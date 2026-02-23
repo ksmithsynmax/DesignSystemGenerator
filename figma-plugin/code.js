@@ -183,14 +183,14 @@ async function buildComponents(varMap) {
   // Remove previously generated component sets to avoid duplicates
   cleanupExistingComponents(page);
 
-  // Load font for button text
+  // Load font for button text and switch labels
   var font = await loadFont();
 
   progress("Creating Button component set...");
   buildButtonComponentSet(varMap, page, font);
 
   progress("Creating Switch component set...");
-  buildSwitchComponentSet(varMap, page);
+  buildSwitchComponentSet(varMap, page, font);
 
   progress("Components created.");
 }
@@ -204,7 +204,8 @@ function cleanupExistingComponents(page) {
     }
     // Also clean up standalone components from failed previous runs
     if (child.type === "COMPONENT" && (
-      child.name.indexOf("Variant=") === 0 || child.name.indexOf("State=") === 0
+      child.name.indexOf("Variant=") === 0 || child.name.indexOf("State=") === 0 ||
+      child.name.indexOf("Size=") === 0 || child.name.indexOf("Checked=") === 0
     )) {
       child.remove();
     }
@@ -414,97 +415,219 @@ function btnColorPath(variant, property, state) {
 // Switch
 // ---------------------------------------------------------------------------
 
-function buildSwitchComponentSet(varMap, page) {
-  var states = ["Unchecked", "Checked"];
+function buildSwitchComponentSet(varMap, page, font) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var checkedStates = [false, true];
+  var states = ["default", "hover", "focus", "pressed", "disabled"];
+  var labelModes = ["hide", "show"];
   var components = [];
 
-  for (var si = 0; si < states.length; si++) {
-    var isChecked = (states[si] === "Checked");
-    var comp = figma.createComponent();
-    comp.name = "State=" + states[si];
+  // Known switch heights per size for dynamic grid spacing
+  var sizeHeights = { xs: 16, sm: 18, md: 22, lg: 28, xl: 34 };
+  var gap = 16;
+  var colGap = 16;
 
-    // Track: horizontal auto-layout, fixed size
-    comp.layoutMode = "HORIZONTAL";
-    comp.primaryAxisSizingMode = "FIXED";
-    comp.counterAxisSizingMode = "FIXED";
-    comp.counterAxisAlignItems = "CENTER";
-    comp.resize(42, 22);
-    comp.paddingLeft = 2;
-    comp.paddingRight = 2;
-    comp.paddingTop = 2;
-    comp.paddingBottom = 2;
-    comp.cornerRadius = 11;
-
-    // Track fill
-    if (isChecked) {
-      comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-      bindPaintVar(comp, "fills", 0, varMap["switch/track-background-checked"]);
-    } else {
-      comp.fills = [{ type: "SOLID", color: { r: 0.87, g: 0.87, b: 0.87 } }];
-      bindPaintVar(comp, "fills", 0, varMap["switch/track-background"]);
+  // Pre-calculate y offsets: rows = (size × state)
+  var rowYOffsets = [];
+  var runningY = 0;
+  for (var rsi = 0; rsi < sizes.length; rsi++) {
+    for (var rsti = 0; rsti < states.length; rsti++) {
+      rowYOffsets.push(runningY);
+      // Row height = max of track height vs label line-height (xl=24), plus gap
+      var rowH = sizeHeights[sizes[rsi]];
+      if (rowH < 24) rowH = 24;
+      runningY += rowH + gap;
     }
-
-    // Track border — inside alignment keeps it crisp
-    comp.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
-    comp.strokeWeight = 1.5;
-    comp.strokeAlign = "INSIDE";
-    bindPaintVar(comp, "strokes", 0, varMap["switch/track-border"]);
-
-    // Bind track dimensions
-    bindVar(comp, "width", varMap["switch/width-default"]);
-    bindVar(comp, "height", varMap["switch/height-default"]);
-    bindVar(comp, "topLeftRadius", varMap["switch/border-radius-default"]);
-    bindVar(comp, "topRightRadius", varMap["switch/border-radius-default"]);
-    bindVar(comp, "bottomLeftRadius", varMap["switch/border-radius-default"]);
-    bindVar(comp, "bottomRightRadius", varMap["switch/border-radius-default"]);
-
-    // Spacer + Thumb approach for alignment
-    // For checked: spacer first, then thumb (pushes thumb right)
-    // For unchecked: thumb first, then spacer (keeps thumb left)
-
-    var spacer = figma.createFrame();
-    spacer.fills = [];
-    spacer.layoutGrow = 1;
-    spacer.layoutAlign = "STRETCH";
-    spacer.resize(1, 1);
-
-    var thumb = figma.createEllipse();
-    thumb.resize(18, 18);
-    thumb.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-    thumb.effects = [{
-      type: "DROP_SHADOW",
-      color: { r: 0, g: 0, b: 0, a: 0.15 },
-      offset: { x: 0, y: 1 },
-      radius: 3,
-      spread: 0,
-      visible: true,
-      blendMode: "NORMAL"
-    }];
-    bindPaintVar(thumb, "fills", 0, varMap["switch/thumb-background"]);
-
-    // Bind thumb size
-    var thumbSizeVar = varMap["switch/thumb-size-default"];
-    bindVar(thumb, "width", thumbSizeVar);
-    bindVar(thumb, "height", thumbSizeVar);
-
-    if (isChecked) {
-      comp.appendChild(spacer);
-      comp.appendChild(thumb);
-    } else {
-      comp.appendChild(thumb);
-      comp.appendChild(spacer);
-    }
-
-    comp.x = si * 80;
-    comp.y = 0;
-    page.appendChild(comp);
-    components.push(comp);
   }
 
+  // Column width: track (~64px max) + gap (~14px) + label (~40px) + padding
+  var colWidth = 140 + colGap;
+
+  for (var ci = 0; ci < checkedStates.length; ci++) {
+    var isChecked = checkedStates[ci];
+    var capChecked = isChecked ? "True" : "False";
+
+    for (var li = 0; li < labelModes.length; li++) {
+      var showLabel = (labelModes[li] === "show");
+      var capLabel = showLabel ? "Show" : "Hide";
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size.toUpperCase();
+
+        for (var sti = 0; sti < states.length; sti++) {
+          var state = states[sti];
+          var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+          var comp = figma.createComponent();
+          comp.name = "Size=" + capSize + ", Checked=" + capChecked +
+                      ", State=" + capState + ", Label=" + capLabel;
+
+          // Root: horizontal auto-layout wrapper (track + optional label)
+          comp.layoutMode = "HORIZONTAL";
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
+          comp.counterAxisAlignItems = "CENTER";
+          comp.itemSpacing = 10;
+          comp.fills = [];
+
+          // Bind label gap to size-specific variable
+          bindVar(comp, "itemSpacing", varMap["switch/label-gap-" + size]);
+
+          // --- Track child frame ---
+          var track = figma.createFrame();
+          track.name = "Track";
+          track.layoutMode = "HORIZONTAL";
+          track.primaryAxisSizingMode = "FIXED";
+          track.counterAxisSizingMode = "FIXED";
+          track.counterAxisAlignItems = "CENTER";
+          track.resize(42, 22);
+          track.paddingLeft = 2;
+          track.paddingRight = 2;
+          track.paddingTop = 2;
+          track.paddingBottom = 2;
+          track.cornerRadius = 11;
+
+          // Bind track dimensions to size-specific variables
+          bindVar(track, "width", varMap["switch/width-" + size]);
+          bindVar(track, "height", varMap["switch/height-" + size]);
+          bindVar(track, "topLeftRadius", varMap["switch/border-radius-" + size]);
+          bindVar(track, "topRightRadius", varMap["switch/border-radius-" + size]);
+          bindVar(track, "bottomLeftRadius", varMap["switch/border-radius-" + size]);
+          bindVar(track, "bottomRightRadius", varMap["switch/border-radius-" + size]);
+
+          // Track fill — state + checked specific
+          var trackBgPath = switchTrackBgPath(isChecked, state);
+          if (isChecked) {
+            track.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          } else {
+            track.fills = [{ type: "SOLID", color: { r: 0.87, g: 0.87, b: 0.87 } }];
+          }
+          bindPaintVar(track, "fills", 0, varMap[trackBgPath]);
+
+          // Track border — state specific
+          var trackBorderPath = switchTrackBorderPath(state);
+          track.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+          track.strokeWeight = 1.5;
+          track.strokeAlign = "INSIDE";
+          bindPaintVar(track, "strokes", 0, varMap[trackBorderPath]);
+          bindVar(track, "strokeWeight", varMap["switch/track-border-width"]);
+
+          // --- Spacer + Thumb ---
+          var spacer = figma.createFrame();
+          spacer.name = "Spacer";
+          spacer.fills = [];
+          spacer.layoutGrow = 1;
+          spacer.layoutAlign = "STRETCH";
+          spacer.resize(1, 1);
+
+          var thumb = figma.createEllipse();
+          thumb.name = "Thumb";
+          thumb.resize(18, 18);
+          thumb.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          thumb.effects = [{
+            type: "DROP_SHADOW",
+            color: { r: 0, g: 0, b: 0, a: 0.15 },
+            offset: { x: 0, y: 1 },
+            radius: 3,
+            spread: 0,
+            visible: true,
+            blendMode: "NORMAL"
+          }];
+
+          // Thumb background — state specific
+          var thumbBgPath = switchThumbBgPath(state);
+          bindPaintVar(thumb, "fills", 0, varMap[thumbBgPath]);
+          bindVar(thumb, "width", varMap["switch/thumb-size-" + size]);
+          bindVar(thumb, "height", varMap["switch/thumb-size-" + size]);
+
+          // Thumb position: spacer pushes thumb to correct side
+          if (isChecked) {
+            track.appendChild(spacer);
+            track.appendChild(thumb);
+          } else {
+            track.appendChild(thumb);
+            track.appendChild(spacer);
+          }
+
+          comp.appendChild(track);
+
+          // --- Optional label text node ---
+          if (showLabel) {
+            var labelNode = figma.createText();
+            labelNode.name = "Label";
+            labelNode.fontName = font;
+            labelNode.characters = "Label";
+            labelNode.fontSize = 14;
+
+            // Label text color — state specific
+            var labelTextPath = switchLabelTextPath(state);
+            labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+            bindPaintVar(labelNode, "fills", 0, varMap[labelTextPath]);
+            bindVar(labelNode, "fontSize", varMap["switch/label-font-size-" + size]);
+            comp.appendChild(labelNode);
+          }
+
+          // Focus ring on the track (not root)
+          if (state === "focus") {
+            track.effects = [{
+              type: "DROP_SHADOW",
+              color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+              offset: { x: 0, y: 0 },
+              radius: 0,
+              spread: 3,
+              visible: true,
+              blendMode: "NORMAL"
+            }];
+          }
+
+          // Disabled opacity
+          if (state === "disabled") {
+            comp.opacity = 0.6;
+          }
+
+          // Grid placement: columns = (checked × label), rows = (size × state)
+          var colIndex = ci * labelModes.length + li;
+          var rowIndex = (si * states.length) + sti;
+          comp.x = colIndex * colWidth;
+          comp.y = rowYOffsets[rowIndex];
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " switch variants");
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Switch";
   componentSet.x = 0;
-  componentSet.y = 200;
+  componentSet.y = 800;
+}
+
+// Helper: build figmaPath for switch track background given checked state and interaction state
+function switchTrackBgPath(isChecked, state) {
+  var base = isChecked ? "switch/track-background-checked" : "switch/track-background";
+  if (state === "default") return base;
+  return base + "-" + state;
+}
+
+// Helper: build figmaPath for switch track border given interaction state
+function switchTrackBorderPath(state) {
+  if (state === "default") return "switch/track-border";
+  return "switch/track-border-" + state;
+}
+
+// Helper: build figmaPath for switch thumb background given interaction state
+function switchThumbBgPath(state) {
+  if (state === "disabled") return "switch/thumb-background-disabled";
+  return "switch/thumb-background";
+}
+
+// Helper: build figmaPath for switch label text given interaction state
+function switchLabelTextPath(state) {
+  if (state === "disabled") return "switch/label-text-disabled";
+  return "switch/label-text";
 }
 
 // ---------------------------------------------------------------------------

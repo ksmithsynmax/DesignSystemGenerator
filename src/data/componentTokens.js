@@ -76,18 +76,49 @@ export const COMPONENT_TOKENS = {
   },
 
   switch: {
-    // ── COLOR TOKENS ──
-    "switch-track-background":         { type: "COLOR", semantic: "surface-default",           figmaPath: "switch/track-background" },
-    "switch-track-background-checked": { type: "COLOR", semantic: "interactive-primary",       figmaPath: "switch/track-background-checked" },
-    "switch-track-background-hover":   { type: "COLOR", semantic: "interactive-secondary-hover",figmaPath: "switch/track-background-hover" },
-    "switch-track-border":             { type: "COLOR", semantic: "border-default",            figmaPath: "switch/track-border" },
-    "switch-thumb-background":         { type: "COLOR", semantic: "surface-default",           figmaPath: "switch/thumb-background" },
+    // ── TRACK BACKGROUND — UNCHECKED (per state) ──
+    "switch-track-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "switch/track-background" },
+    "switch-track-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "switch/track-background-hover" },
+    "switch-track-background-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "switch/track-background-focus" },
+    "switch-track-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "switch/track-background-pressed" },
+    "switch-track-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "switch/track-background-disabled" },
 
-    // ── FLOAT TOKENS (size variants) ──
-    "switch-width":         { type: "FLOAT", unit: "px", sizes: { sm: 34, md: 42, lg: 52 },  figmaPath: "switch/width" },
-    "switch-height":        { type: "FLOAT", unit: "px", sizes: { sm: 18, md: 22, lg: 28 },  figmaPath: "switch/height" },
-    "switch-thumb-size":    { type: "FLOAT", unit: "px", sizes: { sm: 14, md: 18, lg: 24 },  figmaPath: "switch/thumb-size" },
-    "switch-border-radius": { type: "FLOAT", unit: "px", sizes: { sm: 9, md: 11, lg: 14 },   figmaPath: "switch/border-radius" },
+    // ── TRACK BACKGROUND — CHECKED (per state) ──
+    "switch-track-background-checked":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "switch/track-background-checked" },
+    "switch-track-background-checked-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "switch/track-background-checked-hover" },
+    "switch-track-background-checked-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "switch/track-background-checked-focus" },
+    "switch-track-background-checked-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "switch/track-background-checked-pressed" },
+    "switch-track-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "switch/track-background-checked-disabled" },
+
+    // ── TRACK BORDER (per state) ──
+    "switch-track-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "switch/track-border" },
+    "switch-track-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "switch/track-border-hover" },
+    "switch-track-border-focus":    { type: "COLOR", semantic: "border-default",  figmaPath: "switch/track-border-focus" },
+    "switch-track-border-pressed":  { type: "COLOR", semantic: "border-default",  figmaPath: "switch/track-border-pressed" },
+    "switch-track-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "switch/track-border-disabled" },
+
+    // ── THUMB BACKGROUND ──
+    "switch-thumb-background":          { type: "COLOR", semantic: "surface-default", figmaPath: "switch/thumb-background" },
+    "switch-thumb-background-disabled": { type: "COLOR", semantic: "surface-default", figmaPath: "switch/thumb-background-disabled" },
+
+    // ── LABEL TEXT ──
+    "switch-label-text":          { type: "COLOR", semantic: "text-default",  figmaPath: "switch/label-text" },
+    "switch-label-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "switch/label-text-disabled" },
+
+    // ── SHARED COLOR TOKEN ──
+    "switch-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "switch/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "switch-width":              { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 34, md: 42, lg: 52, xl: 64 },           figmaPath: "switch/width" },
+    "switch-height":             { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 18, md: 22, lg: 28, xl: 34 },           figmaPath: "switch/height" },
+    "switch-thumb-size":         { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 18, lg: 24, xl: 30 },           figmaPath: "switch/thumb-size" },
+    "switch-border-radius":      { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 9,  md: 11, lg: 14, xl: 17 },           figmaPath: "switch/border-radius" },
+    "switch-label-font-size":    { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },           figmaPath: "switch/label-font-size" },
+    "switch-label-line-height":  { type: "FLOAT", unit: "px", sizes: { xs: 14.4, sm: 16.8, md: 19.2, lg: 21.6, xl: 24 },   figmaPath: "switch/label-line-height" },
+    "switch-label-gap":          { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 },             figmaPath: "switch/label-gap" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "switch-track-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "switch/track-border-width" },
   },
 };
 
@@ -95,7 +126,7 @@ export const COMPONENT_NAMES = Object.keys(COMPONENT_TOKENS);
 
 export const COMPONENT_SIZE_KEYS = {
   button: ["xs", "sm", "md", "lg", "xl"],
-  switch: ["sm", "md", "lg"],
+  switch: ["xs", "sm", "md", "lg", "xl"],
 };
 
 export function getColorTokens(componentName) {
