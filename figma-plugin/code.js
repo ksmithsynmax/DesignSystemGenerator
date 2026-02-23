@@ -260,88 +260,154 @@ function bindPaintVar(node, paintType, paintIndex, variable) {
 
 function buildButtonComponentSet(varMap, page, font) {
   var variants = ["filled", "outlined", "ghost"];
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "pressed", "disabled"];
   var components = [];
+
+  // Known button heights per size for accurate spacing
+  var sizeHeights = { xs: 28, sm: 36, md: 42, lg: 50, xl: 60 };
+  var gap = 16;
+  var colGap = 16;
+
+  // Pre-calculate y offset for each (size, state) row
+  var rowYOffsets = [];
+  var runningY = 0;
+  for (var rsi = 0; rsi < sizes.length; rsi++) {
+    for (var rsti = 0; rsti < states.length; rsti++) {
+      rowYOffsets.push(runningY);
+      runningY += sizeHeights[sizes[rsi]] + gap;
+    }
+  }
+
+  // Estimate column width: widest button (xl) has ~28px padding each side + ~60px text
+  var colWidth = 160 + colGap;
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
-    var comp = figma.createComponent();
-    comp.name = "Variant=" + variant.charAt(0).toUpperCase() + variant.slice(1);
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
 
-    // Auto-layout: horizontal, center-aligned
-    comp.layoutMode = "HORIZONTAL";
-    comp.primaryAxisAlignItems = "CENTER";
-    comp.counterAxisAlignItems = "CENTER";
-    comp.primaryAxisSizingMode = "AUTO";
-    comp.counterAxisSizingMode = "AUTO";
+    for (var si = 0; si < sizes.length; si++) {
+      var size = sizes[si];
+      var capSize = size.toUpperCase();
 
-    // Set initial padding (will be overridden by variable binding)
-    comp.paddingLeft = 14;
-    comp.paddingRight = 14;
-    comp.paddingTop = 6;
-    comp.paddingBottom = 6;
-    comp.cornerRadius = 8;
-    comp.minHeight = 36;
+      for (var sti = 0; sti < states.length; sti++) {
+        var state = states[sti];
+        var capState = state.charAt(0).toUpperCase() + state.slice(1);
 
-    // Background fill — initialize then bind variable to paint color
-    if (variant === "ghost") {
-      comp.fills = [];
-    } else {
-      comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-      bindPaintVar(comp, "fills", 0, varMap["button/" + variant + "-background"]);
+        var comp = figma.createComponent();
+        comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", State=" + capState;
+
+        // Auto-layout: horizontal, center-aligned
+        comp.layoutMode = "HORIZONTAL";
+        comp.primaryAxisAlignItems = "CENTER";
+        comp.counterAxisAlignItems = "CENTER";
+        comp.primaryAxisSizingMode = "AUTO";
+        comp.counterAxisSizingMode = "AUTO";
+
+        // Initial dimensions (overridden by variable bindings)
+        comp.paddingLeft = 14;
+        comp.paddingRight = 14;
+        comp.paddingTop = 6;
+        comp.paddingBottom = 6;
+        comp.cornerRadius = 8;
+        comp.minHeight = 36;
+
+        // --- Color variable paths for this state ---
+        var bgPath = btnColorPath(variant, "background", state);
+        var textPath = btnColorPath(variant, "text", state);
+        var borderPath = btnColorPath(variant, "border", state);
+
+        // Background fill
+        var bgVar = varMap[bgPath];
+        if (variant === "ghost" && (state === "default" || state === "focus" || state === "disabled")) {
+          comp.fills = [];
+        } else {
+          comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          bindPaintVar(comp, "fills", 0, bgVar);
+        }
+
+        // Stroke/border
+        var borderVar = varMap[borderPath];
+        if (variant === "outlined" && borderVar) {
+          comp.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          comp.strokeWeight = 1.5;
+          bindPaintVar(comp, "strokes", 0, borderVar);
+        } else {
+          comp.strokes = [];
+        }
+
+        // Bind SIZE-SPECIFIC dimensions
+        bindVar(comp, "paddingLeft", varMap["button/padding-x-" + size]);
+        bindVar(comp, "paddingRight", varMap["button/padding-x-" + size]);
+        bindVar(comp, "paddingTop", varMap["button/padding-y-" + size]);
+        bindVar(comp, "paddingBottom", varMap["button/padding-y-" + size]);
+        bindVar(comp, "topLeftRadius", varMap["button/border-radius"]);
+        bindVar(comp, "topRightRadius", varMap["button/border-radius"]);
+        bindVar(comp, "bottomLeftRadius", varMap["button/border-radius"]);
+        bindVar(comp, "bottomRightRadius", varMap["button/border-radius"]);
+        bindVar(comp, "minHeight", varMap["button/height-" + size]);
+        bindVar(comp, "strokeWeight", varMap["button/border-width"]);
+
+        // Text node
+        var textNode = figma.createText();
+        textNode.fontName = font;
+        textNode.characters = "Button";
+        textNode.fontSize = 14;
+
+        // Text color
+        if (variant === "filled" && state !== "disabled") {
+          textNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+        } else {
+          textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+        }
+        bindPaintVar(textNode, "fills", 0, varMap[textPath]);
+
+        // Bind SIZE-SPECIFIC font size
+        bindVar(textNode, "fontSize", varMap["button/font-size-" + size]);
+
+        comp.appendChild(textNode);
+
+        // Focus ring effect
+        if (state === "focus") {
+          comp.effects = [{
+            type: "DROP_SHADOW",
+            color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+            offset: { x: 0, y: 0 },
+            radius: 0,
+            spread: 3,
+            visible: true,
+            blendMode: "NORMAL"
+          }];
+        }
+
+        // Disabled opacity
+        if (state === "disabled") {
+          comp.opacity = 0.6;
+        }
+
+        // Grid layout: columns = variants, rows = size groups × states
+        var rowIndex = (si * states.length) + sti;
+        comp.x = vi * colWidth;
+        comp.y = rowYOffsets[rowIndex];
+        page.appendChild(comp);
+        components.push(comp);
+      }
     }
-
-    // Stroke/border
-    if (variant === "outlined") {
-      comp.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-      comp.strokeWeight = 1.5;
-      bindPaintVar(comp, "strokes", 0, varMap["button/" + variant + "-border"]);
-    } else {
-      comp.strokes = [];
-    }
-
-    // Bind dimensions
-    bindVar(comp, "paddingLeft", varMap["button/padding-x-default"]);
-    bindVar(comp, "paddingRight", varMap["button/padding-x-default"]);
-    bindVar(comp, "paddingTop", varMap["button/padding-y-default"]);
-    bindVar(comp, "paddingBottom", varMap["button/padding-y-default"]);
-    bindVar(comp, "topLeftRadius", varMap["button/border-radius"]);
-    bindVar(comp, "topRightRadius", varMap["button/border-radius"]);
-    bindVar(comp, "bottomLeftRadius", varMap["button/border-radius"]);
-    bindVar(comp, "bottomRightRadius", varMap["button/border-radius"]);
-    bindVar(comp, "minHeight", varMap["button/height-default"]);
-    bindVar(comp, "strokeWeight", varMap["button/border-width"]);
-
-    // Text node
-    var textNode = figma.createText();
-    textNode.fontName = font;
-    textNode.characters = "Button";
-    textNode.fontSize = 14;
-
-    // Text color
-    if (variant === "filled") {
-      textNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-    } else {
-      textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-    }
-    bindPaintVar(textNode, "fills", 0, varMap["button/" + variant + "-text"]);
-
-    // Bind font size
-    bindVar(textNode, "fontSize", varMap["button/font-size-default"]);
-
-    comp.appendChild(textNode);
-
-    // Position variants side by side before combining
-    comp.x = vi * 180;
-    comp.y = 0;
-    page.appendChild(comp);
-    components.push(comp);
   }
 
-  // Combine into a component set
+  progress("Created " + components.length + " button variants");
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Button";
   componentSet.x = 0;
   componentSet.y = 0;
+}
+
+// Build the figmaPath for a button color token given variant, property, and state
+function btnColorPath(variant, property, state) {
+  if (state === "default") {
+    return "button/" + variant + "-" + property;
+  }
+  return "button/" + variant + "-" + property + "-" + state;
 }
 
 // ---------------------------------------------------------------------------

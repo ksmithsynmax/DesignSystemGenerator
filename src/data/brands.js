@@ -23,6 +23,10 @@ export const INITIAL_BRANDS = {
       "border-subtle": { color: "gray", index: 2 },
       "feedback-error": { color: "red", index: 6 },
       "feedback-success": { color: "green", index: 6 },
+      "interactive-disabled": { color: "gray", index: 3 },
+      "text-disabled": { color: "gray", index: 5 },
+      "border-disabled": { color: "gray", index: 4 },
+      "border-focus": { color: "blue", index: 5 },
     },
     componentDefaults: {
       "button-padding-x-default": "sm",
@@ -61,6 +65,10 @@ export const INITIAL_BRANDS = {
       "border-subtle": { color: "gray", index: 2 },
       "feedback-error": { color: "red", index: 6 },
       "feedback-success": { color: "green", index: 6 },
+      "interactive-disabled": { color: "gray", index: 3 },
+      "text-disabled": { color: "gray", index: 5 },
+      "border-disabled": { color: "gray", index: 4 },
+      "border-focus": { color: "green", index: 5 },
     },
     componentDefaults: {
       "button-padding-x-default": "md",
