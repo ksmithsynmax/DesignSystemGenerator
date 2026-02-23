@@ -1,0 +1,13 @@
+{
+  "name": "Design System Token Sync",
+  "id": "design-system-token-sync-poc",
+  "api": "1.0.0",
+  "main": "code.js",
+  "ui": "ui.html",
+  "editorType": ["figma"],
+  "documentAccess": "dynamic-page",
+  "networkAccess": {
+    "allowedDomains": ["none"],
+    "devAllowedDomains": ["http://localhost:9001", "ws://localhost:9001"]
+  }
+}
