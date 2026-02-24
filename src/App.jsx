@@ -18,6 +18,7 @@ import ComponentTokenRow from "./components/editors/ComponentTokenRow";
 import DimensionTokenRow from "./components/editors/DimensionTokenRow";
 import ButtonPreview from "./components/previews/ButtonPreview";
 import SwitchPreview from "./components/previews/SwitchPreview";
+import CheckboxPreview from "./components/previews/CheckboxPreview";
 import TokenChain from "./components/TokenChain";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 
@@ -37,17 +38,21 @@ export default function App() {
   // Derive default size per component from brand data
   const buttonDefault = getComponentDefaultSize(brands, activeBrand, "button") || "sm";
   const switchDefault = getComponentDefaultSize(brands, activeBrand, "switch") || "md";
+  const checkboxDefault = getComponentDefaultSize(brands, activeBrand, "checkbox") || "md";
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
+  const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
 
   // Sync active sizes when brand changes
   const handleBrandChange = useCallback((newBrand) => {
     setActiveBrand(newBrand);
     const btnDef = getComponentDefaultSize(brands, newBrand, "button") || "sm";
     const swDef = getComponentDefaultSize(brands, newBrand, "switch") || "md";
+    const cbDef = getComponentDefaultSize(brands, newBrand, "checkbox") || "md";
     setActiveSize(btnDef);
     setActiveSwitchSize(swDef);
+    setActiveCheckboxSize(cbDef);
   }, [brands]);
 
   // Sync active size when component changes
@@ -57,8 +62,10 @@ export default function App() {
       setActiveSize(buttonDefault);
     } else if (newComp === "switch") {
       setActiveSwitchSize(switchDefault);
+    } else if (newComp === "checkbox") {
+      setActiveCheckboxSize(checkboxDefault);
     }
-  }, [buttonDefault, switchDefault]);
+  }, [buttonDefault, switchDefault, checkboxDefault]);
 
   const updatePrimitive = useCallback(
     (colorName, index, value) => {
@@ -153,7 +160,7 @@ export default function App() {
           <span style={{ fontSize: 18, fontWeight: 700, color: "#E9ECEF" }}>
             Token Pipeline
           </span>
-          <Tag color="#868E96">POC — Button + Switch</Tag>
+          <Tag color="#868E96">POC — Button + Switch + Checkbox</Tag>
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
@@ -291,6 +298,16 @@ export default function App() {
                 activeBrand={activeBrand}
                 activeSwitchSize={activeSwitchSize}
                 setActiveSwitchSize={setActiveSwitchSize}
+                sizeKeys={sizeKeys}
+              />
+            )}
+
+            {activeTab === "preview" && activeComponent === "checkbox" && (
+              <CheckboxPreviewPanel
+                brands={brands}
+                activeBrand={activeBrand}
+                activeCheckboxSize={activeCheckboxSize}
+                setActiveCheckboxSize={setActiveCheckboxSize}
                 sizeKeys={sizeKeys}
               />
             )}
@@ -1087,6 +1104,380 @@ function SwitchPreviewPanel({
         }}
       >
         Resolved Variables — {activeSwitchSize}
+      </div>
+      <div
+        style={{
+          background: "#1A1B1E",
+          borderRadius: 8,
+          padding: 16,
+          overflowX: "auto",
+        }}
+      >
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>
+            <tr>
+              {["Token", "Type", "Value", "Figma Path"].map((h) => (
+                <th
+                  key={h}
+                  style={{
+                    textAlign: "left",
+                    padding: "6px 10px",
+                    fontSize: 10,
+                    color: "#5C5F66",
+                    fontFamily: "monospace",
+                    borderBottom: "1px solid #2C2E33",
+                    textTransform: "uppercase",
+                    letterSpacing: "0.05em",
+                  }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {resolvedVars.map((v) => (
+              <tr key={v.name}>
+                <td
+                  style={{
+                    padding: "5px 10px",
+                    fontSize: 11,
+                    fontFamily: "monospace",
+                    color: "#C1C2C5",
+                    borderBottom: "1px solid #2C2E33",
+                  }}
+                >
+                  {v.name}
+                </td>
+                <td
+                  style={{
+                    padding: "5px 10px",
+                    fontSize: 10,
+                    borderBottom: "1px solid #2C2E33",
+                  }}
+                >
+                  <span
+                    style={{
+                      background: v.type === "COLOR" ? "#862E9C" : "#1971C2",
+                      color: "#fff",
+                      borderRadius: 3,
+                      padding: "1px 6px",
+                      fontSize: 9,
+                      fontWeight: 600,
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    {v.type}
+                  </span>
+                </td>
+                <td
+                  style={{
+                    padding: "5px 10px",
+                    fontSize: 11,
+                    fontFamily: "monospace",
+                    color: "#C1C2C5",
+                    borderBottom: "1px solid #2C2E33",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 6,
+                  }}
+                >
+                  {v.type === "COLOR" && (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 12,
+                        height: 12,
+                        borderRadius: 2,
+                        background: v.value,
+                        border: "1px solid #373A40",
+                        flexShrink: 0,
+                      }}
+                    />
+                  )}
+                  {v.value}
+                </td>
+                <td
+                  style={{
+                    padding: "5px 10px",
+                    fontSize: 10,
+                    fontFamily: "monospace",
+                    color: "#5C5F66",
+                    borderBottom: "1px solid #2C2E33",
+                  }}
+                >
+                  {v.figmaPath}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function CheckboxPreviewPanel({
+  brands,
+  activeBrand,
+  activeCheckboxSize,
+  setActiveCheckboxSize,
+  sizeKeys,
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const tokens = COMPONENT_TOKENS.checkbox;
+
+  const codeString = `import { Checkbox } from "@mantine/core";
+
+<Checkbox size="${activeCheckboxSize}" />`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(codeString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  // Build resolved variables list
+  const resolvedVars = [];
+  for (const [name, def] of Object.entries(tokens)) {
+    if (def.type === TOKEN_TYPES.COLOR) {
+      const resolved = resolveColor(brands, activeBrand, def.semantic);
+      resolvedVars.push({ name, type: "COLOR", value: resolved, figmaPath: def.figmaPath });
+    } else if (def.type === TOKEN_TYPES.FLOAT || def.type === TOKEN_TYPES.STRING) {
+      const hasSizes = !!def.sizes;
+      const resolved = hasSizes
+        ? resolveDimension(brands, activeBrand, name, activeCheckboxSize)
+        : resolveDimension(brands, activeBrand, name);
+      const display = def.unit ? `${resolved}${def.unit}` : String(resolved);
+      const displayName = hasSizes ? `${name}-${activeCheckboxSize}` : name;
+      const displayPath = hasSizes ? `${def.figmaPath}-${activeCheckboxSize}` : def.figmaPath;
+      resolvedVars.push({ name: displayName, type: def.type, value: display, figmaPath: displayPath });
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ marginBottom: 24 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: "#5C5F66",
+            marginBottom: 6,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            fontWeight: 600,
+          }}
+        >
+          Size
+        </div>
+        <div style={{ display: "flex", gap: 4 }}>
+          {(sizeKeys.checkbox || ["xs", "sm", "md", "lg", "xl"]).map((s) => (
+            <button
+              key={s}
+              onClick={() => setActiveCheckboxSize(s)}
+              style={{
+                padding: "4px 12px",
+                borderRadius: 6,
+                border: "1px solid",
+                borderColor: s === activeCheckboxSize ? "#228BE6" : "#373A40",
+                background: s === activeCheckboxSize ? "#228BE6" : "transparent",
+                color: s === activeCheckboxSize ? "#fff" : "#C1C2C5",
+                cursor: "pointer",
+                fontSize: 12,
+                fontWeight: 500,
+                textTransform: "uppercase",
+              }}
+            >
+              {s}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Single preview */}
+      <div
+        style={{
+          background: "#1A1B1E",
+          borderRadius: 8,
+          padding: 24,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 24,
+        }}
+      >
+        <CheckboxPreview
+          brands={brands}
+          brandId={activeBrand}
+          size={activeCheckboxSize}
+        />
+      </div>
+
+      {/* Matrix: rows = unchecked/checked/indeterminate, cols = sizes */}
+      <div style={{ marginBottom: 24 }}>
+        <div
+          style={{
+            fontSize: 11,
+            color: "#5C5F66",
+            marginBottom: 6,
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            fontWeight: 600,
+          }}
+        >
+          All Sizes &amp; States
+        </div>
+        <div
+          style={{
+            background: "#1A1B1E",
+            borderRadius: 8,
+            padding: 16,
+            overflowX: "auto",
+          }}
+        >
+          <table style={{ borderCollapse: "collapse" }}>
+            <thead>
+              <tr>
+                <th
+                  style={{
+                    padding: "4px 12px",
+                    fontSize: 10,
+                    color: "#5C5F66",
+                    textAlign: "left",
+                    fontWeight: 500,
+                  }}
+                >
+                  State
+                </th>
+                {(sizeKeys.checkbox || ["xs", "sm", "md", "lg", "xl"]).map(
+                  (s) => (
+                    <th
+                      key={s}
+                      style={{
+                        padding: "4px 16px",
+                        fontSize: 10,
+                        color: "#5C5F66",
+                        textAlign: "center",
+                        textTransform: "uppercase",
+                        fontWeight: 500,
+                      }}
+                    >
+                      {s}
+                    </th>
+                  )
+                )}
+              </tr>
+            </thead>
+            <tbody>
+              {[
+                { label: "Unchecked", checked: false, indeterminate: false },
+                { label: "Checked", checked: true, indeterminate: false },
+                { label: "Indeterminate", checked: false, indeterminate: true },
+              ].map((row) => (
+                <tr key={row.label}>
+                  <td
+                    style={{
+                      padding: "8px 12px",
+                      fontSize: 11,
+                      color: "#909296",
+                      fontWeight: 500,
+                    }}
+                  >
+                    {row.label}
+                  </td>
+                  {(sizeKeys.checkbox || ["xs", "sm", "md", "lg", "xl"]).map(
+                    (s) => (
+                      <td
+                        key={s}
+                        style={{
+                          padding: "8px 16px",
+                          textAlign: "center",
+                        }}
+                      >
+                        <CheckboxPreview
+                          brands={brands}
+                          brandId={activeBrand}
+                          size={s}
+                          checked={row.checked}
+                          indeterminate={row.indeterminate}
+                          readOnly
+                        />
+                      </td>
+                    )
+                  )}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Code Snippet */}
+      <div style={{ marginBottom: 24 }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginBottom: 6,
+          }}
+        >
+          <div
+            style={{
+              fontSize: 11,
+              color: "#5C5F66",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              fontWeight: 600,
+            }}
+          >
+            Code
+          </div>
+          <button
+            onClick={handleCopy}
+            style={{
+              background: "transparent",
+              border: "1px solid #373A40",
+              color: copied ? "#51CF66" : "#909296",
+              borderRadius: 4,
+              padding: "2px 8px",
+              fontSize: 10,
+              cursor: "pointer",
+            }}
+          >
+            {copied ? "Copied!" : "Copy"}
+          </button>
+        </div>
+        <pre
+          style={{
+            background: "#141517",
+            borderRadius: 8,
+            padding: 16,
+            margin: 0,
+            fontSize: 12,
+            lineHeight: 1.6,
+            overflowX: "auto",
+            color: "#C1C2C5",
+            border: "1px solid #2C2E33",
+          }}
+        >
+          {highlightCode(codeString)}
+        </pre>
+      </div>
+
+      {/* Resolved Variables */}
+      <div
+        style={{
+          fontSize: 11,
+          color: "#5C5F66",
+          marginBottom: 8,
+          textTransform: "uppercase",
+          letterSpacing: "0.05em",
+          fontWeight: 600,
+        }}
+      >
+        Resolved Variables — {activeCheckboxSize}
       </div>
       <div
         style={{

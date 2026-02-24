@@ -186,11 +186,24 @@ async function buildComponents(varMap) {
   // Load font for button text and switch labels
   var font = await loadFont();
 
+  var compSetGap = 300;
+
   progress("Creating Button component set...");
-  buildButtonComponentSet(varMap, page, font);
+  var buttonSet = buildButtonComponentSet(varMap, page, font);
 
   progress("Creating Switch component set...");
-  buildSwitchComponentSet(varMap, page, font);
+  var switchSet = buildSwitchComponentSet(varMap, page, font);
+
+  progress("Creating Checkbox component set...");
+  var checkboxSet = await buildCheckboxComponentSet(varMap, page, font);
+
+  // Position component sets side by side with gaps
+  buttonSet.x = 0;
+  buttonSet.y = 0;
+  switchSet.x = buttonSet.x + buttonSet.width + compSetGap;
+  switchSet.y = 0;
+  checkboxSet.x = switchSet.x + switchSet.width + compSetGap;
+  checkboxSet.y = 0;
 
   progress("Components created.");
 }
@@ -199,7 +212,7 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
@@ -399,8 +412,7 @@ function buildButtonComponentSet(varMap, page, font) {
   progress("Created " + components.length + " button variants");
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Button";
-  componentSet.x = 0;
-  componentSet.y = 0;
+  return componentSet;
 }
 
 // Build the figmaPath for a button color token given variant, property, and state
@@ -601,8 +613,7 @@ function buildSwitchComponentSet(varMap, page, font) {
   progress("Created " + components.length + " switch variants");
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Switch";
-  componentSet.x = 0;
-  componentSet.y = 800;
+  return componentSet;
 }
 
 // Helper: build figmaPath for switch track background given checked state and interaction state
@@ -628,6 +639,270 @@ function switchThumbBgPath(state) {
 function switchLabelTextPath(state) {
   if (state === "disabled") return "switch/label-text-disabled";
   return "switch/label-text";
+}
+
+// ---------------------------------------------------------------------------
+// Checkbox
+// ---------------------------------------------------------------------------
+
+async function buildCheckboxComponentSet(varMap, page, font) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var checkedStates = ["unchecked", "checked", "indeterminate"];
+  var states = ["default", "hover", "focus", "pressed", "disabled"];
+  var labelModes = ["hide", "show"];
+  var components = [];
+
+  // Find icon components from the "icons" page
+  var checkIconComp = null;
+  var minusIconComp = null;
+  var iconsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    if (figma.root.children[pi].name.toLowerCase() === "icons") {
+      iconsPage = figma.root.children[pi];
+      break;
+    }
+  }
+  if (iconsPage) {
+    await iconsPage.loadAsync();
+    var allNodes = iconsPage.findAll(function(n) {
+      return n.type === "COMPONENT";
+    });
+    for (var ni = 0; ni < allNodes.length; ni++) {
+      var nName = allNodes[ni].name.toLowerCase();
+      if (!checkIconComp && nName.indexOf("check") >= 0 && nName.indexOf("circle") < 0 && nName.indexOf("square") < 0) {
+        checkIconComp = allNodes[ni];
+      }
+      if (!minusIconComp && nName.indexOf("minus") >= 0 && nName.indexOf("circle") < 0 && nName.indexOf("square") < 0) {
+        minusIconComp = allNodes[ni];
+      }
+    }
+  }
+  if (checkIconComp) console.log("[Checkbox] Found check icon: " + checkIconComp.name);
+  else console.log("[Checkbox] WARNING: check icon not found on icons page");
+  if (minusIconComp) console.log("[Checkbox] Found minus icon: " + minusIconComp.name);
+  else console.log("[Checkbox] WARNING: minus icon not found on icons page");
+
+  // Known checkbox sizes for dynamic grid spacing
+  var sizeBoxSizes = { xs: 16, sm: 18, md: 20, lg: 24, xl: 28 };
+  var sizeIconSizes = { xs: 10, sm: 12, md: 14, lg: 16, xl: 18 };
+  var gap = 16;
+  var colGap = 16;
+
+  // Pre-calculate y offsets: rows = (size × state)
+  var rowYOffsets = [];
+  var runningY = 0;
+  for (var rsi = 0; rsi < sizes.length; rsi++) {
+    for (var rsti = 0; rsti < states.length; rsti++) {
+      rowYOffsets.push(runningY);
+      var rowH = sizeBoxSizes[sizes[rsi]];
+      if (rowH < 24) rowH = 24;
+      runningY += rowH + gap;
+    }
+  }
+
+  // Column width: box + gap + label text
+  var colWidth = 160 + colGap;
+
+  for (var chi = 0; chi < checkedStates.length; chi++) {
+    var checkedState = checkedStates[chi];
+    var capChecked = checkedState.charAt(0).toUpperCase() + checkedState.slice(1);
+    var isActive = (checkedState !== "unchecked"); // checked or indeterminate
+
+    for (var li = 0; li < labelModes.length; li++) {
+      var showLabel = (labelModes[li] === "show");
+      var capLabel = showLabel ? "Show" : "Hide";
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size.toUpperCase();
+        var boxSize = sizeBoxSizes[size];
+        var iconSize = sizeIconSizes[size];
+
+        for (var sti = 0; sti < states.length; sti++) {
+          var state = states[sti];
+          var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+          var comp = figma.createComponent();
+          comp.name = "Size=" + capSize + ", Checked=" + capChecked +
+                      ", State=" + capState + ", Label=" + capLabel;
+
+          // Root: horizontal auto-layout wrapper (box + optional label)
+          comp.layoutMode = "HORIZONTAL";
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
+          comp.counterAxisAlignItems = "CENTER";
+          comp.itemSpacing = 10;
+          comp.fills = [];
+
+          // Bind label gap
+          bindVar(comp, "itemSpacing", varMap["checkbox/label-gap-" + size]);
+
+          // --- Checkbox box frame ---
+          var box = figma.createFrame();
+          box.name = "Box";
+          box.layoutMode = "HORIZONTAL";
+          box.primaryAxisSizingMode = "FIXED";
+          box.counterAxisSizingMode = "FIXED";
+          box.primaryAxisAlignItems = "CENTER";
+          box.counterAxisAlignItems = "CENTER";
+          box.resize(boxSize, boxSize);
+          box.cornerRadius = 5;
+          box.clipsContent = true;
+
+          // Bind box dimensions
+          bindVar(box, "width", varMap["checkbox/size-" + size]);
+          bindVar(box, "height", varMap["checkbox/size-" + size]);
+          bindVar(box, "topLeftRadius", varMap["checkbox/border-radius-" + size]);
+          bindVar(box, "topRightRadius", varMap["checkbox/border-radius-" + size]);
+          bindVar(box, "bottomLeftRadius", varMap["checkbox/border-radius-" + size]);
+          bindVar(box, "bottomRightRadius", varMap["checkbox/border-radius-" + size]);
+
+          // Box fill — checked/indeterminate use checked bg, unchecked uses unchecked bg
+          var boxBgPath = checkboxBgPath(checkedState, state);
+          if (isActive) {
+            box.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          } else {
+            box.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          }
+          bindPaintVar(box, "fills", 0, varMap[boxBgPath]);
+
+          // Box border
+          var boxBorderPath = checkboxBorderPath(state);
+          if (!isActive) {
+            // Unchecked: visible border
+            box.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+            box.strokeWeight = 1.5;
+            box.strokeAlign = "INSIDE";
+            bindPaintVar(box, "strokes", 0, varMap[boxBorderPath]);
+            bindVar(box, "strokeWeight", varMap["checkbox/border-width"]);
+          } else {
+            // Checked/indeterminate: no border (filled bg is visible)
+            box.strokes = [];
+          }
+
+          // --- Icon inside box (only for checked/indeterminate) ---
+          // Instances from Untitled UI icons on the "icons" page
+          if (checkedState === "checked" && checkIconComp) {
+            var checkInst = checkIconComp.createInstance();
+            checkInst.name = "Icon";
+            box.appendChild(checkInst);
+            checkInst.resize(iconSize, iconSize);
+            bindVar(checkInst, "width", varMap["checkbox/icon-size-" + size]);
+            bindVar(checkInst, "height", varMap["checkbox/icon-size-" + size]);
+
+            // Override icon color on the vector children
+            var iconColorPath = checkboxIconColorPath(state);
+            var vectors = checkInst.findAll(function(n) { return n.type === "VECTOR"; });
+            for (var vi = 0; vi < vectors.length; vi++) {
+              if (vectors[vi].strokes && vectors[vi].strokes.length > 0) {
+                vectors[vi].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(vectors[vi], "strokes", 0, varMap[iconColorPath]);
+              }
+              if (vectors[vi].fills && vectors[vi].fills.length > 0) {
+                vectors[vi].fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(vectors[vi], "fills", 0, varMap[iconColorPath]);
+              }
+            }
+          } else if (checkedState === "indeterminate" && minusIconComp) {
+            var minusInst = minusIconComp.createInstance();
+            minusInst.name = "Icon";
+            box.appendChild(minusInst);
+            minusInst.resize(iconSize, iconSize);
+            bindVar(minusInst, "width", varMap["checkbox/icon-size-" + size]);
+            bindVar(minusInst, "height", varMap["checkbox/icon-size-" + size]);
+
+            // Override icon color on the vector children
+            var dashColorPath = checkboxIconColorPath(state);
+            var dashVectors = minusInst.findAll(function(n) { return n.type === "VECTOR"; });
+            for (var dvi = 0; dvi < dashVectors.length; dvi++) {
+              if (dashVectors[dvi].strokes && dashVectors[dvi].strokes.length > 0) {
+                dashVectors[dvi].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(dashVectors[dvi], "strokes", 0, varMap[dashColorPath]);
+              }
+              if (dashVectors[dvi].fills && dashVectors[dvi].fills.length > 0) {
+                dashVectors[dvi].fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(dashVectors[dvi], "fills", 0, varMap[dashColorPath]);
+              }
+            }
+          }
+
+          comp.appendChild(box);
+
+          // --- Optional label ---
+          if (showLabel) {
+            var labelNode = figma.createText();
+            labelNode.name = "Label";
+            labelNode.fontName = font;
+            labelNode.characters = "Label";
+            labelNode.fontSize = 14;
+
+            var labelTextPath = checkboxLabelTextPath(state);
+            labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+            bindPaintVar(labelNode, "fills", 0, varMap[labelTextPath]);
+            bindVar(labelNode, "fontSize", varMap["checkbox/label-font-size-" + size]);
+            comp.appendChild(labelNode);
+          }
+
+          // Focus ring on the box
+          if (state === "focus") {
+            box.effects = [{
+              type: "DROP_SHADOW",
+              color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+              offset: { x: 0, y: 0 },
+              radius: 0,
+              spread: 3,
+              visible: true,
+              blendMode: "NORMAL"
+            }];
+          }
+
+          // Disabled opacity
+          if (state === "disabled") {
+            comp.opacity = 0.6;
+          }
+
+          // Grid placement: columns = (checkedState × label), rows = (size × state)
+          var colIndex = chi * labelModes.length + li;
+          var rowIndex = (si * states.length) + sti;
+          comp.x = colIndex * colWidth;
+          comp.y = rowYOffsets[rowIndex];
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " checkbox variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Checkbox";
+  return componentSet;
+}
+
+// Helper: build figmaPath for checkbox background
+function checkboxBgPath(checkedState, state) {
+  // checked and indeterminate share the same "checked" background tokens
+  var base = (checkedState === "unchecked") ? "checkbox/background" : "checkbox/background-checked";
+  if (state === "default") return base;
+  return base + "-" + state;
+}
+
+// Helper: build figmaPath for checkbox border
+function checkboxBorderPath(state) {
+  if (state === "default") return "checkbox/border";
+  return "checkbox/border-" + state;
+}
+
+// Helper: build figmaPath for checkbox icon color
+function checkboxIconColorPath(state) {
+  if (state === "disabled") return "checkbox/icon-color-disabled";
+  return "checkbox/icon-color";
+}
+
+// Helper: build figmaPath for checkbox label text
+function checkboxLabelTextPath(state) {
+  if (state === "disabled") return "checkbox/label-text-disabled";
+  return "checkbox/label-text";
 }
 
 // ---------------------------------------------------------------------------

@@ -120,6 +120,51 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "switch-track-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "switch/track-border-width" },
   },
+
+  checkbox: {
+    // ── BOX BACKGROUND — UNCHECKED (per state) ──
+    "checkbox-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "checkbox/background" },
+    "checkbox-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "checkbox/background-hover" },
+    "checkbox-background-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "checkbox/background-focus" },
+    "checkbox-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "checkbox/background-pressed" },
+    "checkbox-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "checkbox/background-disabled" },
+
+    // ── BOX BACKGROUND — CHECKED (per state, shared with indeterminate) ──
+    "checkbox-background-checked":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "checkbox/background-checked" },
+    "checkbox-background-checked-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "checkbox/background-checked-hover" },
+    "checkbox-background-checked-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "checkbox/background-checked-focus" },
+    "checkbox-background-checked-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "checkbox/background-checked-pressed" },
+    "checkbox-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "checkbox/background-checked-disabled" },
+
+    // ── BOX BORDER (per state) ──
+    "checkbox-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "checkbox/border" },
+    "checkbox-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "checkbox/border-hover" },
+    "checkbox-border-focus":    { type: "COLOR", semantic: "border-default",  figmaPath: "checkbox/border-focus" },
+    "checkbox-border-pressed":  { type: "COLOR", semantic: "border-default",  figmaPath: "checkbox/border-pressed" },
+    "checkbox-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "checkbox/border-disabled" },
+
+    // ── ICON COLOR ──
+    "checkbox-icon-color":          { type: "COLOR", semantic: "text-on-interactive", figmaPath: "checkbox/icon-color" },
+    "checkbox-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",       figmaPath: "checkbox/icon-color-disabled" },
+
+    // ── LABEL TEXT ──
+    "checkbox-label-text":          { type: "COLOR", semantic: "text-default",  figmaPath: "checkbox/label-text" },
+    "checkbox-label-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "checkbox/label-text-disabled" },
+
+    // ── SHARED COLOR TOKEN ──
+    "checkbox-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "checkbox/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "checkbox-size":              { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 18, md: 20, lg: 24, xl: 28 },           figmaPath: "checkbox/size" },
+    "checkbox-border-radius":     { type: "FLOAT", unit: "px", sizes: { xs: 4,  sm: 4,  md: 5,  lg: 6,  xl: 7 },            figmaPath: "checkbox/border-radius" },
+    "checkbox-icon-size":         { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 12, md: 14, lg: 16, xl: 18 },           figmaPath: "checkbox/icon-size" },
+    "checkbox-label-font-size":   { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },           figmaPath: "checkbox/label-font-size" },
+    "checkbox-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14.4, sm: 16.8, md: 19.2, lg: 21.6, xl: 24 },   figmaPath: "checkbox/label-line-height" },
+    "checkbox-label-gap":         { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 },             figmaPath: "checkbox/label-gap" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "checkbox-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "checkbox/border-width" },
+  },
 };
 
 export const COMPONENT_NAMES = Object.keys(COMPONENT_TOKENS);
@@ -127,6 +172,7 @@ export const COMPONENT_NAMES = Object.keys(COMPONENT_TOKENS);
 export const COMPONENT_SIZE_KEYS = {
   button: ["xs", "sm", "md", "lg", "xl"],
   switch: ["xs", "sm", "md", "lg", "xl"],
+  checkbox: ["xs", "sm", "md", "lg", "xl"],
 };
 
 export function getColorTokens(componentName) {
