@@ -165,6 +165,57 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "checkbox-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "checkbox/border-width" },
   },
+
+  radio: {
+    // ── RADIO BACKGROUND — UNCHECKED (per state) ──
+    "radio-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "radio/background" },
+    "radio-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "radio/background-hover" },
+    "radio-background-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "radio/background-focus" },
+    "radio-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "radio/background-pressed" },
+    "radio-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "radio/background-disabled" },
+
+    // ── RADIO BACKGROUND — CHECKED — FILLED (per state) ──
+    "radio-filled-background-checked":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "radio/filled-background-checked" },
+    "radio-filled-background-checked-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "radio/filled-background-checked-hover" },
+    "radio-filled-background-checked-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "radio/filled-background-checked-focus" },
+    "radio-filled-background-checked-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "radio/filled-background-checked-pressed" },
+    "radio-filled-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "radio/filled-background-checked-disabled" },
+
+    // ── RADIO BACKGROUND — CHECKED — OUTLINE (per state) ──
+    "radio-outline-background-checked":          { type: "COLOR", semantic: "surface-default", figmaPath: "radio/outline-background-checked" },
+    "radio-outline-background-checked-hover":    { type: "COLOR", semantic: "surface-default", figmaPath: "radio/outline-background-checked-hover" },
+    "radio-outline-background-checked-focus":    { type: "COLOR", semantic: "surface-default", figmaPath: "radio/outline-background-checked-focus" },
+    "radio-outline-background-checked-pressed":  { type: "COLOR", semantic: "surface-default", figmaPath: "radio/outline-background-checked-pressed" },
+    "radio-outline-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "radio/outline-background-checked-disabled" },
+
+    // ── RADIO BORDER (per state) ──
+    "radio-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "radio/border" },
+    "radio-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "radio/border-hover" },
+    "radio-border-focus":    { type: "COLOR", semantic: "border-default",  figmaPath: "radio/border-focus" },
+    "radio-border-pressed":  { type: "COLOR", semantic: "border-default",  figmaPath: "radio/border-pressed" },
+    "radio-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "radio/border-disabled" },
+
+    // ── RADIO ICON (dot) COLOR ──
+    "radio-icon-color":          { type: "COLOR", semantic: "text-on-interactive", figmaPath: "radio/icon-color" },
+    "radio-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",       figmaPath: "radio/icon-color-disabled" },
+
+    // ── LABEL TEXT ──
+    "radio-label-text":          { type: "COLOR", semantic: "text-default",  figmaPath: "radio/label-text" },
+    "radio-label-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "radio/label-text-disabled" },
+
+    // ── SHARED COLOR TOKEN ──
+    "radio-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "radio/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "radio-size":              { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },           figmaPath: "radio/size" },
+    "radio-icon-size":         { type: "FLOAT", unit: "px", sizes: { xs: 6,  sm: 8,  md: 10, lg: 12, xl: 14 },           figmaPath: "radio/icon-size" },
+    "radio-label-font-size":   { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },           figmaPath: "radio/label-font-size" },
+    "radio-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14.4, sm: 16.8, md: 19.2, lg: 21.6, xl: 24 },   figmaPath: "radio/label-line-height" },
+    "radio-label-gap":         { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 },             figmaPath: "radio/label-gap" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "radio-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "radio/border-width" },
+  },
 };
 
 export const COMPONENT_NAMES = Object.keys(COMPONENT_TOKENS);
@@ -173,6 +224,7 @@ export const COMPONENT_SIZE_KEYS = {
   button: ["xs", "sm", "md", "lg", "xl"],
   switch: ["xs", "sm", "md", "lg", "xl"],
   checkbox: ["xs", "sm", "md", "lg", "xl"],
+  radio: ["xs", "sm", "md", "lg", "xl"],
 };
 
 export function getColorTokens(componentName) {

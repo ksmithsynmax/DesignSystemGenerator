@@ -452,6 +452,9 @@ async function buildComponents(varMap) {
   progress("Creating Checkbox component set...");
   var checkboxSet = await buildCheckboxComponentSet(varMap, page, font);
 
+  progress("Creating Radio component set...");
+  var radioSet = buildRadioComponentSet(varMap, page, font);
+
   // Position component sets side by side with gaps
   buttonSet.x = 0;
   buttonSet.y = 0;
@@ -459,6 +462,8 @@ async function buildComponents(varMap) {
   switchSet.y = 0;
   checkboxSet.x = switchSet.x + switchSet.width + compSetGap;
   checkboxSet.y = 0;
+  radioSet.x = checkboxSet.x + checkboxSet.width + compSetGap;
+  radioSet.y = 0;
 
   progress("Components created.");
 }
@@ -467,7 +472,7 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox" || child.name === "Radio")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
@@ -1158,6 +1163,221 @@ function checkboxIconColorPath(state) {
 function checkboxLabelTextPath(state) {
   if (state === "disabled") return "checkbox/label-text-disabled";
   return "checkbox/label-text";
+}
+
+// ---------------------------------------------------------------------------
+// Radio
+// ---------------------------------------------------------------------------
+
+function buildRadioComponentSet(varMap, page, font) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var variants = ["filled", "outline"];
+  var checkedStates = ["unchecked", "checked"];
+  var states = ["default", "hover", "focus", "pressed", "disabled"];
+  var labelModes = ["hide", "show"];
+  var components = [];
+
+  // Known radio sizes for layout
+  var sizeRadioSizes = { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 };
+  var sizeIconSizes = { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 };
+  var gap = 16;
+  var colGap = 16;
+
+  // Pre-calculate y offsets: rows = (size × state)
+  var rowYOffsets = [];
+  var runningY = 0;
+  for (var rsi = 0; rsi < sizes.length; rsi++) {
+    for (var rsti = 0; rsti < states.length; rsti++) {
+      rowYOffsets.push(runningY);
+      var rowH = sizeRadioSizes[sizes[rsi]];
+      if (rowH < 24) rowH = 24;
+      runningY += rowH + gap;
+    }
+  }
+
+  var colWidth = 160 + colGap;
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+
+    for (var chi = 0; chi < checkedStates.length; chi++) {
+      var checkedState = checkedStates[chi];
+      var capChecked = checkedState.charAt(0).toUpperCase() + checkedState.slice(1);
+      var isChecked = (checkedState === "checked");
+
+      for (var li = 0; li < labelModes.length; li++) {
+        var showLabel = (labelModes[li] === "show");
+        var capLabel = showLabel ? "Show" : "Hide";
+
+        for (var si = 0; si < sizes.length; si++) {
+          var size = sizes[si];
+          var capSize = size.toUpperCase();
+          var radioSize = sizeRadioSizes[size];
+          var iconSize = sizeIconSizes[size];
+
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+            var comp = figma.createComponent();
+            comp.name = "Variant=" + capVariant + ", Size=" + capSize +
+                        ", Checked=" + capChecked + ", State=" + capState +
+                        ", Label=" + capLabel;
+
+            // Root: horizontal auto-layout
+            comp.layoutMode = "HORIZONTAL";
+            comp.primaryAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "AUTO";
+            comp.counterAxisAlignItems = "CENTER";
+            comp.itemSpacing = 10;
+            comp.fills = [];
+
+            // Bind label gap
+            bindVar(comp, "itemSpacing", varMap["radio/label-gap-" + size]);
+
+            // --- Radio circle frame ---
+            var circle = figma.createFrame();
+            circle.name = "Radio";
+            circle.layoutMode = "HORIZONTAL";
+            circle.primaryAxisSizingMode = "FIXED";
+            circle.counterAxisSizingMode = "FIXED";
+            circle.primaryAxisAlignItems = "CENTER";
+            circle.counterAxisAlignItems = "CENTER";
+            circle.resize(radioSize, radioSize);
+            circle.cornerRadius = radioSize; // fully round
+            circle.clipsContent = true;
+
+            // Bind radio dimensions
+            bindVar(circle, "width", varMap["radio/size-" + size]);
+            bindVar(circle, "height", varMap["radio/size-" + size]);
+
+            // Radio fill
+            var bgPath = radioBgPath(variant, checkedState, state);
+            if (isChecked && variant === "filled") {
+              circle.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+            } else {
+              circle.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            }
+            bindPaintVar(circle, "fills", 0, varMap[bgPath]);
+
+            // Radio border
+            var borderPath = radioBorderPath(state);
+            if (!isChecked || variant === "outline") {
+              // Unchecked: always show border. Outline checked: also show border
+              circle.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+              circle.strokeWeight = 1.5;
+              circle.strokeAlign = "INSIDE";
+              bindPaintVar(circle, "strokes", 0, varMap[borderPath]);
+              bindVar(circle, "strokeWeight", varMap["radio/border-width"]);
+
+              // For outline checked, the border should use the primary color
+              if (isChecked && variant === "outline") {
+                var outlineBorderPath = radioBgPath("filled", "checked", state);
+                bindPaintVar(circle, "strokes", 0, varMap[outlineBorderPath]);
+              }
+            } else {
+              // Filled checked: no border
+              circle.strokes = [];
+            }
+
+            // --- Inner dot (only when checked) ---
+            if (isChecked) {
+              var dot = figma.createEllipse();
+              dot.name = "Dot";
+              dot.resize(iconSize, iconSize);
+              dot.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+
+              var iconColorPath = radioIconColorPath(variant, state);
+              bindPaintVar(dot, "fills", 0, varMap[iconColorPath]);
+              bindVar(dot, "width", varMap["radio/icon-size-" + size]);
+              bindVar(dot, "height", varMap["radio/icon-size-" + size]);
+
+              circle.appendChild(dot);
+            }
+
+            comp.appendChild(circle);
+
+            // --- Optional label ---
+            if (showLabel) {
+              var labelNode = figma.createText();
+              labelNode.name = "Label";
+              labelNode.fontName = font;
+              labelNode.characters = "Label";
+              labelNode.fontSize = 14;
+
+              var labelTextPath = radioLabelTextPath(state);
+              labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              bindPaintVar(labelNode, "fills", 0, varMap[labelTextPath]);
+              bindVar(labelNode, "fontSize", varMap["radio/label-font-size-" + size]);
+              comp.appendChild(labelNode);
+            }
+
+            // Focus ring
+            if (state === "focus") {
+              circle.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
+
+            // Disabled opacity
+            if (state === "disabled") {
+              comp.opacity = 0.6;
+            }
+
+            // Grid placement
+            var colIndex = (vi * checkedStates.length + chi) * labelModes.length + li;
+            var rowIndex = (si * states.length) + sti;
+            comp.x = colIndex * colWidth;
+            comp.y = rowYOffsets[rowIndex];
+            page.appendChild(comp);
+            components.push(comp);
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " radio variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Radio";
+  return componentSet;
+}
+
+// Helper: build figmaPath for radio background
+function radioBgPath(variant, checkedState, state) {
+  if (checkedState === "unchecked") {
+    if (state === "default") return "radio/background";
+    return "radio/background-" + state;
+  }
+  // checked
+  var prefix = "radio/" + variant + "-background-checked";
+  if (state === "default") return prefix;
+  return prefix + "-" + state;
+}
+
+// Helper: build figmaPath for radio border
+function radioBorderPath(state) {
+  if (state === "default") return "radio/border";
+  return "radio/border-" + state;
+}
+
+// Helper: build figmaPath for radio icon (dot) color
+function radioIconColorPath(variant, state) {
+  if (state === "disabled") return "radio/icon-color-disabled";
+  return "radio/icon-color";
+}
+
+// Helper: build figmaPath for radio label text
+function radioLabelTextPath(state) {
+  if (state === "disabled") return "radio/label-text-disabled";
+  return "radio/label-text";
 }
 
 // ---------------------------------------------------------------------------

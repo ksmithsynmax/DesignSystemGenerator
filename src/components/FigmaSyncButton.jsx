@@ -38,8 +38,6 @@ export default function FigmaSyncButton({ brands }) {
         alignItems: "center",
         gap: 12,
         padding: "12px 0",
-        marginBottom: 12,
-        borderBottom: "1px solid #2C2E33",
       }}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

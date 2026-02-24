@@ -10,7 +10,6 @@ import {
 } from "./data/componentTokens";
 import { resolveColor, resolveDimension, getComponentDefaultSize } from "./utils/resolveToken";
 import Section from "./components/shared/Section";
-import Tag from "./components/shared/Tag";
 import ComponentSelect from "./components/shared/ComponentSelect";
 import PrimitiveScale from "./components/editors/PrimitiveScale";
 import SemanticRow from "./components/editors/SemanticRow";
@@ -19,10 +18,14 @@ import DimensionTokenRow from "./components/editors/DimensionTokenRow";
 import ButtonPreview from "./components/previews/ButtonPreview";
 import SwitchPreview from "./components/previews/SwitchPreview";
 import CheckboxPreview from "./components/previews/CheckboxPreview";
+import RadioPreview from "./components/previews/RadioPreview";
 import TokenChain from "./components/TokenChain";
 import FigmaSyncButton from "./components/FigmaSyncButton";
+import { buildMarkdownExport } from "./utils/buildMarkdownExport";
+import { GLOBAL_PRIMITIVES } from "./data/brands";
 
 const BUTTON_VARIANTS = ["filled", "outlined", "ghost"];
+const RADIO_VARIANTS = ["filled", "outline"];
 
 export default function App() {
   const [brands, setBrands] = useState(INITIAL_BRANDS);
@@ -39,10 +42,12 @@ export default function App() {
   const buttonDefault = getComponentDefaultSize(brands, activeBrand, "button") || "sm";
   const switchDefault = getComponentDefaultSize(brands, activeBrand, "switch") || "md";
   const checkboxDefault = getComponentDefaultSize(brands, activeBrand, "checkbox") || "md";
+  const radioDefault = getComponentDefaultSize(brands, activeBrand, "radio") || "md";
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
   const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
+  const [activeRadioSize, setActiveRadioSize] = useState(radioDefault);
 
   // Sync active sizes when brand changes
   const handleBrandChange = useCallback((newBrand) => {
@@ -50,9 +55,11 @@ export default function App() {
     const btnDef = getComponentDefaultSize(brands, newBrand, "button") || "sm";
     const swDef = getComponentDefaultSize(brands, newBrand, "switch") || "md";
     const cbDef = getComponentDefaultSize(brands, newBrand, "checkbox") || "md";
+    const rdDef = getComponentDefaultSize(brands, newBrand, "radio") || "md";
     setActiveSize(btnDef);
     setActiveSwitchSize(swDef);
     setActiveCheckboxSize(cbDef);
+    setActiveRadioSize(rdDef);
   }, [brands]);
 
   // Sync active size when component changes
@@ -64,8 +71,11 @@ export default function App() {
       setActiveSwitchSize(switchDefault);
     } else if (newComp === "checkbox") {
       setActiveCheckboxSize(checkboxDefault);
+    } else if (newComp === "radio") {
+      setActiveRadioSize(radioDefault);
+      setActiveVariant("filled");
     }
-  }, [buttonDefault, switchDefault, checkboxDefault]);
+  }, [buttonDefault, switchDefault, checkboxDefault, radioDefault]);
 
   const updatePrimitive = useCallback(
     (colorName, index, value) => {
@@ -161,12 +171,9 @@ export default function App() {
           zIndex: 10,
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <span style={{ fontSize: 18, fontWeight: 700, color: "#E9ECEF" }}>
-            Token Pipeline
-          </span>
-          <Tag color="#868E96">POC — Button + Switch + Checkbox</Tag>
-        </div>
+        <span style={{ fontSize: 18, fontWeight: 700, color: "#E9ECEF" }}>
+          Design System Generator
+        </span>
         <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <span style={{ fontSize: 12, color: "#5C5F66" }}>Component:</span>
@@ -317,6 +324,18 @@ export default function App() {
               />
             )}
 
+            {activeTab === "preview" && activeComponent === "radio" && (
+              <RadioPreviewPanel
+                brands={brands}
+                activeBrand={activeBrand}
+                activeVariant={activeVariant}
+                setActiveVariant={setActiveVariant}
+                activeRadioSize={activeRadioSize}
+                setActiveRadioSize={setActiveRadioSize}
+                sizeKeys={sizeKeys}
+              />
+            )}
+
             {/* CHAIN TAB */}
             {activeTab === "chain" && (
               <TokenChain
@@ -355,6 +374,63 @@ export default function App() {
                   entries with -default aliases.
                 </p>
                 <FigmaSyncButton brands={brands} />
+
+                <div
+                  style={{
+                    borderTop: "1px solid #2C2E33",
+                    marginTop: 20,
+                    paddingTop: 20,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "#5C5F66",
+                      marginBottom: 12,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Markdown Export
+                  </div>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "#868E96",
+                      marginBottom: 16,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Download a markdown reference of all tokens, brand primitives,
+                    semantic mappings, and component definitions.
+                  </p>
+                  <button
+                    onClick={() => {
+                      const md = buildMarkdownExport(brands, GLOBAL_PRIMITIVES);
+                      const blob = new Blob([md], { type: "text/markdown" });
+                      const url = URL.createObjectURL(blob);
+                      const a = document.createElement("a");
+                      a.href = url;
+                      a.download = "design-system-tokens.md";
+                      a.click();
+                      URL.revokeObjectURL(url);
+                    }}
+                    style={{
+                      background: "#25262B",
+                      border: "1px solid #373A40",
+                      borderRadius: 6,
+                      padding: "8px 16px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "#C1C2C5",
+                      cursor: "pointer",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    Download Markdown
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -1585,6 +1661,264 @@ function CheckboxPreviewPanel({
                     borderBottom: "1px solid #2C2E33",
                   }}
                 >
+                  {v.figmaPath}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Radio Preview Panel ---------- */
+
+function RadioPreviewPanel({
+  brands,
+  activeBrand,
+  activeVariant,
+  setActiveVariant,
+  activeRadioSize,
+  setActiveRadioSize,
+  sizeKeys,
+}) {
+  const [copied, setCopied] = useState(false);
+  const [showLabel, setShowLabel] = useState(true);
+
+  const tokens = COMPONENT_TOKENS.radio;
+
+  const codeString = `import { Radio } from "@mantine/core";
+
+<Radio variant="${activeVariant}" size="${activeRadioSize}"${showLabel ? ' label="Radio label"' : ""} />`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(codeString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const resolvedVars = [];
+  for (const [name, def] of Object.entries(tokens)) {
+    if (def.type === TOKEN_TYPES.COLOR) {
+      const resolved = resolveColor(brands, activeBrand, def.semantic);
+      resolvedVars.push({ name, type: "COLOR", value: resolved, figmaPath: def.figmaPath });
+    } else if (def.type === TOKEN_TYPES.FLOAT || def.type === TOKEN_TYPES.STRING) {
+      const hasSizes = !!def.sizes;
+      const resolved = hasSizes
+        ? resolveDimension(brands, activeBrand, name, activeRadioSize)
+        : resolveDimension(brands, activeBrand, name);
+      const display = def.unit ? `${resolved}${def.unit}` : String(resolved);
+      const displayName = hasSizes ? `${name}-${activeRadioSize}` : name;
+      const displayPath = hasSizes ? `${def.figmaPath}-${activeRadioSize}` : def.figmaPath;
+      resolvedVars.push({ name: displayName, type: def.type, value: display, figmaPath: displayPath });
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 24, marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+            Variant
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {RADIO_VARIANTS.map((v) => (
+              <button
+                key={v}
+                onClick={() => setActiveVariant(v)}
+                style={{
+                  background: activeVariant === v ? "#373A40" : "transparent",
+                  color: activeVariant === v ? "#E9ECEF" : "#5C5F66",
+                  border: "1px solid #373A40",
+                  borderRadius: 4,
+                  padding: "4px 12px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  fontFamily: "monospace",
+                }}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+            Size
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {sizeKeys.map((s) => (
+              <button
+                key={s}
+                onClick={() => setActiveRadioSize(s)}
+                style={{
+                  background: activeRadioSize === s ? "#373A40" : "transparent",
+                  color: activeRadioSize === s ? "#E9ECEF" : "#5C5F66",
+                  border: "1px solid #373A40",
+                  borderRadius: 4,
+                  padding: "4px 10px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  fontFamily: "monospace",
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+            Label
+          </div>
+          <button
+            onClick={() => setShowLabel((v) => !v)}
+            style={{
+              background: showLabel ? "#373A40" : "transparent",
+              color: showLabel ? "#E9ECEF" : "#5C5F66",
+              border: "1px solid #373A40",
+              borderRadius: 4,
+              padding: "4px 12px",
+              fontSize: 12,
+              cursor: "pointer",
+              fontFamily: "monospace",
+            }}
+          >
+            {showLabel ? "on" : "off"}
+          </button>
+        </div>
+      </div>
+
+      {/* Single radio preview */}
+      <div
+        style={{
+          background: "#1A1B1E",
+          borderRadius: 8,
+          padding: 32,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <RadioPreview
+          brands={brands}
+          brandId={activeBrand}
+          variant={activeVariant}
+          size={activeRadioSize}
+          label={showLabel ? "Radio label" : undefined}
+        />
+      </div>
+
+      {/* All variants x sizes matrix */}
+      <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+        All Variants x Sizes
+      </div>
+      <div
+        style={{
+          background: "#1A1B1E",
+          borderRadius: 8,
+          padding: 20,
+          overflowX: "auto",
+          marginBottom: 24,
+        }}
+      >
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left", padding: "6px 12px", fontSize: 11, color: "#5C5F66", fontFamily: "monospace" }} />
+              {sizeKeys.map((s) => (
+                <th key={s} style={{ textAlign: "center", padding: "6px 12px", fontSize: 11, color: "#5C5F66", fontFamily: "monospace" }}>
+                  {s}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {RADIO_VARIANTS.flatMap((v) =>
+              ["unchecked", "checked"].map((state) => (
+                <tr key={`${v}-${state}`}>
+                  <td style={{ padding: "10px 12px", fontSize: 12, fontFamily: "monospace", color: "#868E96", fontWeight: 500, whiteSpace: "nowrap" }}>
+                    {v} / {state}
+                  </td>
+                  {sizeKeys.map((s) => (
+                    <td key={s} style={{ padding: "10px 12px", textAlign: "center" }}>
+                      <RadioPreview brands={brands} brandId={activeBrand} variant={v} size={s} checked={state === "checked"} readOnly />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Component Code */}
+      <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+        Component Code — {activeVariant} / {activeRadioSize}
+      </div>
+      <div style={{ position: "relative", background: "#1A1B1E", borderRadius: 8, padding: 16, marginBottom: 24 }}>
+        <button
+          onClick={handleCopy}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            background: copied ? "#2F9E44" : "#373A40",
+            color: copied ? "#fff" : "#C1C2C5",
+            border: "none",
+            borderRadius: 4,
+            padding: "4px 10px",
+            fontSize: 11,
+            cursor: "pointer",
+            transition: "background 0.2s",
+          }}
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
+        <pre style={{ margin: 0, color: "#C1C2C5", fontSize: 12, fontFamily: "monospace", lineHeight: 1.5, overflowX: "auto", whiteSpace: "pre" }}>
+          {highlightCode(codeString)}
+        </pre>
+      </div>
+
+      {/* Resolved Variables */}
+      <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+        Resolved Variables — {activeVariant} / {activeRadioSize}
+      </div>
+      <div style={{ background: "#1A1B1E", borderRadius: 8, padding: 16, overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>
+            <tr>
+              {["Token", "Type", "Value", "Figma Path"].map((h) => (
+                <th
+                  key={h}
+                  style={{ textAlign: "left", padding: "6px 10px", fontSize: 10, color: "#5C5F66", fontFamily: "monospace", borderBottom: "1px solid #2C2E33", textTransform: "uppercase", letterSpacing: "0.05em" }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {resolvedVars.map((v) => (
+              <tr key={v.name}>
+                <td style={{ padding: "5px 10px", fontSize: 11, fontFamily: "monospace", color: "#C1C2C5", borderBottom: "1px solid #2C2E33" }}>
+                  {v.name}
+                </td>
+                <td style={{ padding: "5px 10px", fontSize: 10, borderBottom: "1px solid #2C2E33" }}>
+                  <span style={{ background: v.type === "COLOR" ? "#862E9C" : v.type === "STRING" ? "#5C940D" : "#1971C2", color: "#fff", borderRadius: 3, padding: "1px 6px", fontSize: 9, fontWeight: 600, fontFamily: "monospace" }}>
+                    {v.type}
+                  </span>
+                </td>
+                <td style={{ padding: "5px 10px", fontSize: 11, fontFamily: "monospace", color: "#C1C2C5", borderBottom: "1px solid #2C2E33", display: "flex", alignItems: "center", gap: 6 }}>
+                  {v.type === "COLOR" && (
+                    <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, background: v.value, border: "1px solid #373A40", flexShrink: 0 }} />
+                  )}
+                  {v.value}
+                </td>
+                <td style={{ padding: "5px 10px", fontSize: 10, fontFamily: "monospace", color: "#5C5F66", borderBottom: "1px solid #2C2E33" }}>
                   {v.figmaPath}
                 </td>
               </tr>
