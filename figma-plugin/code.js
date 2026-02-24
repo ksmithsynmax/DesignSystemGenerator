@@ -11,166 +11,421 @@ figma.ui.onmessage = async function (msg) {
 };
 
 async function syncTokens(payload) {
-  var brandIds = Object.keys(payload);
+  // Extract globalPrimitives and brand IDs from payload
+  var globalPrimitives = payload.globalPrimitives || {};
+  var allKeys = Object.keys(payload);
+  var brandIds = [];
+  for (var ki = 0; ki < allKeys.length; ki++) {
+    if (allKeys[ki] !== "globalPrimitives") {
+      brandIds.push(allKeys[ki]);
+    }
+  }
   if (brandIds.length === 0) throw new Error("No brands in payload");
 
   progress("Starting sync for brands: " + brandIds.join(", "));
 
-  // Step 1: Find or create the "Components" collection
-  progress("Step 1: Finding or creating Components collection...");
+  // ── Step 1: Find or create collections ──
+  progress("Step 1: Finding or creating collections...");
   var collections = await figma.variables.getLocalVariableCollectionsAsync();
-  var collection = null;
-  for (var ci = 0; ci < collections.length; ci++) {
-    if (collections[ci].name === "Components") {
-      collection = collections[ci];
+
+  // Primitive collections: Global (single mode) + one per brand (single mode)
+  var globalPrimCol = findOrCreateCollection(collections, "Primitive/Global");
+  var brandPrimCols = {};
+  for (var bci = 0; bci < brandIds.length; bci++) {
+    var bId = brandIds[bci];
+    var brandName = bId.charAt(0).toUpperCase() + bId.slice(1);
+    brandPrimCols[bId] = findOrCreateCollection(collections, "Primitive/" + brandName);
+  }
+
+  // Semantic + Components: brand × theme modes
+  var semanticCol = findOrCreateCollection(collections, "Semantic");
+  var componentsCol = findOrCreateCollection(collections, "Components");
+
+  // ── Step 2: Build mode entries (brand × theme) and set up modes ──
+  progress("Step 2: Setting up brand × theme modes...");
+  var themes = ["light", "dark"];
+  var modeEntries = [];
+  for (var mei = 0; mei < brandIds.length; mei++) {
+    var meBrandId = brandIds[mei];
+    var meCapBrand = meBrandId.charAt(0).toUpperCase() + meBrandId.slice(1);
+    for (var ti = 0; ti < themes.length; ti++) {
+      var capTheme = themes[ti].charAt(0).toUpperCase() + themes[ti].slice(1);
+      modeEntries.push({
+        key: meBrandId + "-" + themes[ti],
+        name: meCapBrand + " " + capTheme,
+        brandId: meBrandId,
+        theme: themes[ti],
+      });
+    }
+  }
+
+  var semModes = ensureCollectionModes(semanticCol, modeEntries);
+  var compModes = ensureCollectionModes(componentsCol, modeEntries);
+
+  // Build syncModes — modes that succeeded on both collections
+  var syncModes = [];
+  for (var smi = 0; smi < modeEntries.length; smi++) {
+    var smEntry = modeEntries[smi];
+    if (semModes.modeMap[smEntry.key] && compModes.modeMap[smEntry.key]) {
+      syncModes.push(smEntry);
+    }
+  }
+  if (syncModes.length === 0) throw new Error("No modes could be created");
+
+  // Extract unique brand IDs from successful modes
+  var syncBrands = [];
+  var syncBrandSet = {};
+  for (var sbi = 0; sbi < syncModes.length; sbi++) {
+    var sbId = syncModes[sbi].brandId;
+    if (!syncBrandSet[sbId]) {
+      syncBrands.push(sbId);
+      syncBrandSet[sbId] = true;
+    }
+  }
+  progress("Syncing " + syncModes.length + " modes across " + syncBrands.length + " brands");
+
+  // ── Step 3: Build variable lookup maps ──
+  progress("Step 3: Building variable lookups...");
+  var allVars = await figma.variables.getLocalVariablesAsync();
+  var globalPrimVarMap = {};   // variables in Primitive/Global
+  var brandPrimVarMaps = {};   // { brandId: { varName: var } }
+  var semanticVarMap = {};
+  var componentVarMap = {};
+
+  for (var bmi = 0; bmi < syncBrands.length; bmi++) {
+    brandPrimVarMaps[syncBrands[bmi]] = {};
+  }
+
+  for (var vi = 0; vi < allVars.length; vi++) {
+    var v = allVars[vi];
+    if (v.variableCollectionId === globalPrimCol.id) {
+      globalPrimVarMap[v.name] = v;
+    } else if (v.variableCollectionId === semanticCol.id) {
+      semanticVarMap[v.name] = v;
+    } else if (v.variableCollectionId === componentsCol.id) {
+      componentVarMap[v.name] = v;
+    } else {
+      // Check brand primitive collections
+      for (var bvi = 0; bvi < syncBrands.length; bvi++) {
+        var bvId = syncBrands[bvi];
+        if (brandPrimCols[bvId] && v.variableCollectionId === brandPrimCols[bvId].id) {
+          brandPrimVarMaps[bvId][v.name] = v;
+          break;
+        }
+      }
+    }
+  }
+
+  // ── Clean up old "Primitives" collection (replaced by Primitive/Global + Primitive/[Brand]) ──
+  for (var oci = 0; oci < collections.length; oci++) {
+    if (collections[oci].name === "Primitives") {
+      progress("Removing old 'Primitives' collection...");
+      var oldPrimCol = collections[oci];
+      // Remove variables in the old collection first
+      for (var ovi = 0; ovi < allVars.length; ovi++) {
+        if (allVars[ovi].variableCollectionId === oldPrimCol.id) {
+          allVars[ovi].remove();
+        }
+      }
+      oldPrimCol.remove();
+      progress("Old 'Primitives' collection removed.");
       break;
     }
   }
-  if (!collection) {
-    collection = figma.variables.createVariableCollection("Components");
-    progress("Created new Components collection");
-  } else {
-    progress("Found existing Components collection");
-  }
 
-  // Step 2: Ensure one mode per brand
-  progress("Step 2: Setting up modes...");
-  var modeMap = {};
-  var existingModes = collection.modes;
-  var syncBrands = [];
-
-  for (var i = 0; i < brandIds.length; i++) {
-    var brandId = brandIds[i];
-    var brandName = brandId.charAt(0).toUpperCase() + brandId.slice(1);
-    var existingMode = null;
-
-    for (var mi = 0; mi < existingModes.length; mi++) {
-      if (existingModes[mi].name === brandName) {
-        existingMode = existingModes[mi];
-        break;
-      }
-    }
-
-    if (existingMode) {
-      modeMap[brandId] = existingMode.modeId;
-      syncBrands.push(brandId);
-    } else if (i === 0 && existingModes.length === 1 && existingModes[0].name === "Mode 1") {
-      collection.renameMode(existingModes[0].modeId, brandName);
-      modeMap[brandId] = existingModes[0].modeId;
-      syncBrands.push(brandId);
-    } else {
-      try {
-        var newModeId = collection.addMode(brandName);
-        modeMap[brandId] = newModeId;
-        syncBrands.push(brandId);
-      } catch (modeErr) {
-        progress("Could not add mode for " + brandName + " (plan limit?) - skipping");
-      }
-    }
-  }
-
-  if (syncBrands.length === 0) throw new Error("No brand modes could be created");
-  progress("Syncing brands: " + syncBrands.join(", "));
-
-  // Step 3: Build variable lookup map
-  progress("Step 3: Building variable lookup...");
-  var allVars = await figma.variables.getLocalVariablesAsync();
-  var varMap = {};
-  for (var vi = 0; vi < allVars.length; vi++) {
-    if (allVars[vi].variableCollectionId === collection.id) {
-      varMap[allVars[vi].name] = allVars[vi];
-    }
-  }
-
-  // Step 4: Get component tokens from first synced brand
   var firstBrand = payload[syncBrands[0]];
-  if (!firstBrand || !firstBrand.components) {
-    throw new Error("No components found in payload for " + syncBrands[0]);
+  var totalCreated = 0;
+  var totalAliases = 0;
+
+  // ══════════════════════════════════════════════════════════════
+  // PHASE 1a: Primitive/Global — single mode, raw COLOR values
+  // ══════════════════════════════════════════════════════════════
+  progress("Phase 1a: Syncing Primitive/Global...");
+  var globalModeId = globalPrimCol.modes[0].modeId;
+  var globalPaletteNames = Object.keys(globalPrimitives);
+  for (var gpi = 0; gpi < globalPaletteNames.length; gpi++) {
+    var gPalette = globalPaletteNames[gpi];
+    var gPaletteArr = globalPrimitives[gPalette];
+    for (var gIdx = 0; gIdx < gPaletteArr.length; gIdx++) {
+      var gVarName = gPalette + "/" + gIdx;
+      var gVar = globalPrimVarMap[gVarName];
+      if (!gVar) {
+        gVar = figma.variables.createVariable(gVarName, globalPrimCol, "COLOR");
+        globalPrimVarMap[gVarName] = gVar;
+        totalCreated++;
+      }
+      gVar.setValueForMode(globalModeId, hexToFigmaRgb(gPaletteArr[gIdx]));
+    }
   }
+  // Remove stale global primitive variables (from previous syncs with different palettes)
+  var globalExpected = {};
+  for (var gei = 0; gei < globalPaletteNames.length; gei++) {
+    var gePalette = globalPaletteNames[gei];
+    for (var geIdx = 0; geIdx < globalPrimitives[gePalette].length; geIdx++) {
+      globalExpected[gePalette + "/" + geIdx] = true;
+    }
+  }
+  var globalStale = 0;
+  var globalVarNames = Object.keys(globalPrimVarMap);
+  for (var gsi = 0; gsi < globalVarNames.length; gsi++) {
+    if (!globalExpected[globalVarNames[gsi]]) {
+      globalPrimVarMap[globalVarNames[gsi]].remove();
+      delete globalPrimVarMap[globalVarNames[gsi]];
+      globalStale++;
+    }
+  }
+  if (globalStale > 0) progress("  Removed " + globalStale + " stale Primitive/Global variables");
+  progress("Primitive/Global: " + Object.keys(globalPrimVarMap).length + " variables");
+
+  // ══════════════════════════════════════════════════════════════
+  // PHASE 1b: Primitive/[Brand] — single mode per brand, raw COLOR values
+  // ══════════════════════════════════════════════════════════════
+  for (var bpi = 0; bpi < syncBrands.length; bpi++) {
+    var bpId = syncBrands[bpi];
+    var bpName = bpId.charAt(0).toUpperCase() + bpId.slice(1);
+    progress("Phase 1b: Syncing Primitive/" + bpName + "...");
+    var bpCol = brandPrimCols[bpId];
+    var bpModeId = bpCol.modes[0].modeId;
+    var bpPalettes = payload[bpId].primitives;
+    var bpPaletteNames = Object.keys(bpPalettes);
+    for (var bppi = 0; bppi < bpPaletteNames.length; bppi++) {
+      var bpPalette = bpPaletteNames[bppi];
+      var bpArr = bpPalettes[bpPalette];
+      for (var bpIdx = 0; bpIdx < bpArr.length; bpIdx++) {
+        var bpVarName = bpPalette + "/" + bpIdx;
+        var bpVar = brandPrimVarMaps[bpId][bpVarName];
+        if (!bpVar) {
+          bpVar = figma.variables.createVariable(bpVarName, bpCol, "COLOR");
+          brandPrimVarMaps[bpId][bpVarName] = bpVar;
+          totalCreated++;
+        }
+        bpVar.setValueForMode(bpModeId, hexToFigmaRgb(bpArr[bpIdx]));
+      }
+    }
+    // Remove stale brand primitive variables (e.g. old white/gray from previous syncs)
+    var bpExpected = {};
+    for (var bei = 0; bei < bpPaletteNames.length; bei++) {
+      var bePalette = bpPaletteNames[bei];
+      for (var beIdx = 0; beIdx < bpPalettes[bePalette].length; beIdx++) {
+        bpExpected[bePalette + "/" + beIdx] = true;
+      }
+    }
+    var bpStale = 0;
+    var bpVarNames = Object.keys(brandPrimVarMaps[bpId]);
+    for (var bsi = 0; bsi < bpVarNames.length; bsi++) {
+      if (!bpExpected[bpVarNames[bsi]]) {
+        brandPrimVarMaps[bpId][bpVarNames[bsi]].remove();
+        delete brandPrimVarMaps[bpId][bpVarNames[bsi]];
+        bpStale++;
+      }
+    }
+    if (bpStale > 0) progress("  Removed " + bpStale + " stale Primitive/" + bpName + " variables");
+    progress("Primitive/" + bpName + ": " + Object.keys(brandPrimVarMaps[bpId]).length + " variables");
+  }
+
+  // ══════════════════════════════════════════════════════════════
+  // PHASE 2: Semantic — alias to Primitive variables (brand × theme modes)
+  // ══════════════════════════════════════════════════════════════
+  progress("Phase 2: Syncing Semantic tokens...");
+  // Get semantic keys from first mode's light theme
+  var firstBrandSemantic = firstBrand.semantic.light || firstBrand.semantic;
+  var semanticKeys = Object.keys(firstBrandSemantic);
+  for (var si = 0; si < semanticKeys.length; si++) {
+    var semKey = semanticKeys[si];
+    var semVar = semanticVarMap[semKey];
+    if (!semVar) {
+      semVar = figma.variables.createVariable(semKey, semanticCol, "COLOR");
+      semanticVarMap[semKey] = semVar;
+      totalCreated++;
+    }
+    for (var smi2 = 0; smi2 < syncModes.length; smi2++) {
+      var mode = syncModes[smi2];
+      var modeSemantic = payload[mode.brandId].semantic[mode.theme];
+      if (!modeSemantic) continue;
+      var semToken = modeSemantic[semKey];
+      if (!semToken) continue;
+      // semToken.alias is e.g. "blue/5" — look up in brand primitives first, then global
+      var primTarget = brandPrimVarMaps[mode.brandId][semToken.alias] || globalPrimVarMap[semToken.alias];
+      if (primTarget) {
+        var semAlias = figma.variables.createVariableAlias(primTarget);
+        semVar.setValueForMode(semModes.modeMap[mode.key], semAlias);
+        totalAliases++;
+      } else {
+        // Fallback: set raw value if primitive not found
+        progress("  Warning: primitive " + semToken.alias + " not found for " + mode.key + ", using raw value");
+        semVar.setValueForMode(semModes.modeMap[mode.key], hexToFigmaRgb(semToken.value));
+      }
+    }
+  }
+  progress("Semantic: " + Object.keys(semanticVarMap).length + " variables, " + totalAliases + " aliases");
+
+  // ══════════════════════════════════════════════════════════════
+  // PHASE 3: Components — alias to Semantic (COLOR) or raw (FLOAT/STRING)
+  // ══════════════════════════════════════════════════════════════
+  progress("Phase 3: Syncing Component tokens...");
   var componentKeys = Object.keys(firstBrand.components);
-  progress("Step 4: Processing " + componentKeys.length + " component tokens...");
+  var compCreated = 0;
+  var compAliases = 0;
 
-  var created = 0;
-  var updated = 0;
-
-  // Step 5: First pass — create/update non-alias variables
-  for (var ki = 0; ki < componentKeys.length; ki++) {
-    var figmaPath = componentKeys[ki];
+  // Pass 1: Non-alias variables
+  for (var ki2 = 0; ki2 < componentKeys.length; ki2++) {
+    var figmaPath = componentKeys[ki2];
     var tokenDef = firstBrand.components[figmaPath];
     if (tokenDef.aliasOf) continue;
 
-    var variable = varMap[figmaPath];
-    if (!variable) {
+    var compVar = componentVarMap[figmaPath];
+    if (!compVar) {
       var resolvedType = "FLOAT";
       if (tokenDef.type === "COLOR") resolvedType = "COLOR";
       else if (tokenDef.type === "STRING") resolvedType = "STRING";
 
-      variable = figma.variables.createVariable(figmaPath, collection, resolvedType);
-      varMap[figmaPath] = variable;
-      created++;
-    } else {
-      updated++;
+      compVar = figma.variables.createVariable(figmaPath, componentsCol, resolvedType);
+      componentVarMap[figmaPath] = compVar;
+      compCreated++;
     }
 
-    for (var bi = 0; bi < syncBrands.length; bi++) {
-      var bId = syncBrands[bi];
-      var brandToken = payload[bId].components[figmaPath];
+    for (var cmi = 0; cmi < syncModes.length; cmi++) {
+      var cMode = syncModes[cmi];
+      var brandToken = payload[cMode.brandId].components[figmaPath];
       if (!brandToken) continue;
 
-      var modeId = modeMap[bId];
+      var cModeId = compModes.modeMap[cMode.key];
+
       if (brandToken.type === "COLOR") {
-        variable.setValueForMode(modeId, hexToFigmaRgb(brandToken.value));
+        // Try to alias to semantic variable
+        if (brandToken.alias && semanticVarMap[brandToken.alias]) {
+          var compAlias = figma.variables.createVariableAlias(semanticVarMap[brandToken.alias]);
+          compVar.setValueForMode(cModeId, compAlias);
+          compAliases++;
+        } else {
+          // No semantic (transparent/null) — set raw value
+          compVar.setValueForMode(cModeId, hexToFigmaRgb(brandToken.value));
+        }
       } else if (brandToken.type === "FLOAT") {
-        variable.setValueForMode(modeId, (brandToken.value != null) ? brandToken.value : 0);
+        compVar.setValueForMode(cModeId, (brandToken.value != null) ? brandToken.value : 0);
       } else if (brandToken.type === "STRING") {
-        variable.setValueForMode(modeId, (brandToken.value != null) ? brandToken.value : "");
+        compVar.setValueForMode(cModeId, (brandToken.value != null) ? brandToken.value : "");
       }
     }
   }
 
-  progress("Variables: " + created + " created, " + updated + " updated. Wiring aliases...");
-
-  // Step 6: Second pass — handle -default alias tokens
-  var aliases = 0;
+  // Pass 2: -default alias tokens (within Components collection)
   for (var ai = 0; ai < componentKeys.length; ai++) {
     var aliasPath = componentKeys[ai];
     var aliasDef = firstBrand.components[aliasPath];
     if (!aliasDef.aliasOf) continue;
 
-    var aliasVar = varMap[aliasPath];
+    var aliasVar = componentVarMap[aliasPath];
     if (!aliasVar) {
       var aliasType = (aliasDef.type === "STRING") ? "STRING" : "FLOAT";
-      aliasVar = figma.variables.createVariable(aliasPath, collection, aliasType);
-      varMap[aliasPath] = aliasVar;
+      aliasVar = figma.variables.createVariable(aliasPath, componentsCol, aliasType);
+      componentVarMap[aliasPath] = aliasVar;
+      compCreated++;
     }
 
-    for (var abi = 0; abi < syncBrands.length; abi++) {
-      var abId = syncBrands[abi];
-      var abToken = payload[abId].components[aliasPath];
+    for (var ami = 0; ami < syncModes.length; ami++) {
+      var aMode = syncModes[ami];
+      var abToken = payload[aMode.brandId].components[aliasPath];
       if (!abToken || !abToken.aliasOf) continue;
 
-      var targetVar = varMap[abToken.aliasOf];
+      var targetVar = componentVarMap[abToken.aliasOf];
       if (targetVar) {
-        var abModeId = modeMap[abId];
-        var alias = figma.variables.createVariableAlias(targetVar);
-        aliasVar.setValueForMode(abModeId, alias);
-        aliases++;
+        var abModeId = compModes.modeMap[aMode.key];
+        var defaultAlias = figma.variables.createVariableAlias(targetVar);
+        aliasVar.setValueForMode(abModeId, defaultAlias);
+        compAliases++;
       }
     }
   }
 
-  progress("Variables done: " + created + " created, " + updated + " updated, " + aliases + " aliases.");
+  totalCreated += compCreated;
+  totalAliases += compAliases;
+  progress("Components: " + compCreated + " created, " + compAliases + " aliases");
 
-  // Step 7: Build visual components
-  progress("Step 7: Building visual components...");
-  await buildComponents(varMap);
+  // ── Build visual components ──
+  progress("Building visual components...");
+  await buildComponents(componentVarMap);
 
-  var doneMsg = "Sync complete! " + created + " vars, " + aliases + " aliases, components built.";
-  if (syncBrands.length < brandIds.length) {
-    doneMsg += " (" + (brandIds.length - syncBrands.length) + " brands skipped)";
+  var doneMsg = "Sync complete! " + totalCreated + " vars, " + totalAliases + " aliases, " + syncModes.length + " modes, components built.";
+  if (syncModes.length < modeEntries.length) {
+    doneMsg += " (" + (modeEntries.length - syncModes.length) + " modes skipped)";
   }
   progress(doneMsg);
   figma.ui.postMessage({ type: "sync-complete", success: true, message: doneMsg });
+}
+
+// ---------------------------------------------------------------------------
+// Collection helpers
+// ---------------------------------------------------------------------------
+
+function findOrCreateCollection(collections, name) {
+  for (var i = 0; i < collections.length; i++) {
+    if (collections[i].name === name) {
+      return collections[i];
+    }
+  }
+  return figma.variables.createVariableCollection(name);
+}
+
+function ensureCollectionModes(collection, modeEntries) {
+  var modeMap = {};
+  var existingModes = collection.modes.slice();
+  var usedModeIds = {};
+
+  // First pass: find exact name matches
+  for (var i = 0; i < modeEntries.length; i++) {
+    var entry = modeEntries[i];
+    for (var mi = 0; mi < existingModes.length; mi++) {
+      if (existingModes[mi].name === entry.name) {
+        modeMap[entry.key] = existingModes[mi].modeId;
+        usedModeIds[existingModes[mi].modeId] = true;
+        break;
+      }
+    }
+  }
+
+  // Collect unused existing modes (for renaming)
+  var unusedModes = [];
+  for (var ui = 0; ui < existingModes.length; ui++) {
+    if (!usedModeIds[existingModes[ui].modeId]) {
+      unusedModes.push(existingModes[ui]);
+    }
+  }
+
+  // Second pass: for unmatched entries, reuse unused modes or create new
+  for (var j = 0; j < modeEntries.length; j++) {
+    if (modeMap[modeEntries[j].key]) continue; // already matched
+
+    if (unusedModes.length > 0) {
+      var reuse = unusedModes.shift();
+      collection.renameMode(reuse.modeId, modeEntries[j].name);
+      modeMap[modeEntries[j].key] = reuse.modeId;
+      usedModeIds[reuse.modeId] = true;
+    } else {
+      try {
+        var newId = collection.addMode(modeEntries[j].name);
+        modeMap[modeEntries[j].key] = newId;
+        usedModeIds[newId] = true;
+      } catch (modeErr) {
+        progress("Could not add mode " + modeEntries[j].name + " on " + collection.name + " — skipping");
+      }
+    }
+  }
+
+  // Clean up leftover unused modes
+  var finalModes = collection.modes;
+  for (var fi = finalModes.length - 1; fi >= 0; fi--) {
+    if (!usedModeIds[finalModes[fi].modeId]) {
+      try {
+        collection.removeMode(finalModes[fi].modeId);
+        progress("Removed old mode '" + finalModes[fi].name + "' from " + collection.name);
+      } catch (e) {
+        // Can't remove last mode — safe to ignore
+      }
+    }
+  }
+
+  return { modeMap: modeMap };
 }
 
 // ---------------------------------------------------------------------------

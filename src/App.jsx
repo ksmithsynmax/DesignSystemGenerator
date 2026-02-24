@@ -141,9 +141,12 @@ export default function App() {
       style={{
         background: "#1A1B1E",
         color: "#C1C2C5",
-        minHeight: "100vh",
+        height: "100vh",
+        display: "flex",
+        flexDirection: "column",
         fontFamily:
           "-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif",
+        overflow: "hidden",
       }}
     >
       {/* Header */}
@@ -154,6 +157,8 @@ export default function App() {
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
+          position: "relative",
+          zIndex: 10,
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
@@ -187,7 +192,7 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ display: "flex", height: "calc(100vh - 57px)" }}>
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
         {/* Left Panel — Token Layers */}
         <div
           style={{

@@ -120,7 +120,7 @@ export default function ComponentSelect({
           style={{
             position: "absolute",
             top: "100%",
-            left: 0,
+            right: 0,
             marginTop: 4,
             background: "#25262B",
             border: "1px solid #373A40",

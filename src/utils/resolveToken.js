@@ -1,11 +1,19 @@
 import { COMPONENT_TOKENS, TOKEN_TYPES } from "../data/componentTokens";
+import { GLOBAL_PRIMITIVES } from "../data/brands";
 
-export function resolveColor(brands, brandId, semanticKey) {
+export function resolveColor(brands, brandId, semanticKey, theme = "light") {
   if (!semanticKey) return "transparent";
   const brand = brands[brandId];
-  const mapping = brand.semanticMap[semanticKey];
+  // Merge dark overrides when theme is dark
+  const map = theme === "dark"
+    ? { ...brand.semanticMap, ...(brand.darkSemanticOverrides || {}) }
+    : brand.semanticMap;
+  const mapping = map[semanticKey];
   if (!mapping) return "#FF00FF";
-  return brand.primitives[mapping.color]?.[mapping.index] ?? "#FF00FF";
+  // Check brand primitives first, then global primitives
+  return brand.primitives[mapping.color]?.[mapping.index]
+    ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
+    ?? "#FF00FF";
 }
 
 export function resolveDimension(brands, brandId, tokenName, size) {
