@@ -458,6 +458,12 @@ async function buildComponents(varMap) {
   progress("Creating Chip component set...");
   var chipSet = await buildChipComponentSet(varMap, page, font);
 
+  progress("Creating Tooltip component set...");
+  var tooltipSet = buildTooltipComponentSet(varMap, page, font);
+
+  progress("Creating TextInput component set...");
+  var textInputSet = buildTextInputComponentSet(varMap, page, font);
+
   // Position component sets side by side with gaps
   buttonSet.x = 0;
   buttonSet.y = 0;
@@ -469,9 +475,13 @@ async function buildComponents(varMap) {
   radioSet.y = 0;
   chipSet.x = radioSet.x + radioSet.width + compSetGap;
   chipSet.y = 0;
+  tooltipSet.x = chipSet.x + chipSet.width + compSetGap;
+  tooltipSet.y = 0;
+  textInputSet.x = tooltipSet.x + tooltipSet.width + compSetGap;
+  textInputSet.y = 0;
 
   // Scroll viewport to show all component sets
-  figma.viewport.scrollAndZoomIntoView([buttonSet, switchSet, checkboxSet, radioSet, chipSet]);
+  figma.viewport.scrollAndZoomIntoView([buttonSet, switchSet, checkboxSet, radioSet, chipSet, tooltipSet, textInputSet]);
 
   progress("Components created.");
 }
@@ -480,13 +490,14 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Tooltip" || child.name === "TextInput")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
     if (child.type === "COMPONENT" && (
       child.name.indexOf("Variant=") === 0 || child.name.indexOf("State=") === 0 ||
-      child.name.indexOf("Size=") === 0 || child.name.indexOf("Checked=") === 0
+      child.name.indexOf("Size=") === 0 || child.name.indexOf("Checked=") === 0 ||
+      child.name.indexOf("Label=") === 0 || child.name.indexOf("Direction=") === 0
     )) {
       child.remove();
     }
@@ -1630,6 +1641,388 @@ function chipIconColorPath(variant, state) {
   if (variant === "outline") return "chip/outline-text-checked";
   if (variant === "light") return "chip/light-text-checked";
   return "chip/icon-color";
+}
+
+// ---------------------------------------------------------------------------
+// Tooltip Component Set
+// ---------------------------------------------------------------------------
+
+function buildTooltipComponentSet(varMap, page, font) {
+  var directions = ["top", "bottom", "left", "right"];
+  var arrowStates = ["with-arrow", "without-arrow"];
+  var components = [];
+  var arrowSize = 7;
+  var gap = 16;
+
+  for (var di = 0; di < directions.length; di++) {
+    for (var ai = 0; ai < arrowStates.length; ai++) {
+      var direction = directions[di];
+      var hasArrow = arrowStates[ai] === "with-arrow";
+      var isVertical = (direction === "top" || direction === "bottom");
+
+      // Outer component wraps body + optional arrow
+      var comp = figma.createComponent();
+      comp.name = "Direction=" + direction + ", Arrow=" + arrowStates[ai];
+      comp.layoutMode = isVertical ? "VERTICAL" : "HORIZONTAL";
+      comp.primaryAxisAlignItems = "CENTER";
+      comp.counterAxisAlignItems = "CENTER";
+      comp.primaryAxisSizingMode = "AUTO";
+      comp.counterAxisSizingMode = "AUTO";
+      comp.itemSpacing = 0;
+      comp.fills = [];
+
+      // Tooltip body frame
+      var body = figma.createFrame();
+      body.name = "body";
+      body.layoutMode = "HORIZONTAL";
+      body.primaryAxisAlignItems = "CENTER";
+      body.counterAxisAlignItems = "CENTER";
+      body.primaryAxisSizingMode = "AUTO";
+      body.counterAxisSizingMode = "AUTO";
+      body.paddingTop = 4;
+      body.paddingBottom = 4;
+      body.paddingLeft = 8;
+      body.paddingRight = 8;
+      body.itemSpacing = 0;
+      body.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
+      body.cornerRadius = 4;
+
+      if (varMap["tooltip/background"]) {
+        bindPaintVar(body, "fills", 0, varMap["tooltip/background"]);
+      }
+      if (varMap["tooltip/radius"]) {
+        bindVar(body, "topLeftRadius", varMap["tooltip/radius"]);
+        bindVar(body, "topRightRadius", varMap["tooltip/radius"]);
+        bindVar(body, "bottomLeftRadius", varMap["tooltip/radius"]);
+        bindVar(body, "bottomRightRadius", varMap["tooltip/radius"]);
+      }
+      if (varMap["tooltip/padding-x"]) {
+        bindVar(body, "paddingLeft", varMap["tooltip/padding-x"]);
+        bindVar(body, "paddingRight", varMap["tooltip/padding-x"]);
+      }
+      if (varMap["tooltip/padding-y"]) {
+        bindVar(body, "paddingTop", varMap["tooltip/padding-y"]);
+        bindVar(body, "paddingBottom", varMap["tooltip/padding-y"]);
+      }
+
+      // Text label
+      var textNode = figma.createText();
+      textNode.fontName = font;
+      textNode.characters = "Tooltip";
+      textNode.fontSize = 12;
+      textNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+      if (varMap["tooltip/color"]) {
+        bindPaintVar(textNode, "fills", 0, varMap["tooltip/color"]);
+      }
+      if (varMap["tooltip/font-size"]) {
+        bindVar(textNode, "fontSize", varMap["tooltip/font-size"]);
+      }
+      body.appendChild(textNode);
+
+      // Arrow triangle (only for with-arrow)
+      // Use createVector with explicit path data so bounds match the triangle
+      // exactly — no rotation needed, no bounding-box gaps.
+      var arrow = null;
+      if (hasArrow) {
+        arrow = figma.createVector();
+        arrow.name = "arrow";
+        var half = arrowSize / 2;
+
+        if (direction === "top") {
+          // Arrow points down (tooltip above trigger)
+          arrow.vectorPaths = [{ windingRule: "NONZERO", data: "M 0 0 L " + half + " " + half + " L " + arrowSize + " 0 Z" }];
+          arrow.resize(arrowSize, half);
+        } else if (direction === "bottom") {
+          // Arrow points up (tooltip below trigger)
+          arrow.vectorPaths = [{ windingRule: "NONZERO", data: "M 0 " + half + " L " + half + " 0 L " + arrowSize + " " + half + " Z" }];
+          arrow.resize(arrowSize, half);
+        } else if (direction === "left") {
+          // Arrow points right (tooltip left of trigger)
+          arrow.vectorPaths = [{ windingRule: "NONZERO", data: "M 0 0 L " + half + " " + half + " L 0 " + arrowSize + " Z" }];
+          arrow.resize(half, arrowSize);
+        } else {
+          // Arrow points left (tooltip right of trigger)
+          arrow.vectorPaths = [{ windingRule: "NONZERO", data: "M " + half + " 0 L 0 " + half + " L " + half + " " + arrowSize + " Z" }];
+          arrow.resize(half, arrowSize);
+        }
+
+        arrow.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
+        arrow.strokes = [];
+        if (varMap["tooltip/background"]) {
+          bindPaintVar(arrow, "fills", 0, varMap["tooltip/background"]);
+        }
+      }
+
+      // Assemble: arrow placement depends on direction
+      // "top" = tooltip above trigger → body first, arrow below
+      // "bottom" = tooltip below → arrow on top, body below
+      // "left" = tooltip left → body first, arrow right
+      // "right" = tooltip right → arrow left, body right
+      if (direction === "bottom" || direction === "right") {
+        if (arrow) comp.appendChild(arrow);
+        comp.appendChild(body);
+      } else {
+        comp.appendChild(body);
+        if (arrow) comp.appendChild(arrow);
+      }
+
+      // Grid position
+      var colWidth = 100;
+      var rowHeight = 50;
+      comp.x = ai * (colWidth + gap);
+      comp.y = di * (rowHeight + gap);
+
+      page.appendChild(comp);
+      components.push(comp);
+    }
+  }
+
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Tooltip";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
+// TextInput
+// ---------------------------------------------------------------------------
+
+function buildTextInputComponentSet(varMap, page, font) {
+  var variants = ["default", "filled"];
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "error", "disabled"];
+  var labelModes = ["none", "label", "required"];
+  var components = [];
+
+  var sizeHeights = { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
+  var gap = 20;
+  var colWidth = 220;
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+
+    for (var li = 0; li < labelModes.length; li++) {
+      var labelMode = labelModes[li];
+      var capLabelMode = labelMode.charAt(0).toUpperCase() + labelMode.slice(1);
+      var hasLabel = (labelMode !== "none");
+      var hasAsterisk = (labelMode === "required");
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size.toUpperCase();
+
+        for (var ri = 0; ri < radii.length; ri++) {
+          var rad = radii[ri];
+          var capRad = rad.toUpperCase();
+
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+            var comp = figma.createComponent();
+            comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", Radius=" + capRad + ", State=" + capState + ", Label=" + capLabelMode;
+
+            // Root: vertical auto-layout
+            comp.layoutMode = "VERTICAL";
+            comp.primaryAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "AUTO";
+            comp.itemSpacing = 4;
+            comp.fills = [];
+
+            if (varMap["textinput/label-gap"]) {
+              bindVar(comp, "itemSpacing", varMap["textinput/label-gap"]);
+            }
+
+            // --- Optional label row ---
+            if (hasLabel) {
+              var labelRow = figma.createFrame();
+              labelRow.name = "LabelRow";
+              labelRow.layoutMode = "HORIZONTAL";
+              labelRow.primaryAxisSizingMode = "AUTO";
+              labelRow.counterAxisSizingMode = "AUTO";
+              labelRow.itemSpacing = 2;
+              labelRow.fills = [];
+
+              var labelNode = figma.createText();
+              labelNode.name = "Label";
+              labelNode.fontName = font;
+              labelNode.characters = "Label";
+              labelNode.fontSize = 14;
+              labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              if (varMap["textinput/label-color"]) {
+                bindPaintVar(labelNode, "fills", 0, varMap["textinput/label-color"]);
+              }
+              if (varMap["textinput/label-font-size"]) {
+                bindVar(labelNode, "fontSize", varMap["textinput/label-font-size"]);
+              }
+              labelRow.appendChild(labelNode);
+
+              if (hasAsterisk) {
+                var asteriskNode = figma.createText();
+                asteriskNode.name = "Asterisk";
+                asteriskNode.fontName = font;
+                asteriskNode.characters = " *";
+                asteriskNode.fontSize = 14;
+                asteriskNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+                if (varMap["textinput/asterisk-color"]) {
+                  bindPaintVar(asteriskNode, "fills", 0, varMap["textinput/asterisk-color"]);
+                }
+                if (varMap["textinput/label-font-size"]) {
+                  bindVar(asteriskNode, "fontSize", varMap["textinput/label-font-size"]);
+                }
+                labelRow.appendChild(asteriskNode);
+              }
+
+              comp.appendChild(labelRow);
+            }
+
+            // --- Input frame ---
+            var input = figma.createFrame();
+            input.name = "Input";
+            input.layoutMode = "HORIZONTAL";
+            input.primaryAxisSizingMode = "FIXED";
+            input.counterAxisSizingMode = "AUTO";
+            input.primaryAxisAlignItems = "MIN";
+            input.counterAxisAlignItems = "CENTER";
+            input.resize(200, sizeHeights[size]);
+            input.cornerRadius = 4;
+            input.paddingLeft = 10;
+            input.paddingRight = 10;
+            input.paddingTop = 0;
+            input.paddingBottom = 0;
+            input.minHeight = sizeHeights[size];
+
+            // Bind input dimensions (size-based)
+            if (varMap["textinput/height-" + size]) {
+              bindVar(input, "minHeight", varMap["textinput/height-" + size]);
+            }
+            if (varMap["textinput/padding-x-" + size]) {
+              bindVar(input, "paddingLeft", varMap["textinput/padding-x-" + size]);
+              bindVar(input, "paddingRight", varMap["textinput/padding-x-" + size]);
+            }
+            // Bind radius (independent from size)
+            if (varMap["textinput/radius-" + rad]) {
+              bindVar(input, "topLeftRadius", varMap["textinput/radius-" + rad]);
+              bindVar(input, "topRightRadius", varMap["textinput/radius-" + rad]);
+              bindVar(input, "bottomLeftRadius", varMap["textinput/radius-" + rad]);
+              bindVar(input, "bottomRightRadius", varMap["textinput/radius-" + rad]);
+            }
+
+            // Input background
+            var bgPath = textInputColorPath(variant, "background", state);
+            if (variant === "filled") {
+              input.fills = [{ type: "SOLID", color: { r: 0.95, g: 0.95, b: 0.95 } }];
+            } else {
+              input.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            }
+            if (varMap[bgPath]) {
+              bindPaintVar(input, "fills", 0, varMap[bgPath]);
+            }
+
+            // Input border
+            var borderPath = textInputColorPath(variant, "border", state);
+            input.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+            input.strokeWeight = 1;
+            input.strokeAlign = "INSIDE";
+            if (varMap[borderPath]) {
+              bindPaintVar(input, "strokes", 0, varMap[borderPath]);
+            }
+            if (varMap["textinput/border-width"]) {
+              bindVar(input, "strokeWeight", varMap["textinput/border-width"]);
+            }
+
+            // Text inside input
+            var textNode = figma.createText();
+            textNode.name = (state === "focus") ? "InputText" : "Placeholder";
+            textNode.fontName = font;
+            textNode.characters = (state === "focus") ? "Input text" : "Placeholder";
+            textNode.fontSize = 14;
+
+            if (state === "disabled") {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+              if (varMap["textinput/text-disabled"]) {
+                bindPaintVar(textNode, "fills", 0, varMap["textinput/text-disabled"]);
+              }
+            } else if (state === "focus") {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              if (varMap["textinput/text"]) {
+                bindPaintVar(textNode, "fills", 0, varMap["textinput/text"]);
+              }
+            } else {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+              if (varMap["textinput/placeholder"]) {
+                bindPaintVar(textNode, "fills", 0, varMap["textinput/placeholder"]);
+              }
+            }
+            if (varMap["textinput/font-size-" + size]) {
+              bindVar(textNode, "fontSize", varMap["textinput/font-size-" + size]);
+            }
+
+            input.appendChild(textNode);
+
+            // Focus ring effect
+            if (state === "focus") {
+              input.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.87, a: 0.25 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
+
+            comp.appendChild(input);
+
+            // --- Error text (only for error state) ---
+            if (state === "error") {
+              var errorNode = figma.createText();
+              errorNode.name = "Error";
+              errorNode.fontName = font;
+              errorNode.characters = "Error message";
+              errorNode.fontSize = 12;
+              errorNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+              if (varMap["textinput/error-color"]) {
+                bindPaintVar(errorNode, "fills", 0, varMap["textinput/error-color"]);
+              }
+              if (varMap["textinput/error-font-size"]) {
+                bindVar(errorNode, "fontSize", varMap["textinput/error-font-size"]);
+              }
+              comp.appendChild(errorNode);
+            }
+
+            // Disabled opacity
+            if (state === "disabled") {
+              comp.opacity = 0.6;
+            }
+
+            // Grid placement
+            var colIndex = vi * labelModes.length + li;
+            var rowIndex = (si * radii.length + ri) * states.length + sti;
+            comp.x = colIndex * (colWidth + gap);
+            comp.y = rowIndex * 80;
+
+            page.appendChild(comp);
+            components.push(comp);
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " text input variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "TextInput";
+  return componentSet;
+}
+
+function textInputColorPath(variant, property, state) {
+  if (state === "default") {
+    return "textinput/" + variant + "-" + property;
+  }
+  return "textinput/" + variant + "-" + property + "-" + state;
 }
 
 // ---------------------------------------------------------------------------

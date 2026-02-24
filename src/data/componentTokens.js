@@ -279,6 +279,73 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "chip-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "chip/border-width" },
   },
+
+  tooltip: {
+    // ── COLOR TOKENS ──
+    "tooltip-background": { type: "COLOR", semantic: "surface-inverse", figmaPath: "tooltip/background" },
+    "tooltip-color":      { type: "COLOR", semantic: "text-inverse",    figmaPath: "tooltip/color" },
+
+    // ── FLOAT TOKENS (single value, no size variants) ──
+    "tooltip-radius":     { type: "FLOAT", unit: "px", value: 4,  figmaPath: "tooltip/radius" },
+    "tooltip-padding-x":  { type: "FLOAT", unit: "px", value: 8,  figmaPath: "tooltip/padding-x" },
+    "tooltip-padding-y":  { type: "FLOAT", unit: "px", value: 4,  figmaPath: "tooltip/padding-y" },
+    "tooltip-font-size":  { type: "FLOAT", unit: "px", value: 12, figmaPath: "tooltip/font-size" },
+    "tooltip-arrow-size": { type: "FLOAT", unit: "px", value: 7,  figmaPath: "tooltip/arrow-size" },
+  },
+
+  textinput: {
+    // ── DEFAULT VARIANT — BACKGROUND (per state) ──
+    "textinput-default-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "textinput/default-background" },
+    "textinput-default-background-hover":    { type: "COLOR", semantic: "surface-default",      figmaPath: "textinput/default-background-hover" },
+    "textinput-default-background-focus":    { type: "COLOR", semantic: "surface-default",      figmaPath: "textinput/default-background-focus" },
+    "textinput-default-background-error":    { type: "COLOR", semantic: "surface-default",      figmaPath: "textinput/default-background-error" },
+    "textinput-default-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "textinput/default-background-disabled" },
+
+    // ── DEFAULT VARIANT — BORDER (per state) ──
+    "textinput-default-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "textinput/default-border" },
+    "textinput-default-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "textinput/default-border-hover" },
+    "textinput-default-border-focus":    { type: "COLOR", semantic: "border-focus",    figmaPath: "textinput/default-border-focus" },
+    "textinput-default-border-error":    { type: "COLOR", semantic: "feedback-error",  figmaPath: "textinput/default-border-error" },
+    "textinput-default-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "textinput/default-border-disabled" },
+
+    // ── FILLED VARIANT — BACKGROUND (per state) ──
+    "textinput-filled-background":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "textinput/filled-background" },
+    "textinput-filled-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "textinput/filled-background-hover" },
+    "textinput-filled-background-focus":    { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "textinput/filled-background-focus" },
+    "textinput-filled-background-error":    { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "textinput/filled-background-error" },
+    "textinput-filled-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "textinput/filled-background-disabled" },
+
+    // ── FILLED VARIANT — BORDER (per state) ──
+    "textinput-filled-border":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "textinput/filled-border" },
+    "textinput-filled-border-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "textinput/filled-border-hover" },
+    "textinput-filled-border-focus":    { type: "COLOR", semantic: "border-focus",                figmaPath: "textinput/filled-border-focus" },
+    "textinput-filled-border-error":    { type: "COLOR", semantic: "feedback-error",              figmaPath: "textinput/filled-border-error" },
+    "textinput-filled-border-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "textinput/filled-border-disabled" },
+
+    // ── SHARED COLOR TOKENS ──
+    "textinput-text":           { type: "COLOR", semantic: "text-default",     figmaPath: "textinput/text" },
+    "textinput-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "textinput/text-disabled" },
+    "textinput-placeholder":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "textinput/placeholder" },
+    "textinput-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "textinput/label-color" },
+    "textinput-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "textinput/asterisk-color" },
+    "textinput-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "textinput/error-color" },
+    "textinput-focus-ring":     { type: "COLOR", semantic: "border-focus",     figmaPath: "textinput/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "textinput-height":    { type: "FLOAT", unit: "px", sizes: { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 },  figmaPath: "textinput/height" },
+    "textinput-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },  figmaPath: "textinput/font-size" },
+    "textinput-padding-x": { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 },  figmaPath: "textinput/padding-x" },
+
+    // ── FLOAT TOKENS (radius variants: xs, sm, md, lg, xl — independent from size) ──
+    "textinput-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "textinput/radius" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "textinput-border-width":    { type: "FLOAT", unit: "px", value: 1,  figmaPath: "textinput/border-width" },
+    "textinput-label-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "textinput/label-font-size" },
+    "textinput-label-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "textinput/label-gap" },
+    "textinput-error-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "textinput/error-font-size" },
+    "textinput-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "textinput/error-gap" },
+  },
 };
 
 export const COMPONENT_NAMES = Object.keys(COMPONENT_TOKENS);
@@ -289,6 +356,8 @@ export const COMPONENT_SIZE_KEYS = {
   checkbox: ["xs", "sm", "md", "lg", "xl"],
   radio: ["xs", "sm", "md", "lg", "xl"],
   chip: ["xs", "sm", "md", "lg", "xl"],
+  tooltip: [],
+  textinput: ["xs", "sm", "md", "lg", "xl"],
 };
 
 export function getColorTokens(componentName) {

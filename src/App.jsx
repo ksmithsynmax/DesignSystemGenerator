@@ -18,6 +18,8 @@ import SwitchPreviewPanel from "./components/panels/SwitchPreviewPanel";
 import CheckboxPreviewPanel from "./components/panels/CheckboxPreviewPanel";
 import RadioPreviewPanel from "./components/panels/RadioPreviewPanel";
 import ChipPreviewPanel from "./components/panels/ChipPreviewPanel";
+import TooltipPreviewPanel from "./components/panels/TooltipPreviewPanel";
+import TextInputPreviewPanel from "./components/panels/TextInputPreviewPanel";
 import TokenChain from "./components/TokenChain";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
@@ -40,6 +42,7 @@ export default function App() {
   const checkboxDefault = getComponentDefaultSize(brands, activeBrand, "checkbox") || "md";
   const radioDefault = getComponentDefaultSize(brands, activeBrand, "radio") || "md";
   const chipDefault = getComponentDefaultSize(brands, activeBrand, "chip") || "md";
+  const textInputDefault = getComponentDefaultSize(brands, activeBrand, "textinput") || "sm";
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
@@ -47,6 +50,8 @@ export default function App() {
   const [activeRadioSize, setActiveRadioSize] = useState(radioDefault);
   const [activeChipSize, setActiveChipSize] = useState(chipDefault);
   const [activeChipRadius, setActiveChipRadius] = useState(chipDefault);
+  const [activeTextInputSize, setActiveTextInputSize] = useState(textInputDefault);
+  const [activeTextInputRadius, setActiveTextInputRadius] = useState(textInputDefault);
 
   // Sync active sizes when brand changes
   const handleBrandChange = useCallback((newBrand) => {
@@ -62,6 +67,9 @@ export default function App() {
     setActiveRadioSize(rdDef);
     setActiveChipSize(chDef);
     setActiveChipRadius(chDef);
+    const tiDef = getComponentDefaultSize(brands, newBrand, "textinput") || "sm";
+    setActiveTextInputSize(tiDef);
+    setActiveTextInputRadius(tiDef);
   }, [brands]);
 
   // Sync active size when component changes
@@ -80,8 +88,12 @@ export default function App() {
       setActiveChipSize(chipDefault);
       setActiveChipRadius(chipDefault);
       setActiveVariant("filled");
+    } else if (newComp === "textinput") {
+      setActiveTextInputSize(textInputDefault);
+      setActiveTextInputRadius(textInputDefault);
+      setActiveVariant("default");
     }
-  }, [buttonDefault, switchDefault, checkboxDefault, radioDefault, chipDefault]);
+  }, [buttonDefault, switchDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault]);
 
   const updatePrimitive = useCallback(
     (colorName, index, value) => {
@@ -363,6 +375,27 @@ export default function App() {
                 setActiveChipSize={setActiveChipSize}
                 activeChipRadius={activeChipRadius}
                 setActiveChipRadius={setActiveChipRadius}
+                sizeKeys={sizeKeys}
+              />
+            )}
+
+            {activeTab === "preview" && activeComponent === "tooltip" && (
+              <TooltipPreviewPanel
+                brands={brands}
+                activeBrand={activeBrand}
+              />
+            )}
+
+            {activeTab === "preview" && activeComponent === "textinput" && (
+              <TextInputPreviewPanel
+                brands={brands}
+                activeBrand={activeBrand}
+                activeVariant={activeVariant}
+                setActiveVariant={setActiveVariant}
+                activeTextInputSize={activeTextInputSize}
+                setActiveTextInputSize={setActiveTextInputSize}
+                activeTextInputRadius={activeTextInputRadius}
+                setActiveTextInputRadius={setActiveTextInputRadius}
                 sizeKeys={sizeKeys}
               />
             )}
