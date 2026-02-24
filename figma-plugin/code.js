@@ -455,6 +455,9 @@ async function buildComponents(varMap) {
   progress("Creating Radio component set...");
   var radioSet = buildRadioComponentSet(varMap, page, font);
 
+  progress("Creating Chip component set...");
+  var chipSet = await buildChipComponentSet(varMap, page, font);
+
   // Position component sets side by side with gaps
   buttonSet.x = 0;
   buttonSet.y = 0;
@@ -464,6 +467,11 @@ async function buildComponents(varMap) {
   checkboxSet.y = 0;
   radioSet.x = checkboxSet.x + checkboxSet.width + compSetGap;
   radioSet.y = 0;
+  chipSet.x = radioSet.x + radioSet.width + compSetGap;
+  chipSet.y = 0;
+
+  // Scroll viewport to show all component sets
+  figma.viewport.scrollAndZoomIntoView([buttonSet, switchSet, checkboxSet, radioSet, chipSet]);
 
   progress("Components created.");
 }
@@ -472,7 +480,7 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox" || child.name === "Radio")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
@@ -1378,6 +1386,254 @@ function radioIconColorPath(variant, state) {
 function radioLabelTextPath(state) {
   if (state === "disabled") return "radio/label-text-disabled";
   return "radio/label-text";
+}
+
+// ---------------------------------------------------------------------------
+// Chip
+// ---------------------------------------------------------------------------
+
+async function buildChipComponentSet(varMap, page, font) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var variants = ["filled", "outline", "light"];
+  var checkedStates = ["unchecked", "checked"];
+  var states = ["default", "hover", "focus", "disabled"];
+  var components = [];
+
+  // Find check icon from icons page
+  var checkIconComp = null;
+  var iconsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    if (figma.root.children[pi].name.toLowerCase() === "icons") {
+      iconsPage = figma.root.children[pi];
+      break;
+    }
+  }
+  if (iconsPage) {
+    await iconsPage.loadAsync();
+    var allNodes = iconsPage.findAll(function(n) {
+      return n.type === "COMPONENT";
+    });
+    for (var ni = 0; ni < allNodes.length; ni++) {
+      var nName = allNodes[ni].name.toLowerCase();
+      if (!checkIconComp && nName.indexOf("check") >= 0 && nName.indexOf("circle") < 0 && nName.indexOf("square") < 0) {
+        checkIconComp = allNodes[ni];
+      }
+    }
+  }
+
+  // Known chip heights per size for grid spacing
+  var sizeHeights = { xs: 23, sm: 28, md: 32, lg: 36, xl: 40 };
+  var sizeIconSizes = { xs: 9, sm: 12, md: 14, lg: 16, xl: 18 };
+  var gap = 16;
+  var colGap = 16;
+
+  // Pre-calculate y offsets: rows = (size × state)
+  var rowYOffsets = [];
+  var runningY = 0;
+  for (var rsi = 0; rsi < sizes.length; rsi++) {
+    for (var rsti = 0; rsti < states.length; rsti++) {
+      rowYOffsets.push(runningY);
+      var rowH = sizeHeights[sizes[rsi]];
+      if (rowH < 24) rowH = 24;
+      runningY += rowH + gap;
+    }
+  }
+
+  var colWidth = 180 + colGap;
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+
+    for (var chi = 0; chi < checkedStates.length; chi++) {
+      var checkedState = checkedStates[chi];
+      var capChecked = checkedState.charAt(0).toUpperCase() + checkedState.slice(1);
+      var isChecked = (checkedState === "checked");
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size.toUpperCase();
+        var chipHeight = sizeHeights[size];
+        var iconSize = sizeIconSizes[size];
+
+        for (var sti = 0; sti < states.length; sti++) {
+          var state = states[sti];
+          var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+          var comp = figma.createComponent();
+          comp.name = "Variant=" + capVariant + ", Size=" + capSize +
+                      ", Checked=" + capChecked + ", State=" + capState;
+
+          // Root: horizontal auto-layout (pill shape)
+          comp.layoutMode = "HORIZONTAL";
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
+          comp.primaryAxisAlignItems = "CENTER";
+          comp.counterAxisAlignItems = "CENTER";
+          comp.resize(80, chipHeight);
+          comp.cornerRadius = 16;
+
+          // Padding
+          var padding = isChecked ? 10 : 16;
+          comp.paddingLeft = padding;
+          comp.paddingRight = padding;
+          comp.paddingTop = 4;
+          comp.paddingBottom = 4;
+          comp.itemSpacing = 6;
+
+          // Bind dimensions
+          bindVar(comp, "minHeight", varMap["chip/height-" + size]);
+          if (isChecked) {
+            bindVar(comp, "paddingLeft", varMap["chip/checked-padding-" + size]);
+            bindVar(comp, "paddingRight", varMap["chip/checked-padding-" + size]);
+          } else {
+            bindVar(comp, "paddingLeft", varMap["chip/padding-" + size]);
+            bindVar(comp, "paddingRight", varMap["chip/padding-" + size]);
+          }
+          bindVar(comp, "topLeftRadius", varMap["chip/radius-" + size]);
+          bindVar(comp, "topRightRadius", varMap["chip/radius-" + size]);
+          bindVar(comp, "bottomLeftRadius", varMap["chip/radius-" + size]);
+          bindVar(comp, "bottomRightRadius", varMap["chip/radius-" + size]);
+          bindVar(comp, "itemSpacing", varMap["chip/spacing-" + size]);
+
+          // Background fill
+          var bgPath = chipBgPath(variant, isChecked, state);
+          if (isChecked && variant === "filled") {
+            comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          } else if (isChecked && variant === "light") {
+            comp.fills = [{ type: "SOLID", color: { r: 0.92, g: 0.92, b: 0.95 } }];
+          } else {
+            comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          }
+          bindPaintVar(comp, "fills", 0, varMap[bgPath]);
+
+          // Border
+          var borderPath = chipBorderPath(state);
+          if (variant === "outline" || !isChecked) {
+            comp.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+            comp.strokeWeight = 1.5;
+            comp.strokeAlign = "INSIDE";
+            bindPaintVar(comp, "strokes", 0, varMap[borderPath]);
+            bindVar(comp, "strokeWeight", varMap["chip/border-width"]);
+          } else if (variant === "filled" && isChecked) {
+            comp.strokes = [];
+          } else {
+            // light checked — no border
+            comp.strokes = [];
+          }
+
+          // --- Check icon (only when checked) ---
+          if (isChecked && checkIconComp) {
+            var checkInst = checkIconComp.createInstance();
+            checkInst.name = "Icon";
+            checkInst.resize(iconSize, iconSize);
+            bindVar(checkInst, "width", varMap["chip/icon-size-" + size]);
+            bindVar(checkInst, "height", varMap["chip/icon-size-" + size]);
+
+            // Override icon color
+            var iconColorPath = chipIconColorPath(variant, state);
+            var vectors = checkInst.findAll(function(n) { return n.type === "VECTOR"; });
+            for (var vci = 0; vci < vectors.length; vci++) {
+              if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
+                vectors[vci].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(vectors[vci], "strokes", 0, varMap[iconColorPath]);
+              }
+              if (vectors[vci].fills && vectors[vci].fills.length > 0) {
+                vectors[vci].fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(vectors[vci], "fills", 0, varMap[iconColorPath]);
+              }
+            }
+
+            comp.appendChild(checkInst);
+          }
+
+          // --- Label text ---
+          var textNode = figma.createText();
+          textNode.name = "Label";
+          textNode.fontName = font;
+          textNode.characters = "Chip";
+          textNode.fontSize = 14;
+
+          var textColorPath = chipTextColorPath(variant, isChecked, state);
+          textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+          bindPaintVar(textNode, "fills", 0, varMap[textColorPath]);
+          bindVar(textNode, "fontSize", varMap["chip/font-size-" + size]);
+          comp.appendChild(textNode);
+
+          // Focus ring
+          if (state === "focus") {
+            comp.effects = [{
+              type: "DROP_SHADOW",
+              color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+              offset: { x: 0, y: 0 },
+              radius: 0,
+              spread: 3,
+              visible: true,
+              blendMode: "NORMAL"
+            }];
+          }
+
+          // Disabled opacity
+          if (state === "disabled") {
+            comp.opacity = 0.6;
+          }
+
+          // Grid placement
+          var colIndex = vi * checkedStates.length + chi;
+          var rowIndex = (si * states.length) + sti;
+          comp.x = colIndex * colWidth;
+          comp.y = rowYOffsets[rowIndex];
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " chip variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Chip";
+  return componentSet;
+}
+
+// Helper: build figmaPath for chip background
+function chipBgPath(variant, isChecked, state) {
+  if (!isChecked) {
+    var base = "chip/background";
+    if (state === "default") return base;
+    if (state === "hover") return base + "-hover";
+    if (state === "disabled") return base + "-disabled";
+    return base;
+  }
+  // checked — variant-specific
+  var prefix = "chip/" + variant + "-background-checked";
+  if (state === "default") return prefix;
+  if (state === "hover") return prefix + "-hover";
+  if (state === "disabled") return prefix + "-disabled";
+  return prefix;
+}
+
+// Helper: build figmaPath for chip border
+function chipBorderPath(state) {
+  if (state === "disabled") return "chip/border-disabled";
+  return "chip/border";
+}
+
+// Helper: build figmaPath for chip text color
+function chipTextColorPath(variant, isChecked, state) {
+  if (state === "disabled") return "chip/text-disabled";
+  if (!isChecked) return "chip/text";
+  // Checked — variant-specific text
+  return "chip/" + variant + "-text-checked";
+}
+
+// Helper: build figmaPath for chip icon color
+// Filled uses white (text-on-interactive), outline/light use brand primary (same as their text)
+function chipIconColorPath(variant, state) {
+  if (state === "disabled") return "chip/icon-color-disabled";
+  if (variant === "outline") return "chip/outline-text-checked";
+  if (variant === "light") return "chip/light-text-checked";
+  return "chip/icon-color";
 }
 
 // ---------------------------------------------------------------------------

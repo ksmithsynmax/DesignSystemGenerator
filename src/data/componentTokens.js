@@ -216,6 +216,58 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "radio-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "radio/border-width" },
   },
+
+  chip: {
+    // ── CHIP BACKGROUND — UNCHECKED (per state) ──
+    "chip-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "chip/background" },
+    "chip-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/background-hover" },
+    "chip-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/background-disabled" },
+
+    // ── CHIP BACKGROUND — CHECKED — FILLED (per state) ──
+    "chip-filled-background-checked":          { type: "COLOR", semantic: "interactive-primary",       figmaPath: "chip/filled-background-checked" },
+    "chip-filled-background-checked-hover":    { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "chip/filled-background-checked-hover" },
+    "chip-filled-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",      figmaPath: "chip/filled-background-checked-disabled" },
+
+    // ── CHIP BACKGROUND — CHECKED — LIGHT (per state) ──
+    "chip-light-background-checked":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "chip/light-background-checked" },
+    "chip-light-background-checked-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/light-background-checked-hover" },
+    "chip-light-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/light-background-checked-disabled" },
+
+    // ── CHIP BACKGROUND — CHECKED — OUTLINE (per state) ──
+    "chip-outline-background-checked":          { type: "COLOR", semantic: "surface-default",            figmaPath: "chip/outline-background-checked" },
+    "chip-outline-background-checked-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/outline-background-checked-hover" },
+    "chip-outline-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/outline-background-checked-disabled" },
+
+    // ── CHIP BORDER ──
+    "chip-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "chip/border" },
+    "chip-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "chip/border-disabled" },
+
+    // ── CHIP TEXT ──
+    "chip-text":                 { type: "COLOR", semantic: "text-default",        figmaPath: "chip/text" },
+    "chip-text-disabled":        { type: "COLOR", semantic: "text-disabled",       figmaPath: "chip/text-disabled" },
+    "chip-filled-text-checked":  { type: "COLOR", semantic: "text-on-interactive", figmaPath: "chip/filled-text-checked" },
+    "chip-light-text-checked":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/light-text-checked" },
+    "chip-outline-text-checked": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/outline-text-checked" },
+
+    // ── CHIP ICON COLOR ──
+    "chip-icon-color":          { type: "COLOR", semantic: "text-on-interactive", figmaPath: "chip/icon-color" },
+    "chip-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",       figmaPath: "chip/icon-color-disabled" },
+
+    // ── SHARED COLOR TOKEN ──
+    "chip-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "chip/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "chip-height":          { type: "FLOAT", unit: "px", sizes: { xs: 23, sm: 28, md: 32, lg: 36, xl: 40 },              figmaPath: "chip/height" },
+    "chip-padding":         { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },              figmaPath: "chip/padding" },
+    "chip-checked-padding": { type: "FLOAT", unit: "px", sizes: { xs: 8.2, sm: 10, md: 11.7, lg: 13.5, xl: 15.7 },      figmaPath: "chip/checked-padding" },
+    "chip-icon-size":       { type: "FLOAT", unit: "px", sizes: { xs: 9, sm: 12, md: 14, lg: 16, xl: 18 },               figmaPath: "chip/icon-size" },
+    "chip-font-size":       { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 12, md: 14, lg: 16, xl: 18 },              figmaPath: "chip/font-size" },
+    "chip-radius":          { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },                 figmaPath: "chip/radius" },
+    "chip-spacing":         { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 4, lg: 6, xl: 8 },                 figmaPath: "chip/spacing" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "chip-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "chip/border-width" },
+  },
 };
 
 export const COMPONENT_NAMES = Object.keys(COMPONENT_TOKENS);
@@ -225,6 +277,7 @@ export const COMPONENT_SIZE_KEYS = {
   switch: ["xs", "sm", "md", "lg", "xl"],
   checkbox: ["xs", "sm", "md", "lg", "xl"],
   radio: ["xs", "sm", "md", "lg", "xl"],
+  chip: ["xs", "sm", "md", "lg", "xl"],
 };
 
 export function getColorTokens(componentName) {

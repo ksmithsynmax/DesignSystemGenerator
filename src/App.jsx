@@ -19,6 +19,7 @@ import ButtonPreview from "./components/previews/ButtonPreview";
 import SwitchPreview from "./components/previews/SwitchPreview";
 import CheckboxPreview from "./components/previews/CheckboxPreview";
 import RadioPreview from "./components/previews/RadioPreview";
+import ChipPreview from "./components/previews/ChipPreview";
 import TokenChain from "./components/TokenChain";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
@@ -26,6 +27,7 @@ import { GLOBAL_PRIMITIVES } from "./data/brands";
 
 const BUTTON_VARIANTS = ["filled", "outlined", "ghost"];
 const RADIO_VARIANTS = ["filled", "outline"];
+const CHIP_VARIANTS = ["filled", "outline", "light"];
 
 export default function App() {
   const [brands, setBrands] = useState(INITIAL_BRANDS);
@@ -43,11 +45,14 @@ export default function App() {
   const switchDefault = getComponentDefaultSize(brands, activeBrand, "switch") || "md";
   const checkboxDefault = getComponentDefaultSize(brands, activeBrand, "checkbox") || "md";
   const radioDefault = getComponentDefaultSize(brands, activeBrand, "radio") || "md";
+  const chipDefault = getComponentDefaultSize(brands, activeBrand, "chip") || "md";
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
   const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
   const [activeRadioSize, setActiveRadioSize] = useState(radioDefault);
+  const [activeChipSize, setActiveChipSize] = useState(chipDefault);
+  const [activeChipRadius, setActiveChipRadius] = useState(chipDefault);
 
   // Sync active sizes when brand changes
   const handleBrandChange = useCallback((newBrand) => {
@@ -56,10 +61,13 @@ export default function App() {
     const swDef = getComponentDefaultSize(brands, newBrand, "switch") || "md";
     const cbDef = getComponentDefaultSize(brands, newBrand, "checkbox") || "md";
     const rdDef = getComponentDefaultSize(brands, newBrand, "radio") || "md";
+    const chDef = getComponentDefaultSize(brands, newBrand, "chip") || "md";
     setActiveSize(btnDef);
     setActiveSwitchSize(swDef);
     setActiveCheckboxSize(cbDef);
     setActiveRadioSize(rdDef);
+    setActiveChipSize(chDef);
+    setActiveChipRadius(chDef);
   }, [brands]);
 
   // Sync active size when component changes
@@ -74,8 +82,12 @@ export default function App() {
     } else if (newComp === "radio") {
       setActiveRadioSize(radioDefault);
       setActiveVariant("filled");
+    } else if (newComp === "chip") {
+      setActiveChipSize(chipDefault);
+      setActiveChipRadius(chipDefault);
+      setActiveVariant("filled");
     }
-  }, [buttonDefault, switchDefault, checkboxDefault, radioDefault]);
+  }, [buttonDefault, switchDefault, checkboxDefault, radioDefault, chipDefault]);
 
   const updatePrimitive = useCallback(
     (colorName, index, value) => {
@@ -332,6 +344,20 @@ export default function App() {
                 setActiveVariant={setActiveVariant}
                 activeRadioSize={activeRadioSize}
                 setActiveRadioSize={setActiveRadioSize}
+                sizeKeys={sizeKeys}
+              />
+            )}
+
+            {activeTab === "preview" && activeComponent === "chip" && (
+              <ChipPreviewPanel
+                brands={brands}
+                activeBrand={activeBrand}
+                activeVariant={activeVariant}
+                setActiveVariant={setActiveVariant}
+                activeChipSize={activeChipSize}
+                setActiveChipSize={setActiveChipSize}
+                activeChipRadius={activeChipRadius}
+                setActiveChipRadius={setActiveChipRadius}
                 sizeKeys={sizeKeys}
               />
             )}
@@ -1661,6 +1687,274 @@ function CheckboxPreviewPanel({
                     borderBottom: "1px solid #2C2E33",
                   }}
                 >
+                  {v.figmaPath}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Chip Preview Panel ---------- */
+
+const CHIP_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+
+function ChipPreviewPanel({
+  brands,
+  activeBrand,
+  activeVariant,
+  setActiveVariant,
+  activeChipSize,
+  setActiveChipSize,
+  activeChipRadius,
+  setActiveChipRadius,
+  sizeKeys,
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const tokens = COMPONENT_TOKENS.chip;
+
+  const codeString = `import { Chip } from "@mantine/core";
+
+<Chip variant="${activeVariant}" size="${activeChipSize}" radius="${activeChipRadius}" checked>
+  Chip
+</Chip>`;
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(codeString);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const resolvedVars = [];
+  for (const [name, def] of Object.entries(tokens)) {
+    if (def.type === TOKEN_TYPES.COLOR) {
+      const resolved = resolveColor(brands, activeBrand, def.semantic);
+      resolvedVars.push({ name, type: "COLOR", value: resolved, figmaPath: def.figmaPath });
+    } else if (def.type === TOKEN_TYPES.FLOAT || def.type === TOKEN_TYPES.STRING) {
+      const hasSizes = !!def.sizes;
+      const resolved = hasSizes
+        ? resolveDimension(brands, activeBrand, name, activeChipSize)
+        : resolveDimension(brands, activeBrand, name);
+      const display = def.unit ? `${resolved}${def.unit}` : String(resolved);
+      const displayName = hasSizes ? `${name}-${activeChipSize}` : name;
+      const displayPath = hasSizes ? `${def.figmaPath}-${activeChipSize}` : def.figmaPath;
+      resolvedVars.push({ name: displayName, type: def.type, value: display, figmaPath: displayPath });
+    }
+  }
+
+  return (
+    <div>
+      <div style={{ display: "flex", gap: 24, marginBottom: 24 }}>
+        <div>
+          <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+            Variant
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {CHIP_VARIANTS.map((v) => (
+              <button
+                key={v}
+                onClick={() => setActiveVariant(v)}
+                style={{
+                  background: activeVariant === v ? "#373A40" : "transparent",
+                  color: activeVariant === v ? "#E9ECEF" : "#5C5F66",
+                  border: "1px solid #373A40",
+                  borderRadius: 4,
+                  padding: "4px 12px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  fontFamily: "monospace",
+                }}
+              >
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+            Size
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {sizeKeys.map((s) => (
+              <button
+                key={s}
+                onClick={() => setActiveChipSize(s)}
+                style={{
+                  background: activeChipSize === s ? "#373A40" : "transparent",
+                  color: activeChipSize === s ? "#E9ECEF" : "#5C5F66",
+                  border: "1px solid #373A40",
+                  borderRadius: 4,
+                  padding: "4px 10px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  fontFamily: "monospace",
+                }}
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div>
+          <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 6, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+            Radius
+          </div>
+          <div style={{ display: "flex", gap: 4 }}>
+            {CHIP_RADIUS_KEYS.map((r) => (
+              <button
+                key={r}
+                onClick={() => setActiveChipRadius(r)}
+                style={{
+                  background: activeChipRadius === r ? "#373A40" : "transparent",
+                  color: activeChipRadius === r ? "#E9ECEF" : "#5C5F66",
+                  border: "1px solid #373A40",
+                  borderRadius: 4,
+                  padding: "4px 10px",
+                  fontSize: 12,
+                  cursor: "pointer",
+                  fontFamily: "monospace",
+                }}
+              >
+                {r}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* Single chip preview */}
+      <div
+        style={{
+          background: "#1A1B1E",
+          borderRadius: 8,
+          padding: 32,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 16,
+          marginBottom: 24,
+        }}
+      >
+        <ChipPreview
+          brands={brands}
+          brandId={activeBrand}
+          variant={activeVariant}
+          size={activeChipSize}
+          radius={activeChipRadius}
+        />
+      </div>
+
+      {/* All variants x checked states x sizes matrix */}
+      <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+        All Variants x Sizes
+      </div>
+      <div
+        style={{
+          background: "#1A1B1E",
+          borderRadius: 8,
+          padding: 20,
+          overflowX: "auto",
+          marginBottom: 24,
+        }}
+      >
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>
+            <tr>
+              <th style={{ textAlign: "left", padding: "6px 12px", fontSize: 11, color: "#5C5F66", fontFamily: "monospace" }} />
+              {sizeKeys.map((s) => (
+                <th key={s} style={{ textAlign: "center", padding: "6px 12px", fontSize: 11, color: "#5C5F66", fontFamily: "monospace" }}>
+                  {s}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {CHIP_VARIANTS.flatMap((v) =>
+              ["unchecked", "checked"].map((state) => (
+                <tr key={`${v}-${state}`}>
+                  <td style={{ padding: "10px 12px", fontSize: 12, fontFamily: "monospace", color: "#868E96", fontWeight: 500, whiteSpace: "nowrap" }}>
+                    {v} / {state}
+                  </td>
+                  {sizeKeys.map((s) => (
+                    <td key={s} style={{ padding: "10px 12px", textAlign: "center" }}>
+                      <ChipPreview brands={brands} brandId={activeBrand} variant={v} size={s} radius={activeChipRadius} checked={state === "checked"} readOnly />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Component Code */}
+      <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+        Component Code — {activeVariant} / {activeChipSize}
+      </div>
+      <div style={{ position: "relative", background: "#1A1B1E", borderRadius: 8, padding: 16, marginBottom: 24 }}>
+        <button
+          onClick={handleCopy}
+          style={{
+            position: "absolute",
+            top: 8,
+            right: 8,
+            background: copied ? "#2F9E44" : "#373A40",
+            color: copied ? "#fff" : "#C1C2C5",
+            border: "none",
+            borderRadius: 4,
+            padding: "4px 10px",
+            fontSize: 11,
+            cursor: "pointer",
+            transition: "background 0.2s",
+          }}
+        >
+          {copied ? "Copied!" : "Copy"}
+        </button>
+        <pre style={{ margin: 0, color: "#C1C2C5", fontSize: 12, fontFamily: "monospace", lineHeight: 1.5, overflowX: "auto", whiteSpace: "pre" }}>
+          {highlightCode(codeString)}
+        </pre>
+      </div>
+
+      {/* Resolved Variables */}
+      <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 8, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+        Resolved Variables — {activeVariant} / {activeChipSize}
+      </div>
+      <div style={{ background: "#1A1B1E", borderRadius: 8, padding: 16, overflowX: "auto" }}>
+        <table style={{ borderCollapse: "collapse", width: "100%" }}>
+          <thead>
+            <tr>
+              {["Token", "Type", "Value", "Figma Path"].map((h) => (
+                <th
+                  key={h}
+                  style={{ textAlign: "left", padding: "6px 10px", fontSize: 10, color: "#5C5F66", fontFamily: "monospace", borderBottom: "1px solid #2C2E33", textTransform: "uppercase", letterSpacing: "0.05em" }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {resolvedVars.map((v) => (
+              <tr key={v.name}>
+                <td style={{ padding: "5px 10px", fontSize: 11, fontFamily: "monospace", color: "#C1C2C5", borderBottom: "1px solid #2C2E33" }}>
+                  {v.name}
+                </td>
+                <td style={{ padding: "5px 10px", fontSize: 10, borderBottom: "1px solid #2C2E33" }}>
+                  <span style={{ background: v.type === "COLOR" ? "#862E9C" : v.type === "STRING" ? "#5C940D" : "#1971C2", color: "#fff", borderRadius: 3, padding: "1px 6px", fontSize: 9, fontWeight: 600, fontFamily: "monospace" }}>
+                    {v.type}
+                  </span>
+                </td>
+                <td style={{ padding: "5px 10px", fontSize: 11, fontFamily: "monospace", color: "#C1C2C5", borderBottom: "1px solid #2C2E33", display: "flex", alignItems: "center", gap: 6 }}>
+                  {v.type === "COLOR" && (
+                    <span style={{ display: "inline-block", width: 12, height: 12, borderRadius: 2, background: v.value, border: "1px solid #373A40", flexShrink: 0 }} />
+                  )}
+                  {v.value}
+                </td>
+                <td style={{ padding: "5px 10px", fontSize: 10, fontFamily: "monospace", color: "#5C5F66", borderBottom: "1px solid #2C2E33" }}>
                   {v.figmaPath}
                 </td>
               </tr>
