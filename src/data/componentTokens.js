@@ -221,25 +221,36 @@ export const COMPONENT_TOKENS = {
     // ── CHIP BACKGROUND — UNCHECKED (per state) ──
     "chip-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "chip/background" },
     "chip-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/background-hover" },
+    "chip-background-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "chip/background-focus" },
+    "chip-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/background-pressed" },
     "chip-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/background-disabled" },
 
     // ── CHIP BACKGROUND — CHECKED — FILLED (per state) ──
-    "chip-filled-background-checked":          { type: "COLOR", semantic: "interactive-primary",       figmaPath: "chip/filled-background-checked" },
-    "chip-filled-background-checked-hover":    { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "chip/filled-background-checked-hover" },
-    "chip-filled-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",      figmaPath: "chip/filled-background-checked-disabled" },
+    "chip-filled-background-checked":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "chip/filled-background-checked" },
+    "chip-filled-background-checked-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "chip/filled-background-checked-hover" },
+    "chip-filled-background-checked-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "chip/filled-background-checked-focus" },
+    "chip-filled-background-checked-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "chip/filled-background-checked-pressed" },
+    "chip-filled-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/filled-background-checked-disabled" },
 
     // ── CHIP BACKGROUND — CHECKED — LIGHT (per state) ──
     "chip-light-background-checked":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "chip/light-background-checked" },
     "chip-light-background-checked-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/light-background-checked-hover" },
+    "chip-light-background-checked-focus":    { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "chip/light-background-checked-focus" },
+    "chip-light-background-checked-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/light-background-checked-pressed" },
     "chip-light-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/light-background-checked-disabled" },
 
     // ── CHIP BACKGROUND — CHECKED — OUTLINE (per state) ──
     "chip-outline-background-checked":          { type: "COLOR", semantic: "surface-default",            figmaPath: "chip/outline-background-checked" },
     "chip-outline-background-checked-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/outline-background-checked-hover" },
+    "chip-outline-background-checked-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "chip/outline-background-checked-focus" },
+    "chip-outline-background-checked-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/outline-background-checked-pressed" },
     "chip-outline-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/outline-background-checked-disabled" },
 
     // ── CHIP BORDER ──
     "chip-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "chip/border" },
+    "chip-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "chip/border-hover" },
+    "chip-border-focus":    { type: "COLOR", semantic: "border-default",  figmaPath: "chip/border-focus" },
+    "chip-border-pressed":  { type: "COLOR", semantic: "border-default",  figmaPath: "chip/border-pressed" },
     "chip-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "chip/border-disabled" },
 
     // ── CHIP TEXT ──

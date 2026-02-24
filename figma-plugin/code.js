@@ -1396,7 +1396,7 @@ async function buildChipComponentSet(varMap, page, font) {
   var sizes = ["xs", "sm", "md", "lg", "xl"];
   var variants = ["filled", "outline", "light"];
   var checkedStates = ["unchecked", "checked"];
-  var states = ["default", "hover", "focus", "disabled"];
+  var states = ["default", "hover", "focus", "pressed", "disabled"];
   var components = [];
 
   // Find check icon from icons page
@@ -1601,22 +1601,18 @@ function chipBgPath(variant, isChecked, state) {
   if (!isChecked) {
     var base = "chip/background";
     if (state === "default") return base;
-    if (state === "hover") return base + "-hover";
-    if (state === "disabled") return base + "-disabled";
-    return base;
+    return base + "-" + state;
   }
   // checked — variant-specific
   var prefix = "chip/" + variant + "-background-checked";
   if (state === "default") return prefix;
-  if (state === "hover") return prefix + "-hover";
-  if (state === "disabled") return prefix + "-disabled";
-  return prefix;
+  return prefix + "-" + state;
 }
 
 // Helper: build figmaPath for chip border
 function chipBorderPath(state) {
-  if (state === "disabled") return "chip/border-disabled";
-  return "chip/border";
+  if (state === "default") return "chip/border";
+  return "chip/border-" + state;
 }
 
 // Helper: build figmaPath for chip text color

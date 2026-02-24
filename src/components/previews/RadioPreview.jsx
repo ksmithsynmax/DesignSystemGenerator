@@ -18,10 +18,10 @@ export default function RadioPreview({ brands, brandId, variant = "filled", size
   const radioSize = resolveDimension(brands, brandId, "radio-size", size);
   const iconSize = resolveDimension(brands, brandId, "radio-icon-size", size);
 
-  // Mantine outline variant: --radio-color controls the border ring color (not bg)
-  // Mantine filled variant: --radio-color controls the background fill
-  const radioColor = variant === "outline" ? filledBg : filledBg;
-  // For outline, the icon (dot) should match the ring color
+  // --radio-color: accent color used for filled bg (when checked) and outline ring (when checked)
+  // Both variants use the primary brand color for the accent
+  const radioColor = filledBg;
+  // For outline, the dot should match the ring color (primary); for filled, use icon-color (white)
   const radioIconColor = variant === "outline" ? filledBg : iconColor;
 
   const handleClick = readOnly ? undefined : () => setInternalChecked((v) => !v);
