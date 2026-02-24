@@ -23,6 +23,7 @@ import TextInputPreviewPanel from "./components/panels/TextInputPreviewPanel";
 import TokenChain from "./components/TokenChain";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
+import { buildStorybookZip } from "./utils/buildStorybookZip";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
 
 export default function App() {
@@ -171,6 +172,16 @@ export default function App() {
     const a = document.createElement("a");
     a.href = url;
     a.download = "design-system-tokens.md";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleStorybookExport = async () => {
+    const blob = await buildStorybookZip(brands, GLOBAL_PRIMITIVES);
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "design-system-storybook.zip";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -484,6 +495,56 @@ export default function App() {
                     }}
                   >
                     Download Markdown
+                  </button>
+                </div>
+
+                <div
+                  style={{
+                    borderTop: "1px solid #2C2E33",
+                    marginTop: 20,
+                    paddingTop: 20,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: 11,
+                      color: "#5C5F66",
+                      marginBottom: 12,
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Storybook Export
+                  </div>
+                  <p
+                    style={{
+                      fontSize: 13,
+                      color: "#868E96",
+                      marginBottom: 16,
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    Download a ready-to-run Storybook project with all components,
+                    tokens, and a brand switcher toolbar. Extract, run{" "}
+                    <code style={{ color: "#C1C2C5" }}>npm install && npm run storybook</code>,
+                    and you're set.
+                  </p>
+                  <button
+                    onClick={handleStorybookExport}
+                    style={{
+                      background: "#228BE6",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "8px 16px",
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "#fff",
+                      cursor: "pointer",
+                      fontFamily: "monospace",
+                    }}
+                  >
+                    Generate Storybook
                   </button>
                 </div>
               </div>
