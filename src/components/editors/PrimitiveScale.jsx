@@ -17,15 +17,17 @@ export default function PrimitiveScale({ name, scale, onUpdate }) {
       >
         {name}
       </div>
-      <div style={{ display: "flex", gap: 2 }}>
+      <div style={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
         {scale.map((c, i) => (
           <div
             key={i}
             style={{
+              flex: 1,
               display: "flex",
               flexDirection: "column",
               alignItems: "center",
               gap: 2,
+              minWidth: 0,
             }}
           >
             {editing === i ? (
@@ -42,7 +44,7 @@ export default function PrimitiveScale({ name, scale, onUpdate }) {
                 }}
                 autoFocus
                 style={{
-                  width: 56,
+                  width: "100%",
                   fontSize: 9,
                   fontFamily: "monospace",
                   padding: "2px 4px",
@@ -51,6 +53,7 @@ export default function PrimitiveScale({ name, scale, onUpdate }) {
                   borderRadius: 3,
                   color: "#C1C2C5",
                   textAlign: "center",
+                  boxSizing: "border-box",
                 }}
               />
             ) : (
@@ -60,7 +63,7 @@ export default function PrimitiveScale({ name, scale, onUpdate }) {
                   setVal(c);
                 }}
                 style={{
-                  width: 36,
+                  width: "100%",
                   height: 36,
                   borderRadius: 4,
                   background: c,

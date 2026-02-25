@@ -1,10 +1,6 @@
-import { COMPONENT_TOKENS } from "../../data/componentTokens";
-import { buildResolvedVars } from "../../utils/buildResolvedVars";
 import ChipPreview from "../previews/ChipPreview";
 import SectionLabel from "../shared/SectionLabel";
 import ToggleButtonGroup from "../shared/ToggleButtonGroup";
-import CodeSnippet from "../shared/CodeSnippet";
-import ResolvedVarsTable from "../shared/ResolvedVarsTable";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
@@ -21,17 +17,9 @@ export default function ChipPreviewPanel({
   activeChipRadius,
   setActiveChipRadius,
   sizeKeys,
+  forcedChecked,
+  activeColorToken,
 }) {
-  const tokens = COMPONENT_TOKENS.chip;
-
-  const codeString = `import { Chip } from "@mantine/core";
-
-<Chip variant="${activeVariant}" size="${activeChipSize}" radius="${activeChipRadius}" checked>
-  Chip
-</Chip>`;
-
-  const resolvedVars = buildResolvedVars(tokens, brands, activeBrand, activeChipSize);
-
   const matrixRows = CHIP_VARIANTS.flatMap((v) => [
     { label: `${v} / unchecked`, variant: v, checked: false },
     { label: `${v} / checked`, variant: v, checked: true },
@@ -66,6 +54,11 @@ export default function ChipPreviewPanel({
         </div>
       </div>
 
+      {activeColorToken && (
+        <div style={{ fontSize: 12, fontFamily: "monospace", color: "#868E96", marginBottom: 8 }}>
+          {activeColorToken}
+        </div>
+      )}
       <PreviewStage>
         <ChipPreview
           brands={brands}
@@ -73,6 +66,8 @@ export default function ChipPreviewPanel({
           variant={activeVariant}
           size={activeChipSize}
           radius={activeChipRadius}
+          checked={forcedChecked != null ? forcedChecked : undefined}
+          readOnly={forcedChecked != null}
         />
       </PreviewStage>
 
@@ -93,11 +88,6 @@ export default function ChipPreviewPanel({
         )}
       />
 
-      <SectionLabel>Component Code — {activeVariant} / {activeChipSize}</SectionLabel>
-      <CodeSnippet code={codeString} />
-
-      <SectionLabel>Resolved Variables — {activeVariant} / {activeChipSize}</SectionLabel>
-      <ResolvedVarsTable resolvedVars={resolvedVars} />
     </div>
   );
 }

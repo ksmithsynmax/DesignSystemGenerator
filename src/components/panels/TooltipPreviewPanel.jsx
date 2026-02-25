@@ -1,11 +1,7 @@
 import { useState } from "react";
-import { COMPONENT_TOKENS } from "../../data/componentTokens";
-import { buildResolvedVars } from "../../utils/buildResolvedVars";
 import TooltipPreview from "../previews/TooltipPreview";
 import SectionLabel from "../shared/SectionLabel";
 import ToggleButtonGroup from "../shared/ToggleButtonGroup";
-import CodeSnippet from "../shared/CodeSnippet";
-import ResolvedVarsTable from "../shared/ResolvedVarsTable";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
@@ -14,16 +10,6 @@ const TOOLTIP_POSITIONS = ["top", "bottom", "left", "right"];
 export default function TooltipPreviewPanel({ brands, activeBrand }) {
   const [activePosition, setActivePosition] = useState("top");
   const [withArrow, setWithArrow] = useState(true);
-
-  const tokens = COMPONENT_TOKENS.tooltip;
-
-  const codeString = `import { Tooltip } from "@mantine/core";
-
-<Tooltip label="Tooltip text" position="${activePosition}"${withArrow ? " withArrow" : ""}>
-  <Button>Trigger</Button>
-</Tooltip>`;
-
-  const resolvedVars = buildResolvedVars(tokens, brands, activeBrand, null);
 
   const matrixRows = TOOLTIP_POSITIONS.map((pos) => ({ label: pos, position: pos }));
 
@@ -83,11 +69,6 @@ export default function TooltipPreviewPanel({ brands, activeBrand }) {
         )}
       />
 
-      <SectionLabel>Component Code — {activePosition}</SectionLabel>
-      <CodeSnippet code={codeString} />
-
-      <SectionLabel>Resolved Variables</SectionLabel>
-      <ResolvedVarsTable resolvedVars={resolvedVars} />
     </div>
   );
 }

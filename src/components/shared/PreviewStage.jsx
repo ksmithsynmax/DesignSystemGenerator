@@ -10,6 +10,7 @@ export default function PreviewStage({ children, padding = 32, gap = 16 }) {
         justifyContent: "center",
         gap,
         marginBottom: 24,
+        minHeight: "calc(100vh - 250px)",
       }}
     >
       {children}

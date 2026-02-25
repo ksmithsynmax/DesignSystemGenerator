@@ -1,11 +1,7 @@
 import { useState } from "react";
-import { COMPONENT_TOKENS } from "../../data/componentTokens";
-import { buildResolvedVars } from "../../utils/buildResolvedVars";
 import RadioPreview from "../previews/RadioPreview";
 import SectionLabel from "../shared/SectionLabel";
 import ToggleButtonGroup from "../shared/ToggleButtonGroup";
-import CodeSnippet from "../shared/CodeSnippet";
-import ResolvedVarsTable from "../shared/ResolvedVarsTable";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
@@ -19,16 +15,10 @@ export default function RadioPreviewPanel({
   activeRadioSize,
   setActiveRadioSize,
   sizeKeys,
+  forcedChecked,
+  activeColorToken,
 }) {
   const [showLabel, setShowLabel] = useState(true);
-  const tokens = COMPONENT_TOKENS.radio;
-
-  const codeString = `import { Radio } from "@mantine/core";
-
-<Radio variant="${activeVariant}" size="${activeRadioSize}"${showLabel ? ' label="Radio label"' : ""} />`;
-
-  const resolvedVars = buildResolvedVars(tokens, brands, activeBrand, activeRadioSize);
-
   const matrixRows = RADIO_VARIANTS.flatMap((v) => [
     { label: `${v} / unchecked`, variant: v, checked: false },
     { label: `${v} / checked`, variant: v, checked: true },
@@ -73,6 +63,11 @@ export default function RadioPreviewPanel({
         </div>
       </div>
 
+      {activeColorToken && (
+        <div style={{ fontSize: 12, fontFamily: "monospace", color: "#868E96", marginBottom: 8 }}>
+          {activeColorToken}
+        </div>
+      )}
       <PreviewStage>
         <RadioPreview
           brands={brands}
@@ -80,6 +75,8 @@ export default function RadioPreviewPanel({
           variant={activeVariant}
           size={activeRadioSize}
           label={showLabel ? "Radio label" : undefined}
+          checked={forcedChecked != null ? forcedChecked : undefined}
+          readOnly={forcedChecked != null}
         />
       </PreviewStage>
 
@@ -99,11 +96,6 @@ export default function RadioPreviewPanel({
         )}
       />
 
-      <SectionLabel>Component Code — {activeVariant} / {activeRadioSize}</SectionLabel>
-      <CodeSnippet code={codeString} />
-
-      <SectionLabel>Resolved Variables — {activeVariant} / {activeRadioSize}</SectionLabel>
-      <ResolvedVarsTable resolvedVars={resolvedVars} />
     </div>
   );
 }

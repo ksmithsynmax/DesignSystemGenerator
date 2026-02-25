@@ -1,10 +1,6 @@
-import { COMPONENT_TOKENS } from "../../data/componentTokens";
-import { buildResolvedVars } from "../../utils/buildResolvedVars";
 import SwitchPreview from "../previews/SwitchPreview";
 import SectionLabel from "../shared/SectionLabel";
 import ToggleButtonGroup from "../shared/ToggleButtonGroup";
-import CodeSnippet from "../shared/CodeSnippet";
-import ResolvedVarsTable from "../shared/ResolvedVarsTable";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
@@ -14,15 +10,9 @@ export default function SwitchPreviewPanel({
   activeSwitchSize,
   setActiveSwitchSize,
   sizeKeys,
+  forcedChecked,
+  activeColorToken,
 }) {
-  const tokens = COMPONENT_TOKENS.switch;
-
-  const codeString = `import { Switch } from "@mantine/core";
-
-<Switch size="${activeSwitchSize}" />`;
-
-  const resolvedVars = buildResolvedVars(tokens, brands, activeBrand, activeSwitchSize);
-
   const matrixRows = [
     { label: "off", checked: false },
     { label: "on", checked: true },
@@ -39,13 +29,22 @@ export default function SwitchPreviewPanel({
         />
       </div>
 
+      {activeColorToken && (
+        <div style={{ fontSize: 12, fontFamily: "monospace", color: "#868E96", marginBottom: 8 }}>
+          {activeColorToken}
+        </div>
+      )}
       <PreviewStage>
         <SwitchPreview
           brands={brands}
           brandId={activeBrand}
           size={activeSwitchSize}
+          checked={forcedChecked != null ? forcedChecked : undefined}
+          readOnly={forcedChecked != null}
         />
-        <span style={{ fontSize: 13, color: "#868E96" }}>Click to toggle</span>
+        {forcedChecked == null && (
+          <span style={{ fontSize: 13, color: "#868E96" }}>Click to toggle</span>
+        )}
       </PreviewStage>
 
       <SectionLabel>All Sizes — Off & On States</SectionLabel>
@@ -63,11 +62,6 @@ export default function SwitchPreviewPanel({
         )}
       />
 
-      <SectionLabel>Component Code — {activeSwitchSize}</SectionLabel>
-      <CodeSnippet code={codeString} />
-
-      <SectionLabel>Resolved Variables — {activeSwitchSize}</SectionLabel>
-      <ResolvedVarsTable resolvedVars={resolvedVars} />
     </div>
   );
 }

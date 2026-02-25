@@ -1,10 +1,6 @@
-import { COMPONENT_TOKENS } from "../../data/componentTokens";
-import { buildResolvedVars } from "../../utils/buildResolvedVars";
 import CheckboxPreview from "../previews/CheckboxPreview";
 import SectionLabel from "../shared/SectionLabel";
 import ToggleButtonGroup from "../shared/ToggleButtonGroup";
-import CodeSnippet from "../shared/CodeSnippet";
-import ResolvedVarsTable from "../shared/ResolvedVarsTable";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
@@ -14,15 +10,10 @@ export default function CheckboxPreviewPanel({
   activeCheckboxSize,
   setActiveCheckboxSize,
   sizeKeys,
+  forcedChecked,
+  forcedIndeterminate,
+  activeColorToken,
 }) {
-  const tokens = COMPONENT_TOKENS.checkbox;
-
-  const codeString = `import { Checkbox } from "@mantine/core";
-
-<Checkbox size="${activeCheckboxSize}" />`;
-
-  const resolvedVars = buildResolvedVars(tokens, brands, activeBrand, activeCheckboxSize);
-
   const matrixRows = [
     { label: "Unchecked", checked: false, indeterminate: false },
     { label: "Checked", checked: true, indeterminate: false },
@@ -40,11 +31,19 @@ export default function CheckboxPreviewPanel({
         />
       </div>
 
+      {activeColorToken && (
+        <div style={{ fontSize: 12, fontFamily: "monospace", color: "#868E96", marginBottom: 8 }}>
+          {activeColorToken}
+        </div>
+      )}
       <PreviewStage padding={24}>
         <CheckboxPreview
           brands={brands}
           brandId={activeBrand}
           size={activeCheckboxSize}
+          checked={forcedChecked != null ? forcedChecked : undefined}
+          indeterminate={forcedIndeterminate || undefined}
+          readOnly={forcedChecked != null || forcedIndeterminate}
         />
       </PreviewStage>
 
@@ -64,11 +63,6 @@ export default function CheckboxPreviewPanel({
         )}
       />
 
-      <SectionLabel>Code</SectionLabel>
-      <CodeSnippet code={codeString} />
-
-      <SectionLabel>Resolved Variables — {activeCheckboxSize}</SectionLabel>
-      <ResolvedVarsTable resolvedVars={resolvedVars} />
     </div>
   );
 }

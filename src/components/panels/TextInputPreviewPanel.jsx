@@ -1,11 +1,7 @@
 import { useState } from "react";
-import { COMPONENT_TOKENS } from "../../data/componentTokens";
-import { buildResolvedVars } from "../../utils/buildResolvedVars";
 import TextInputPreview from "../previews/TextInputPreview";
 import SectionLabel from "../shared/SectionLabel";
 import ToggleButtonGroup from "../shared/ToggleButtonGroup";
-import CodeSnippet from "../shared/CodeSnippet";
-import ResolvedVarsTable from "../shared/ResolvedVarsTable";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
@@ -22,26 +18,14 @@ export default function TextInputPreviewPanel({
   activeTextInputRadius,
   setActiveTextInputRadius,
   sizeKeys,
+  forcedState,
+  activeColorToken,
 }) {
   const [showLabel, setShowLabel] = useState(true);
   const [labelText, setLabelText] = useState("Label");
   const [withAsterisk, setWithAsterisk] = useState(false);
   const [showError, setShowError] = useState(false);
   const [errorText, setErrorText] = useState("Error message");
-
-  const tokens = COMPONENT_TOKENS.textinput;
-
-  const mantineVariant = activeVariant === "filled" ? "filled" : "default";
-  const codeString = `import { TextInput } from "@mantine/core";
-
-<TextInput
-  variant="${mantineVariant}"
-  size="${activeTextInputSize}"
-  radius="${activeTextInputRadius}"${showLabel ? `\n  label="${labelText}"` : ""}${withAsterisk && showLabel ? "\n  withAsterisk" : ""}${showError ? `\n  error="${errorText}"` : ""}
-  placeholder="Placeholder"
-/>`;
-
-  const resolvedVars = buildResolvedVars(tokens, brands, activeBrand, activeTextInputSize);
 
   const matrixRows = TEXTINPUT_VARIANTS.flatMap((v) => [
     { label: `${v}`, variant: v, state: "default" },
@@ -149,6 +133,11 @@ export default function TextInputPreviewPanel({
         </div>
       </div>
 
+      {activeColorToken && (
+        <div style={{ fontSize: 12, fontFamily: "monospace", color: "#868E96", marginBottom: 8 }}>
+          {activeColorToken}
+        </div>
+      )}
       <PreviewStage>
         <div style={{ width: 280 }}>
           <TextInputPreview
@@ -160,8 +149,9 @@ export default function TextInputPreviewPanel({
             showLabel={showLabel}
             labelText={labelText}
             withAsterisk={withAsterisk}
-            showError={showError}
+            showError={forcedState === "error" || showError}
             errorText={errorText}
+            state={forcedState}
           />
         </div>
       </PreviewStage>
@@ -187,11 +177,6 @@ export default function TextInputPreviewPanel({
         )}
       />
 
-      <SectionLabel>Component Code — {activeVariant} / {activeTextInputSize}</SectionLabel>
-      <CodeSnippet code={codeString} />
-
-      <SectionLabel>Resolved Variables — {activeVariant} / {activeTextInputSize}</SectionLabel>
-      <ResolvedVarsTable resolvedVars={resolvedVars} />
     </div>
   );
 }

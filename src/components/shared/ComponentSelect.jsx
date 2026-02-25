@@ -94,7 +94,7 @@ export default function ComponentSelect({
           cursor: "pointer",
           fontFamily: "monospace",
           textTransform: "capitalize",
-          minWidth: 140,
+          width: "100%",
           textAlign: "left",
           position: "relative",
         }}
@@ -120,6 +120,7 @@ export default function ComponentSelect({
           style={{
             position: "absolute",
             top: "100%",
+            left: 0,
             right: 0,
             marginTop: 4,
             background: "#25262B",

@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { INITIAL_BRANDS } from "./data/brands";
 import {
   COMPONENT_NAMES,
@@ -10,8 +10,7 @@ import { resolveColor, getComponentDefaultSize } from "./utils/resolveToken";
 import Section from "./components/shared/Section";
 import ComponentSelect from "./components/shared/ComponentSelect";
 import PrimitiveScale from "./components/editors/PrimitiveScale";
-import SemanticRow from "./components/editors/SemanticRow";
-import ComponentTokenRow from "./components/editors/ComponentTokenRow";
+import TokenChainCard from "./components/editors/TokenChainCard";
 import DimensionTokenRow from "./components/editors/DimensionTokenRow";
 import ButtonPreviewPanel from "./components/panels/ButtonPreviewPanel";
 import SwitchPreviewPanel from "./components/panels/SwitchPreviewPanel";
@@ -20,7 +19,6 @@ import RadioPreviewPanel from "./components/panels/RadioPreviewPanel";
 import ChipPreviewPanel from "./components/panels/ChipPreviewPanel";
 import TooltipPreviewPanel from "./components/panels/TooltipPreviewPanel";
 import TextInputPreviewPanel from "./components/panels/TextInputPreviewPanel";
-import TokenChain from "./components/TokenChain";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
@@ -33,6 +31,27 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("preview");
   const [storybookLoading, setStorybookLoading] = useState(false);
   const [storybookError, setStorybookError] = useState(null);
+  const [panelWidth, setPanelWidth] = useState(460);
+  const [activeColorToken, setActiveColorToken] = useState(null);
+  const [activeDimensionToken, setActiveDimensionToken] = useState(null);
+
+  const panelWidthRef = useRef(460);
+  const handlePanelDrag = useCallback((e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = panelWidthRef.current;
+    const onMove = (ev) => {
+      const next = Math.min(700, Math.max(300, startWidth + ev.clientX - startX));
+      panelWidthRef.current = next;
+      setPanelWidth(next);
+    };
+    const onUp = () => {
+      document.removeEventListener("mousemove", onMove);
+      document.removeEventListener("mouseup", onUp);
+    };
+    document.addEventListener("mousemove", onMove);
+    document.addEventListener("mouseup", onUp);
+  }, []);
 
   const brand = brands[activeBrand];
   const colorNames = Object.keys(brand.primitives);
@@ -77,6 +96,8 @@ export default function App() {
   // Sync active size when component changes
   const handleComponentChange = useCallback((newComp) => {
     setActiveComponent(newComp);
+    setActiveColorToken(null);
+    setActiveDimensionToken(null);
     if (newComp === "button") {
       setActiveSize(buttonDefault);
     } else if (newComp === "switch") {
@@ -155,6 +176,48 @@ export default function App() {
   const colorTokens = getColorTokens(activeComponent);
   const dimensionTokens = getDimensionTokens(activeComponent);
 
+  // Parse forced state/checked/variant from the active token card
+  const INTERACTIVE_STATES = ["hover", "focus", "pressed", "disabled", "error"];
+  let forcedState = null;
+  let forcedChecked = null;
+  let forcedIndeterminate = false;
+  let forcedVariant = null;
+
+  if (activeColorToken) {
+    const parts = activeColorToken.split("-");
+    const last = parts[parts.length - 1];
+
+    // Detect interactive state suffix
+    if (INTERACTIVE_STATES.includes(last)) {
+      forcedState = last;
+    }
+
+    // Detect checked/indeterminate
+    if (parts.includes("checked")) {
+      forcedChecked = true;
+    }
+    if (parts.includes("indeterminate")) {
+      forcedIndeterminate = true;
+    }
+
+    // Extract variant from token name (e.g., "button-filled-background-hover" → "filled")
+    // Pattern: component-variant-property[-state]
+    // Variant is the second segment for components that have variants
+    if (["button", "chip", "radio", "textinput"].includes(activeComponent)) {
+      const variantSegment = parts[1];
+      // Validate it's actually a variant, not a property
+      const knownVariants = {
+        button: ["filled", "outlined", "ghost"],
+        chip: ["filled", "light", "outline"],
+        radio: ["filled", "outline"],
+        textinput: ["default", "filled"],
+      };
+      if (knownVariants[activeComponent]?.includes(variantSegment)) {
+        forcedVariant = variantSegment;
+      }
+    }
+  }
+
   const tabStyle = (t) => ({
     background: activeTab === t ? "#25262B" : "transparent",
     color: activeTab === t ? "#C1C2C5" : "#5C5F66",
@@ -163,7 +226,7 @@ export default function App() {
     fontSize: 13,
     fontWeight: 500,
     cursor: "pointer",
-    borderRadius: "6px 6px 0 0",
+    borderRadius: 6,
   });
 
   const handleMarkdownExport = () => {
@@ -231,18 +294,32 @@ export default function App() {
         <span style={{ fontSize: 18, fontWeight: 700, color: "#E9ECEF" }}>
           Design System Generator
         </span>
-        <div style={{ display: "flex", alignItems: "center", gap: 20 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 12, color: "#5C5F66" }}>Component:</span>
-            <ComponentSelect
-              options={COMPONENT_NAMES}
-              value={activeComponent}
-              onChange={handleComponentChange}
-            />
-          </div>
-          <div style={{ width: 1, height: 20, background: "#373A40" }} />
-          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-            <span style={{ fontSize: 12, color: "#5C5F66" }}>Brand:</span>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button onClick={() => setActiveTab("preview")} style={tabStyle("preview")}>
+            Preview
+          </button>
+          <button onClick={() => setActiveTab("export")} style={tabStyle("export")}>
+            Export
+          </button>
+        </div>
+      </div>
+
+      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
+        {/* Left Panel — Token Layers (Preview tab only) */}
+        {activeTab === "preview" && (
+          <div
+            style={{
+              width: panelWidth,
+              borderRight: "1px solid #2C2E33",
+              overflowY: "auto",
+              overflowX: "hidden",
+              padding: "16px 20px",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ fontSize: 11, color: "#5C5F66", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, marginBottom: 8 }}>
+              Brand
+            </div>
             <ComponentSelect
               options={brandNames}
               value={activeBrand}
@@ -252,112 +329,97 @@ export default function App() {
               onAdd={addBrand}
               addLabel="+ New brand"
             />
+            <div style={{ marginTop: 20 }} />
+            <Section title={`Primitives — ${brand.name}`}>
+              {colorNames.map((c) => (
+                <PrimitiveScale
+                  key={c}
+                  name={c}
+                  scale={brand.primitives[c]}
+                  onUpdate={updatePrimitive}
+                />
+              ))}
+            </Section>
+
+            <Section title={`Color Tokens — ${activeComponent}`}>
+              {Object.entries(colorTokens).map(([token, def]) => {
+                const semantic = def.semantic;
+                const mapping = brand.semanticMap[semantic];
+                if (!mapping) return null;
+                const isActive = activeColorToken === token;
+                return (
+                  <TokenChainCard
+                    key={token}
+                    componentToken={token}
+                    semanticToken={semantic}
+                    mapping={mapping}
+                    resolvedColor={resolveColor(brands, activeBrand, semantic)}
+                    isActive={isActive}
+                    onClick={() => setActiveColorToken(isActive ? null : token)}
+                    onUpdate={updateSemantic}
+                    colors={colorNames}
+                  />
+                );
+              })}
+            </Section>
+
+            <Section title={`Dimension Tokens — ${activeComponent}`}>
+              {Object.entries(dimensionTokens).map(([token, def]) => {
+                const isActive = activeDimensionToken === token;
+                return (
+                  <DimensionTokenRow
+                    key={token}
+                    tokenName={token}
+                    tokenDef={def}
+                    brands={brands}
+                    brandId={activeBrand}
+                    sizeKeys={sizeKeys}
+                    onUpdateDimension={updateDimensionOverride}
+                    isActive={isActive}
+                    onClick={() => setActiveDimensionToken(isActive ? null : token)}
+                  />
+                );
+              })}
+            </Section>
           </div>
-        </div>
-      </div>
+        )}
 
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        {/* Left Panel — Token Layers */}
-        <div
-          style={{
-            width: 420,
-            borderRight: "1px solid #2C2E33",
-            overflowY: "auto",
-            padding: "16px 20px",
-            flexShrink: 0,
-          }}
-        >
-          <Section title={`Primitives — ${brand.name}`}>
-            {colorNames.map((c) => (
-              <PrimitiveScale
-                key={c}
-                name={c}
-                scale={brand.primitives[c]}
-                onUpdate={updatePrimitive}
-              />
-            ))}
-          </Section>
+        {/* Drag Handle */}
+        {activeTab === "preview" && (
+          <div
+            onMouseDown={handlePanelDrag}
+            style={{
+              width: 4,
+              cursor: "col-resize",
+              flexShrink: 0,
+              background: "transparent",
+              transition: "background 0.15s",
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#373A40")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          />
+        )}
 
-          <Section title="Semantic Tokens">
-            {Object.entries(brand.semanticMap).map(([token, mapping]) => (
-              <SemanticRow
-                key={token}
-                token={token}
-                mapping={mapping}
-                resolvedColor={resolveColor(brands, activeBrand, token)}
-                onUpdate={updateSemantic}
-                colors={colorNames}
-              />
-            ))}
-          </Section>
-
-          <Section title={`Color Tokens — ${activeComponent}`}>
-            {Object.entries(colorTokens).map(([token, def]) => (
-              <ComponentTokenRow
-                key={token}
-                token={token}
-                tokenDef={def}
-                resolvedColor={resolveColor(brands, activeBrand, def.semantic)}
-              />
-            ))}
-          </Section>
-
-          <Section title={`Dimension Tokens — ${activeComponent}`}>
-            {Object.entries(dimensionTokens).map(([token, def]) => (
-              <DimensionTokenRow
-                key={token}
-                tokenName={token}
-                tokenDef={def}
-                brands={brands}
-                brandId={activeBrand}
-                sizeKeys={sizeKeys}
-                onUpdateDimension={updateDimensionOverride}
-              />
-            ))}
-          </Section>
-        </div>
-
-        {/* Right Panel — Preview & Chain */}
+        {/* Center Panel — Preview */}
         <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
-          {/* Tabs */}
-          <div style={{ display: "flex", gap: 4, marginBottom: 0 }}>
-            <button
-              onClick={() => setActiveTab("preview")}
-              style={tabStyle("preview")}
-            >
-              Preview
-            </button>
-            <button
-              onClick={() => setActiveTab("chain")}
-              style={tabStyle("chain")}
-            >
-              Token Chain
-            </button>
-            <button
-              onClick={() => setActiveTab("export")}
-              style={tabStyle("export")}
-            >
-              Export
-            </button>
-          </div>
-
           <div
             style={{
               background: "#25262B",
-              borderRadius: "0 8px 8px 8px",
+              borderRadius: 8,
               padding: 24,
             }}
           >
-            {/* PREVIEW TAB */}
             {activeTab === "preview" && activeComponent === "button" && (
               <ButtonPreviewPanel
                 brands={brands}
                 activeBrand={activeBrand}
-                activeVariant={activeVariant}
+                activeVariant={forcedVariant || activeVariant}
                 setActiveVariant={setActiveVariant}
                 activeSize={activeSize}
                 setActiveSize={setActiveSize}
                 sizeKeys={sizeKeys}
+                forcedState={forcedState}
+                activeColorToken={activeColorToken}
               />
             )}
 
@@ -368,6 +430,8 @@ export default function App() {
                 activeSwitchSize={activeSwitchSize}
                 setActiveSwitchSize={setActiveSwitchSize}
                 sizeKeys={sizeKeys}
+                forcedChecked={forcedChecked}
+                activeColorToken={activeColorToken}
               />
             )}
 
@@ -378,6 +442,9 @@ export default function App() {
                 activeCheckboxSize={activeCheckboxSize}
                 setActiveCheckboxSize={setActiveCheckboxSize}
                 sizeKeys={sizeKeys}
+                forcedChecked={forcedChecked}
+                forcedIndeterminate={forcedIndeterminate}
+                activeColorToken={activeColorToken}
               />
             )}
 
@@ -385,11 +452,13 @@ export default function App() {
               <RadioPreviewPanel
                 brands={brands}
                 activeBrand={activeBrand}
-                activeVariant={activeVariant}
+                activeVariant={forcedVariant || activeVariant}
                 setActiveVariant={setActiveVariant}
                 activeRadioSize={activeRadioSize}
                 setActiveRadioSize={setActiveRadioSize}
                 sizeKeys={sizeKeys}
+                forcedChecked={forcedChecked}
+                activeColorToken={activeColorToken}
               />
             )}
 
@@ -397,13 +466,15 @@ export default function App() {
               <ChipPreviewPanel
                 brands={brands}
                 activeBrand={activeBrand}
-                activeVariant={activeVariant}
+                activeVariant={forcedVariant || activeVariant}
                 setActiveVariant={setActiveVariant}
                 activeChipSize={activeChipSize}
                 setActiveChipSize={setActiveChipSize}
                 activeChipRadius={activeChipRadius}
                 setActiveChipRadius={setActiveChipRadius}
                 sizeKeys={sizeKeys}
+                forcedChecked={forcedChecked}
+                activeColorToken={activeColorToken}
               />
             )}
 
@@ -418,161 +489,113 @@ export default function App() {
               <TextInputPreviewPanel
                 brands={brands}
                 activeBrand={activeBrand}
-                activeVariant={activeVariant}
+                activeVariant={forcedVariant || activeVariant}
                 setActiveVariant={setActiveVariant}
                 activeTextInputSize={activeTextInputSize}
                 setActiveTextInputSize={setActiveTextInputSize}
                 activeTextInputRadius={activeTextInputRadius}
                 setActiveTextInputRadius={setActiveTextInputRadius}
                 sizeKeys={sizeKeys}
-              />
-            )}
-
-            {/* CHAIN TAB */}
-            {activeTab === "chain" && (
-              <TokenChain
-                brands={brands}
-                brandId={activeBrand}
-                componentName={activeComponent}
+                forcedState={forcedState}
+                activeColorToken={activeColorToken}
               />
             )}
 
             {/* EXPORT TAB */}
             {activeTab === "export" && (
               <div>
-                <div
-                  style={{
-                    fontSize: 11,
-                    color: "#5C5F66",
-                    marginBottom: 12,
-                    textTransform: "uppercase",
-                    letterSpacing: "0.05em",
-                    fontWeight: 600,
-                  }}
-                >
-                  Resolved Tokens — All Brands
+                <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+                  Figma Sync
                 </div>
-                <p
-                  style={{
-                    fontSize: 13,
-                    color: "#868E96",
-                    marginBottom: 16,
-                    lineHeight: 1.5,
-                  }}
-                >
-                  This JSON represents the fully resolved token data for all
-                  brands. Figma folder paths are used as keys. COLOR and FLOAT
-                  types are included. Size variants are expanded into individual
-                  entries with -default aliases.
+                <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
+                  Sync resolved token data to Figma variables via the relay server.
                 </p>
                 <FigmaSyncButton brands={brands} />
 
-                <div
-                  style={{
-                    borderTop: "1px solid #2C2E33",
-                    marginTop: 20,
-                    paddingTop: 20,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "#5C5F66",
-                      marginBottom: 12,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      fontWeight: 600,
-                    }}
-                  >
+                <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
+                  <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
                     Markdown Export
                   </div>
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: "#868E96",
-                      marginBottom: 16,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    Download a markdown reference of all tokens, brand primitives,
-                    semantic mappings, and component definitions.
+                  <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
+                    Download a markdown reference of all tokens, brand primitives, semantic mappings, and component definitions.
                   </p>
                   <button
                     onClick={handleMarkdownExport}
-                    style={{
-                      background: "#25262B",
-                      border: "1px solid #373A40",
-                      borderRadius: 6,
-                      padding: "8px 16px",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: "#C1C2C5",
-                      cursor: "pointer",
-                      fontFamily: "monospace",
-                    }}
+                    style={{ background: "#25262B", border: "1px solid #373A40", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#C1C2C5", cursor: "pointer", fontFamily: "monospace" }}
                   >
                     Download Markdown
                   </button>
                 </div>
 
-                <div
-                  style={{
-                    borderTop: "1px solid #2C2E33",
-                    marginTop: 20,
-                    paddingTop: 20,
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: 11,
-                      color: "#5C5F66",
-                      marginBottom: 12,
-                      textTransform: "uppercase",
-                      letterSpacing: "0.05em",
-                      fontWeight: 600,
-                    }}
-                  >
+                <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
+                  <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
                     Storybook Export
                   </div>
-                  <p
-                    style={{
-                      fontSize: 13,
-                      color: "#868E96",
-                      marginBottom: 16,
-                      lineHeight: 1.5,
-                    }}
-                  >
-                    Launch a live Storybook with all components, tokens, and a
-                    brand switcher toolbar. Opens in a new tab on localhost:6006.
+                  <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
+                    Launch a live Storybook with all components, tokens, and a brand switcher toolbar.
                   </p>
                   <button
                     onClick={handleStorybookExport}
                     disabled={storybookLoading}
-                    style={{
-                      background: storybookLoading ? "#1971C2" : "#228BE6",
-                      border: "none",
-                      borderRadius: 6,
-                      padding: "8px 16px",
-                      fontSize: 13,
-                      fontWeight: 600,
-                      color: "#fff",
-                      cursor: storybookLoading ? "wait" : "pointer",
-                      fontFamily: "monospace",
-                      opacity: storybookLoading ? 0.8 : 1,
-                    }}
+                    style={{ background: storybookLoading ? "#1971C2" : "#228BE6", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#fff", cursor: storybookLoading ? "wait" : "pointer", fontFamily: "monospace", opacity: storybookLoading ? 0.8 : 1 }}
                   >
                     {storybookLoading ? "Launching Storybook..." : "Launch Storybook"}
                   </button>
                   {storybookError && (
-                    <p style={{ fontSize: 12, color: "#FA5252", marginTop: 8 }}>
-                      {storybookError}
-                    </p>
+                    <p style={{ fontSize: 12, color: "#FA5252", marginTop: 8 }}>{storybookError}</p>
                   )}
                 </div>
               </div>
             )}
           </div>
         </div>
+
+        {/* Right Nav — Component List (Preview tab only) */}
+        {activeTab === "preview" && (
+          <div
+          style={{
+            width: 180,
+            borderLeft: "1px solid #2C2E33",
+            overflowY: "auto",
+            padding: "16px 12px",
+            flexShrink: 0,
+          }}
+        >
+          <div>
+            {COMPONENT_NAMES.map((name) => (
+              <button
+                key={name}
+                onClick={() => handleComponentChange(name)}
+                style={{
+                  display: "block",
+                  width: "100%",
+                  textAlign: "left",
+                  background: activeComponent === name ? "#25262B" : "transparent",
+                  border: "none",
+                  borderRadius: 6,
+                  padding: "8px 12px",
+                  fontSize: 13,
+                  fontWeight: activeComponent === name ? 600 : 400,
+                  color: activeComponent === name ? "#E9ECEF" : "#909296",
+                  cursor: "pointer",
+                  textTransform: "capitalize",
+                  marginBottom: 2,
+                }}
+                onMouseEnter={(e) => {
+                  if (activeComponent !== name)
+                    e.currentTarget.style.background = "#2C2E33";
+                }}
+                onMouseLeave={(e) => {
+                  if (activeComponent !== name)
+                    e.currentTarget.style.background = "transparent";
+                }}
+              >
+                {name}
+              </button>
+            ))}
+          </div>
+        </div>
+        )}
       </div>
     </div>
   );

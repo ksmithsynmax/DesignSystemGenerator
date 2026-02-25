@@ -1,15 +1,10 @@
-import { COMPONENT_TOKENS } from "../../data/componentTokens";
-import { buildResolvedVars } from "../../utils/buildResolvedVars";
 import ButtonPreview from "../previews/ButtonPreview";
 import SectionLabel from "../shared/SectionLabel";
 import ToggleButtonGroup from "../shared/ToggleButtonGroup";
-import CodeSnippet from "../shared/CodeSnippet";
-import ResolvedVarsTable from "../shared/ResolvedVarsTable";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
 const BUTTON_VARIANTS = ["filled", "outlined", "ghost"];
-const BTN_VARIANT_MAP = { filled: "filled", outlined: "outline", ghost: "subtle" };
 
 export default function ButtonPreviewPanel({
   brands,
@@ -19,18 +14,9 @@ export default function ButtonPreviewPanel({
   activeSize,
   setActiveSize,
   sizeKeys,
+  forcedState,
+  activeColorToken,
 }) {
-  const tokens = COMPONENT_TOKENS.button;
-  const mantineVariant = BTN_VARIANT_MAP[activeVariant] || "filled";
-
-  const codeString = `import { Button } from "@mantine/core";
-
-<Button variant="${mantineVariant}" size="${activeSize}">
-  Button
-</Button>`;
-
-  const resolvedVars = buildResolvedVars(tokens, brands, activeBrand, activeSize);
-
   const matrixRows = BUTTON_VARIANTS.map((v) => ({ label: v, variant: v }));
 
   return (
@@ -54,12 +40,18 @@ export default function ButtonPreviewPanel({
         </div>
       </div>
 
+      {activeColorToken && (
+        <div style={{ fontSize: 12, fontFamily: "monospace", color: "#868E96", marginBottom: 8 }}>
+          {activeColorToken}
+        </div>
+      )}
       <PreviewStage>
         <ButtonPreview
           brands={brands}
           brandId={activeBrand}
           variant={activeVariant}
           size={activeSize}
+          state={forcedState}
         />
       </PreviewStage>
 
@@ -77,11 +69,6 @@ export default function ButtonPreviewPanel({
         )}
       />
 
-      <SectionLabel>Component Code — {activeVariant} / {activeSize}</SectionLabel>
-      <CodeSnippet code={codeString} />
-
-      <SectionLabel>Resolved Variables — {activeVariant} / {activeSize}</SectionLabel>
-      <ResolvedVarsTable resolvedVars={resolvedVars} />
     </div>
   );
 }

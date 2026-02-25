@@ -7,30 +7,33 @@ export default function ComponentTokenRow({ token, tokenDef, resolvedColor }) {
   return (
     <div
       style={{
-        display: "flex",
-        alignItems: "center",
-        gap: 8,
-        padding: "5px 0",
+        padding: "5px 4px",
         borderBottom: "1px solid #2C2E33",
+        borderRadius: 4,
+        cursor: "pointer",
       }}
+      onMouseEnter={(e) => (e.currentTarget.style.background = "#2C2E33")}
+      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
     >
-      <Swatch color={resolvedColor} />
-      <span
+      <div
         style={{
           fontSize: 12,
           fontFamily: "monospace",
           color: "#C1C2C5",
-          minWidth: 260,
+          marginBottom: 4,
         }}
       >
         {token}
-      </span>
-      <Arrow />
-      {semanticRef ? (
-        <Tag color="#4DABF7">{semanticRef}</Tag>
-      ) : (
-        <Tag color="#5C5F66">transparent</Tag>
-      )}
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Swatch color={resolvedColor} />
+        <Arrow />
+        {semanticRef ? (
+          <Tag color="#4DABF7">{semanticRef}</Tag>
+        ) : (
+          <Tag color="#5C5F66">transparent</Tag>
+        )}
+      </div>
     </div>
   );
 }
