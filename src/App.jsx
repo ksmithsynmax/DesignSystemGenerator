@@ -23,7 +23,6 @@ import TextInputPreviewPanel from "./components/panels/TextInputPreviewPanel";
 import TokenChain from "./components/TokenChain";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
-import { buildStorybookZip } from "./utils/buildStorybookZip";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
 
 export default function App() {
@@ -32,6 +31,8 @@ export default function App() {
   const [activeComponent, setActiveComponent] = useState("button");
   const [activeVariant, setActiveVariant] = useState("filled");
   const [activeTab, setActiveTab] = useState("preview");
+  const [storybookLoading, setStorybookLoading] = useState(false);
+  const [storybookError, setStorybookError] = useState(null);
 
   const brand = brands[activeBrand];
   const colorNames = Object.keys(brand.primitives);
@@ -177,13 +178,29 @@ export default function App() {
   };
 
   const handleStorybookExport = async () => {
-    const blob = await buildStorybookZip(brands, GLOBAL_PRIMITIVES);
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "design-system-storybook.zip";
-    a.click();
-    URL.revokeObjectURL(url);
+    setStorybookLoading(true);
+    setStorybookError(null);
+    try {
+      const response = await fetch("http://localhost:9001/api/launch-storybook", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ brands, globalPrimitives: GLOBAL_PRIMITIVES }),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Server error");
+      }
+      const data = await response.json();
+      window.open(data.url, "_blank");
+    } catch (err) {
+      setStorybookError(
+        err.message === "Failed to fetch"
+          ? "Server not running. Start it with: npm run relay"
+          : err.message
+      );
+    } finally {
+      setStorybookLoading(false);
+    }
   };
 
   return (
@@ -525,27 +542,32 @@ export default function App() {
                       lineHeight: 1.5,
                     }}
                   >
-                    Download a ready-to-run Storybook project with all components,
-                    tokens, and a brand switcher toolbar. Extract, run{" "}
-                    <code style={{ color: "#C1C2C5" }}>npm install && npm run storybook</code>,
-                    and you're set.
+                    Launch a live Storybook with all components, tokens, and a
+                    brand switcher toolbar. Opens in a new tab on localhost:6006.
                   </p>
                   <button
                     onClick={handleStorybookExport}
+                    disabled={storybookLoading}
                     style={{
-                      background: "#228BE6",
+                      background: storybookLoading ? "#1971C2" : "#228BE6",
                       border: "none",
                       borderRadius: 6,
                       padding: "8px 16px",
                       fontSize: 13,
                       fontWeight: 600,
                       color: "#fff",
-                      cursor: "pointer",
+                      cursor: storybookLoading ? "wait" : "pointer",
                       fontFamily: "monospace",
+                      opacity: storybookLoading ? 0.8 : 1,
                     }}
                   >
-                    Generate Storybook
+                    {storybookLoading ? "Launching Storybook..." : "Launch Storybook"}
                   </button>
+                  {storybookError && (
+                    <p style={{ fontSize: 12, color: "#FA5252", marginTop: 8 }}>
+                      {storybookError}
+                    </p>
+                  )}
                 </div>
               </div>
             )}
