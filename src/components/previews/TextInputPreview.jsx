@@ -35,17 +35,20 @@ export default function TextInputPreview({
     ? "-hover"
     : "";
 
-  const bg = resolveColor(brands, brandId, tokens[`${prefix}-background${stateSuffix}`]?.semantic);
-  const borderColor = resolveColor(brands, brandId, tokens[`${prefix}-border${stateSuffix}`]?.semantic);
+  const bgKey = `${prefix}-background${stateSuffix}`;
+  const borderKey = `${prefix}-border${stateSuffix}`;
+
+  const bg = resolveColor(brands, brandId, tokens[bgKey]?.semantic, "light", bgKey);
+  const borderColor = resolveColor(brands, brandId, tokens[borderKey]?.semantic, "light", borderKey);
 
   const textColor = isDisabled
-    ? resolveColor(brands, brandId, tokens["textinput-text-disabled"]?.semantic)
-    : resolveColor(brands, brandId, tokens["textinput-text"]?.semantic);
-  const placeholderColor = resolveColor(brands, brandId, tokens["textinput-placeholder"]?.semantic);
-  const labelColor = resolveColor(brands, brandId, tokens["textinput-label-color"]?.semantic);
-  const asteriskColor = resolveColor(brands, brandId, tokens["textinput-asterisk-color"]?.semantic);
-  const errorColor = resolveColor(brands, brandId, tokens["textinput-error-color"]?.semantic);
-  const focusRingColor = resolveColor(brands, brandId, tokens["textinput-focus-ring"]?.semantic);
+    ? resolveColor(brands, brandId, tokens["textinput-text-disabled"]?.semantic, "light", "textinput-text-disabled")
+    : resolveColor(brands, brandId, tokens["textinput-text"]?.semantic, "light", "textinput-text");
+  const placeholderColor = resolveColor(brands, brandId, tokens["textinput-placeholder"]?.semantic, "light", "textinput-placeholder");
+  const labelColor = resolveColor(brands, brandId, tokens["textinput-label-color"]?.semantic, "light", "textinput-label-color");
+  const asteriskColor = resolveColor(brands, brandId, tokens["textinput-asterisk-color"]?.semantic, "light", "textinput-asterisk-color");
+  const errorColor = resolveColor(brands, brandId, tokens["textinput-error-color"]?.semantic, "light", "textinput-error-color");
+  const focusRingColor = resolveColor(brands, brandId, tokens["textinput-focus-ring"]?.semantic, "light", "textinput-focus-ring");
 
   const height = resolveDimension(brands, brandId, "textinput-height", size);
   const fontSize = resolveDimension(brands, brandId, "textinput-font-size", size);

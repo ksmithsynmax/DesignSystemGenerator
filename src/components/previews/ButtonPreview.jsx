@@ -25,15 +25,16 @@ export default function ButtonPreview({ brands, brandId, variant, size, state })
   const prefix = `button-${variant}`;
   const suffix = state ? `-${state}` : "";
 
-  const bg = resolveColor(brands, brandId,
-    tokens[`${prefix}-background${suffix}`]?.semantic ?? tokens[`${prefix}-background`]?.semantic);
+  const bgKey = suffix && tokens[`${prefix}-background${suffix}`] ? `${prefix}-background${suffix}` : `${prefix}-background`;
+  const textKey = suffix && tokens[`${prefix}-text${suffix}`] ? `${prefix}-text${suffix}` : `${prefix}-text`;
+  const borderKey = suffix && tokens[`${prefix}-border${suffix}`] ? `${prefix}-border${suffix}` : `${prefix}-border`;
+
+  const bg = resolveColor(brands, brandId, tokens[bgKey]?.semantic, "light", bgKey);
   const bgHover = state
     ? bg
-    : resolveColor(brands, brandId, tokens[`${prefix}-background-hover`]?.semantic);
-  const text = resolveColor(brands, brandId,
-    tokens[`${prefix}-text${suffix}`]?.semantic ?? tokens[`${prefix}-text`]?.semantic);
-  const border = resolveColor(brands, brandId,
-    tokens[`${prefix}-border${suffix}`]?.semantic ?? tokens[`${prefix}-border`]?.semantic);
+    : resolveColor(brands, brandId, tokens[`${prefix}-background-hover`]?.semantic, "light", `${prefix}-background-hover`);
+  const text = resolveColor(brands, brandId, tokens[textKey]?.semantic, "light", textKey);
+  const border = resolveColor(brands, brandId, tokens[borderKey]?.semantic, "light", borderKey);
 
   const height = resolveDimension(brands, brandId, "button-height", size);
   const paddingX = resolveDimension(brands, brandId, "button-padding-x", size);

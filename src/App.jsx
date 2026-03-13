@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import { INITIAL_BRANDS } from "./data/brands";
 import {
   COMPONENT_NAMES,
@@ -12,7 +12,10 @@ import ComponentSelect from "./components/shared/ComponentSelect";
 import PrimitiveScale from "./components/editors/PrimitiveScale";
 import TokenChainCard from "./components/editors/TokenChainCard";
 import DimensionTokenRow from "./components/editors/DimensionTokenRow";
+import AddPrimitiveForm from "./components/editors/AddPrimitiveForm";
 import ButtonPreviewPanel from "./components/panels/ButtonPreviewPanel";
+import ActionIconPreviewPanel from "./components/panels/ActionIconPreviewPanel";
+import TabsPreviewPanel from "./components/panels/TabsPreviewPanel";
 import SwitchPreviewPanel from "./components/panels/SwitchPreviewPanel";
 import CheckboxPreviewPanel from "./components/panels/CheckboxPreviewPanel";
 import RadioPreviewPanel from "./components/panels/RadioPreviewPanel";
@@ -23,7 +26,24 @@ import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
 
+const VARIANTS_BY_COMPONENT = {
+  button: ["filled", "outlined", "ghost"],
+  actionicon: ["default", "filled", "light", "outlined", "transparent"],
+  tabs: ["default", "outlined", "pills"],
+  checkbox: ["filled", "outlined"],
+  chip: ["filled", "light", "outline"],
+  radio: ["filled", "outline"],
+  textinput: ["default", "filled"],
+};
+
 export default function App() {
+  const COMPONENT_LABELS = {
+    actionicon: "ActionIcon",
+    textinput: "TextInput",
+  };
+  const getComponentLabel = (name) =>
+    COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
+
   const [brands, setBrands] = useState(INITIAL_BRANDS);
   const [activeBrand, setActiveBrand] = useState("theia");
   const [activeComponent, setActiveComponent] = useState("button");
@@ -55,10 +75,13 @@ export default function App() {
 
   const brand = brands[activeBrand];
   const colorNames = Object.keys(brand.primitives);
+  const globalColorNames = Object.keys(GLOBAL_PRIMITIVES);
   const sizeKeys = COMPONENT_SIZE_KEYS[activeComponent] || [];
 
   // Derive default size per component from brand data
   const buttonDefault = getComponentDefaultSize(brands, activeBrand, "button") || "sm";
+  const actionIconDefault = getComponentDefaultSize(brands, activeBrand, "actionicon") || "sm";
+  const tabsDefault = getComponentDefaultSize(brands, activeBrand, "tabs") || "sm";
   const switchDefault = getComponentDefaultSize(brands, activeBrand, "switch") || "md";
   const checkboxDefault = getComponentDefaultSize(brands, activeBrand, "checkbox") || "md";
   const radioDefault = getComponentDefaultSize(brands, activeBrand, "radio") || "md";
@@ -66,8 +89,14 @@ export default function App() {
   const textInputDefault = getComponentDefaultSize(brands, activeBrand, "textinput") || "sm";
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
+  const [activeActionIconSize, setActiveActionIconSize] = useState(actionIconDefault);
+  const [activeActionIconRadius, setActiveActionIconRadius] = useState(actionIconDefault);
+  const [activeActionIconIcon, setActiveActionIconIcon] = useState("check");
+  const [activeTabsRadius, setActiveTabsRadius] = useState(tabsDefault);
+  const [activeTabsOrientation, setActiveTabsOrientation] = useState("horizontal");
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
   const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
+  const [activeCheckboxRadius, setActiveCheckboxRadius] = useState(checkboxDefault);
   const [activeRadioSize, setActiveRadioSize] = useState(radioDefault);
   const [activeChipSize, setActiveChipSize] = useState(chipDefault);
   const [activeChipRadius, setActiveChipRadius] = useState(chipDefault);
@@ -78,13 +107,19 @@ export default function App() {
   const handleBrandChange = useCallback((newBrand) => {
     setActiveBrand(newBrand);
     const btnDef = getComponentDefaultSize(brands, newBrand, "button") || "sm";
+    const aiDef = getComponentDefaultSize(brands, newBrand, "actionicon") || "sm";
+    const tbDef = getComponentDefaultSize(brands, newBrand, "tabs") || "sm";
     const swDef = getComponentDefaultSize(brands, newBrand, "switch") || "md";
     const cbDef = getComponentDefaultSize(brands, newBrand, "checkbox") || "md";
     const rdDef = getComponentDefaultSize(brands, newBrand, "radio") || "md";
     const chDef = getComponentDefaultSize(brands, newBrand, "chip") || "md";
     setActiveSize(btnDef);
+    setActiveActionIconSize(aiDef);
+    setActiveActionIconRadius(aiDef);
+    setActiveTabsRadius(tbDef);
     setActiveSwitchSize(swDef);
     setActiveCheckboxSize(cbDef);
+    setActiveCheckboxRadius(cbDef);
     setActiveRadioSize(rdDef);
     setActiveChipSize(chDef);
     setActiveChipRadius(chDef);
@@ -100,10 +135,21 @@ export default function App() {
     setActiveDimensionToken(null);
     if (newComp === "button") {
       setActiveSize(buttonDefault);
+      setActiveVariant("filled");
+    } else if (newComp === "actionicon") {
+      setActiveActionIconSize(actionIconDefault);
+      setActiveActionIconRadius(actionIconDefault);
+      setActiveVariant("default");
+    } else if (newComp === "tabs") {
+      setActiveTabsRadius(tabsDefault);
+      setActiveTabsOrientation("horizontal");
+      setActiveVariant("default");
     } else if (newComp === "switch") {
       setActiveSwitchSize(switchDefault);
     } else if (newComp === "checkbox") {
       setActiveCheckboxSize(checkboxDefault);
+      setActiveCheckboxRadius(checkboxDefault);
+      setActiveVariant("filled");
     } else if (newComp === "radio") {
       setActiveRadioSize(radioDefault);
       setActiveVariant("filled");
@@ -116,7 +162,15 @@ export default function App() {
       setActiveTextInputRadius(textInputDefault);
       setActiveVariant("default");
     }
-  }, [buttonDefault, switchDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault]);
+
+  useEffect(() => {
+    const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
+    if (!allowedVariants) return;
+    if (!allowedVariants.includes(activeVariant)) {
+      setActiveVariant(allowedVariants[0]);
+    }
+  }, [activeComponent, activeVariant]);
 
   const updatePrimitive = useCallback(
     (colorName, index, value) => {
@@ -129,11 +183,23 @@ export default function App() {
     [activeBrand]
   );
 
-  const updateSemantic = useCallback(
-    (token, mapping) => {
+  const addPrimitive = useCallback(
+    (colorName, scale) => {
       setBrands((prev) => {
         const next = JSON.parse(JSON.stringify(prev));
-        next[activeBrand].semanticMap[token] = mapping;
+        next[activeBrand].primitives[colorName] = scale;
+        return next;
+      });
+    },
+    [activeBrand]
+  );
+
+  const updateComponentOverride = useCallback(
+    (componentToken, mapping) => {
+      setBrands((prev) => {
+        const next = JSON.parse(JSON.stringify(prev));
+        if (!next[activeBrand].componentOverrides) next[activeBrand].componentOverrides = {};
+        next[activeBrand].componentOverrides[componentToken] = mapping;
         return next;
       });
     },
@@ -175,6 +241,28 @@ export default function App() {
   const brandNames = Object.keys(brands);
   const colorTokens = getColorTokens(activeComponent);
   const dimensionTokens = getDimensionTokens(activeComponent);
+  const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token]) => {
+    const parts = token.split("-");
+    const variantSegment = parts[1];
+    const variantsByComponent = {
+      button: ["filled", "outlined", "ghost"],
+      actionicon: ["default", "filled", "light", "outlined", "transparent"],
+      tabs: ["default", "outlined", "pills"],
+      checkbox: ["filled", "outlined"],
+    };
+    const variants = variantsByComponent[activeComponent];
+    if (!variants) return true;
+    if (activeComponent === "checkbox") {
+      const checkboxSharedSegments = ["focus", "label"];
+      if (!variants.includes(variantSegment)) {
+        return checkboxSharedSegments.includes(variantSegment);
+      }
+      return variantSegment === activeVariant;
+    }
+    // Keep shared component tokens (e.g., button-focus-ring / actionicon-focus-ring) and only active variant tokens.
+    if (!variants.includes(variantSegment)) return true;
+    return variantSegment === activeVariant;
+  });
 
   // Parse forced state/checked/variant from the active token card
   const INTERACTIVE_STATES = ["hover", "focus", "pressed", "disabled", "error"];
@@ -203,11 +291,14 @@ export default function App() {
     // Extract variant from token name (e.g., "button-filled-background-hover" → "filled")
     // Pattern: component-variant-property[-state]
     // Variant is the second segment for components that have variants
-    if (["button", "chip", "radio", "textinput"].includes(activeComponent)) {
+    if (["button", "actionicon", "tabs", "checkbox", "chip", "radio", "textinput"].includes(activeComponent)) {
       const variantSegment = parts[1];
       // Validate it's actually a variant, not a property
       const knownVariants = {
         button: ["filled", "outlined", "ghost"],
+        actionicon: ["default", "filled", "light", "outlined", "transparent"],
+        tabs: ["default", "outlined", "pills"],
+        checkbox: ["filled", "outlined"],
         chip: ["filled", "light", "outline"],
         radio: ["filled", "outline"],
         textinput: ["default", "filled"],
@@ -217,6 +308,23 @@ export default function App() {
       }
     }
   }
+
+  useEffect(() => {
+    if (!activeColorToken) return;
+    const parts = activeColorToken.split("-");
+    const variantSegment = parts[1];
+    const variantsByComponent = {
+      button: ["filled", "outlined", "ghost"],
+      actionicon: ["default", "filled", "light", "outlined", "transparent"],
+      tabs: ["default", "outlined", "pills"],
+      checkbox: ["filled", "outlined"],
+    };
+    const variants = variantsByComponent[activeComponent];
+    if (!variants) return;
+    if (variants.includes(variantSegment) && variantSegment !== activeVariant) {
+      setActiveColorToken(null);
+    }
+  }, [activeComponent, activeColorToken, activeVariant]);
 
   const tabStyle = (t) => ({
     background: activeTab === t ? "#25262B" : "transparent",
@@ -339,10 +447,25 @@ export default function App() {
                   onUpdate={updatePrimitive}
                 />
               ))}
+              <AddPrimitiveForm
+                existingNames={colorNames}
+                onAdd={addPrimitive}
+              />
             </Section>
 
-            <Section title={`Color Tokens — ${activeComponent}`}>
-              {Object.entries(colorTokens).map(([token, def]) => {
+            <Section title="Primitives — Global" defaultOpen={false}>
+              {globalColorNames.map((c) => (
+                <PrimitiveScale
+                  key={c}
+                  name={c}
+                  scale={GLOBAL_PRIMITIVES[c]}
+                  readOnly
+                />
+              ))}
+            </Section>
+
+            <Section title={`Color Tokens — ${getComponentLabel(activeComponent)}`}>
+              {visibleColorTokenEntries.map(([token, def]) => {
                 const semantic = def.semantic;
                 const mapping = brand.semanticMap[semantic];
                 if (!mapping) return null;
@@ -352,18 +475,19 @@ export default function App() {
                     key={token}
                     componentToken={token}
                     semanticToken={semantic}
-                    mapping={mapping}
-                    resolvedColor={resolveColor(brands, activeBrand, semantic)}
+                    mapping={brand.componentOverrides?.[token] ?? mapping}
+                    resolvedColor={resolveColor(brands, activeBrand, semantic, "light", token)}
                     isActive={isActive}
                     onClick={() => setActiveColorToken(isActive ? null : token)}
-                    onUpdate={updateSemantic}
-                    colors={colorNames}
+                    onUpdate={updateComponentOverride}
+                    brandColors={colorNames}
+                    globalColors={globalColorNames}
                   />
                 );
               })}
             </Section>
 
-            <Section title={`Dimension Tokens — ${activeComponent}`}>
+            <Section title={`Dimension Tokens — ${getComponentLabel(activeComponent)}`}>
               {Object.entries(dimensionTokens).map(([token, def]) => {
                 const isActive = activeDimensionToken === token;
                 return (
@@ -407,6 +531,8 @@ export default function App() {
               background: "#25262B",
               borderRadius: 8,
               padding: 24,
+              maxWidth: activeTab === "export" ? "50%" : undefined,
+              margin: activeTab === "export" ? "0 auto" : undefined,
             }}
           >
             {activeTab === "preview" && activeComponent === "button" && (
@@ -418,6 +544,39 @@ export default function App() {
                 activeSize={activeSize}
                 setActiveSize={setActiveSize}
                 sizeKeys={sizeKeys}
+                forcedState={forcedState}
+                activeColorToken={activeColorToken}
+              />
+            )}
+
+            {activeTab === "preview" && activeComponent === "actionicon" && (
+              <ActionIconPreviewPanel
+                brands={brands}
+                activeBrand={activeBrand}
+                activeVariant={forcedVariant || activeVariant}
+                setActiveVariant={setActiveVariant}
+                activeActionIconSize={activeActionIconSize}
+                setActiveActionIconSize={setActiveActionIconSize}
+                activeActionIconRadius={activeActionIconRadius}
+                setActiveActionIconRadius={setActiveActionIconRadius}
+                activeActionIconIcon={activeActionIconIcon}
+                setActiveActionIconIcon={setActiveActionIconIcon}
+                sizeKeys={sizeKeys}
+                forcedState={forcedState}
+                activeColorToken={activeColorToken}
+              />
+            )}
+
+            {activeTab === "preview" && activeComponent === "tabs" && (
+              <TabsPreviewPanel
+                brands={brands}
+                activeBrand={activeBrand}
+                activeVariant={forcedVariant || activeVariant}
+                setActiveVariant={setActiveVariant}
+                activeTabsRadius={activeTabsRadius}
+                setActiveTabsRadius={setActiveTabsRadius}
+                activeTabsOrientation={activeTabsOrientation}
+                setActiveTabsOrientation={setActiveTabsOrientation}
                 forcedState={forcedState}
                 activeColorToken={activeColorToken}
               />
@@ -439,8 +598,12 @@ export default function App() {
               <CheckboxPreviewPanel
                 brands={brands}
                 activeBrand={activeBrand}
+                activeVariant={forcedVariant || activeVariant}
+                setActiveVariant={setActiveVariant}
                 activeCheckboxSize={activeCheckboxSize}
                 setActiveCheckboxSize={setActiveCheckboxSize}
+                activeCheckboxRadius={activeCheckboxRadius}
+                setActiveCheckboxRadius={setActiveCheckboxRadius}
                 sizeKeys={sizeKeys}
                 forcedChecked={forcedChecked}
                 forcedIndeterminate={forcedIndeterminate}
@@ -554,13 +717,16 @@ export default function App() {
         {activeTab === "preview" && (
           <div
           style={{
-            width: 180,
+            width: 260,
             borderLeft: "1px solid #2C2E33",
             overflowY: "auto",
             padding: "16px 12px",
             flexShrink: 0,
           }}
         >
+          <div style={{ fontSize: 11, color: "#5C5F66", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, marginBottom: 8 }}>
+            Components
+          </div>
           <div>
             {COMPONENT_NAMES.map((name) => (
               <button
@@ -578,7 +744,6 @@ export default function App() {
                   fontWeight: activeComponent === name ? 600 : 400,
                   color: activeComponent === name ? "#E9ECEF" : "#909296",
                   cursor: "pointer",
-                  textTransform: "capitalize",
                   marginBottom: 2,
                 }}
                 onMouseEnter={(e) => {
@@ -590,7 +755,7 @@ export default function App() {
                     e.currentTarget.style.background = "transparent";
                 }}
               >
-                {name}
+                {getComponentLabel(name)}
               </button>
             ))}
           </div>

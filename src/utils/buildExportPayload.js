@@ -45,11 +45,12 @@ export function buildExportPayload(brands) {
 
       Object.entries(tokens).forEach(([tokenName, def]) => {
         if (def.type === TOKEN_TYPES.COLOR) {
-          const hex = resolveColor(brands, brandId, def.semantic);
+          const hex = resolveColor(brands, brandId, def.semantic, "light", tokenName);
+          const hasComponentOverride = !!brand.componentOverrides?.[tokenName];
           out[brandId].components[def.figmaPath] = {
             type: "COLOR",
             value: hex,
-            alias: def.semantic || null,
+            alias: hasComponentOverride ? null : (def.semantic || null),
           };
         } else if (def.type === TOKEN_TYPES.FLOAT) {
           if (def.sizes) {

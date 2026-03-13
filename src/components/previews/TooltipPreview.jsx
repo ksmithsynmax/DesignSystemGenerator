@@ -12,8 +12,8 @@ export default function TooltipPreview({
 }) {
   const tokens = COMPONENT_TOKENS.tooltip;
 
-  const bg = resolveColor(brands, brandId, tokens["tooltip-background"]?.semantic);
-  const color = resolveColor(brands, brandId, tokens["tooltip-color"]?.semantic);
+  const bg = resolveColor(brands, brandId, tokens["tooltip-background"]?.semantic, "light", "tooltip-background");
+  const color = resolveColor(brands, brandId, tokens["tooltip-color"]?.semantic, "light", "tooltip-color");
   const radius = resolveDimension(brands, brandId, "tooltip-radius");
   const paddingX = resolveDimension(brands, brandId, "tooltip-padding-x");
   const paddingY = resolveDimension(brands, brandId, "tooltip-padding-y");

@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function PrimitiveScale({ name, scale, onUpdate }) {
+export default function PrimitiveScale({ name, scale, onUpdate, readOnly }) {
   const [editing, setEditing] = useState(null);
   const [val, setVal] = useState("");
 
@@ -30,7 +30,7 @@ export default function PrimitiveScale({ name, scale, onUpdate }) {
               minWidth: 0,
             }}
           >
-            {editing === i ? (
+            {!readOnly && editing === i ? (
               <input
                 value={val}
                 onChange={(e) => setVal(e.target.value)}
@@ -58,7 +58,7 @@ export default function PrimitiveScale({ name, scale, onUpdate }) {
               />
             ) : (
               <div
-                onClick={() => {
+                onClick={readOnly ? undefined : () => {
                   setEditing(i);
                   setVal(c);
                 }}
@@ -67,17 +67,17 @@ export default function PrimitiveScale({ name, scale, onUpdate }) {
                   height: 36,
                   borderRadius: 4,
                   background: c,
-                  cursor: "pointer",
+                  cursor: readOnly ? "default" : "pointer",
                   border: "2px solid transparent",
                   transition: "border-color 0.15s",
                 }}
-                onMouseEnter={(e) =>
+                onMouseEnter={readOnly ? undefined : (e) =>
                   (e.currentTarget.style.borderColor = "#4DABF7")
                 }
-                onMouseLeave={(e) =>
+                onMouseLeave={readOnly ? undefined : (e) =>
                   (e.currentTarget.style.borderColor = "transparent")
                 }
-                title={`${name}/${i} — ${c}\nClick to edit`}
+                title={`${name}/${i} — ${c}`}
               />
             )}
             <span

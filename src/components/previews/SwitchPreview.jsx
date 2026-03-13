@@ -10,9 +10,9 @@ export default function SwitchPreview({ brands, brandId, size, checked: controll
 
   const tokens = COMPONENT_TOKENS.switch;
 
-  const checkedBg = resolveColor(brands, brandId, tokens["switch-track-background-checked"]?.semantic);
-  const uncheckedBg = resolveColor(brands, brandId, tokens["switch-track-background"]?.semantic);
-  const trackBorder = resolveColor(brands, brandId, tokens["switch-track-border"]?.semantic);
+  const checkedBg = resolveColor(brands, brandId, tokens["switch-track-background-checked"]?.semantic, "light", "switch-track-background-checked");
+  const uncheckedBg = resolveColor(brands, brandId, tokens["switch-track-background"]?.semantic, "light", "switch-track-background");
+  const trackBorder = resolveColor(brands, brandId, tokens["switch-track-border"]?.semantic, "light", "switch-track-border");
 
   const width = resolveDimension(brands, brandId, "switch-width", size);
   const height = resolveDimension(brands, brandId, "switch-height", size);

@@ -11,7 +11,8 @@ export default function TokenChainCard({
   isActive,
   onClick,
   onUpdate,
-  colors,
+  brandColors,
+  globalColors,
 }) {
   const primitive = `${mapping.color}/${mapping.index}`;
 
@@ -98,7 +99,7 @@ export default function TokenChainCard({
             <select
               value={mapping.color}
               onChange={(e) =>
-                onUpdate(semanticToken, { ...mapping, color: e.target.value })
+                onUpdate(componentToken, { ...mapping, color: e.target.value })
               }
               style={{
                 flex: 1,
@@ -117,17 +118,22 @@ export default function TokenChainCard({
                 paddingRight: 28,
               }}
             >
-              {colors.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
+              <optgroup label="Brand">
+                {brandColors.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </optgroup>
+              <optgroup label="Global">
+                {globalColors.map((c) => (
+                  <option key={c} value={c}>{c}</option>
+                ))}
+              </optgroup>
             </select>
             <span style={{ color: "#5C5F66", fontSize: 12, flexShrink: 0 }}>/</span>
             <select
               value={mapping.index}
               onChange={(e) =>
-                onUpdate(semanticToken, {
+                onUpdate(componentToken, {
                   ...mapping,
                   index: parseInt(e.target.value),
                 })

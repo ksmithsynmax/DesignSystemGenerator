@@ -4,11 +4,18 @@ import ToggleButtonGroup from "../shared/ToggleButtonGroup";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
+const CHECKBOX_VARIANTS = ["filled", "outlined"];
+const CHECKBOX_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+
 export default function CheckboxPreviewPanel({
   brands,
   activeBrand,
+  activeVariant,
+  setActiveVariant,
   activeCheckboxSize,
   setActiveCheckboxSize,
+  activeCheckboxRadius,
+  setActiveCheckboxRadius,
   sizeKeys,
   forcedChecked,
   forcedIndeterminate,
@@ -22,32 +29,48 @@ export default function CheckboxPreviewPanel({
 
   return (
     <div>
-      <div style={{ marginBottom: 24 }}>
-        <SectionLabel mb={6}>Size</SectionLabel>
-        <ToggleButtonGroup
-          options={sizeKeys}
-          value={activeCheckboxSize}
-          onChange={setActiveCheckboxSize}
-        />
+      <div style={{ display: "flex", gap: 24, marginBottom: 24 }}>
+        <div>
+          <SectionLabel mb={6}>Variant</SectionLabel>
+          <ToggleButtonGroup
+            options={CHECKBOX_VARIANTS}
+            value={activeVariant}
+            onChange={setActiveVariant}
+          />
+        </div>
+        <div>
+          <SectionLabel mb={6}>Size</SectionLabel>
+          <ToggleButtonGroup
+            options={sizeKeys}
+            value={activeCheckboxSize}
+            onChange={setActiveCheckboxSize}
+          />
+        </div>
+        <div>
+          <SectionLabel mb={6}>Radius</SectionLabel>
+          <ToggleButtonGroup
+            options={CHECKBOX_RADIUS_KEYS}
+            value={activeCheckboxRadius}
+            onChange={setActiveCheckboxRadius}
+          />
+        </div>
       </div>
 
-      {activeColorToken && (
-        <div style={{ fontSize: 12, fontFamily: "monospace", color: "#868E96", marginBottom: 8 }}>
-          {activeColorToken}
-        </div>
-      )}
-      <PreviewStage padding={24}>
+      <PreviewStage padding={24} label={activeColorToken}>
         <CheckboxPreview
           brands={brands}
           brandId={activeBrand}
+          variant={activeVariant}
           size={activeCheckboxSize}
+          radius={activeCheckboxRadius}
           checked={forcedChecked != null ? forcedChecked : undefined}
           indeterminate={forcedIndeterminate || undefined}
           readOnly={forcedChecked != null || forcedIndeterminate}
         />
       </PreviewStage>
 
-      <SectionLabel>All Sizes &amp; States</SectionLabel>
+      <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
+      <SectionLabel mt={20}>All Sizes &amp; States</SectionLabel>
       <PreviewMatrix
         sizeKeys={sizeKeys}
         rows={matrixRows}
@@ -55,7 +78,9 @@ export default function CheckboxPreviewPanel({
           <CheckboxPreview
             brands={brands}
             brandId={activeBrand}
+            variant={activeVariant}
             size={s}
+            radius={activeCheckboxRadius}
             checked={row.checked}
             indeterminate={row.indeterminate}
             readOnly

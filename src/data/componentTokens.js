@@ -75,6 +75,178 @@ export const COMPONENT_TOKENS = {
       allowedValues: ["Thin", "Extra Light", "Light", "Regular", "Medium", "Semi Bold", "Bold", "Extra Bold", "Black"] },
   },
 
+  actionicon: {
+    // ── DEFAULT VARIANT (all states) ──
+    "actionicon-default-background":          { type: "COLOR", semantic: "surface-default",             figmaPath: "actionicon/default-background" },
+    "actionicon-default-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "actionicon/default-background-hover" },
+    "actionicon-default-background-focus":    { type: "COLOR", semantic: "surface-default",             figmaPath: "actionicon/default-background-focus" },
+    "actionicon-default-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "actionicon/default-background-pressed" },
+    "actionicon-default-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "actionicon/default-background-disabled" },
+    "actionicon-default-icon":                { type: "COLOR", semantic: "text-default",                figmaPath: "actionicon/default-icon" },
+    "actionicon-default-icon-hover":          { type: "COLOR", semantic: "text-default",                figmaPath: "actionicon/default-icon-hover" },
+    "actionicon-default-icon-focus":          { type: "COLOR", semantic: "text-default",                figmaPath: "actionicon/default-icon-focus" },
+    "actionicon-default-icon-pressed":        { type: "COLOR", semantic: "text-default",                figmaPath: "actionicon/default-icon-pressed" },
+    "actionicon-default-icon-disabled":       { type: "COLOR", semantic: "text-disabled",               figmaPath: "actionicon/default-icon-disabled" },
+    "actionicon-default-border":              { type: "COLOR", semantic: "border-default",              figmaPath: "actionicon/default-border" },
+    "actionicon-default-border-hover":        { type: "COLOR", semantic: "border-default",              figmaPath: "actionicon/default-border-hover" },
+    "actionicon-default-border-focus":        { type: "COLOR", semantic: "border-focus",                figmaPath: "actionicon/default-border-focus" },
+    "actionicon-default-border-pressed":      { type: "COLOR", semantic: "border-default",              figmaPath: "actionicon/default-border-pressed" },
+    "actionicon-default-border-disabled":     { type: "COLOR", semantic: "border-disabled",             figmaPath: "actionicon/default-border-disabled" },
+
+    // ── FILLED VARIANT (all states) ──
+    "actionicon-filled-background":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "actionicon/filled-background" },
+    "actionicon-filled-background-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "actionicon/filled-background-hover" },
+    "actionicon-filled-background-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "actionicon/filled-background-focus" },
+    "actionicon-filled-background-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "actionicon/filled-background-pressed" },
+    "actionicon-filled-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "actionicon/filled-background-disabled" },
+    "actionicon-filled-icon":                { type: "COLOR", semantic: "text-on-interactive",         figmaPath: "actionicon/filled-icon" },
+    "actionicon-filled-icon-hover":          { type: "COLOR", semantic: "text-on-interactive",         figmaPath: "actionicon/filled-icon-hover" },
+    "actionicon-filled-icon-focus":          { type: "COLOR", semantic: "text-on-interactive",         figmaPath: "actionicon/filled-icon-focus" },
+    "actionicon-filled-icon-pressed":        { type: "COLOR", semantic: "text-on-interactive",         figmaPath: "actionicon/filled-icon-pressed" },
+    "actionicon-filled-icon-disabled":       { type: "COLOR", semantic: "text-disabled",               figmaPath: "actionicon/filled-icon-disabled" },
+    "actionicon-filled-border":              { type: "COLOR", semantic: null,                          figmaPath: "actionicon/filled-border" },
+    "actionicon-filled-border-hover":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/filled-border-hover" },
+    "actionicon-filled-border-focus":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/filled-border-focus" },
+    "actionicon-filled-border-pressed":      { type: "COLOR", semantic: null,                          figmaPath: "actionicon/filled-border-pressed" },
+    "actionicon-filled-border-disabled":     { type: "COLOR", semantic: null,                          figmaPath: "actionicon/filled-border-disabled" },
+
+    // ── LIGHT VARIANT (all states) ──
+    "actionicon-light-background":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "actionicon/light-background" },
+    "actionicon-light-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "actionicon/light-background-hover" },
+    "actionicon-light-background-focus":    { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "actionicon/light-background-focus" },
+    "actionicon-light-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "actionicon/light-background-pressed" },
+    "actionicon-light-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "actionicon/light-background-disabled" },
+    "actionicon-light-icon":                { type: "COLOR", semantic: "interactive-primary",         figmaPath: "actionicon/light-icon" },
+    "actionicon-light-icon-hover":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "actionicon/light-icon-hover" },
+    "actionicon-light-icon-focus":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "actionicon/light-icon-focus" },
+    "actionicon-light-icon-pressed":        { type: "COLOR", semantic: "interactive-primary",         figmaPath: "actionicon/light-icon-pressed" },
+    "actionicon-light-icon-disabled":       { type: "COLOR", semantic: "text-disabled",               figmaPath: "actionicon/light-icon-disabled" },
+    "actionicon-light-border":              { type: "COLOR", semantic: null,                          figmaPath: "actionicon/light-border" },
+    "actionicon-light-border-hover":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/light-border-hover" },
+    "actionicon-light-border-focus":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/light-border-focus" },
+    "actionicon-light-border-pressed":      { type: "COLOR", semantic: null,                          figmaPath: "actionicon/light-border-pressed" },
+    "actionicon-light-border-disabled":     { type: "COLOR", semantic: null,                          figmaPath: "actionicon/light-border-disabled" },
+
+    // ── OUTLINED VARIANT (all states) ──
+    "actionicon-outlined-background":          { type: "COLOR", semantic: "surface-default",             figmaPath: "actionicon/outlined-background" },
+    "actionicon-outlined-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "actionicon/outlined-background-hover" },
+    "actionicon-outlined-background-focus":    { type: "COLOR", semantic: "surface-default",             figmaPath: "actionicon/outlined-background-focus" },
+    "actionicon-outlined-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "actionicon/outlined-background-pressed" },
+    "actionicon-outlined-background-disabled": { type: "COLOR", semantic: "surface-default",             figmaPath: "actionicon/outlined-background-disabled" },
+    "actionicon-outlined-icon":                { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/outlined-icon" },
+    "actionicon-outlined-icon-hover":          { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/outlined-icon-hover" },
+    "actionicon-outlined-icon-focus":          { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/outlined-icon-focus" },
+    "actionicon-outlined-icon-pressed":        { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/outlined-icon-pressed" },
+    "actionicon-outlined-icon-disabled":       { type: "COLOR", semantic: "text-disabled",               figmaPath: "actionicon/outlined-icon-disabled" },
+    "actionicon-outlined-border":              { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/outlined-border" },
+    "actionicon-outlined-border-hover":        { type: "COLOR", semantic: "interactive-primary-hover",    figmaPath: "actionicon/outlined-border-hover" },
+    "actionicon-outlined-border-focus":        { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/outlined-border-focus" },
+    "actionicon-outlined-border-pressed":      { type: "COLOR", semantic: "interactive-primary-pressed",  figmaPath: "actionicon/outlined-border-pressed" },
+    "actionicon-outlined-border-disabled":     { type: "COLOR", semantic: "border-disabled",             figmaPath: "actionicon/outlined-border-disabled" },
+
+    // ── TRANSPARENT VARIANT (all states) ──
+    "actionicon-transparent-background":          { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-background" },
+    "actionicon-transparent-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "actionicon/transparent-background-hover" },
+    "actionicon-transparent-background-focus":    { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-background-focus" },
+    "actionicon-transparent-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "actionicon/transparent-background-pressed" },
+    "actionicon-transparent-background-disabled": { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-background-disabled" },
+    "actionicon-transparent-icon":                { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/transparent-icon" },
+    "actionicon-transparent-icon-hover":          { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/transparent-icon-hover" },
+    "actionicon-transparent-icon-focus":          { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/transparent-icon-focus" },
+    "actionicon-transparent-icon-pressed":        { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/transparent-icon-pressed" },
+    "actionicon-transparent-icon-disabled":       { type: "COLOR", semantic: "text-disabled",               figmaPath: "actionicon/transparent-icon-disabled" },
+    "actionicon-transparent-border":              { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-border" },
+    "actionicon-transparent-border-hover":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-border-hover" },
+    "actionicon-transparent-border-focus":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-border-focus" },
+    "actionicon-transparent-border-pressed":      { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-border-pressed" },
+    "actionicon-transparent-border-disabled":     { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-border-disabled" },
+
+    // ── SHARED COLOR TOKEN ──
+    "actionicon-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "actionicon/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "actionicon-size":      { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 32, md: 36, lg: 42, xl: 48 }, figmaPath: "actionicon/size" },
+    "actionicon-icon-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "actionicon/icon-size" },
+    "actionicon-radius":    { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },    figmaPath: "actionicon/radius" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "actionicon-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "actionicon/border-width" },
+  },
+
+  tabs: {
+    // ── DEFAULT VARIANT ──
+    "tabs-default-list-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/default-list-background" },
+    "tabs-default-list-border": { type: "COLOR", semantic: "border-default", figmaPath: "tabs/default-list-border" },
+    "tabs-default-tab-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/default-tab-background" },
+    "tabs-default-tab-background-hover": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "tabs/default-tab-background-hover" },
+    "tabs-default-tab-background-active": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/default-tab-background-active" },
+    "tabs-default-tab-background-pressed": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "tabs/default-tab-background-pressed" },
+    "tabs-default-tab-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "tabs/default-tab-background-disabled" },
+    "tabs-default-tab-text": { type: "COLOR", semantic: "text-default", figmaPath: "tabs/default-tab-text" },
+    "tabs-default-tab-text-hover": { type: "COLOR", semantic: "text-default", figmaPath: "tabs/default-tab-text-hover" },
+    "tabs-default-tab-text-active": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-text-active" },
+    "tabs-default-tab-text-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-text-pressed" },
+    "tabs-default-tab-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "tabs/default-tab-text-disabled" },
+    "tabs-default-tab-border": { type: "COLOR", semantic: "border-subtle", figmaPath: "tabs/default-tab-border" },
+    "tabs-default-tab-border-hover": { type: "COLOR", semantic: "border-default", figmaPath: "tabs/default-tab-border-hover" },
+    "tabs-default-tab-border-active": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-border-active" },
+    "tabs-default-tab-border-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-border-pressed" },
+    "tabs-default-tab-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "tabs/default-tab-border-disabled" },
+
+    // ── OUTLINED VARIANT ──
+    "tabs-outlined-list-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/outlined-list-background" },
+    "tabs-outlined-list-border": { type: "COLOR", semantic: "border-default", figmaPath: "tabs/outlined-list-border" },
+    "tabs-outlined-tab-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/outlined-tab-background" },
+    "tabs-outlined-tab-background-hover": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "tabs/outlined-tab-background-hover" },
+    "tabs-outlined-tab-background-active": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/outlined-tab-background-active" },
+    "tabs-outlined-tab-background-pressed": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "tabs/outlined-tab-background-pressed" },
+    "tabs-outlined-tab-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "tabs/outlined-tab-background-disabled" },
+    "tabs-outlined-tab-text": { type: "COLOR", semantic: "text-default", figmaPath: "tabs/outlined-tab-text" },
+    "tabs-outlined-tab-text-hover": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/outlined-tab-text-hover" },
+    "tabs-outlined-tab-text-active": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/outlined-tab-text-active" },
+    "tabs-outlined-tab-text-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/outlined-tab-text-pressed" },
+    "tabs-outlined-tab-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "tabs/outlined-tab-text-disabled" },
+    "tabs-outlined-tab-border": { type: "COLOR", semantic: "border-default", figmaPath: "tabs/outlined-tab-border" },
+    "tabs-outlined-tab-border-hover": { type: "COLOR", semantic: "border-default", figmaPath: "tabs/outlined-tab-border-hover" },
+    "tabs-outlined-tab-border-active": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/outlined-tab-border-active" },
+    "tabs-outlined-tab-border-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/outlined-tab-border-pressed" },
+    "tabs-outlined-tab-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "tabs/outlined-tab-border-disabled" },
+
+    // ── PILLS VARIANT ──
+    "tabs-pills-list-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/pills-list-background" },
+    "tabs-pills-list-border": { type: "COLOR", semantic: "border-subtle", figmaPath: "tabs/pills-list-border" },
+    "tabs-pills-tab-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/pills-tab-background" },
+    "tabs-pills-tab-background-hover": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "tabs/pills-tab-background-hover" },
+    "tabs-pills-tab-background-active": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/pills-tab-background-active" },
+    "tabs-pills-tab-background-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "tabs/pills-tab-background-pressed" },
+    "tabs-pills-tab-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "tabs/pills-tab-background-disabled" },
+    "tabs-pills-tab-text": { type: "COLOR", semantic: "text-default", figmaPath: "tabs/pills-tab-text" },
+    "tabs-pills-tab-text-hover": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/pills-tab-text-hover" },
+    "tabs-pills-tab-text-active": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "tabs/pills-tab-text-active" },
+    "tabs-pills-tab-text-pressed": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "tabs/pills-tab-text-pressed" },
+    "tabs-pills-tab-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "tabs/pills-tab-text-disabled" },
+    "tabs-pills-tab-border": { type: "COLOR", semantic: "border-subtle", figmaPath: "tabs/pills-tab-border" },
+    "tabs-pills-tab-border-hover": { type: "COLOR", semantic: "border-default", figmaPath: "tabs/pills-tab-border-hover" },
+    "tabs-pills-tab-border-active": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/pills-tab-border-active" },
+    "tabs-pills-tab-border-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/pills-tab-border-pressed" },
+    "tabs-pills-tab-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "tabs/pills-tab-border-disabled" },
+
+    // ── SHARED COLOR TOKEN ──
+    "tabs-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "tabs/focus-ring" },
+
+    // ── FLOAT TOKENS ──
+    "tabs-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "tabs/radius" },
+    "tabs-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "tabs/font-size" },
+    "tabs-tab-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/tab-padding-x" },
+    "tabs-tab-padding-y": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/tab-padding-y" },
+    "tabs-list-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/list-gap" },
+    "tabs-list-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "tabs/list-border-width" },
+    "tabs-tab-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "tabs/tab-border-width" },
+    "tabs-panel-padding": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/panel-padding" },
+    "tabs-icon-size": { type: "FLOAT", unit: "px", value: 16, figmaPath: "tabs/icon-size" },
+    "tabs-icon-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/icon-gap" },
+  },
+
   switch: {
     // ── TRACK BACKGROUND — UNCHECKED (per state) ──
     "switch-track-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "switch/track-background" },
@@ -122,6 +294,26 @@ export const COMPONENT_TOKENS = {
   },
 
   checkbox: {
+    // ── FILLED VARIANT ──
+    "checkbox-filled-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "checkbox/filled-background" },
+    "checkbox-filled-background-checked":  { type: "COLOR", semantic: "interactive-primary",   figmaPath: "checkbox/filled-background-checked" },
+    "checkbox-filled-background-disabled": { type: "COLOR", semantic: "interactive-disabled",  figmaPath: "checkbox/filled-background-disabled" },
+    "checkbox-filled-border":              { type: "COLOR", semantic: "border-default",        figmaPath: "checkbox/filled-border" },
+    "checkbox-filled-border-checked":      { type: "COLOR", semantic: "interactive-primary",   figmaPath: "checkbox/filled-border-checked" },
+    "checkbox-filled-border-disabled":     { type: "COLOR", semantic: "border-disabled",       figmaPath: "checkbox/filled-border-disabled" },
+    "checkbox-filled-icon-color":          { type: "COLOR", semantic: "text-on-interactive",   figmaPath: "checkbox/filled-icon-color" },
+    "checkbox-filled-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",         figmaPath: "checkbox/filled-icon-color-disabled" },
+
+    // ── OUTLINED VARIANT ──
+    "checkbox-outlined-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "checkbox/outlined-background" },
+    "checkbox-outlined-background-checked":  { type: "COLOR", semantic: "surface-default",      figmaPath: "checkbox/outlined-background-checked" },
+    "checkbox-outlined-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "checkbox/outlined-background-disabled" },
+    "checkbox-outlined-border":              { type: "COLOR", semantic: "border-default",       figmaPath: "checkbox/outlined-border" },
+    "checkbox-outlined-border-checked":      { type: "COLOR", semantic: "interactive-primary",  figmaPath: "checkbox/outlined-border-checked" },
+    "checkbox-outlined-border-disabled":     { type: "COLOR", semantic: "border-disabled",      figmaPath: "checkbox/outlined-border-disabled" },
+    "checkbox-outlined-icon-color":          { type: "COLOR", semantic: "interactive-primary",  figmaPath: "checkbox/outlined-icon-color" },
+    "checkbox-outlined-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",        figmaPath: "checkbox/outlined-icon-color-disabled" },
+
     // ── BOX BACKGROUND — UNCHECKED (per state) ──
     "checkbox-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "checkbox/background" },
     "checkbox-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "checkbox/background-hover" },
@@ -157,6 +349,7 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "checkbox-size":              { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 18, md: 20, lg: 24, xl: 28 },           figmaPath: "checkbox/size" },
     "checkbox-border-radius":     { type: "FLOAT", unit: "px", sizes: { xs: 4,  sm: 4,  md: 5,  lg: 6,  xl: 7 },            figmaPath: "checkbox/border-radius" },
+    "checkbox-radius":            { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },              figmaPath: "checkbox/radius" },
     "checkbox-icon-size":         { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 12, md: 14, lg: 16, xl: 18 },           figmaPath: "checkbox/icon-size" },
     "checkbox-label-font-size":   { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },           figmaPath: "checkbox/label-font-size" },
     "checkbox-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14.4, sm: 16.8, md: 19.2, lg: 21.6, xl: 24 },   figmaPath: "checkbox/label-line-height" },
@@ -352,6 +545,8 @@ export const COMPONENT_NAMES = Object.keys(COMPONENT_TOKENS);
 
 export const COMPONENT_SIZE_KEYS = {
   button: ["xs", "sm", "md", "lg", "xl"],
+  actionicon: ["xs", "sm", "md", "lg", "xl"],
+  tabs: ["xs", "sm", "md", "lg", "xl"],
   switch: ["xs", "sm", "md", "lg", "xl"],
   checkbox: ["xs", "sm", "md", "lg", "xl"],
   radio: ["xs", "sm", "md", "lg", "xl"],

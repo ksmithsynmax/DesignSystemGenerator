@@ -464,6 +464,12 @@ async function buildComponents(varMap) {
   progress("Creating TextInput component set...");
   var textInputSet = buildTextInputComponentSet(varMap, page, font);
 
+  progress("Creating ActionIcon component set...");
+  var actionIconSet = await buildActionIconComponentSet(varMap, page);
+
+  progress("Creating Tabs component set...");
+  var tabsSet = await buildTabsComponentSet(varMap, page, font);
+
   // Position component sets side by side with gaps
   buttonSet.x = 0;
   buttonSet.y = 0;
@@ -479,9 +485,13 @@ async function buildComponents(varMap) {
   tooltipSet.y = 0;
   textInputSet.x = tooltipSet.x + tooltipSet.width + compSetGap;
   textInputSet.y = 0;
+  actionIconSet.x = textInputSet.x + textInputSet.width + compSetGap;
+  actionIconSet.y = 0;
+  tabsSet.x = actionIconSet.x + actionIconSet.width + compSetGap;
+  tabsSet.y = 0;
 
   // Scroll viewport to show all component sets
-  figma.viewport.scrollAndZoomIntoView([buttonSet, switchSet, checkboxSet, radioSet, chipSet, tooltipSet, textInputSet]);
+  figma.viewport.scrollAndZoomIntoView([buttonSet, switchSet, checkboxSet, radioSet, chipSet, tooltipSet, textInputSet, actionIconSet, tabsSet]);
 
   progress("Components created.");
 }
@@ -490,7 +500,7 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Tooltip" || child.name === "TextInput")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Tooltip" || child.name === "TextInput" || child.name === "ActionIcon" || child.name === "Tabs")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
@@ -2023,6 +2033,495 @@ function textInputColorPath(variant, property, state) {
     return "textinput/" + variant + "-" + property;
   }
   return "textinput/" + variant + "-" + property + "-" + state;
+}
+
+// ---------------------------------------------------------------------------
+// ActionIcon
+// ---------------------------------------------------------------------------
+
+async function buildActionIconComponentSet(varMap, page) {
+  var variants = ["default", "filled", "light", "outlined", "transparent"];
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "pressed", "disabled"];
+  var icons = ["check", "minus"];
+  var components = [];
+
+  var checkIconComp = null;
+  var minusIconComp = null;
+  var iconsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    if (figma.root.children[pi].name.toLowerCase() === "icons") {
+      iconsPage = figma.root.children[pi];
+      break;
+    }
+  }
+  if (iconsPage) {
+    await iconsPage.loadAsync();
+    var allNodes = iconsPage.findAll(function(n) {
+      return n.type === "COMPONENT";
+    });
+    for (var ni = 0; ni < allNodes.length; ni++) {
+      var nName = allNodes[ni].name.toLowerCase();
+      if (!checkIconComp && nName.indexOf("check") >= 0 && nName.indexOf("circle") < 0 && nName.indexOf("square") < 0) {
+        checkIconComp = allNodes[ni];
+      }
+      if (!minusIconComp && nName.indexOf("minus") >= 0 && nName.indexOf("circle") < 0 && nName.indexOf("square") < 0) {
+        minusIconComp = allNodes[ni];
+      }
+    }
+  }
+  if (checkIconComp) console.log("[ActionIcon] Found check icon: " + checkIconComp.name);
+  else console.log("[ActionIcon] WARNING: check icon not found on icons page");
+  if (minusIconComp) console.log("[ActionIcon] Found minus icon: " + minusIconComp.name);
+  else console.log("[ActionIcon] WARNING: minus icon not found on icons page");
+
+  var sizePx = { xs: 28, sm: 32, md: 36, lg: 42, xl: 48 };
+  var gap = 18;
+  var colGap = 24;
+
+  var rowYOffsets = [];
+  var runningY = 0;
+  for (var rsi = 0; rsi < sizes.length; rsi++) {
+    for (var rri = 0; rri < radii.length; rri++) {
+      for (var rsti = 0; rsti < states.length; rsti++) {
+        rowYOffsets.push(runningY);
+        runningY += sizePx[sizes[rsi]] + gap;
+      }
+    }
+  }
+
+  var colWidth = 90 + colGap;
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+
+    for (var ii = 0; ii < icons.length; ii++) {
+      var iconName = icons[ii];
+      var capIcon = iconName.charAt(0).toUpperCase() + iconName.slice(1);
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size.toUpperCase();
+
+        for (var ri = 0; ri < radii.length; ri++) {
+          var rad = radii[ri];
+          var capRadius = rad.toUpperCase();
+
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+            var comp = figma.createComponent();
+            comp.name = "Variant=" + capVariant + ", Size=" + capSize +
+                        ", Radius=" + capRadius + ", State=" + capState +
+                        ", Icon=" + capIcon;
+
+            comp.layoutMode = "HORIZONTAL";
+            comp.primaryAxisSizingMode = "FIXED";
+            comp.counterAxisSizingMode = "FIXED";
+            comp.primaryAxisAlignItems = "CENTER";
+            comp.counterAxisAlignItems = "CENTER";
+            comp.resize(sizePx[size], sizePx[size]);
+            comp.cornerRadius = 8;
+            comp.clipsContent = true;
+
+            var bgPath = actionIconColorPath(variant, "background", state);
+            var iconPath = actionIconColorPath(variant, "icon", state);
+            var borderPath = actionIconColorPath(variant, "border", state);
+
+            comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            bindPaintVar(comp, "fills", 0, varMap[bgPath]);
+
+            comp.strokes = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 0 }];
+            comp.strokeAlign = "INSIDE";
+            bindPaintVar(comp, "strokes", 0, varMap[borderPath]);
+
+            bindVar(comp, "width", varMap["actionicon/size-" + size]);
+            bindVar(comp, "height", varMap["actionicon/size-" + size]);
+            bindVar(comp, "topLeftRadius", varMap["actionicon/radius-" + rad]);
+            bindVar(comp, "topRightRadius", varMap["actionicon/radius-" + rad]);
+            bindVar(comp, "bottomLeftRadius", varMap["actionicon/radius-" + rad]);
+            bindVar(comp, "bottomRightRadius", varMap["actionicon/radius-" + rad]);
+            bindVar(comp, "strokeWeight", varMap["actionicon/border-width"]);
+
+            var iconInst = null;
+            if (iconName === "check" && checkIconComp) {
+              iconInst = checkIconComp.createInstance();
+            } else if (iconName === "minus" && minusIconComp) {
+              iconInst = minusIconComp.createInstance();
+            }
+
+            if (iconInst) {
+              iconInst.name = "Icon";
+              iconInst.resize(16, 16);
+              bindVar(iconInst, "width", varMap["actionicon/icon-size-" + size]);
+              bindVar(iconInst, "height", varMap["actionicon/icon-size-" + size]);
+
+              var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
+              for (var vci = 0; vci < vectors.length; vci++) {
+                if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
+                  vectors[vci].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                  bindPaintVar(vectors[vci], "strokes", 0, varMap[iconPath]);
+                }
+                if (vectors[vci].fills && vectors[vci].fills.length > 0) {
+                  vectors[vci].fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                  bindPaintVar(vectors[vci], "fills", 0, varMap[iconPath]);
+                }
+              }
+              comp.appendChild(iconInst);
+            }
+
+            if (state === "focus") {
+              comp.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
+
+            if (state === "disabled") {
+              comp.opacity = 0.6;
+            }
+
+            var colIndex = vi * icons.length + ii;
+            var rowIndex = (si * radii.length + ri) * states.length + sti;
+            comp.x = colIndex * colWidth;
+            comp.y = rowYOffsets[rowIndex];
+            page.appendChild(comp);
+            components.push(comp);
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " action icon variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "ActionIcon";
+  return componentSet;
+}
+
+function actionIconColorPath(variant, property, state) {
+  var base = "actionicon/" + variant + "-" + property;
+  if (state === "default") return base;
+  return base + "-" + state;
+}
+
+// ---------------------------------------------------------------------------
+// Tabs
+// ---------------------------------------------------------------------------
+
+async function buildTabsComponentSet(varMap, page, font) {
+  validateTabsVariables(varMap);
+
+  var variants = ["default", "outlined", "pills"];
+  var orientations = ["horizontal", "vertical"];
+  var leftIconModes = ["off", "on"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "pressed", "disabled"];
+  var components = [];
+
+  var colWidth = 340;
+  var rowHeight = 120;
+  var gap = 24;
+
+  var iconComponents = await findTabsIconComponents();
+  if (!iconComponents.image) progress("[Tabs] Warning: Image icon component not found on icons page");
+  if (!iconComponents.message) progress("[Tabs] Warning: Message icon component not found on icons page");
+  if (!iconComponents.settings) progress("[Tabs] Warning: Settings icon component not found on icons page");
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+
+    for (var oi = 0; oi < orientations.length; oi++) {
+      var orientation = orientations[oi];
+      var capOrientation = orientation.charAt(0).toUpperCase() + orientation.slice(1);
+
+      for (var li = 0; li < leftIconModes.length; li++) {
+        var leftIconMode = leftIconModes[li];
+        var showLeftIcon = leftIconMode === "on";
+        var capLeftIcon = showLeftIcon ? "On" : "Off";
+
+        for (var ri = 0; ri < radii.length; ri++) {
+          var rad = radii[ri];
+          var capRadius = rad.toUpperCase();
+
+          for (var si = 0; si < states.length; si++) {
+            var state = states[si];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+            var comp = figma.createComponent();
+            comp.name = "Variant=" + capVariant + ", Orientation=" + capOrientation +
+                        ", LeftIcon=" + capLeftIcon + ", Radius=" + capRadius + ", State=" + capState;
+            comp.layoutMode = "VERTICAL";
+            comp.primaryAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "AUTO";
+            comp.itemSpacing = 0;
+            comp.fills = [];
+
+            var list = figma.createFrame();
+            list.name = "List";
+            list.layoutMode = orientation === "horizontal" ? "HORIZONTAL" : "VERTICAL";
+            list.primaryAxisSizingMode = "AUTO";
+            list.counterAxisSizingMode = "AUTO";
+            list.primaryAxisAlignItems = "MIN";
+            list.counterAxisAlignItems = "MIN";
+            list.itemSpacing = 8;
+            list.paddingLeft = 4;
+            list.paddingRight = 4;
+            list.paddingTop = 4;
+            list.paddingBottom = 4;
+            list.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            list.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+            list.strokeAlign = "INSIDE";
+
+            bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
+            bindPaintVar(list, "strokes", 0, varMap["tabs/" + variant + "-list-border"]);
+            bindVar(list, "strokeWeight", varMap["tabs/list-border-width"]);
+            bindVar(list, "itemSpacing", varMap["tabs/list-gap"]);
+            bindVar(list, "topLeftRadius", varMap["tabs/radius-" + rad]);
+            bindVar(list, "topRightRadius", varMap["tabs/radius-" + rad]);
+            bindVar(list, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
+            bindVar(list, "bottomRightRadius", varMap["tabs/radius-" + rad]);
+
+            var tabDefs = [
+              { label: "Overview", active: true, disabled: false, icon: "image" },
+              { label: "Details", active: false, disabled: false, icon: "message" },
+              { label: "Settings", active: false, disabled: true, icon: "settings" },
+            ];
+
+            for (var ti = 0; ti < tabDefs.length; ti++) {
+              var tabDef = tabDefs[ti];
+              var tab = figma.createFrame();
+              tab.name = "Tab/" + tabDef.label;
+              tab.layoutMode = "HORIZONTAL";
+              tab.primaryAxisSizingMode = "AUTO";
+              tab.counterAxisSizingMode = "AUTO";
+              tab.primaryAxisAlignItems = "CENTER";
+              tab.counterAxisAlignItems = "CENTER";
+              tab.paddingLeft = 12;
+              tab.paddingRight = 12;
+              tab.paddingTop = 8;
+              tab.paddingBottom = 8;
+              tab.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              tab.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+              tab.strokeAlign = "INSIDE";
+
+              bindVar(tab, "paddingLeft", varMap["tabs/tab-padding-x"]);
+              bindVar(tab, "paddingRight", varMap["tabs/tab-padding-x"]);
+              bindVar(tab, "paddingTop", varMap["tabs/tab-padding-y"]);
+              bindVar(tab, "paddingBottom", varMap["tabs/tab-padding-y"]);
+              bindVar(tab, "strokeWeight", varMap["tabs/tab-border-width"]);
+              bindVar(tab, "topLeftRadius", varMap["tabs/radius-" + rad]);
+              bindVar(tab, "topRightRadius", varMap["tabs/radius-" + rad]);
+              bindVar(tab, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
+              bindVar(tab, "bottomRightRadius", varMap["tabs/radius-" + rad]);
+
+              var visualState = "default";
+              if (state === "disabled" || tabDef.disabled) visualState = "disabled";
+              else if (tabDef.active) visualState = "active";
+              else if (state === "hover") visualState = "hover";
+              else if (state === "pressed") visualState = "pressed";
+
+              var tabBgPath = tabsTabColorPath(variant, "background", visualState);
+              var tabTextPath = tabsTabColorPath(variant, "text", visualState);
+              var tabBorderPath = tabsTabColorPath(variant, "border", visualState);
+
+              bindPaintVar(tab, "fills", 0, varMap[tabBgPath]);
+              bindPaintVar(tab, "strokes", 0, varMap[tabBorderPath]);
+
+              if (showLeftIcon) {
+                var iconComp = iconComponents[tabDef.icon] || null;
+                if (iconComp) {
+                  var iconInst = iconComp.createInstance();
+                  iconInst.name = "LeftIcon";
+                  iconInst.resize(16, 16);
+                  bindVar(iconInst, "width", varMap["tabs/icon-size"]);
+                  bindVar(iconInst, "height", varMap["tabs/icon-size"]);
+
+                  var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
+                  for (var vci = 0; vci < vectors.length; vci++) {
+                    if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
+                      vectors[vci].strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                      bindPaintVar(vectors[vci], "strokes", 0, varMap[tabTextPath]);
+                    }
+                    if (vectors[vci].fills && vectors[vci].fills.length > 0) {
+                      vectors[vci].fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                      bindPaintVar(vectors[vci], "fills", 0, varMap[tabTextPath]);
+                    }
+                  }
+                  tab.appendChild(iconInst);
+                }
+                bindVar(tab, "itemSpacing", varMap["tabs/icon-gap"]);
+              }
+
+              var labelNode = figma.createText();
+              labelNode.name = "Label";
+              labelNode.fontName = font;
+              labelNode.characters = tabDef.label;
+              labelNode.fontSize = 14;
+              labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              bindVar(labelNode, "fontSize", varMap["tabs/font-size"]);
+              bindPaintVar(labelNode, "fills", 0, varMap[tabTextPath]);
+
+              tab.appendChild(labelNode);
+
+              if (state === "focus" && ti === 1 && visualState !== "disabled") {
+                tab.effects = [{
+                  type: "DROP_SHADOW",
+                  color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+                  offset: { x: 0, y: 0 },
+                  radius: 0,
+                  spread: 3,
+                  visible: true,
+                  blendMode: "NORMAL"
+                }];
+                bindPaintVar(tab, "strokes", 0, varMap["tabs/focus-ring"]);
+              }
+
+              list.appendChild(tab);
+            }
+
+            comp.appendChild(list);
+
+            if (state === "disabled") {
+              comp.opacity = 0.6;
+            }
+
+            var colIndex = (vi * orientations.length + oi) * leftIconModes.length + li;
+            var rowIndex = ri * states.length + si;
+            comp.x = colIndex * (colWidth + gap);
+            comp.y = rowIndex * (rowHeight + gap);
+            page.appendChild(comp);
+            components.push(comp);
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " tabs variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Tabs";
+  return componentSet;
+}
+
+function tabsTabColorPath(variant, property, state) {
+  var base = "tabs/" + variant + "-tab-" + property;
+  if (state === "default") return base;
+  return base + "-" + state;
+}
+
+async function findTabsIconComponents() {
+  var result = { image: null, message: null, settings: null };
+  var iconCandidates = [];
+  var iconsPage = null;
+
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var page = figma.root.children[pi];
+    if (page.type !== "PAGE") continue;
+    await page.loadAsync();
+    if (!iconsPage && page.name && page.name.toLowerCase() === "icons") {
+      iconsPage = page;
+    }
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function(n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+
+  // Expand COMPONENT_SET into its child COMPONENT nodes for instance swap support.
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") {
+          iconCandidates.push(setChildren[ci]);
+        }
+      }
+    }
+  }
+
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var name = iconCandidates[j].name.toLowerCase();
+    if (!result.image && (name.indexOf("image") >= 0 || name.indexOf("gallery") >= 0 || name.indexOf("photo") >= 0)) {
+      result.image = iconCandidates[j];
+    }
+    if (!result.message && (name.indexOf("message") >= 0 || name.indexOf("chat") >= 0)) {
+      result.message = iconCandidates[j];
+    }
+    if (!result.settings && (name.indexOf("settings") >= 0 || name.indexOf("cog") >= 0 || name.indexOf("gear") >= 0)) {
+      result.settings = iconCandidates[j];
+    }
+  }
+
+  // Fallback: if naming does not match expected keywords, use first 3 components so LeftIcon=On always renders.
+  if ((!result.image || !result.message || !result.settings) && iconCandidates.length >= 3) {
+    var sorted = iconCandidates.slice().sort(function(a, b) {
+      return a.name.localeCompare(b.name);
+    });
+    if (!result.image) result.image = sorted[0];
+    if (!result.message) result.message = sorted[1];
+    if (!result.settings) result.settings = sorted[2];
+  }
+
+  if (result.image) progress("[Tabs] LeftIcon image source: " + result.image.name);
+  if (result.message) progress("[Tabs] LeftIcon message source: " + result.message.name);
+  if (result.settings) progress("[Tabs] LeftIcon settings source: " + result.settings.name);
+
+  return result;
+}
+
+function validateTabsVariables(varMap) {
+  var variants = ["default", "outlined", "pills"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "active", "pressed", "disabled"];
+  var required = [
+    "tabs/font-size",
+    "tabs/tab-padding-x",
+    "tabs/tab-padding-y",
+    "tabs/list-gap",
+    "tabs/list-border-width",
+    "tabs/tab-border-width",
+    "tabs/icon-size",
+    "tabs/icon-gap",
+    "tabs/focus-ring"
+  ];
+
+  for (var ri = 0; ri < radii.length; ri++) {
+    required.push("tabs/radius-" + radii[ri]);
+  }
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    required.push("tabs/" + variant + "-list-background");
+    required.push("tabs/" + variant + "-list-border");
+    for (var si = 0; si < states.length; si++) {
+      var state = states[si];
+      var suffix = state === "default" ? "" : "-" + state;
+      required.push("tabs/" + variant + "-tab-background" + suffix);
+      required.push("tabs/" + variant + "-tab-text" + suffix);
+      required.push("tabs/" + variant + "-tab-border" + suffix);
+    }
+  }
+
+  var missing = [];
+  for (var i = 0; i < required.length; i++) {
+    if (!varMap[required[i]]) missing.push(required[i]);
+  }
+  if (missing.length > 0) {
+    throw new Error("Tabs sync missing required variables: " + missing.slice(0, 12).join(", ") + (missing.length > 12 ? " ..." : ""));
+  }
 }
 
 // ---------------------------------------------------------------------------

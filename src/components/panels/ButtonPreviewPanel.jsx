@@ -40,12 +40,7 @@ export default function ButtonPreviewPanel({
         </div>
       </div>
 
-      {activeColorToken && (
-        <div style={{ fontSize: 12, fontFamily: "monospace", color: "#868E96", marginBottom: 8 }}>
-          {activeColorToken}
-        </div>
-      )}
-      <PreviewStage>
+      <PreviewStage label={activeColorToken}>
         <ButtonPreview
           brands={brands}
           brandId={activeBrand}
@@ -55,7 +50,8 @@ export default function ButtonPreviewPanel({
         />
       </PreviewStage>
 
-      <SectionLabel>All Variants x Sizes</SectionLabel>
+      <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
+      <SectionLabel mt={20}>All Variants x Sizes</SectionLabel>
       <PreviewMatrix
         sizeKeys={sizeKeys}
         rows={matrixRows}

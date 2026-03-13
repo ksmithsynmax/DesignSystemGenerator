@@ -10,10 +10,10 @@ export default function RadioPreview({ brands, brandId, variant = "filled", size
 
   const tokens = COMPONENT_TOKENS.radio;
 
-  const filledBg = resolveColor(brands, brandId, tokens["radio-filled-background-checked"]?.semantic);
-  const uncheckedBg = resolveColor(brands, brandId, tokens["radio-background"]?.semantic);
-  const borderColor = resolveColor(brands, brandId, tokens["radio-border"]?.semantic);
-  const iconColor = resolveColor(brands, brandId, tokens["radio-icon-color"]?.semantic);
+  const filledBg = resolveColor(brands, brandId, tokens["radio-filled-background-checked"]?.semantic, "light", "radio-filled-background-checked");
+  const uncheckedBg = resolveColor(brands, brandId, tokens["radio-background"]?.semantic, "light", "radio-background");
+  const borderColor = resolveColor(brands, brandId, tokens["radio-border"]?.semantic, "light", "radio-border");
+  const iconColor = resolveColor(brands, brandId, tokens["radio-icon-color"]?.semantic, "light", "radio-icon-color");
 
   const radioSize = resolveDimension(brands, brandId, "radio-size", size);
   const iconSize = resolveDimension(brands, brandId, "radio-icon-size", size);
@@ -37,7 +37,6 @@ export default function RadioPreview({ brands, brandId, variant = "filled", size
       vars={() => ({
         root: {
           "--radio-size": `${radioSize}px`,
-          "--radio-radius": `${radioSize}px`,
           "--radio-color": radioColor,
           "--radio-icon-color": radioIconColor,
           "--radio-icon-size": `${iconSize}px`,

@@ -53,7 +53,8 @@ export default function TooltipPreviewPanel({ brands, activeBrand }) {
         />
       </PreviewStage>
 
-      <SectionLabel>All Positions</SectionLabel>
+      <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
+      <SectionLabel mt={20}>All Positions</SectionLabel>
       <PreviewMatrix
         sizeKeys={["with arrow", "without arrow"]}
         rows={matrixRows}

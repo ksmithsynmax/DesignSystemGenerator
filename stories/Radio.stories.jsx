@@ -8,8 +8,8 @@ function buildCode(args) {
 
 <Radio
   variant="${mantineVariant}"
-  size="${args.size}"${args.label ? `\n  label="${args.label}"` : ""}${args.checked ? "\n  defaultChecked" : ""}
-/>`;
+  size="${args.size}"
+  ${args.label ? `label="${args.label}"\n  ` : ""}${args.checked ? "defaultChecked\n  " : ""}/>`;
 }
 
 export default {

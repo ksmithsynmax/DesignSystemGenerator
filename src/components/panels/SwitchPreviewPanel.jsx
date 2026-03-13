@@ -29,12 +29,7 @@ export default function SwitchPreviewPanel({
         />
       </div>
 
-      {activeColorToken && (
-        <div style={{ fontSize: 12, fontFamily: "monospace", color: "#868E96", marginBottom: 8 }}>
-          {activeColorToken}
-        </div>
-      )}
-      <PreviewStage>
+      <PreviewStage label={activeColorToken}>
         <SwitchPreview
           brands={brands}
           brandId={activeBrand}
@@ -47,7 +42,8 @@ export default function SwitchPreviewPanel({
         )}
       </PreviewStage>
 
-      <SectionLabel>All Sizes — Off & On States</SectionLabel>
+      <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
+      <SectionLabel mt={20}>All Sizes — Off & On States</SectionLabel>
       <PreviewMatrix
         sizeKeys={sizeKeys}
         rows={matrixRows}

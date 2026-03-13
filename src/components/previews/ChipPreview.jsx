@@ -11,21 +11,21 @@ export default function ChipPreview({ brands, brandId, variant = "filled", size,
   const tokens = COMPONENT_TOKENS.chip;
 
   // Resolve colors based on variant and checked state
-  const uncheckedBg = resolveColor(brands, brandId, tokens["chip-background"]?.semantic);
-  const borderColor = resolveColor(brands, brandId, tokens["chip-border"]?.semantic);
-  const textColor = resolveColor(brands, brandId, tokens["chip-text"]?.semantic);
+  const uncheckedBg = resolveColor(brands, brandId, tokens["chip-background"]?.semantic, "light", "chip-background");
+  const borderColor = resolveColor(brands, brandId, tokens["chip-border"]?.semantic, "light", "chip-border");
+  const textColor = resolveColor(brands, brandId, tokens["chip-text"]?.semantic, "light", "chip-text");
 
   // Variant-specific checked backgrounds
-  const filledCheckedBg = resolveColor(brands, brandId, tokens["chip-filled-background-checked"]?.semantic);
-  const lightCheckedBg = resolveColor(brands, brandId, tokens["chip-light-background-checked"]?.semantic);
-  const outlineCheckedBg = resolveColor(brands, brandId, tokens["chip-outline-background-checked"]?.semantic);
+  const filledCheckedBg = resolveColor(brands, brandId, tokens["chip-filled-background-checked"]?.semantic, "light", "chip-filled-background-checked");
+  const lightCheckedBg = resolveColor(brands, brandId, tokens["chip-light-background-checked"]?.semantic, "light", "chip-light-background-checked");
+  const outlineCheckedBg = resolveColor(brands, brandId, tokens["chip-outline-background-checked"]?.semantic, "light", "chip-outline-background-checked");
 
   // Variant-specific checked text
-  const filledCheckedText = resolveColor(brands, brandId, tokens["chip-filled-text-checked"]?.semantic);
-  const lightCheckedText = resolveColor(brands, brandId, tokens["chip-light-text-checked"]?.semantic);
-  const outlineCheckedText = resolveColor(brands, brandId, tokens["chip-outline-text-checked"]?.semantic);
+  const filledCheckedText = resolveColor(brands, brandId, tokens["chip-filled-text-checked"]?.semantic, "light", "chip-filled-text-checked");
+  const lightCheckedText = resolveColor(brands, brandId, tokens["chip-light-text-checked"]?.semantic, "light", "chip-light-text-checked");
+  const outlineCheckedText = resolveColor(brands, brandId, tokens["chip-outline-text-checked"]?.semantic, "light", "chip-outline-text-checked");
 
-  const iconColor = resolveColor(brands, brandId, tokens["chip-icon-color"]?.semantic);
+  const iconColor = resolveColor(brands, brandId, tokens["chip-icon-color"]?.semantic, "light", "chip-icon-color");
 
   // Resolve dimensions
   const chipHeight = resolveDimension(brands, brandId, "chip-height", size);
