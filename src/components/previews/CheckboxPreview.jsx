@@ -11,6 +11,7 @@ export default function CheckboxPreview({
   radius,
   checked: controlledChecked,
   indeterminate,
+  state,
   readOnly,
 }) {
   const [internalChecked, setInternalChecked] = useState(false);
@@ -20,30 +21,65 @@ export default function CheckboxPreview({
   const tokens = COMPONENT_TOKENS.checkbox;
 
   const prefix = `checkbox-${variant}`;
-  const uncheckedBg = resolveColor(brands, brandId, tokens[`${prefix}-background`]?.semantic, "light", `${prefix}-background`);
-  const checkedBg = resolveColor(brands, brandId, tokens[`${prefix}-background-checked`]?.semantic, "light", `${prefix}-background-checked`);
-  const disabledBg = resolveColor(brands, brandId, tokens[`${prefix}-background-disabled`]?.semantic, "light", `${prefix}-background-disabled`);
+  const stateSuffix = state && state !== "default" ? `-${state}` : "";
+  const isDisabled = state === "disabled";
 
-  const borderColor = resolveColor(brands, brandId, tokens[`${prefix}-border`]?.semantic, "light", `${prefix}-border`);
-  const checkedBorderColor = resolveColor(brands, brandId, tokens[`${prefix}-border-checked`]?.semantic, "light", `${prefix}-border-checked`);
-  const disabledBorderColor = resolveColor(brands, brandId, tokens[`${prefix}-border-disabled`]?.semantic, "light", `${prefix}-border-disabled`);
+  const resolveFirst = (tokenKeys) => {
+    const key = tokenKeys.find((k) => tokens[k]);
+    if (!key) return "#FF00FF";
+    return resolveColor(brands, brandId, tokens[key]?.semantic, "light", key);
+  };
 
-  const iconColor = resolveColor(brands, brandId, tokens[`${prefix}-icon-color`]?.semantic, "light", `${prefix}-icon-color`);
-  const disabledIconColor = resolveColor(brands, brandId, tokens[`${prefix}-icon-color-disabled`]?.semantic, "light", `${prefix}-icon-color-disabled`);
+  const uncheckedBg = resolveFirst([
+    `checkbox-background${stateSuffix}`,
+    `${prefix}-background`,
+  ]);
+  const checkedBg = resolveFirst([
+    `checkbox-background-checked${stateSuffix}`,
+    `${prefix}-background-checked`,
+  ]);
+  const disabledBg = resolveFirst([
+    "checkbox-background-disabled",
+    `${prefix}-background-disabled`,
+  ]);
+
+  const borderColor = resolveFirst([
+    `checkbox-border${stateSuffix}`,
+    `${prefix}-border`,
+  ]);
+  const checkedBorderColor = resolveFirst([
+    `${prefix}-border-checked`,
+    "checkbox-border",
+  ]);
+  const disabledBorderColor = resolveFirst([
+    "checkbox-border-disabled",
+    `${prefix}-border-disabled`,
+  ]);
+
+  const iconColor = resolveFirst([
+    `${prefix}-icon-color`,
+    "checkbox-icon-color",
+  ]);
+  const disabledIconColor = resolveFirst([
+    `${prefix}-icon-color-disabled`,
+    "checkbox-icon-color-disabled",
+  ]);
+  const focusRing = resolveFirst(["checkbox-focus-ring"]);
 
   const boxSize = resolveDimension(brands, brandId, "checkbox-size", size);
   const borderRadius = resolveDimension(brands, brandId, "checkbox-radius", radius || size);
   const isActive = checked || indeterminate;
-  const bg = readOnly && !isActive ? disabledBg : isActive ? checkedBg : uncheckedBg;
-  const bd = readOnly ? disabledBorderColor : isActive ? checkedBorderColor : borderColor;
-  const ic = readOnly ? disabledIconColor : iconColor;
+  const bg = isDisabled ? disabledBg : isActive ? checkedBg : uncheckedBg;
+  const bd = isDisabled ? disabledBorderColor : isActive ? checkedBorderColor : borderColor;
+  const ic = isDisabled ? disabledIconColor : iconColor;
 
   return (
     <Checkbox
       checked={checked}
       indeterminate={indeterminate}
-      onChange={readOnly ? undefined : () => setInternalChecked((v) => !v)}
-      readOnly={readOnly}
+      onChange={readOnly || isDisabled ? undefined : () => setInternalChecked((v) => !v)}
+      readOnly={readOnly || isDisabled}
+      disabled={isDisabled}
       vars={() => ({
         root: {
           "--checkbox-size": `${boxSize}px`,
@@ -56,6 +92,7 @@ export default function CheckboxPreview({
         input: {
           backgroundColor: bg,
           borderColor: bd,
+          boxShadow: state === "focus" ? `0 0 0 2px ${focusRing}40` : "none",
         },
       }}
     />

@@ -29,7 +29,10 @@ import {
   SwitchPreviewContent,
   SwitchPropertiesPanel,
 } from "./components/panels/SwitchPreviewPanel";
-import CheckboxPreviewPanel from "./components/panels/CheckboxPreviewPanel";
+import {
+  CheckboxPreviewContent,
+  CheckboxPropertiesPanel,
+} from "./components/panels/CheckboxPreviewPanel";
 import RadioPreviewPanel from "./components/panels/RadioPreviewPanel";
 import ChipPreviewPanel from "./components/panels/ChipPreviewPanel";
 import TooltipPreviewPanel from "./components/panels/TooltipPreviewPanel";
@@ -130,6 +133,8 @@ export default function App() {
   const [activeSwitchState, setActiveSwitchState] = useState("default");
   const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
   const [activeCheckboxRadius, setActiveCheckboxRadius] = useState(checkboxDefault);
+  const [activeCheckboxSelection, setActiveCheckboxSelection] = useState("unchecked");
+  const [activeCheckboxState, setActiveCheckboxState] = useState("default");
   const [activeRadioSize, setActiveRadioSize] = useState(radioDefault);
   const [activeChipSize, setActiveChipSize] = useState(chipDefault);
   const [activeChipRadius, setActiveChipRadius] = useState(chipDefault);
@@ -189,6 +194,8 @@ export default function App() {
     } else if (newComp === "checkbox") {
       setActiveCheckboxSize(checkboxDefault);
       setActiveCheckboxRadius(checkboxDefault);
+      setActiveCheckboxSelection("unchecked");
+      setActiveCheckboxState("default");
       setActiveVariant("filled");
     } else if (newComp === "radio") {
       setActiveRadioSize(radioDefault);
@@ -330,6 +337,8 @@ export default function App() {
           ? forcedState || activeTabsState
         : activeComponent === "switch"
           ? forcedState || activeSwitchState
+          : activeComponent === "checkbox"
+            ? forcedState || activeCheckboxState
           : forcedState;
 
   const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token]) => {
@@ -364,11 +373,37 @@ export default function App() {
     const variants = variantsByComponent[activeComponent];
     if (!variants) return true;
     if (activeComponent === "checkbox") {
-      const checkboxSharedSegments = ["focus", "label"];
-      if (!variants.includes(variantSegment)) {
-        return checkboxSharedSegments.includes(variantSegment);
+      const checkboxSharedSegments = ["background", "border", "icon", "label", "focus"];
+      const targetState = effectiveComponentState || "default";
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      const forcedSelection = forcedIndeterminate
+        ? "indeterminate"
+        : forcedChecked
+          ? "checked"
+          : null;
+      const targetSelection = forcedSelection || activeCheckboxSelection;
+      const isCheckedLike = targetSelection !== "unchecked";
+      const isCheckedToken = parts.includes("checked");
+
+      if (variants.includes(variantSegment)) {
+        if (variantSegment !== activeVariant) return false;
+        if (tokenState !== targetState) {
+          if (!(targetState === "default" && tokenState === "default")) return false;
+        }
+        if (parts.includes("disabled")) return targetState === "disabled";
+        if (isCheckedToken) return isCheckedLike;
+        if (parts[2] === "background" || parts[2] === "border") return !isCheckedLike;
+        return true;
       }
-      return variantSegment === activeVariant;
+
+      if (!checkboxSharedSegments.includes(variantSegment)) return false;
+      if (tokenState !== targetState) return false;
+      if (variantSegment === "background") {
+        return isCheckedToken === isCheckedLike;
+      }
+      return true;
     }
     if (activeComponent === "button" || activeComponent === "actionicon" || activeComponent === "tabs") {
       if (!variants.includes(variantSegment)) return true;
@@ -662,19 +697,22 @@ export default function App() {
               )}
 
               {activeComponent === "checkbox" && (
-                <CheckboxPreviewPanel
+                <CheckboxPreviewContent
                   brands={brands}
                   activeBrand={activeBrand}
                   activeVariant={forcedVariant || activeVariant}
-                  setActiveVariant={setActiveVariant}
                   activeCheckboxSize={activeCheckboxSize}
-                  setActiveCheckboxSize={setActiveCheckboxSize}
                   activeCheckboxRadius={activeCheckboxRadius}
-                  setActiveCheckboxRadius={setActiveCheckboxRadius}
                   sizeKeys={sizeKeys}
-                  forcedChecked={forcedChecked}
-                  forcedIndeterminate={forcedIndeterminate}
                   activeColorToken={activeColorToken}
+                  selectedSelection={
+                    forcedIndeterminate
+                      ? "indeterminate"
+                      : forcedChecked
+                        ? "checked"
+                        : activeCheckboxSelection
+                  }
+                  selectedState={forcedState || activeCheckboxState}
                 />
               )}
 
@@ -809,7 +847,31 @@ export default function App() {
                   forcedState={forcedState}
                 />
               )}
-              {!["button", "actionicon", "tabs", "switch"].includes(activeComponent) && (
+              {activeComponent === "checkbox" && (
+                <CheckboxPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeCheckboxSize={activeCheckboxSize}
+                  setActiveCheckboxSize={setActiveCheckboxSize}
+                  activeCheckboxRadius={activeCheckboxRadius}
+                  setActiveCheckboxRadius={setActiveCheckboxRadius}
+                  sizeKeys={sizeKeys}
+                  selectedSelection={
+                    forcedIndeterminate
+                      ? "indeterminate"
+                      : forcedChecked
+                        ? "checked"
+                        : activeCheckboxSelection
+                  }
+                  setSelectedSelection={setActiveCheckboxSelection}
+                  selectedState={forcedState || activeCheckboxState}
+                  setSelectedState={setActiveCheckboxState}
+                  forcedChecked={forcedChecked}
+                  forcedIndeterminate={forcedIndeterminate}
+                  forcedState={forcedState}
+                />
+              )}
+              {!["button", "actionicon", "tabs", "switch", "checkbox"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>
