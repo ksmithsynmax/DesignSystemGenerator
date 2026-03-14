@@ -21,7 +21,10 @@ import {
   ActionIconPreviewContent,
   ActionIconPropertiesPanel,
 } from "./components/panels/ActionIconPreviewPanel";
-import TabsPreviewPanel from "./components/panels/TabsPreviewPanel";
+import {
+  TabsPreviewContent,
+  TabsPropertiesPanel,
+} from "./components/panels/TabsPreviewPanel";
 import SwitchPreviewPanel from "./components/panels/SwitchPreviewPanel";
 import CheckboxPreviewPanel from "./components/panels/CheckboxPreviewPanel";
 import RadioPreviewPanel from "./components/panels/RadioPreviewPanel";
@@ -116,6 +119,9 @@ export default function App() {
   const [activeActionIconIcon, setActiveActionIconIcon] = useState("check");
   const [activeTabsRadius, setActiveTabsRadius] = useState(tabsDefault);
   const [activeTabsOrientation, setActiveTabsOrientation] = useState("horizontal");
+  const [activeTabsShowPanel, setActiveTabsShowPanel] = useState(false);
+  const [activeTabsShowIcons, setActiveTabsShowIcons] = useState(false);
+  const [activeTabsState, setActiveTabsState] = useState("default");
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
   const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
   const [activeCheckboxRadius, setActiveCheckboxRadius] = useState(checkboxDefault);
@@ -167,6 +173,9 @@ export default function App() {
     } else if (newComp === "tabs") {
       setActiveTabsRadius(tabsDefault);
       setActiveTabsOrientation("horizontal");
+      setActiveTabsShowPanel(false);
+      setActiveTabsShowIcons(false);
+      setActiveTabsState("default");
       setActiveVariant("default");
     } else if (newComp === "switch") {
       setActiveSwitchSize(switchDefault);
@@ -267,7 +276,7 @@ export default function App() {
   const dimensionTokens = getDimensionTokens(activeComponent);
 
   // Parse forced state/checked/variant from the active token card
-  const INTERACTIVE_STATES = ["hover", "focus", "pressed", "disabled", "error"];
+  const INTERACTIVE_STATES = ["active", "hover", "focus", "pressed", "disabled", "error"];
   let forcedState = null;
   let forcedChecked = null;
   let forcedIndeterminate = false;
@@ -310,7 +319,9 @@ export default function App() {
       ? forcedState || activeButtonState
       : activeComponent === "actionicon"
         ? forcedState || activeActionIconState
-        : forcedState;
+        : activeComponent === "tabs"
+          ? forcedState || activeTabsState
+          : forcedState;
 
   const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token]) => {
     const parts = token.split("-");
@@ -330,7 +341,7 @@ export default function App() {
       }
       return variantSegment === activeVariant;
     }
-    if (activeComponent === "button" || activeComponent === "actionicon") {
+    if (activeComponent === "button" || activeComponent === "actionicon" || activeComponent === "tabs") {
       if (!variants.includes(variantSegment)) return true;
       if (variantSegment !== activeVariant) return false;
       const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
@@ -596,17 +607,16 @@ export default function App() {
               )}
 
               {activeComponent === "tabs" && (
-                <TabsPreviewPanel
+                <TabsPreviewContent
                   brands={brands}
                   activeBrand={activeBrand}
                   activeVariant={forcedVariant || activeVariant}
-                  setActiveVariant={setActiveVariant}
                   activeTabsRadius={activeTabsRadius}
-                  setActiveTabsRadius={setActiveTabsRadius}
                   activeTabsOrientation={activeTabsOrientation}
-                  setActiveTabsOrientation={setActiveTabsOrientation}
-                  forcedState={forcedState}
+                  selectedState={forcedState || activeTabsState}
                   activeColorToken={activeColorToken}
+                  showPanel={activeTabsShowPanel}
+                  showIcons={activeTabsShowIcons}
                 />
               )}
 
@@ -708,7 +718,10 @@ export default function App() {
               flexShrink: 0,
             }}
           >
-            <Section title="Properties">
+            <div style={{ fontSize: 11, color: "#5C5F66", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, marginBottom: 8 }}>
+              Properties
+            </div>
+            <div>
               {activeComponent === "button" && (
                 <ButtonPropertiesPanel
                   activeVariant={forcedVariant || activeVariant}
@@ -737,12 +750,29 @@ export default function App() {
                   forcedState={forcedState}
                 />
               )}
-              {!["button", "actionicon"].includes(activeComponent) && (
+              {activeComponent === "tabs" && (
+                <TabsPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeTabsRadius={activeTabsRadius}
+                  setActiveTabsRadius={setActiveTabsRadius}
+                  activeTabsOrientation={activeTabsOrientation}
+                  setActiveTabsOrientation={setActiveTabsOrientation}
+                  showPanel={activeTabsShowPanel}
+                  setShowPanel={setActiveTabsShowPanel}
+                  showIcons={activeTabsShowIcons}
+                  setShowIcons={setActiveTabsShowIcons}
+                  selectedState={forcedState || activeTabsState}
+                  setSelectedState={setActiveTabsState}
+                  forcedState={forcedState}
+                />
+              )}
+              {!["button", "actionicon", "tabs"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>
               )}
-            </Section>
+            </div>
           </div>
 
           <div

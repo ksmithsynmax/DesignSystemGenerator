@@ -62,57 +62,69 @@ export default function TabsPreview({
   const iconSize = resolveDimension(brands, brandId, "tabs-icon-size");
   const iconGap = resolveDimension(brands, brandId, "tabs-icon-gap");
 
-  const forceDisabled = state === "disabled";
   const forcedHover = state === "hover";
   const forcedPressed = state === "pressed";
+  const forcedFocus = state === "focus";
+  const forcedDisabled = state === "disabled";
   const isPills = variant === "pills";
 
-  const tabBaseBg = forceDisabled ? tabBgDisabled : tabBg;
-  const tabBaseText = forceDisabled ? tabTextDisabled : tabText;
-  const tabBaseBorder = forceDisabled ? tabBorderDisabled : tabBorder;
+  const tabBaseBg = tabBg;
+  const tabBaseText = tabText;
+  const tabBaseBorder = tabBorder;
   const baseTabBg = tabBaseBg;
   const hoverTabBg = tabBgHover;
   const pressedTabBg = tabBgPressed;
   const activeTabBg = tabBgActive;
 
-  const getTabVisual = (tabKey, disabledTab = false) => {
-    if (disabledTab || forceDisabled) {
+  const getTabVisual = (tabKey) => {
+    const isActiveTab = tabKey === currentTab;
+
+    if (isActiveTab && forcedDisabled) {
       return {
         backgroundColor: tabBgDisabled,
         color: tabTextDisabled,
         borderColor: tabBorderDisabled,
         cursor: "not-allowed",
+        boxShadow: "none",
       };
     }
-    if (tabKey === currentTab) {
-      return {
-        backgroundColor: activeTabBg,
-        color: tabTextActive,
-        borderColor: tabBorderActive,
-        cursor: "pointer",
-      };
-    }
-    if (forcedPressed) {
+
+    if (isActiveTab && forcedPressed) {
       return {
         backgroundColor: pressedTabBg,
         color: tabTextPressed,
         borderColor: tabBorderPressed,
         cursor: "pointer",
+        boxShadow: "none",
       };
     }
-    if (forcedHover) {
+
+    if (isActiveTab && forcedHover) {
       return {
         backgroundColor: hoverTabBg,
         color: tabTextHover,
         borderColor: tabBorderHover,
         cursor: "pointer",
+        boxShadow: "none",
       };
     }
+
+    if (isActiveTab) {
+      return {
+        backgroundColor: activeTabBg,
+        color: tabTextActive,
+        borderColor: tabBorderActive,
+        cursor: "pointer",
+        boxShadow: forcedFocus ? `0 0 0 2px ${focusRing}40` : "none",
+      };
+    }
+
     return {
       backgroundColor: baseTabBg,
       color: tabBaseText,
       borderColor: tabBaseBorder,
       cursor: "pointer",
+      boxShadow: "none",
     };
   };
 
@@ -140,11 +152,6 @@ export default function TabsPreview({
             padding: `${tabPaddingY}px ${tabPaddingX}px`,
             fontSize: `${tabsFontSize}px`,
             cursor: "pointer",
-            ...(state === "focus"
-              ? {
-                  boxShadow: `0 0 0 2px ${focusRing}40`,
-                }
-              : {}),
           },
           panel: {
             padding: `${panelPadding}px`,
@@ -161,25 +168,25 @@ export default function TabsPreview({
         <Tabs.List>
           <Tabs.Tab
             value="overview"
-            disabled={forceDisabled}
+            disabled={false}
             leftSection={showIcons ? <Image01Icon width={iconSize} height={iconSize} /> : null}
-            style={getTabVisual("overview", false)}
+            style={getTabVisual("overview")}
           >
             Overview
           </Tabs.Tab>
           <Tabs.Tab
             value="details"
-            disabled={forceDisabled}
+            disabled={false}
             leftSection={showIcons ? <MessageCircle01Icon width={iconSize} height={iconSize} /> : null}
-            style={getTabVisual("details", false)}
+            style={getTabVisual("details")}
           >
             Details
           </Tabs.Tab>
           <Tabs.Tab
             value="settings"
-            disabled
+            disabled={false}
             leftSection={showIcons ? <Settings01Icon width={iconSize} height={iconSize} /> : null}
-            style={getTabVisual("settings", true)}
+            style={getTabVisual("settings")}
           >
             Settings
           </Tabs.Tab>
