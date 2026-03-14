@@ -261,6 +261,7 @@ export const STORYBOOK_BRANDS = {
       "actionicon-size-default": "sm",
       "actionicon-icon-size-default": "sm",
       "actionicon-radius-default": "sm",
+      "tabs-radius-default": "sm",
       "switch-width-default": "md",
       "switch-height-default": "md",
       "switch-thumb-size-default": "md",
@@ -270,6 +271,7 @@ export const STORYBOOK_BRANDS = {
       "switch-label-gap-default": "md",
       "checkbox-size-default": "md",
       "checkbox-border-radius-default": "md",
+      "checkbox-radius-default": "md",
       "checkbox-icon-size-default": "md",
       "checkbox-label-font-size-default": "md",
       "checkbox-label-line-height-default": "md",
@@ -291,7 +293,34 @@ export const STORYBOOK_BRANDS = {
       "textinput-padding-x-default": "sm",
       "textinput-radius-default": "sm"
     },
-    "dimensionOverrides": {}
+    "dimensionOverrides": {
+      "button-border-radius": {
+        "_value": 25
+      },
+      "button-font-weight": {
+        "_value": "Extra Bold"
+      }
+    },
+    "componentOverrides": {
+      "button-filled-background": {
+        "color": "yellow",
+        "index": 5,
+        "opacity": 100
+      },
+      "button-filled-text": {
+        "color": "neutral",
+        "index": 9
+      },
+      "button-filled-background-hover": {
+        "color": "yellow",
+        "index": 5,
+        "opacity": 100
+      },
+      "button-filled-text-hover": {
+        "color": "neutral",
+        "index": 9
+      }
+    }
   },
   "hyperion": {
     "name": "Hyperion",
@@ -526,6 +555,7 @@ export const STORYBOOK_BRANDS = {
       "actionicon-size-default": "md",
       "actionicon-icon-size-default": "md",
       "actionicon-radius-default": "md",
+      "tabs-radius-default": "md",
       "switch-width-default": "md",
       "switch-height-default": "md",
       "switch-thumb-size-default": "md",
@@ -535,6 +565,7 @@ export const STORYBOOK_BRANDS = {
       "switch-label-gap-default": "md",
       "checkbox-size-default": "md",
       "checkbox-border-radius-default": "md",
+      "checkbox-radius-default": "md",
       "checkbox-icon-size-default": "md",
       "checkbox-label-font-size-default": "md",
       "checkbox-label-line-height-default": "md",

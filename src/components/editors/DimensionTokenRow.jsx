@@ -7,6 +7,7 @@ export default function DimensionTokenRow({
   brands,
   brandId,
   sizeKeys,
+  selectedSize,
   onUpdateDimension,
   isActive,
   onClick,
@@ -19,6 +20,10 @@ export default function DimensionTokenRow({
   const isString = tokenDef.type === "STRING";
   const allowedValues = tokenDef.allowedValues;
   const isSingleValue = tokenDef.value !== undefined && !tokenDef.sizes;
+  const visibleSizes =
+    !isSingleValue && selectedSize && sizeKeys.includes(selectedSize)
+      ? [selectedSize]
+      : sizeKeys;
 
   // Resolve a display value for the collapsed card
   const displayValue = isSingleValue
@@ -62,7 +67,7 @@ export default function DimensionTokenRow({
             flex: 1,
           }}
         >
-          {tokenName}
+          {!isSingleValue && selectedSize ? `${tokenName}-${selectedSize}` : tokenName}
         </div>
         <ChevronRightIcon
           style={{
@@ -145,7 +150,7 @@ export default function DimensionTokenRow({
             </div>
           ) : (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
-              {sizeKeys.map((size) => {
+              {visibleSizes.map((size) => {
                 const val = resolveDimension(brands, brandId, tokenName, size);
                 const isDefault = size === defaultSize;
                 const isOverridden = hasOverride(size);
@@ -159,17 +164,19 @@ export default function DimensionTokenRow({
                       gap: 4,
                     }}
                   >
-                    <span
-                      style={{
-                        fontSize: 10,
-                        color: isDefault ? "#228BE6" : "#5C5F66",
-                        fontWeight: isDefault ? 600 : 400,
-                        fontFamily: "monospace",
-                      }}
-                    >
-                      {size}
-                      {isDefault ? "*" : ""}
-                    </span>
+                    {!selectedSize && (
+                      <span
+                        style={{
+                          fontSize: 10,
+                          color: isDefault ? "#228BE6" : "#5C5F66",
+                          fontWeight: isDefault ? 600 : 400,
+                          fontFamily: "monospace",
+                        }}
+                      >
+                        {size}
+                        {isDefault ? "*" : ""}
+                      </span>
+                    )}
                     {isString && allowedValues ? (
                       <select
                         value={val ?? ""}

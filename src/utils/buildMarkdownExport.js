@@ -1,5 +1,39 @@
 import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/componentTokens";
 
+function normalizeOpacity(opacity) {
+  const parsed = Number(opacity);
+  if (!Number.isFinite(parsed)) return 100;
+  return Math.min(100, Math.max(0, Math.round(parsed)));
+}
+
+function normalizeHex(hex) {
+  if (typeof hex !== "string") return null;
+  const trimmed = hex.trim();
+  if (trimmed.toLowerCase() === "transparent") return "transparent";
+  const raw = trimmed.startsWith("#") ? trimmed.slice(1) : trimmed;
+  if (raw.length === 3) {
+    return raw
+      .split("")
+      .map((c) => c + c)
+      .join("")
+      .toUpperCase();
+  }
+  if (raw.length === 8) return raw.slice(0, 6).toUpperCase();
+  if (raw.length === 6) return raw.toUpperCase();
+  return null;
+}
+
+function applyOpacity(hex, opacity) {
+  if (hex === "transparent") return "transparent";
+  const normalized = normalizeHex(hex);
+  if (!normalized) return hex;
+  const alpha = Math.round((normalizeOpacity(opacity) / 100) * 255)
+    .toString(16)
+    .padStart(2, "0")
+    .toUpperCase();
+  return `#${normalized}${alpha}`;
+}
+
 /**
  * Generates a comprehensive markdown reference document
  * for the design system's tokens, brands, and components.
@@ -50,10 +84,18 @@ export function buildMarkdownExport(brands, globalPrimitives) {
     lines.push("| Token | Alias | Resolved Hex |");
     lines.push("|-------|-------|-------------|");
     Object.entries(brand.semanticMap).forEach(([key, mapping]) => {
-      const hex = brand.primitives[mapping.color]?.[mapping.index]
-        ?? globalPrimitives[mapping.color]?.[mapping.index]
-        ?? "—";
-      lines.push(`| ${key} | \`${mapping.color}/${mapping.index}\` | \`${hex}\` |`);
+      const isTransparent = mapping.color === "transparent";
+      const baseHex = isTransparent
+        ? "transparent"
+        : brand.primitives[mapping.color]?.[mapping.index]
+          ?? globalPrimitives[mapping.color]?.[mapping.index]
+          ?? "—";
+      const opacity = normalizeOpacity(mapping.opacity);
+      const alias = isTransparent
+        ? "transparent"
+        : `${mapping.color}/${mapping.index}${opacity !== 100 ? ` @ ${opacity}%` : ""}`;
+      const hex = baseHex === "—" ? "—" : applyOpacity(baseHex, opacity);
+      lines.push(`| ${key} | \`${alias}\` | \`${hex}\` |`);
     });
     lines.push("");
 
@@ -66,10 +108,18 @@ export function buildMarkdownExport(brands, globalPrimitives) {
       lines.push("| Token | Alias | Resolved Hex |");
       lines.push("|-------|-------|-------------|");
       Object.entries(brand.darkSemanticOverrides).forEach(([key, mapping]) => {
-        const hex = brand.primitives[mapping.color]?.[mapping.index]
-          ?? globalPrimitives[mapping.color]?.[mapping.index]
-          ?? "—";
-        lines.push(`| ${key} | \`${mapping.color}/${mapping.index}\` | \`${hex}\` |`);
+        const isTransparent = mapping.color === "transparent";
+        const baseHex = isTransparent
+          ? "transparent"
+          : brand.primitives[mapping.color]?.[mapping.index]
+            ?? globalPrimitives[mapping.color]?.[mapping.index]
+            ?? "—";
+        const opacity = normalizeOpacity(mapping.opacity);
+        const alias = isTransparent
+          ? "transparent"
+          : `${mapping.color}/${mapping.index}${opacity !== 100 ? ` @ ${opacity}%` : ""}`;
+        const hex = baseHex === "—" ? "—" : applyOpacity(baseHex, opacity);
+        lines.push(`| ${key} | \`${alias}\` | \`${hex}\` |`);
       });
       lines.push("");
     }

@@ -2,6 +2,40 @@ import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/comp
 import { resolveColor, resolveDimension, getDefaultSizeKey } from "./resolveToken";
 import { GLOBAL_PRIMITIVES } from "../data/brands";
 
+function normalizeOpacity(opacity) {
+  const parsed = Number(opacity);
+  if (!Number.isFinite(parsed)) return 100;
+  return Math.min(100, Math.max(0, Math.round(parsed)));
+}
+
+function normalizeHex(hex) {
+  if (typeof hex !== "string") return null;
+  const trimmed = hex.trim();
+  if (trimmed.toLowerCase() === "transparent") return "transparent";
+  const raw = trimmed.startsWith("#") ? trimmed.slice(1) : trimmed;
+  if (raw.length === 3) {
+    return raw
+      .split("")
+      .map((c) => c + c)
+      .join("")
+      .toUpperCase();
+  }
+  if (raw.length === 8) return raw.slice(0, 6).toUpperCase();
+  if (raw.length === 6) return raw.toUpperCase();
+  return null;
+}
+
+function applyOpacity(hex, opacity) {
+  if (hex === "transparent") return "transparent";
+  const normalized = normalizeHex(hex);
+  if (!normalized) return hex;
+  const alpha = Math.round((normalizeOpacity(opacity) / 100) * 255)
+    .toString(16)
+    .padStart(2, "0")
+    .toUpperCase();
+  return `#${normalized}${alpha}`;
+}
+
 /**
  * Builds the fully-resolved token payload for all brands.
  * Returns a plain object (not serialized).
@@ -13,13 +47,21 @@ export function buildExportPayload(brands) {
   const resolveSemanticMap = (brand, map) => {
     const resolved = {};
     Object.entries(map).forEach(([key, mapping]) => {
-      const value = brand.primitives[mapping.color]?.[mapping.index]
-        ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
-        ?? null;
+      const isTransparent = mapping.color === "transparent";
+      const baseValue = isTransparent
+        ? "transparent"
+        : brand.primitives[mapping.color]?.[mapping.index]
+          ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
+          ?? null;
+      const opacity = normalizeOpacity(mapping.opacity);
+      const value = baseValue ? applyOpacity(baseValue, opacity) : null;
+      const alias = isTransparent
+        ? "transparent"
+        : `${mapping.color}/${mapping.index}${opacity !== 100 ? ` @ ${opacity}%` : ""}`;
       resolved[key] = {
         type: "COLOR",
         value,
-        alias: `${mapping.color}/${mapping.index}`,
+        alias,
       };
     });
     return resolved;

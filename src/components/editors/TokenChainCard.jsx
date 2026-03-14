@@ -14,7 +14,19 @@ export default function TokenChainCard({
   brandColors,
   globalColors,
 }) {
-  const primitive = `${mapping.color}/${mapping.index}`;
+  const opacity = Number.isFinite(Number(mapping.opacity))
+    ? Math.min(100, Math.max(0, Math.round(Number(mapping.opacity))))
+    : 100;
+  const isTransparent = mapping.color === "transparent";
+  const primitive = isTransparent
+    ? "transparent"
+    : `${mapping.color}/${mapping.index}${opacity !== 100 ? ` @ ${opacity}%` : ""}`;
+
+  const updateOpacity = (nextValue) => {
+    const parsed = Number.parseInt(nextValue, 10);
+    const safeOpacity = Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : 0;
+    onUpdate(componentToken, { ...mapping, opacity: safeOpacity });
+  };
 
   return (
     <div>
@@ -98,9 +110,24 @@ export default function TokenChainCard({
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <select
               value={mapping.color}
-              onChange={(e) =>
-                onUpdate(componentToken, { ...mapping, color: e.target.value })
-              }
+              onChange={(e) => {
+                const nextColor = e.target.value;
+                if (nextColor === "transparent") {
+                  onUpdate(componentToken, {
+                    ...mapping,
+                    color: "transparent",
+                    index: 0,
+                    opacity: 0,
+                  });
+                  return;
+                }
+                const nextOpacity = isTransparent && opacity === 0 ? 100 : opacity;
+                onUpdate(componentToken, {
+                  ...mapping,
+                  color: nextColor,
+                  opacity: nextOpacity,
+                });
+              }}
               style={{
                 flex: 1,
                 background: "#1A1B1E",
@@ -128,14 +155,18 @@ export default function TokenChainCard({
                   <option key={c} value={c}>{c}</option>
                 ))}
               </optgroup>
+              <optgroup label="Special">
+                <option value="transparent">transparent</option>
+              </optgroup>
             </select>
             <span style={{ color: "#5C5F66", fontSize: 12, flexShrink: 0 }}>/</span>
             <select
               value={mapping.index}
+              disabled={isTransparent}
               onChange={(e) =>
                 onUpdate(componentToken, {
                   ...mapping,
-                  index: parseInt(e.target.value),
+                  index: Number.parseInt(e.target.value, 10) || 0,
                 })
               }
               style={{
@@ -154,6 +185,7 @@ export default function TokenChainCard({
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "right 10px center",
                 paddingRight: 28,
+                opacity: isTransparent ? 0.55 : 1,
               }}
             >
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
@@ -162,6 +194,51 @@ export default function TokenChainCard({
                 </option>
               ))}
             </select>
+          </div>
+          <div style={{ marginTop: 8 }}>
+            <div
+              style={{
+                fontSize: 11,
+                color: "#5C5F66",
+                textTransform: "uppercase",
+                letterSpacing: "0.05em",
+                fontWeight: 600,
+                marginBottom: 6,
+              }}
+            >
+              Opacity
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={opacity}
+                disabled={isTransparent}
+                onChange={(e) => updateOpacity(e.target.value)}
+                style={{ flex: 1, accentColor: "#228BE6", opacity: isTransparent ? 0.45 : 1 }}
+              />
+              <input
+                type="number"
+                min={0}
+                max={100}
+                value={opacity}
+                disabled={isTransparent}
+                onChange={(e) => updateOpacity(e.target.value)}
+                style={{
+                  width: 58,
+                  background: "#1A1B1E",
+                  border: "1px solid #373A40",
+                  borderRadius: 4,
+                  color: "#C1C2C5",
+                  fontSize: 12,
+                  fontFamily: "monospace",
+                  padding: "6px 8px",
+                  opacity: isTransparent ? 0.55 : 1,
+                }}
+              />
+              <span style={{ color: "#5C5F66", fontSize: 12, flexShrink: 0 }}>%</span>
+            </div>
           </div>
         </div>
       )}

@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { INITIAL_BRANDS } from "./data/brands";
 import {
   COMPONENT_NAMES,
@@ -13,8 +13,14 @@ import PrimitiveScale from "./components/editors/PrimitiveScale";
 import TokenChainCard from "./components/editors/TokenChainCard";
 import DimensionTokenRow from "./components/editors/DimensionTokenRow";
 import AddPrimitiveForm from "./components/editors/AddPrimitiveForm";
-import ButtonPreviewPanel from "./components/panels/ButtonPreviewPanel";
-import ActionIconPreviewPanel from "./components/panels/ActionIconPreviewPanel";
+import {
+  ButtonPreviewContent,
+  ButtonPropertiesPanel,
+} from "./components/panels/ButtonPreviewPanel";
+import {
+  ActionIconPreviewContent,
+  ActionIconPropertiesPanel,
+} from "./components/panels/ActionIconPreviewPanel";
 import TabsPreviewPanel from "./components/panels/TabsPreviewPanel";
 import SwitchPreviewPanel from "./components/panels/SwitchPreviewPanel";
 import CheckboxPreviewPanel from "./components/panels/CheckboxPreviewPanel";
@@ -51,27 +57,43 @@ export default function App() {
   const [activeTab, setActiveTab] = useState("preview");
   const [storybookLoading, setStorybookLoading] = useState(false);
   const [storybookError, setStorybookError] = useState(null);
-  const [panelWidth, setPanelWidth] = useState(460);
+  const [leftPanelWidth, setLeftPanelWidth] = useState(420);
+  const [previewPanelWidth, setPreviewPanelWidth] = useState(640);
+  const [propertiesPanelWidth, setPropertiesPanelWidth] = useState(300);
+  const componentsPanelWidth = 260;
   const [activeColorToken, setActiveColorToken] = useState(null);
   const [activeDimensionToken, setActiveDimensionToken] = useState(null);
+  const [activeButtonState, setActiveButtonState] = useState("default");
+  const [activeActionIconState, setActiveActionIconState] = useState("default");
 
-  const panelWidthRef = useRef(460);
-  const handlePanelDrag = useCallback((e) => {
-    e.preventDefault();
-    const startX = e.clientX;
-    const startWidth = panelWidthRef.current;
-    const onMove = (ev) => {
-      const next = Math.min(700, Math.max(300, startWidth + ev.clientX - startX));
-      panelWidthRef.current = next;
-      setPanelWidth(next);
+  const createResizeHandler = useCallback((setter, min, max) => {
+    return (e) => {
+      e.preventDefault();
+      const startX = e.clientX;
+      let startWidth = 0;
+      setter((curr) => {
+        startWidth = curr;
+        return curr;
+      });
+
+      const onMove = (ev) => {
+        const next = Math.min(max, Math.max(min, startWidth + ev.clientX - startX));
+        setter(next);
+      };
+
+      const onUp = () => {
+        document.removeEventListener("mousemove", onMove);
+        document.removeEventListener("mouseup", onUp);
+      };
+
+      document.addEventListener("mousemove", onMove);
+      document.addEventListener("mouseup", onUp);
     };
-    const onUp = () => {
-      document.removeEventListener("mousemove", onMove);
-      document.removeEventListener("mouseup", onUp);
-    };
-    document.addEventListener("mousemove", onMove);
-    document.addEventListener("mouseup", onUp);
   }, []);
+
+  const handleLeftPanelDrag = createResizeHandler(setLeftPanelWidth, 300, 760);
+  const handlePreviewPanelDrag = createResizeHandler(setPreviewPanelWidth, 420, 1200);
+  const handlePropertiesPanelDrag = createResizeHandler(setPropertiesPanelWidth, 240, 520);
 
   const brand = brands[activeBrand];
   const colorNames = Object.keys(brand.primitives);
@@ -136,10 +158,12 @@ export default function App() {
     if (newComp === "button") {
       setActiveSize(buttonDefault);
       setActiveVariant("filled");
+      setActiveButtonState("default");
     } else if (newComp === "actionicon") {
       setActiveActionIconSize(actionIconDefault);
       setActiveActionIconRadius(actionIconDefault);
       setActiveVariant("default");
+      setActiveActionIconState("default");
     } else if (newComp === "tabs") {
       setActiveTabsRadius(tabsDefault);
       setActiveTabsOrientation("horizontal");
@@ -241,6 +265,53 @@ export default function App() {
   const brandNames = Object.keys(brands);
   const colorTokens = getColorTokens(activeComponent);
   const dimensionTokens = getDimensionTokens(activeComponent);
+
+  // Parse forced state/checked/variant from the active token card
+  const INTERACTIVE_STATES = ["hover", "focus", "pressed", "disabled", "error"];
+  let forcedState = null;
+  let forcedChecked = null;
+  let forcedIndeterminate = false;
+  let forcedVariant = null;
+
+  if (activeColorToken) {
+    const parts = activeColorToken.split("-");
+    const last = parts[parts.length - 1];
+
+    if (INTERACTIVE_STATES.includes(last)) {
+      forcedState = last;
+    }
+
+    if (parts.includes("checked")) {
+      forcedChecked = true;
+    }
+    if (parts.includes("indeterminate")) {
+      forcedIndeterminate = true;
+    }
+
+    if (["button", "actionicon", "tabs", "checkbox", "chip", "radio", "textinput"].includes(activeComponent)) {
+      const variantSegment = parts[1];
+      const knownVariants = {
+        button: ["filled", "outlined", "ghost"],
+        actionicon: ["default", "filled", "light", "outlined", "transparent"],
+        tabs: ["default", "outlined", "pills"],
+        checkbox: ["filled", "outlined"],
+        chip: ["filled", "light", "outline"],
+        radio: ["filled", "outline"],
+        textinput: ["default", "filled"],
+      };
+      if (knownVariants[activeComponent]?.includes(variantSegment)) {
+        forcedVariant = variantSegment;
+      }
+    }
+  }
+
+  const effectiveComponentState =
+    activeComponent === "button"
+      ? forcedState || activeButtonState
+      : activeComponent === "actionicon"
+        ? forcedState || activeActionIconState
+        : forcedState;
+
   const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token]) => {
     const parts = token.split("-");
     const variantSegment = parts[1];
@@ -259,55 +330,19 @@ export default function App() {
       }
       return variantSegment === activeVariant;
     }
-    // Keep shared component tokens (e.g., button-focus-ring / actionicon-focus-ring) and only active variant tokens.
+    if (activeComponent === "button" || activeComponent === "actionicon") {
+      if (!variants.includes(variantSegment)) return true;
+      if (variantSegment !== activeVariant) return false;
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      return tokenState === (effectiveComponentState || "default");
+    }
+
+    // Keep shared component tokens and only active variant tokens.
     if (!variants.includes(variantSegment)) return true;
     return variantSegment === activeVariant;
   });
-
-  // Parse forced state/checked/variant from the active token card
-  const INTERACTIVE_STATES = ["hover", "focus", "pressed", "disabled", "error"];
-  let forcedState = null;
-  let forcedChecked = null;
-  let forcedIndeterminate = false;
-  let forcedVariant = null;
-
-  if (activeColorToken) {
-    const parts = activeColorToken.split("-");
-    const last = parts[parts.length - 1];
-
-    // Detect interactive state suffix
-    if (INTERACTIVE_STATES.includes(last)) {
-      forcedState = last;
-    }
-
-    // Detect checked/indeterminate
-    if (parts.includes("checked")) {
-      forcedChecked = true;
-    }
-    if (parts.includes("indeterminate")) {
-      forcedIndeterminate = true;
-    }
-
-    // Extract variant from token name (e.g., "button-filled-background-hover" → "filled")
-    // Pattern: component-variant-property[-state]
-    // Variant is the second segment for components that have variants
-    if (["button", "actionicon", "tabs", "checkbox", "chip", "radio", "textinput"].includes(activeComponent)) {
-      const variantSegment = parts[1];
-      // Validate it's actually a variant, not a property
-      const knownVariants = {
-        button: ["filled", "outlined", "ghost"],
-        actionicon: ["default", "filled", "light", "outlined", "transparent"],
-        tabs: ["default", "outlined", "pills"],
-        checkbox: ["filled", "outlined"],
-        chip: ["filled", "light", "outline"],
-        radio: ["filled", "outline"],
-        textinput: ["default", "filled"],
-      };
-      if (knownVariants[activeComponent]?.includes(variantSegment)) {
-        forcedVariant = variantSegment;
-      }
-    }
-  }
 
   useEffect(() => {
     if (!activeColorToken) return;
@@ -336,6 +371,35 @@ export default function App() {
     cursor: "pointer",
     borderRadius: 6,
   });
+
+  const activeSizeByComponent = {
+    button: activeSize,
+    actionicon: activeActionIconSize,
+    switch: activeSwitchSize,
+    checkbox: activeCheckboxSize,
+    radio: activeRadioSize,
+    chip: activeChipSize,
+    textinput: activeTextInputSize,
+  };
+  const activeDimensionSize = activeSizeByComponent[activeComponent] || sizeKeys[0];
+  const getSelectedDimensionSize = (tokenName) => {
+    if (activeComponent === "actionicon" && tokenName === "actionicon-radius") {
+      return activeActionIconRadius;
+    }
+    if (activeComponent === "checkbox" && tokenName === "checkbox-radius") {
+      return activeCheckboxRadius;
+    }
+    if (activeComponent === "textinput" && tokenName === "textinput-radius") {
+      return activeTextInputRadius;
+    }
+    if (activeComponent === "tabs" && tokenName === "tabs-radius") {
+      return activeTabsRadius;
+    }
+    if (activeComponent === "chip" && tokenName === "chip-radius") {
+      return activeChipRadius;
+    }
+    return activeDimensionSize;
+  };
 
   const handleMarkdownExport = () => {
     const md = buildMarkdownExport(brands, GLOBAL_PRIMITIVES);
@@ -412,12 +476,11 @@ export default function App() {
         </div>
       </div>
 
-      <div style={{ display: "flex", flex: 1, minHeight: 0 }}>
-        {/* Left Panel — Token Layers (Preview tab only) */}
-        {activeTab === "preview" && (
+      {activeTab === "preview" ? (
+        <div style={{ display: "flex", flex: 1, minHeight: 0, overflowX: "auto" }}>
           <div
             style={{
-              width: panelWidth,
+              width: leftPanelWidth,
               borderRight: "1px solid #2C2E33",
               overflowY: "auto",
               overflowX: "hidden",
@@ -447,23 +510,13 @@ export default function App() {
                   onUpdate={updatePrimitive}
                 />
               ))}
-              <AddPrimitiveForm
-                existingNames={colorNames}
-                onAdd={addPrimitive}
-              />
+              <AddPrimitiveForm existingNames={colorNames} onAdd={addPrimitive} />
             </Section>
-
             <Section title="Primitives — Global" defaultOpen={false}>
               {globalColorNames.map((c) => (
-                <PrimitiveScale
-                  key={c}
-                  name={c}
-                  scale={GLOBAL_PRIMITIVES[c]}
-                  readOnly
-                />
+                <PrimitiveScale key={c} name={c} scale={GLOBAL_PRIMITIVES[c]} readOnly />
               ))}
             </Section>
-
             <Section title={`Color Tokens — ${getComponentLabel(activeComponent)}`}>
               {visibleColorTokenEntries.map(([token, def]) => {
                 const semantic = def.semantic;
@@ -486,7 +539,6 @@ export default function App() {
                 );
               })}
             </Section>
-
             <Section title={`Dimension Tokens — ${getComponentLabel(activeComponent)}`}>
               {Object.entries(dimensionTokens).map(([token, def]) => {
                 const isActive = activeDimensionToken === token;
@@ -498,6 +550,7 @@ export default function App() {
                     brands={brands}
                     brandId={activeBrand}
                     sizeKeys={sizeKeys}
+                    selectedSize={getSelectedDimensionSize(token)}
                     onUpdateDimension={updateDimensionOverride}
                     isActive={isActive}
                     onClick={() => setActiveDimensionToken(isActive ? null : token)}
@@ -506,262 +559,300 @@ export default function App() {
               })}
             </Section>
           </div>
-        )}
 
-        {/* Drag Handle */}
-        {activeTab === "preview" && (
           <div
-            onMouseDown={handlePanelDrag}
-            style={{
-              width: 4,
-              cursor: "col-resize",
-              flexShrink: 0,
-              background: "transparent",
-              transition: "background 0.15s",
-            }}
+            onMouseDown={handleLeftPanelDrag}
+            style={{ width: 4, cursor: "col-resize", flexShrink: 0, background: "transparent", transition: "background 0.15s" }}
             onMouseEnter={(e) => (e.currentTarget.style.background = "#373A40")}
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           />
-        )}
 
-        {/* Center Panel — Preview */}
+          <div style={{ width: previewPanelWidth, overflowY: "auto", padding: "24px 32px", flexShrink: 0 }}>
+            <div style={{ background: "#25262B", borderRadius: 8, padding: 24 }}>
+              {activeComponent === "button" && (
+                <ButtonPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  activeSize={activeSize}
+                  selectedState={forcedState || activeButtonState}
+                  activeColorToken={activeColorToken}
+                  sizeKeys={sizeKeys}
+                />
+              )}
+
+              {activeComponent === "actionicon" && (
+                <ActionIconPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  activeActionIconSize={activeActionIconSize}
+                  activeActionIconRadius={activeActionIconRadius}
+                  activeActionIconIcon={activeActionIconIcon}
+                  selectedState={forcedState || activeActionIconState}
+                  activeColorToken={activeColorToken}
+                  sizeKeys={sizeKeys}
+                />
+              )}
+
+              {activeComponent === "tabs" && (
+                <TabsPreviewPanel
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeTabsRadius={activeTabsRadius}
+                  setActiveTabsRadius={setActiveTabsRadius}
+                  activeTabsOrientation={activeTabsOrientation}
+                  setActiveTabsOrientation={setActiveTabsOrientation}
+                  forcedState={forcedState}
+                  activeColorToken={activeColorToken}
+                />
+              )}
+
+              {activeComponent === "switch" && (
+                <SwitchPreviewPanel
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeSwitchSize={activeSwitchSize}
+                  setActiveSwitchSize={setActiveSwitchSize}
+                  sizeKeys={sizeKeys}
+                  forcedChecked={forcedChecked}
+                  activeColorToken={activeColorToken}
+                />
+              )}
+
+              {activeComponent === "checkbox" && (
+                <CheckboxPreviewPanel
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeCheckboxSize={activeCheckboxSize}
+                  setActiveCheckboxSize={setActiveCheckboxSize}
+                  activeCheckboxRadius={activeCheckboxRadius}
+                  setActiveCheckboxRadius={setActiveCheckboxRadius}
+                  sizeKeys={sizeKeys}
+                  forcedChecked={forcedChecked}
+                  forcedIndeterminate={forcedIndeterminate}
+                  activeColorToken={activeColorToken}
+                />
+              )}
+
+              {activeComponent === "radio" && (
+                <RadioPreviewPanel
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeRadioSize={activeRadioSize}
+                  setActiveRadioSize={setActiveRadioSize}
+                  sizeKeys={sizeKeys}
+                  forcedChecked={forcedChecked}
+                  activeColorToken={activeColorToken}
+                />
+              )}
+
+              {activeComponent === "chip" && (
+                <ChipPreviewPanel
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeChipSize={activeChipSize}
+                  setActiveChipSize={setActiveChipSize}
+                  activeChipRadius={activeChipRadius}
+                  setActiveChipRadius={setActiveChipRadius}
+                  sizeKeys={sizeKeys}
+                  forcedChecked={forcedChecked}
+                  activeColorToken={activeColorToken}
+                />
+              )}
+
+              {activeComponent === "tooltip" && (
+                <TooltipPreviewPanel brands={brands} activeBrand={activeBrand} />
+              )}
+
+              {activeComponent === "textinput" && (
+                <TextInputPreviewPanel
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeTextInputSize={activeTextInputSize}
+                  setActiveTextInputSize={setActiveTextInputSize}
+                  activeTextInputRadius={activeTextInputRadius}
+                  setActiveTextInputRadius={setActiveTextInputRadius}
+                  sizeKeys={sizeKeys}
+                  forcedState={forcedState}
+                  activeColorToken={activeColorToken}
+                />
+              )}
+            </div>
+          </div>
+
+          <div
+            onMouseDown={handlePreviewPanelDrag}
+            style={{ width: 4, cursor: "col-resize", flexShrink: 0, background: "transparent", transition: "background 0.15s" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#373A40")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          />
+
+          <div
+            style={{
+              width: propertiesPanelWidth,
+              borderLeft: "1px solid #2C2E33",
+              borderRight: "1px solid #2C2E33",
+              overflowY: "auto",
+              padding: "16px 12px",
+              flexShrink: 0,
+            }}
+          >
+            <Section title="Properties">
+              {activeComponent === "button" && (
+                <ButtonPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeSize={activeSize}
+                  setActiveSize={setActiveSize}
+                  sizeKeys={sizeKeys}
+                  selectedState={forcedState || activeButtonState}
+                  setSelectedState={setActiveButtonState}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "actionicon" && (
+                <ActionIconPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeActionIconSize={activeActionIconSize}
+                  setActiveActionIconSize={setActiveActionIconSize}
+                  activeActionIconRadius={activeActionIconRadius}
+                  setActiveActionIconRadius={setActiveActionIconRadius}
+                  activeActionIconIcon={activeActionIconIcon}
+                  setActiveActionIconIcon={setActiveActionIconIcon}
+                  sizeKeys={sizeKeys}
+                  selectedState={forcedState || activeActionIconState}
+                  setSelectedState={setActiveActionIconState}
+                  forcedState={forcedState}
+                />
+              )}
+              {!["button", "actionicon"].includes(activeComponent) && (
+                <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
+                  Properties for this component are currently shown in the preview column.
+                </div>
+              )}
+            </Section>
+          </div>
+
+          <div
+            onMouseDown={handlePropertiesPanelDrag}
+            style={{ width: 4, cursor: "col-resize", flexShrink: 0, background: "transparent", transition: "background 0.15s" }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = "#373A40")}
+            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+          />
+
+          <div
+            style={{
+              width: componentsPanelWidth,
+              overflowY: "auto",
+              padding: "16px 12px",
+              flexShrink: 0,
+            }}
+          >
+            <div style={{ fontSize: 11, color: "#5C5F66", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, marginBottom: 8 }}>
+              Components
+            </div>
+            <div>
+              {COMPONENT_NAMES.map((name) => (
+                <button
+                  key={name}
+                  onClick={() => handleComponentChange(name)}
+                  style={{
+                    display: "block",
+                    width: "100%",
+                    textAlign: "left",
+                    background: activeComponent === name ? "#25262B" : "transparent",
+                    border: "none",
+                    borderRadius: 6,
+                    padding: "8px 12px",
+                    boxSizing: "border-box",
+                    fontSize: 13,
+                    fontWeight: activeComponent === name ? 600 : 400,
+                    color: activeComponent === name ? "#E9ECEF" : "#909296",
+                    cursor: "pointer",
+                    marginBottom: 2,
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeComponent !== name) e.currentTarget.style.background = "#2C2E33";
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeComponent !== name) e.currentTarget.style.background = "transparent";
+                  }}
+                >
+                  {getComponentLabel(name)}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      ) : (
         <div style={{ flex: 1, overflowY: "auto", padding: "24px 32px" }}>
           <div
             style={{
               background: "#25262B",
               borderRadius: 8,
               padding: 24,
-              maxWidth: activeTab === "export" ? "50%" : undefined,
-              margin: activeTab === "export" ? "0 auto" : undefined,
+              maxWidth: 720,
+              margin: "0 auto",
             }}
           >
-            {activeTab === "preview" && activeComponent === "button" && (
-              <ButtonPreviewPanel
-                brands={brands}
-                activeBrand={activeBrand}
-                activeVariant={forcedVariant || activeVariant}
-                setActiveVariant={setActiveVariant}
-                activeSize={activeSize}
-                setActiveSize={setActiveSize}
-                sizeKeys={sizeKeys}
-                forcedState={forcedState}
-                activeColorToken={activeColorToken}
-              />
-            )}
+            <div>
+              <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+                Figma Sync
+              </div>
+              <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
+                Sync resolved token data to Figma variables via the relay server.
+              </p>
+              <FigmaSyncButton brands={brands} />
 
-            {activeTab === "preview" && activeComponent === "actionicon" && (
-              <ActionIconPreviewPanel
-                brands={brands}
-                activeBrand={activeBrand}
-                activeVariant={forcedVariant || activeVariant}
-                setActiveVariant={setActiveVariant}
-                activeActionIconSize={activeActionIconSize}
-                setActiveActionIconSize={setActiveActionIconSize}
-                activeActionIconRadius={activeActionIconRadius}
-                setActiveActionIconRadius={setActiveActionIconRadius}
-                activeActionIconIcon={activeActionIconIcon}
-                setActiveActionIconIcon={setActiveActionIconIcon}
-                sizeKeys={sizeKeys}
-                forcedState={forcedState}
-                activeColorToken={activeColorToken}
-              />
-            )}
-
-            {activeTab === "preview" && activeComponent === "tabs" && (
-              <TabsPreviewPanel
-                brands={brands}
-                activeBrand={activeBrand}
-                activeVariant={forcedVariant || activeVariant}
-                setActiveVariant={setActiveVariant}
-                activeTabsRadius={activeTabsRadius}
-                setActiveTabsRadius={setActiveTabsRadius}
-                activeTabsOrientation={activeTabsOrientation}
-                setActiveTabsOrientation={setActiveTabsOrientation}
-                forcedState={forcedState}
-                activeColorToken={activeColorToken}
-              />
-            )}
-
-            {activeTab === "preview" && activeComponent === "switch" && (
-              <SwitchPreviewPanel
-                brands={brands}
-                activeBrand={activeBrand}
-                activeSwitchSize={activeSwitchSize}
-                setActiveSwitchSize={setActiveSwitchSize}
-                sizeKeys={sizeKeys}
-                forcedChecked={forcedChecked}
-                activeColorToken={activeColorToken}
-              />
-            )}
-
-            {activeTab === "preview" && activeComponent === "checkbox" && (
-              <CheckboxPreviewPanel
-                brands={brands}
-                activeBrand={activeBrand}
-                activeVariant={forcedVariant || activeVariant}
-                setActiveVariant={setActiveVariant}
-                activeCheckboxSize={activeCheckboxSize}
-                setActiveCheckboxSize={setActiveCheckboxSize}
-                activeCheckboxRadius={activeCheckboxRadius}
-                setActiveCheckboxRadius={setActiveCheckboxRadius}
-                sizeKeys={sizeKeys}
-                forcedChecked={forcedChecked}
-                forcedIndeterminate={forcedIndeterminate}
-                activeColorToken={activeColorToken}
-              />
-            )}
-
-            {activeTab === "preview" && activeComponent === "radio" && (
-              <RadioPreviewPanel
-                brands={brands}
-                activeBrand={activeBrand}
-                activeVariant={forcedVariant || activeVariant}
-                setActiveVariant={setActiveVariant}
-                activeRadioSize={activeRadioSize}
-                setActiveRadioSize={setActiveRadioSize}
-                sizeKeys={sizeKeys}
-                forcedChecked={forcedChecked}
-                activeColorToken={activeColorToken}
-              />
-            )}
-
-            {activeTab === "preview" && activeComponent === "chip" && (
-              <ChipPreviewPanel
-                brands={brands}
-                activeBrand={activeBrand}
-                activeVariant={forcedVariant || activeVariant}
-                setActiveVariant={setActiveVariant}
-                activeChipSize={activeChipSize}
-                setActiveChipSize={setActiveChipSize}
-                activeChipRadius={activeChipRadius}
-                setActiveChipRadius={setActiveChipRadius}
-                sizeKeys={sizeKeys}
-                forcedChecked={forcedChecked}
-                activeColorToken={activeColorToken}
-              />
-            )}
-
-            {activeTab === "preview" && activeComponent === "tooltip" && (
-              <TooltipPreviewPanel
-                brands={brands}
-                activeBrand={activeBrand}
-              />
-            )}
-
-            {activeTab === "preview" && activeComponent === "textinput" && (
-              <TextInputPreviewPanel
-                brands={brands}
-                activeBrand={activeBrand}
-                activeVariant={forcedVariant || activeVariant}
-                setActiveVariant={setActiveVariant}
-                activeTextInputSize={activeTextInputSize}
-                setActiveTextInputSize={setActiveTextInputSize}
-                activeTextInputRadius={activeTextInputRadius}
-                setActiveTextInputRadius={setActiveTextInputRadius}
-                sizeKeys={sizeKeys}
-                forcedState={forcedState}
-                activeColorToken={activeColorToken}
-              />
-            )}
-
-            {/* EXPORT TAB */}
-            {activeTab === "export" && (
-              <div>
+              <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
                 <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
-                  Figma Sync
+                  Markdown Export
                 </div>
                 <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
-                  Sync resolved token data to Figma variables via the relay server.
+                  Download a markdown reference of all tokens, brand primitives, semantic mappings, and component definitions.
                 </p>
-                <FigmaSyncButton brands={brands} />
-
-                <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
-                  <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
-                    Markdown Export
-                  </div>
-                  <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
-                    Download a markdown reference of all tokens, brand primitives, semantic mappings, and component definitions.
-                  </p>
-                  <button
-                    onClick={handleMarkdownExport}
-                    style={{ background: "#25262B", border: "1px solid #373A40", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#C1C2C5", cursor: "pointer", fontFamily: "monospace" }}
-                  >
-                    Download Markdown
-                  </button>
-                </div>
-
-                <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
-                  <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
-                    Storybook Export
-                  </div>
-                  <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
-                    Launch a live Storybook with all components, tokens, and a brand switcher toolbar.
-                  </p>
-                  <button
-                    onClick={handleStorybookExport}
-                    disabled={storybookLoading}
-                    style={{ background: storybookLoading ? "#1971C2" : "#228BE6", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#fff", cursor: storybookLoading ? "wait" : "pointer", fontFamily: "monospace", opacity: storybookLoading ? 0.8 : 1 }}
-                  >
-                    {storybookLoading ? "Launching Storybook..." : "Launch Storybook"}
-                  </button>
-                  {storybookError && (
-                    <p style={{ fontSize: 12, color: "#FA5252", marginTop: 8 }}>{storybookError}</p>
-                  )}
-                </div>
+                <button
+                  onClick={handleMarkdownExport}
+                  style={{ background: "#25262B", border: "1px solid #373A40", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#C1C2C5", cursor: "pointer", fontFamily: "monospace" }}
+                >
+                  Download Markdown
+                </button>
               </div>
-            )}
-          </div>
-        </div>
 
-        {/* Right Nav — Component List (Preview tab only) */}
-        {activeTab === "preview" && (
-          <div
-          style={{
-            width: 260,
-            borderLeft: "1px solid #2C2E33",
-            overflowY: "auto",
-            padding: "16px 12px",
-            flexShrink: 0,
-          }}
-        >
-          <div style={{ fontSize: 11, color: "#5C5F66", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600, marginBottom: 8 }}>
-            Components
-          </div>
-          <div>
-            {COMPONENT_NAMES.map((name) => (
-              <button
-                key={name}
-                onClick={() => handleComponentChange(name)}
-                style={{
-                  display: "block",
-                  width: "100%",
-                  textAlign: "left",
-                  background: activeComponent === name ? "#25262B" : "transparent",
-                  border: "none",
-                  borderRadius: 6,
-                  padding: "8px 12px",
-                  fontSize: 13,
-                  fontWeight: activeComponent === name ? 600 : 400,
-                  color: activeComponent === name ? "#E9ECEF" : "#909296",
-                  cursor: "pointer",
-                  marginBottom: 2,
-                }}
-                onMouseEnter={(e) => {
-                  if (activeComponent !== name)
-                    e.currentTarget.style.background = "#2C2E33";
-                }}
-                onMouseLeave={(e) => {
-                  if (activeComponent !== name)
-                    e.currentTarget.style.background = "transparent";
-                }}
-              >
-                {getComponentLabel(name)}
-              </button>
-            ))}
+              <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
+                <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+                  Storybook Export
+                </div>
+                <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
+                  Launch a live Storybook with all components, tokens, and a brand switcher toolbar.
+                </p>
+                <button
+                  onClick={handleStorybookExport}
+                  disabled={storybookLoading}
+                  style={{ background: storybookLoading ? "#1971C2" : "#228BE6", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#fff", cursor: storybookLoading ? "wait" : "pointer", fontFamily: "monospace", opacity: storybookLoading ? 0.8 : 1 }}
+                >
+                  {storybookLoading ? "Launching Storybook..." : "Launch Storybook"}
+                </button>
+                {storybookError && (
+                  <p style={{ fontSize: 12, color: "#FA5252", marginTop: 8 }}>{storybookError}</p>
+                )}
+              </div>
+            </div>
           </div>
         </div>
-        )}
-      </div>
+      )}
     </div>
   );
 }

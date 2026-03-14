@@ -1,15 +1,51 @@
 import { COMPONENT_TOKENS, TOKEN_TYPES } from "../data/componentTokens";
 import { GLOBAL_PRIMITIVES } from "../data/brands";
 
+function normalizeOpacity(opacity) {
+  const parsed = Number(opacity);
+  if (!Number.isFinite(parsed)) return 100;
+  return Math.min(100, Math.max(0, Math.round(parsed)));
+}
+
+function normalizeHex(hex) {
+  if (typeof hex !== "string") return null;
+  const trimmed = hex.trim();
+  if (trimmed.toLowerCase() === "transparent") return "transparent";
+  const raw = trimmed.startsWith("#") ? trimmed.slice(1) : trimmed;
+  if (raw.length === 3) {
+    return raw
+      .split("")
+      .map((c) => c + c)
+      .join("")
+      .toUpperCase();
+  }
+  if (raw.length === 8) return raw.slice(0, 6).toUpperCase();
+  if (raw.length === 6) return raw.toUpperCase();
+  return null;
+}
+
+function applyOpacity(hex, opacity) {
+  if (hex === "transparent") return "transparent";
+  const normalized = normalizeHex(hex);
+  if (!normalized) return hex;
+  const alpha = Math.round((normalizeOpacity(opacity) / 100) * 255)
+    .toString(16)
+    .padStart(2, "0")
+    .toUpperCase();
+  return `#${normalized}${alpha}`;
+}
+
 export function resolveColor(brands, brandId, semanticKey, theme = "light", componentToken = null) {
   if (!semanticKey) return "transparent";
   const brand = brands[brandId];
   // Check component-level override first (avoids bleeding shared semantics)
   if (componentToken && brand.componentOverrides?.[componentToken]) {
     const mapping = brand.componentOverrides[componentToken];
-    return brand.primitives[mapping.color]?.[mapping.index]
+    if (mapping.color === "transparent") return "transparent";
+    const baseColor = brand.primitives[mapping.color]?.[mapping.index]
       ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
       ?? "#FF00FF";
+    return applyOpacity(baseColor, mapping.opacity);
   }
   // Merge dark overrides when theme is dark
   const map = theme === "dark"
@@ -17,10 +53,12 @@ export function resolveColor(brands, brandId, semanticKey, theme = "light", comp
     : brand.semanticMap;
   const mapping = map[semanticKey];
   if (!mapping) return "#FF00FF";
+  if (mapping.color === "transparent") return "transparent";
   // Check brand primitives first, then global primitives
-  return brand.primitives[mapping.color]?.[mapping.index]
+  const baseColor = brand.primitives[mapping.color]?.[mapping.index]
     ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
     ?? "#FF00FF";
+  return applyOpacity(baseColor, mapping.opacity);
 }
 
 export function resolveDimension(brands, brandId, tokenName, size) {
