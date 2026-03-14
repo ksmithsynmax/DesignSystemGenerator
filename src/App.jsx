@@ -25,7 +25,10 @@ import {
   TabsPreviewContent,
   TabsPropertiesPanel,
 } from "./components/panels/TabsPreviewPanel";
-import SwitchPreviewPanel from "./components/panels/SwitchPreviewPanel";
+import {
+  SwitchPreviewContent,
+  SwitchPropertiesPanel,
+} from "./components/panels/SwitchPreviewPanel";
 import CheckboxPreviewPanel from "./components/panels/CheckboxPreviewPanel";
 import RadioPreviewPanel from "./components/panels/RadioPreviewPanel";
 import ChipPreviewPanel from "./components/panels/ChipPreviewPanel";
@@ -123,6 +126,8 @@ export default function App() {
   const [activeTabsShowIcons, setActiveTabsShowIcons] = useState(false);
   const [activeTabsState, setActiveTabsState] = useState("default");
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
+  const [activeSwitchChecked, setActiveSwitchChecked] = useState(false);
+  const [activeSwitchState, setActiveSwitchState] = useState("default");
   const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
   const [activeCheckboxRadius, setActiveCheckboxRadius] = useState(checkboxDefault);
   const [activeRadioSize, setActiveRadioSize] = useState(radioDefault);
@@ -179,6 +184,8 @@ export default function App() {
       setActiveVariant("default");
     } else if (newComp === "switch") {
       setActiveSwitchSize(switchDefault);
+      setActiveSwitchChecked(false);
+      setActiveSwitchState("default");
     } else if (newComp === "checkbox") {
       setActiveCheckboxSize(checkboxDefault);
       setActiveCheckboxRadius(checkboxDefault);
@@ -321,11 +328,33 @@ export default function App() {
         ? forcedState || activeActionIconState
         : activeComponent === "tabs"
           ? forcedState || activeTabsState
+        : activeComponent === "switch"
+          ? forcedState || activeSwitchState
           : forcedState;
 
   const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token]) => {
     const parts = token.split("-");
     const variantSegment = parts[1];
+
+    if (activeComponent === "switch") {
+      if (token === "switch-focus-ring") return true;
+
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      const targetState = effectiveComponentState || "default";
+      if (tokenState !== targetState) return false;
+
+      const targetChecked = forcedChecked != null ? forcedChecked : activeSwitchChecked;
+      const isTrackBackgroundToken = parts[1] === "track" && parts[2] === "background";
+      const isCheckedToken = parts.includes("checked");
+
+      if (isTrackBackgroundToken) {
+        return isCheckedToken === Boolean(targetChecked);
+      }
+      return !isCheckedToken || Boolean(targetChecked);
+    }
+
     const variantsByComponent = {
       button: ["filled", "outlined", "ghost"],
       actionicon: ["default", "filled", "light", "outlined", "transparent"],
@@ -621,14 +650,14 @@ export default function App() {
               )}
 
               {activeComponent === "switch" && (
-                <SwitchPreviewPanel
+                <SwitchPreviewContent
                   brands={brands}
                   activeBrand={activeBrand}
                   activeSwitchSize={activeSwitchSize}
-                  setActiveSwitchSize={setActiveSwitchSize}
                   sizeKeys={sizeKeys}
-                  forcedChecked={forcedChecked}
                   activeColorToken={activeColorToken}
+                  selectedChecked={forcedChecked != null ? forcedChecked : activeSwitchChecked}
+                  selectedState={forcedState || activeSwitchState}
                 />
               )}
 
@@ -767,7 +796,20 @@ export default function App() {
                   forcedState={forcedState}
                 />
               )}
-              {!["button", "actionicon", "tabs"].includes(activeComponent) && (
+              {activeComponent === "switch" && (
+                <SwitchPropertiesPanel
+                  activeSwitchSize={activeSwitchSize}
+                  setActiveSwitchSize={setActiveSwitchSize}
+                  sizeKeys={sizeKeys}
+                  selectedChecked={forcedChecked != null ? forcedChecked : activeSwitchChecked}
+                  setSelectedChecked={setActiveSwitchChecked}
+                  selectedState={forcedState || activeSwitchState}
+                  setSelectedState={setActiveSwitchState}
+                  forcedChecked={forcedChecked}
+                  forcedState={forcedState}
+                />
+              )}
+              {!["button", "actionicon", "tabs", "switch"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

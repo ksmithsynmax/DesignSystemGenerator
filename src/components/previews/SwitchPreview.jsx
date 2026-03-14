@@ -3,16 +3,48 @@ import { Switch } from "@mantine/core";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
-export default function SwitchPreview({ brands, brandId, size, checked: controlledChecked, readOnly }) {
+export default function SwitchPreview({
+  brands,
+  brandId,
+  size,
+  checked: controlledChecked,
+  readOnly,
+  state,
+}) {
   const [internalChecked, setInternalChecked] = useState(false);
   const isControlled = controlledChecked !== undefined;
   const checked = isControlled ? controlledChecked : internalChecked;
 
   const tokens = COMPONENT_TOKENS.switch;
+  const stateSuffix = state && state !== "default" ? `-${state}` : "";
 
-  const checkedBg = resolveColor(brands, brandId, tokens["switch-track-background-checked"]?.semantic, "light", "switch-track-background-checked");
-  const uncheckedBg = resolveColor(brands, brandId, tokens["switch-track-background"]?.semantic, "light", "switch-track-background");
-  const trackBorder = resolveColor(brands, brandId, tokens["switch-track-border"]?.semantic, "light", "switch-track-border");
+  const getTokenColor = (baseName) => {
+    const checkedKey = `${baseName}-checked${stateSuffix}`;
+    const checkedBaseKey = `${baseName}-checked`;
+    const stateKey = `${baseName}${stateSuffix}`;
+    const baseKey = baseName;
+
+    if (checked) {
+      if (tokens[checkedKey]) {
+        return resolveColor(brands, brandId, tokens[checkedKey]?.semantic, "light", checkedKey);
+      }
+      if (tokens[checkedBaseKey]) {
+        return resolveColor(brands, brandId, tokens[checkedBaseKey]?.semantic, "light", checkedBaseKey);
+      }
+    }
+
+    if (tokens[stateKey]) {
+      return resolveColor(brands, brandId, tokens[stateKey]?.semantic, "light", stateKey);
+    }
+    return resolveColor(brands, brandId, tokens[baseKey]?.semantic, "light", baseKey);
+  };
+
+  const checkedBg = getTokenColor("switch-track-background");
+  const uncheckedBg = getTokenColor("switch-track-background");
+  const trackBorder = getTokenColor("switch-track-border");
+  const thumbBg = getTokenColor("switch-thumb-background");
+  const focusRing = resolveColor(brands, brandId, tokens["switch-focus-ring"]?.semantic, "light", "switch-focus-ring");
+  const isDisabled = state === "disabled";
 
   const width = resolveDimension(brands, brandId, "switch-width", size);
   const height = resolveDimension(brands, brandId, "switch-height", size);
@@ -23,7 +55,8 @@ export default function SwitchPreview({ brands, brandId, size, checked: controll
     <Switch
       checked={checked}
       onChange={readOnly ? undefined : () => setInternalChecked((v) => !v)}
-      readOnly={readOnly}
+      readOnly={readOnly || isDisabled}
+      disabled={isDisabled}
       vars={() => ({
         root: {
           "--switch-color": checkedBg,
@@ -31,6 +64,7 @@ export default function SwitchPreview({ brands, brandId, size, checked: controll
           "--switch-height": `${height}px`,
           "--switch-thumb-size": `${thumbSize}px`,
           "--switch-radius": `${borderRadius}px`,
+          "--switch-thumb-bg": thumbBg,
         },
       })}
       styles={{
@@ -38,6 +72,15 @@ export default function SwitchPreview({ brands, brandId, size, checked: controll
           backgroundColor: checked ? undefined : uncheckedBg,
           borderColor: checked ? "transparent" : trackBorder,
         },
+        thumb: {
+          backgroundColor: thumbBg,
+        },
+        input: state === "focus"
+          ? {
+              outline: `2px solid ${focusRing}`,
+              outlineOffset: 2,
+            }
+          : undefined,
       }}
     />
   );
