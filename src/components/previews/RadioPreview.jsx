@@ -3,17 +3,48 @@ import { Radio } from "@mantine/core";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
-export default function RadioPreview({ brands, brandId, variant = "filled", size, checked: controlledChecked, readOnly, label }) {
+export default function RadioPreview({
+  brands,
+  brandId,
+  variant = "filled",
+  size,
+  checked: controlledChecked,
+  state,
+  readOnly,
+  label,
+}) {
   const [internalChecked, setInternalChecked] = useState(false);
   const isControlled = controlledChecked !== undefined;
   const checked = isControlled ? controlledChecked : internalChecked;
 
   const tokens = COMPONENT_TOKENS.radio;
 
-  const filledBg = resolveColor(brands, brandId, tokens["radio-filled-background-checked"]?.semantic, "light", "radio-filled-background-checked");
-  const uncheckedBg = resolveColor(brands, brandId, tokens["radio-background"]?.semantic, "light", "radio-background");
-  const borderColor = resolveColor(brands, brandId, tokens["radio-border"]?.semantic, "light", "radio-border");
-  const iconColor = resolveColor(brands, brandId, tokens["radio-icon-color"]?.semantic, "light", "radio-icon-color");
+  const stateSuffix = state && state !== "default" ? `-${state}` : "";
+  const isDisabled = state === "disabled";
+
+  const resolveFirst = (tokenKeys) => {
+    const key = tokenKeys.find((k) => tokens[k]);
+    if (!key) return "#FF00FF";
+    return resolveColor(brands, brandId, tokens[key]?.semantic, "light", key);
+  };
+
+  const filledBg = resolveFirst([
+    `radio-${variant}-background-checked${stateSuffix}`,
+    `radio-${variant}-background-checked`,
+  ]);
+  const uncheckedBg = resolveFirst([
+    `radio-background${stateSuffix}`,
+    "radio-background",
+  ]);
+  const borderColor = resolveFirst([
+    `radio-border${stateSuffix}`,
+    "radio-border",
+  ]);
+  const iconColor = resolveFirst([
+    isDisabled ? "radio-icon-color-disabled" : "radio-icon-color",
+  ]);
+  const focusRing = resolveFirst(["radio-focus-ring"]);
+  const labelColor = resolveFirst([isDisabled ? "radio-label-text-disabled" : "radio-label-text"]);
 
   const radioSize = resolveDimension(brands, brandId, "radio-size", size);
   const iconSize = resolveDimension(brands, brandId, "radio-icon-size", size);
@@ -24,7 +55,7 @@ export default function RadioPreview({ brands, brandId, variant = "filled", size
   // For outline, the dot should match the ring color (primary); for filled, use icon-color (white)
   const radioIconColor = variant === "outline" ? filledBg : iconColor;
 
-  const handleClick = readOnly ? undefined : () => setInternalChecked((v) => !v);
+  const handleClick = readOnly || isDisabled ? undefined : () => setInternalChecked((v) => !v);
 
   return (
     <Radio
@@ -33,7 +64,8 @@ export default function RadioPreview({ brands, brandId, variant = "filled", size
       label={label}
       onChange={() => {}}
       onClick={handleClick}
-      readOnly={readOnly}
+      readOnly={readOnly || isDisabled}
+      disabled={isDisabled}
       vars={() => ({
         root: {
           "--radio-size": `${radioSize}px`,
@@ -46,7 +78,9 @@ export default function RadioPreview({ brands, brandId, variant = "filled", size
         radio: {
           backgroundColor: checked && variant !== "outline" ? undefined : uncheckedBg,
           borderColor: checked && variant !== "outline" ? "transparent" : borderColor,
+          boxShadow: state === "focus" ? `0 0 0 2px ${focusRing}40` : "none",
         },
+        label: { color: labelColor },
       }}
     />
   );

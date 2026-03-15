@@ -3,29 +3,48 @@ import { Chip } from "@mantine/core";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
-export default function ChipPreview({ brands, brandId, variant = "filled", size, radius, checked: controlledChecked, readOnly, label = "Chip" }) {
+export default function ChipPreview({
+  brands,
+  brandId,
+  variant = "filled",
+  size,
+  radius,
+  checked: controlledChecked,
+  state,
+  readOnly,
+  label = "Chip",
+}) {
   const [internalChecked, setInternalChecked] = useState(false);
   const isControlled = controlledChecked !== undefined;
   const checked = isControlled ? controlledChecked : internalChecked;
 
   const tokens = COMPONENT_TOKENS.chip;
+  const stateSuffix = state && state !== "default" ? `-${state}` : "";
+  const isDisabled = state === "disabled";
+
+  const resolveFirst = (tokenKeys) => {
+    const key = tokenKeys.find((k) => tokens[k]);
+    if (!key) return "#FF00FF";
+    return resolveColor(brands, brandId, tokens[key]?.semantic, "light", key);
+  };
 
   // Resolve colors based on variant and checked state
-  const uncheckedBg = resolveColor(brands, brandId, tokens["chip-background"]?.semantic, "light", "chip-background");
-  const borderColor = resolveColor(brands, brandId, tokens["chip-border"]?.semantic, "light", "chip-border");
-  const textColor = resolveColor(brands, brandId, tokens["chip-text"]?.semantic, "light", "chip-text");
+  const uncheckedBg = resolveFirst([`chip-background${stateSuffix}`, "chip-background"]);
+  const borderColor = resolveFirst([`chip-border${stateSuffix}`, "chip-border"]);
+  const textColor = resolveFirst([isDisabled ? "chip-text-disabled" : "chip-text"]);
 
   // Variant-specific checked backgrounds
-  const filledCheckedBg = resolveColor(brands, brandId, tokens["chip-filled-background-checked"]?.semantic, "light", "chip-filled-background-checked");
-  const lightCheckedBg = resolveColor(brands, brandId, tokens["chip-light-background-checked"]?.semantic, "light", "chip-light-background-checked");
-  const outlineCheckedBg = resolveColor(brands, brandId, tokens["chip-outline-background-checked"]?.semantic, "light", "chip-outline-background-checked");
+  const filledCheckedBg = resolveFirst([`chip-filled-background-checked${stateSuffix}`, "chip-filled-background-checked"]);
+  const lightCheckedBg = resolveFirst([`chip-light-background-checked${stateSuffix}`, "chip-light-background-checked"]);
+  const outlineCheckedBg = resolveFirst([`chip-outline-background-checked${stateSuffix}`, "chip-outline-background-checked"]);
 
   // Variant-specific checked text
-  const filledCheckedText = resolveColor(brands, brandId, tokens["chip-filled-text-checked"]?.semantic, "light", "chip-filled-text-checked");
-  const lightCheckedText = resolveColor(brands, brandId, tokens["chip-light-text-checked"]?.semantic, "light", "chip-light-text-checked");
-  const outlineCheckedText = resolveColor(brands, brandId, tokens["chip-outline-text-checked"]?.semantic, "light", "chip-outline-text-checked");
+  const filledCheckedText = resolveFirst([isDisabled ? "chip-text-disabled" : "chip-filled-text-checked"]);
+  const lightCheckedText = resolveFirst([isDisabled ? "chip-text-disabled" : "chip-light-text-checked"]);
+  const outlineCheckedText = resolveFirst([isDisabled ? "chip-text-disabled" : "chip-outline-text-checked"]);
 
-  const iconColor = resolveColor(brands, brandId, tokens["chip-icon-color"]?.semantic, "light", "chip-icon-color");
+  const iconColor = resolveFirst([isDisabled ? "chip-icon-color-disabled" : "chip-icon-color"]);
+  const focusRing = resolveFirst(["chip-focus-ring"]);
 
   // Resolve dimensions
   const chipHeight = resolveDimension(brands, brandId, "chip-height", size);
@@ -50,14 +69,15 @@ export default function ChipPreview({ brands, brandId, variant = "filled", size,
     checkedText = filledCheckedText;
   }
 
-  const handleChange = readOnly ? undefined : () => setInternalChecked((v) => !v);
+  const handleChange = readOnly || isDisabled ? undefined : () => setInternalChecked((v) => !v);
 
   return (
     <Chip
       checked={checked}
       variant={variant}
       onChange={handleChange}
-      readOnly={readOnly}
+      readOnly={readOnly || isDisabled}
+      disabled={isDisabled}
       vars={() => ({
         root: {
           "--chip-size": `${chipHeight}px`,
@@ -79,6 +99,7 @@ export default function ChipPreview({ brands, brandId, variant = "filled", size,
           borderColor: variant === "outline" || !checked ? borderColor : "transparent",
           borderWidth: chipBorderWidth,
           color: checked ? checkedText : textColor,
+          boxShadow: state === "focus" ? `0 0 0 2px ${focusRing}40` : "none",
         },
       }}
     >

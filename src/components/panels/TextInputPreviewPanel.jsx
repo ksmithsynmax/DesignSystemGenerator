@@ -1,31 +1,76 @@
-import { useState } from "react";
 import TextInputPreview from "../previews/TextInputPreview";
 import SectionLabel from "../shared/SectionLabel";
-import ToggleButtonGroup from "../shared/ToggleButtonGroup";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-const TEXTINPUT_VARIANTS = ["default", "filled"];
-const TEXTINPUT_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const TEXTINPUT_VARIANTS = ["default", "filled"];
+export const TEXTINPUT_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const TEXTINPUT_STATES = ["default", "hover", "focus", "error", "disabled"];
 
-export default function TextInputPreviewPanel({
+function PropertyRow({ label, value, onChange, options, disabled = false }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <SectionLabel mb={0}>{label}</SectionLabel>
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        disabled={disabled}
+        style={{
+          background: disabled ? "#2A2C31" : "#25262B",
+          color: disabled ? "#868E96" : "#E9ECEF",
+          border: "1px solid #373A40",
+          borderRadius: 6,
+          padding: "6px 28px 6px 12px",
+          fontSize: 13,
+          fontWeight: 600,
+          fontFamily: "monospace",
+          outline: "none",
+          cursor: disabled ? "not-allowed" : "pointer",
+          appearance: "none",
+          WebkitAppearance: "none",
+          textTransform: "capitalize",
+          backgroundImage: `url("data:image/svg+xml,%3Csvg width='10' height='6' viewBox='0 0 10 6' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%235C5F66' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
+          backgroundRepeat: "no-repeat",
+          backgroundPosition: "right 10px center",
+        }}
+      >
+        {options.map((opt) => (
+          <option key={opt} value={opt}>
+            {opt}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
+const textFieldStyle = {
+  background: "#1A1B1E",
+  border: "1px solid #373A40",
+  borderRadius: 4,
+  padding: "6px 8px",
+  fontSize: 12,
+  color: "#C1C2C5",
+  fontFamily: "monospace",
+  width: "100%",
+  boxSizing: "border-box",
+};
+
+export function TextInputPreviewContent({
   brands,
   activeBrand,
   activeVariant,
-  setActiveVariant,
   activeTextInputSize,
-  setActiveTextInputSize,
   activeTextInputRadius,
-  setActiveTextInputRadius,
   sizeKeys,
-  forcedState,
   activeColorToken,
+  selectedState,
+  showLabel,
+  labelText,
+  withAsterisk,
+  showError,
+  errorText,
 }) {
-  const [showLabel, setShowLabel] = useState(true);
-  const [labelText, setLabelText] = useState("Label");
-  const [withAsterisk, setWithAsterisk] = useState(false);
-  const [showError, setShowError] = useState(false);
-  const [errorText, setErrorText] = useState("Error message");
 
   const matrixRows = TEXTINPUT_VARIANTS.flatMap((v) => [
     { label: `${v}`, variant: v, state: "default" },
@@ -35,104 +80,8 @@ export default function TextInputPreviewPanel({
     { label: `${v} / disabled`, variant: v, state: "disabled" },
   ]);
 
-  const toggleStyle = (active) => ({
-    background: active ? "#373A40" : "transparent",
-    color: active ? "#E9ECEF" : "#5C5F66",
-    border: "1px solid #373A40",
-    borderRadius: 4,
-    padding: "4px 10px",
-    fontSize: 12,
-    cursor: "pointer",
-    fontFamily: "monospace",
-  });
-
-  const inputFieldStyle = {
-    background: "#1A1B1E",
-    border: "1px solid #373A40",
-    borderRadius: 4,
-    padding: "2px 8px",
-    fontSize: 12,
-    color: "#C1C2C5",
-    width: 100,
-    fontFamily: "monospace",
-  };
-
   return (
     <div>
-      {/* Row 1: Variant, Size, Radius */}
-      <div style={{ display: "flex", gap: 24, marginBottom: 16 }}>
-        <div>
-          <SectionLabel mb={6}>Variant</SectionLabel>
-          <ToggleButtonGroup
-            options={TEXTINPUT_VARIANTS}
-            value={activeVariant}
-            onChange={setActiveVariant}
-          />
-        </div>
-        <div>
-          <SectionLabel mb={6}>Size</SectionLabel>
-          <ToggleButtonGroup
-            options={sizeKeys}
-            value={activeTextInputSize}
-            onChange={setActiveTextInputSize}
-          />
-        </div>
-        <div>
-          <SectionLabel mb={6}>Radius</SectionLabel>
-          <ToggleButtonGroup
-            options={TEXTINPUT_RADIUS_KEYS}
-            value={activeTextInputRadius}
-            onChange={setActiveTextInputRadius}
-          />
-        </div>
-      </div>
-
-      {/* Row 2: Label, Asterisk, Error toggles */}
-      <div style={{ display: "flex", gap: 16, marginBottom: 24, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={() => setShowLabel((v) => !v)}
-            style={toggleStyle(showLabel)}
-          >
-            Label
-          </button>
-          {showLabel && (
-            <input
-              type="text"
-              value={labelText}
-              onChange={(e) => setLabelText(e.target.value)}
-              style={inputFieldStyle}
-            />
-          )}
-        </div>
-
-        {showLabel && (
-          <button
-            onClick={() => setWithAsterisk((v) => !v)}
-            style={toggleStyle(withAsterisk)}
-          >
-            Required *
-          </button>
-        )}
-
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <button
-            onClick={() => setShowError((v) => !v)}
-            style={toggleStyle(showError)}
-          >
-            Error
-          </button>
-          {showError && (
-            <input
-              type="text"
-              value={errorText}
-              onChange={(e) => setErrorText(e.target.value)}
-              style={inputFieldStyle}
-            />
-          )}
-        </div>
-      </div>
-
       <PreviewStage label={activeColorToken}>
         <div style={{ width: 280 }}>
           <TextInputPreview
@@ -144,9 +93,9 @@ export default function TextInputPreviewPanel({
             showLabel={showLabel}
             labelText={labelText}
             withAsterisk={withAsterisk}
-            showError={forcedState === "error" || showError}
+            showError={selectedState === "error" || showError}
             errorText={errorText}
-            state={forcedState}
+            state={selectedState === "default" ? undefined : selectedState}
           />
         </div>
       </PreviewStage>
@@ -173,6 +122,85 @@ export default function TextInputPreviewPanel({
         )}
       />
 
+    </div>
+  );
+}
+
+export function TextInputPropertiesPanel({
+  activeVariant,
+  setActiveVariant,
+  activeTextInputSize,
+  setActiveTextInputSize,
+  activeTextInputRadius,
+  setActiveTextInputRadius,
+  sizeKeys,
+  selectedState,
+  setSelectedState,
+  showLabel,
+  setShowLabel,
+  labelText,
+  setLabelText,
+  withAsterisk,
+  setWithAsterisk,
+  showError,
+  setShowError,
+  errorText,
+  setErrorText,
+  forcedState,
+}) {
+  return (
+    <div style={{ display: "grid", gap: 10 }}>
+      <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={TEXTINPUT_VARIANTS} />
+      <PropertyRow label="Size" value={activeTextInputSize} onChange={setActiveTextInputSize} options={sizeKeys} />
+      <PropertyRow label="Radius" value={activeTextInputRadius} onChange={setActiveTextInputRadius} options={TEXTINPUT_RADIUS_KEYS} />
+      <PropertyRow
+        label="State"
+        value={selectedState}
+        onChange={setSelectedState}
+        options={TEXTINPUT_STATES}
+        disabled={Boolean(forcedState)}
+      />
+      <PropertyRow
+        label="Label"
+        value={showLabel ? "on" : "off"}
+        onChange={(v) => setShowLabel(v === "on")}
+        options={["off", "on"]}
+      />
+      {showLabel && (
+        <div>
+          <SectionLabel mb={6}>Label Text</SectionLabel>
+          <input
+            type="text"
+            value={labelText}
+            onChange={(e) => setLabelText(e.target.value)}
+            style={textFieldStyle}
+          />
+        </div>
+      )}
+      <PropertyRow
+        label="Required"
+        value={withAsterisk ? "on" : "off"}
+        onChange={(v) => setWithAsterisk(v === "on")}
+        options={["off", "on"]}
+        disabled={!showLabel}
+      />
+      <PropertyRow
+        label="Error Message"
+        value={showError ? "on" : "off"}
+        onChange={(v) => setShowError(v === "on")}
+        options={["off", "on"]}
+      />
+      {showError && (
+        <div>
+          <SectionLabel mb={6}>Error Text</SectionLabel>
+          <input
+            type="text"
+            value={errorText}
+            onChange={(e) => setErrorText(e.target.value)}
+            style={textFieldStyle}
+          />
+        </div>
+      )}
     </div>
   );
 }

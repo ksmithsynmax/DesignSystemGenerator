@@ -33,10 +33,22 @@ import {
   CheckboxPreviewContent,
   CheckboxPropertiesPanel,
 } from "./components/panels/CheckboxPreviewPanel";
-import RadioPreviewPanel from "./components/panels/RadioPreviewPanel";
-import ChipPreviewPanel from "./components/panels/ChipPreviewPanel";
-import TooltipPreviewPanel from "./components/panels/TooltipPreviewPanel";
-import TextInputPreviewPanel from "./components/panels/TextInputPreviewPanel";
+import {
+  RadioPreviewContent,
+  RadioPropertiesPanel,
+} from "./components/panels/RadioPreviewPanel";
+import {
+  ChipPreviewContent,
+  ChipPropertiesPanel,
+} from "./components/panels/ChipPreviewPanel";
+import {
+  TooltipPreviewContent,
+  TooltipPropertiesPanel,
+} from "./components/panels/TooltipPreviewPanel";
+import {
+  TextInputPreviewContent,
+  TextInputPropertiesPanel,
+} from "./components/panels/TextInputPreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
@@ -136,10 +148,23 @@ export default function App() {
   const [activeCheckboxSelection, setActiveCheckboxSelection] = useState("unchecked");
   const [activeCheckboxState, setActiveCheckboxState] = useState("default");
   const [activeRadioSize, setActiveRadioSize] = useState(radioDefault);
+  const [activeRadioChecked, setActiveRadioChecked] = useState(false);
+  const [activeRadioState, setActiveRadioState] = useState("default");
+  const [activeRadioShowLabel, setActiveRadioShowLabel] = useState(true);
   const [activeChipSize, setActiveChipSize] = useState(chipDefault);
   const [activeChipRadius, setActiveChipRadius] = useState(chipDefault);
+  const [activeChipChecked, setActiveChipChecked] = useState(false);
+  const [activeChipState, setActiveChipState] = useState("default");
+  const [activeTooltipPosition, setActiveTooltipPosition] = useState("top");
+  const [activeTooltipWithArrow, setActiveTooltipWithArrow] = useState(true);
   const [activeTextInputSize, setActiveTextInputSize] = useState(textInputDefault);
   const [activeTextInputRadius, setActiveTextInputRadius] = useState(textInputDefault);
+  const [activeTextInputState, setActiveTextInputState] = useState("default");
+  const [activeTextInputShowLabel, setActiveTextInputShowLabel] = useState(true);
+  const [activeTextInputLabelText, setActiveTextInputLabelText] = useState("Label");
+  const [activeTextInputWithAsterisk, setActiveTextInputWithAsterisk] = useState(false);
+  const [activeTextInputShowError, setActiveTextInputShowError] = useState(false);
+  const [activeTextInputErrorText, setActiveTextInputErrorText] = useState("Error message");
 
   // Sync active sizes when brand changes
   const handleBrandChange = useCallback((newBrand) => {
@@ -199,15 +224,29 @@ export default function App() {
       setActiveVariant("filled");
     } else if (newComp === "radio") {
       setActiveRadioSize(radioDefault);
+      setActiveRadioChecked(false);
+      setActiveRadioState("default");
+      setActiveRadioShowLabel(true);
       setActiveVariant("filled");
     } else if (newComp === "chip") {
       setActiveChipSize(chipDefault);
       setActiveChipRadius(chipDefault);
+      setActiveChipChecked(false);
+      setActiveChipState("default");
       setActiveVariant("filled");
     } else if (newComp === "textinput") {
       setActiveTextInputSize(textInputDefault);
       setActiveTextInputRadius(textInputDefault);
+      setActiveTextInputState("default");
+      setActiveTextInputShowLabel(true);
+      setActiveTextInputLabelText("Label");
+      setActiveTextInputWithAsterisk(false);
+      setActiveTextInputShowError(false);
+      setActiveTextInputErrorText("Error message");
       setActiveVariant("default");
+    } else if (newComp === "tooltip") {
+      setActiveTooltipPosition("top");
+      setActiveTooltipWithArrow(true);
     }
   }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault]);
 
@@ -339,6 +378,12 @@ export default function App() {
           ? forcedState || activeSwitchState
           : activeComponent === "checkbox"
             ? forcedState || activeCheckboxState
+          : activeComponent === "radio"
+            ? forcedState || activeRadioState
+          : activeComponent === "chip"
+            ? forcedState || activeChipState
+          : activeComponent === "textinput"
+            ? forcedState || activeTextInputState
           : forcedState;
 
   const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token]) => {
@@ -364,11 +409,69 @@ export default function App() {
       return !isCheckedToken || Boolean(targetChecked);
     }
 
+    if (activeComponent === "radio") {
+      if (token === "radio-focus-ring") return true;
+
+      const targetState = effectiveComponentState || "default";
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      if (tokenState !== targetState) return false;
+
+      const targetChecked = forcedChecked != null ? forcedChecked : activeRadioChecked;
+      const isCheckedToken = parts.includes("checked");
+      const isVariantToken = ["filled", "outline"].includes(variantSegment);
+
+      if (isVariantToken) {
+        if (variantSegment !== activeVariant) return false;
+        return isCheckedToken === Boolean(targetChecked);
+      }
+
+      if (variantSegment === "background") {
+        return isCheckedToken === Boolean(targetChecked);
+      }
+
+      if (variantSegment === "icon") {
+        return Boolean(targetChecked);
+      }
+
+      return true;
+    }
+
+    if (activeComponent === "chip") {
+      if (token === "chip-focus-ring") return true;
+
+      const targetState = effectiveComponentState || "default";
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      if (tokenState !== targetState) {
+        const canUseDefaultFallback =
+          tokenState === "default" &&
+          targetState !== "default" &&
+          !Boolean(colorTokens[`${token}-${targetState}`]);
+        if (!canUseDefaultFallback) return false;
+      }
+
+      const targetChecked = forcedChecked != null ? forcedChecked : activeChipChecked;
+      const isCheckedToken = parts.includes("checked");
+      const isVariantToken = ["filled", "outline", "light"].includes(variantSegment);
+
+      if (isVariantToken && variantSegment !== activeVariant) return false;
+      // Keep active variant tokens visible even when unchecked so each variant
+      // remains editable from the token list.
+      if (!isVariantToken && !targetChecked && isCheckedToken) return false;
+      return true;
+    }
+
     const variantsByComponent = {
       button: ["filled", "outlined", "ghost"],
       actionicon: ["default", "filled", "light", "outlined", "transparent"],
       tabs: ["default", "outlined", "pills"],
       checkbox: ["filled", "outlined"],
+      radio: ["filled", "outline"],
+      chip: ["filled", "light", "outline"],
+      textinput: ["default", "filled"],
     };
     const variants = variantsByComponent[activeComponent];
     if (!variants) return true;
@@ -405,7 +508,12 @@ export default function App() {
       }
       return true;
     }
-    if (activeComponent === "button" || activeComponent === "actionicon" || activeComponent === "tabs") {
+    if (
+      activeComponent === "button" ||
+      activeComponent === "actionicon" ||
+      activeComponent === "tabs" ||
+      activeComponent === "textinput"
+    ) {
       if (!variants.includes(variantSegment)) return true;
       if (variantSegment !== activeVariant) return false;
       const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
@@ -428,6 +536,8 @@ export default function App() {
       actionicon: ["default", "filled", "light", "outlined", "transparent"],
       tabs: ["default", "outlined", "pills"],
       checkbox: ["filled", "outlined"],
+      radio: ["filled", "outline"],
+      textinput: ["default", "filled"],
     };
     const variants = variantsByComponent[activeComponent];
     if (!variants) return;
@@ -717,52 +827,57 @@ export default function App() {
               )}
 
               {activeComponent === "radio" && (
-                <RadioPreviewPanel
+                <RadioPreviewContent
                   brands={brands}
                   activeBrand={activeBrand}
                   activeVariant={forcedVariant || activeVariant}
-                  setActiveVariant={setActiveVariant}
                   activeRadioSize={activeRadioSize}
-                  setActiveRadioSize={setActiveRadioSize}
                   sizeKeys={sizeKeys}
-                  forcedChecked={forcedChecked}
                   activeColorToken={activeColorToken}
+                  selectedChecked={forcedChecked != null ? forcedChecked : activeRadioChecked}
+                  selectedState={forcedState || activeRadioState}
+                  showLabel={activeRadioShowLabel}
                 />
               )}
 
               {activeComponent === "chip" && (
-                <ChipPreviewPanel
+                <ChipPreviewContent
                   brands={brands}
                   activeBrand={activeBrand}
                   activeVariant={forcedVariant || activeVariant}
-                  setActiveVariant={setActiveVariant}
                   activeChipSize={activeChipSize}
-                  setActiveChipSize={setActiveChipSize}
                   activeChipRadius={activeChipRadius}
-                  setActiveChipRadius={setActiveChipRadius}
                   sizeKeys={sizeKeys}
-                  forcedChecked={forcedChecked}
                   activeColorToken={activeColorToken}
+                  selectedChecked={forcedChecked != null ? forcedChecked : activeChipChecked}
+                  selectedState={forcedState || activeChipState}
                 />
               )}
 
               {activeComponent === "tooltip" && (
-                <TooltipPreviewPanel brands={brands} activeBrand={activeBrand} />
+                <TooltipPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activePosition={activeTooltipPosition}
+                  withArrow={activeTooltipWithArrow}
+                />
               )}
 
               {activeComponent === "textinput" && (
-                <TextInputPreviewPanel
+                <TextInputPreviewContent
                   brands={brands}
                   activeBrand={activeBrand}
                   activeVariant={forcedVariant || activeVariant}
-                  setActiveVariant={setActiveVariant}
                   activeTextInputSize={activeTextInputSize}
-                  setActiveTextInputSize={setActiveTextInputSize}
                   activeTextInputRadius={activeTextInputRadius}
-                  setActiveTextInputRadius={setActiveTextInputRadius}
                   sizeKeys={sizeKeys}
-                  forcedState={forcedState}
                   activeColorToken={activeColorToken}
+                  selectedState={forcedState || activeTextInputState}
+                  showLabel={activeTextInputShowLabel}
+                  labelText={activeTextInputLabelText}
+                  withAsterisk={activeTextInputWithAsterisk}
+                  showError={activeTextInputShowError}
+                  errorText={activeTextInputErrorText}
                 />
               )}
             </div>
@@ -871,7 +986,73 @@ export default function App() {
                   forcedState={forcedState}
                 />
               )}
-              {!["button", "actionicon", "tabs", "switch", "checkbox"].includes(activeComponent) && (
+              {activeComponent === "radio" && (
+                <RadioPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeRadioSize={activeRadioSize}
+                  setActiveRadioSize={setActiveRadioSize}
+                  sizeKeys={sizeKeys}
+                  selectedChecked={forcedChecked != null ? forcedChecked : activeRadioChecked}
+                  setSelectedChecked={setActiveRadioChecked}
+                  selectedState={forcedState || activeRadioState}
+                  setSelectedState={setActiveRadioState}
+                  showLabel={activeRadioShowLabel}
+                  setShowLabel={setActiveRadioShowLabel}
+                  forcedChecked={forcedChecked}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "chip" && (
+                <ChipPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeChipSize={activeChipSize}
+                  setActiveChipSize={setActiveChipSize}
+                  activeChipRadius={activeChipRadius}
+                  setActiveChipRadius={setActiveChipRadius}
+                  sizeKeys={sizeKeys}
+                  selectedChecked={forcedChecked != null ? forcedChecked : activeChipChecked}
+                  setSelectedChecked={setActiveChipChecked}
+                  selectedState={forcedState || activeChipState}
+                  setSelectedState={setActiveChipState}
+                  forcedChecked={forcedChecked}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "tooltip" && (
+                <TooltipPropertiesPanel
+                  activePosition={activeTooltipPosition}
+                  setActivePosition={setActiveTooltipPosition}
+                  withArrow={activeTooltipWithArrow}
+                  setWithArrow={setActiveTooltipWithArrow}
+                />
+              )}
+              {activeComponent === "textinput" && (
+                <TextInputPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeTextInputSize={activeTextInputSize}
+                  setActiveTextInputSize={setActiveTextInputSize}
+                  activeTextInputRadius={activeTextInputRadius}
+                  setActiveTextInputRadius={setActiveTextInputRadius}
+                  sizeKeys={sizeKeys}
+                  selectedState={forcedState || activeTextInputState}
+                  setSelectedState={setActiveTextInputState}
+                  showLabel={activeTextInputShowLabel}
+                  setShowLabel={setActiveTextInputShowLabel}
+                  labelText={activeTextInputLabelText}
+                  setLabelText={setActiveTextInputLabelText}
+                  withAsterisk={activeTextInputWithAsterisk}
+                  setWithAsterisk={setActiveTextInputWithAsterisk}
+                  showError={activeTextInputShowError}
+                  setShowError={setActiveTextInputShowError}
+                  errorText={activeTextInputErrorText}
+                  setErrorText={setActiveTextInputErrorText}
+                  forcedState={forcedState}
+                />
+              )}
+              {!["button", "actionicon", "tabs", "switch", "checkbox", "radio", "chip", "tooltip", "textinput"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>
