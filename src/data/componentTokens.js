@@ -473,6 +473,24 @@ export const COMPONENT_TOKENS = {
     "chip-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "chip/border-width" },
   },
 
+  notification: {
+    // ── COLOR TOKENS ──
+    "notification-background": { type: "COLOR", semantic: "surface-default", figmaPath: "notification/background" },
+    "notification-border": { type: "COLOR", semantic: "border-default", figmaPath: "notification/border" },
+    "notification-title": { type: "COLOR", semantic: "text-default", figmaPath: "notification/title" },
+    "notification-description": { type: "COLOR", semantic: "text-default", figmaPath: "notification/description" },
+    "notification-icon": { type: "COLOR", semantic: "interactive-primary", figmaPath: "notification/icon" },
+    "notification-close": { type: "COLOR", semantic: "text-default", figmaPath: "notification/close" },
+
+    // ── FLOAT TOKENS ──
+    "notification-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "notification/radius" },
+    "notification-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "notification/padding-x" },
+    "notification-padding-y": { type: "FLOAT", unit: "px", value: 10, figmaPath: "notification/padding-y" },
+    "notification-title-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "notification/title-font-size" },
+    "notification-description-font-size": { type: "FLOAT", unit: "px", value: 13, figmaPath: "notification/description-font-size" },
+    "notification-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "notification/border-width" },
+  },
+
   tooltip: {
     // ── COLOR TOKENS ──
     "tooltip-background": { type: "COLOR", semantic: "surface-inverse", figmaPath: "tooltip/background" },
@@ -541,7 +559,24 @@ export const COMPONENT_TOKENS = {
   },
 };
 
-export const COMPONENT_NAMES = Object.keys(COMPONENT_TOKENS);
+const PLACEHOLDER_COMPONENTS = [
+  "card",
+  "notification",
+  "modal",
+  "slider",
+  "rangeslider",
+  "select",
+  "loader",
+  "pill",
+  "accordion",
+  "badge",
+  "text",
+  "title",
+  "multiselect",
+  "alert",
+];
+
+export const COMPONENT_NAMES = [...new Set([...Object.keys(COMPONENT_TOKENS), ...PLACEHOLDER_COMPONENTS])];
 
 export const COMPONENT_SIZE_KEYS = {
   button: ["xs", "sm", "md", "lg", "xl"],
@@ -551,6 +586,7 @@ export const COMPONENT_SIZE_KEYS = {
   checkbox: ["xs", "sm", "md", "lg", "xl"],
   radio: ["xs", "sm", "md", "lg", "xl"],
   chip: ["xs", "sm", "md", "lg", "xl"],
+  notification: ["xs", "sm", "md", "lg", "xl"],
   tooltip: [],
   textinput: ["xs", "sm", "md", "lg", "xl"],
 };

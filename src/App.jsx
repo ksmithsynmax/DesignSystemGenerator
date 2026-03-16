@@ -49,6 +49,10 @@ import {
   TextInputPreviewContent,
   TextInputPropertiesPanel,
 } from "./components/panels/TextInputPreviewPanel";
+import {
+  NotificationPreviewContent,
+  NotificationPropertiesPanel,
+} from "./components/panels/NotificationPreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
@@ -67,6 +71,8 @@ export default function App() {
   const COMPONENT_LABELS = {
     actionicon: "ActionIcon",
     textinput: "TextInput",
+    rangeslider: "RangeSlider",
+    multiselect: "MultiSelect",
   };
   const getComponentLabel = (name) =>
     COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
@@ -165,6 +171,16 @@ export default function App() {
   const [activeTextInputWithAsterisk, setActiveTextInputWithAsterisk] = useState(false);
   const [activeTextInputShowError, setActiveTextInputShowError] = useState(false);
   const [activeTextInputErrorText, setActiveTextInputErrorText] = useState("Error message");
+  const [activeNotificationRadius, setActiveNotificationRadius] = useState("md");
+  const [activeNotificationColor, setActiveNotificationColor] = useState("blue");
+  const [activeNotificationWithBorder, setActiveNotificationWithBorder] = useState(false);
+  const [activeNotificationWithCloseButton, setActiveNotificationWithCloseButton] = useState(false);
+  const [activeNotificationWithIcon, setActiveNotificationWithIcon] = useState(false);
+  const [activeNotificationLoading, setActiveNotificationLoading] = useState(false);
+  const [activeNotificationTitle, setActiveNotificationTitle] = useState("We notify you that");
+  const [activeNotificationDescription, setActiveNotificationDescription] = useState(
+    "You are now obligated to give a star to Mantine project on GitHub"
+  );
 
   // Sync active sizes when brand changes
   const handleBrandChange = useCallback((newBrand) => {
@@ -234,6 +250,15 @@ export default function App() {
       setActiveChipChecked(false);
       setActiveChipState("default");
       setActiveVariant("filled");
+    } else if (newComp === "notification") {
+      setActiveNotificationRadius("md");
+      setActiveNotificationColor("blue");
+      setActiveNotificationWithBorder(false);
+      setActiveNotificationWithCloseButton(false);
+      setActiveNotificationWithIcon(false);
+      setActiveNotificationLoading(false);
+      setActiveNotificationTitle("We notify you that");
+      setActiveNotificationDescription("You are now obligated to give a star to Mantine project on GitHub");
     } else if (newComp === "textinput") {
       setActiveTextInputSize(textInputDefault);
       setActiveTextInputRadius(textInputDefault);
@@ -583,6 +608,9 @@ export default function App() {
     if (activeComponent === "chip" && tokenName === "chip-radius") {
       return activeChipRadius;
     }
+    if (activeComponent === "notification" && tokenName === "notification-radius") {
+      return activeNotificationRadius;
+    }
     return activeDimensionSize;
   };
 
@@ -863,6 +891,22 @@ export default function App() {
                 />
               )}
 
+              {activeComponent === "notification" && (
+                <NotificationPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  radius={activeNotificationRadius}
+                  color={activeNotificationColor}
+                  title={activeNotificationTitle}
+                  description={activeNotificationDescription}
+                  withBorder={activeNotificationWithBorder}
+                  withCloseButton={activeNotificationWithCloseButton}
+                  withIcon={activeNotificationWithIcon}
+                  loading={activeNotificationLoading}
+                />
+              )}
+
               {activeComponent === "textinput" && (
                 <TextInputPreviewContent
                   brands={brands}
@@ -1028,6 +1072,26 @@ export default function App() {
                   setWithArrow={setActiveTooltipWithArrow}
                 />
               )}
+              {activeComponent === "notification" && (
+                <NotificationPropertiesPanel
+                  radius={activeNotificationRadius}
+                  setRadius={setActiveNotificationRadius}
+                  color={activeNotificationColor}
+                  setColor={setActiveNotificationColor}
+                  withBorder={activeNotificationWithBorder}
+                  setWithBorder={setActiveNotificationWithBorder}
+                  withCloseButton={activeNotificationWithCloseButton}
+                  setWithCloseButton={setActiveNotificationWithCloseButton}
+                  withIcon={activeNotificationWithIcon}
+                  setWithIcon={setActiveNotificationWithIcon}
+                  loading={activeNotificationLoading}
+                  setLoading={setActiveNotificationLoading}
+                  title={activeNotificationTitle}
+                  setTitle={setActiveNotificationTitle}
+                  description={activeNotificationDescription}
+                  setDescription={setActiveNotificationDescription}
+                />
+              )}
               {activeComponent === "textinput" && (
                 <TextInputPropertiesPanel
                   activeVariant={forcedVariant || activeVariant}
@@ -1052,7 +1116,7 @@ export default function App() {
                   forcedState={forcedState}
                 />
               )}
-              {!["button", "actionicon", "tabs", "switch", "checkbox", "radio", "chip", "tooltip", "textinput"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "switch", "checkbox", "radio", "chip", "tooltip", "notification", "textinput"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

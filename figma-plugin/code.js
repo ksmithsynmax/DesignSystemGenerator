@@ -458,6 +458,9 @@ async function buildComponents(varMap) {
   progress("Creating Chip component set...");
   var chipSet = await buildChipComponentSet(varMap, page, font);
 
+  progress("Creating Notification component set...");
+  var notificationSet = buildNotificationComponentSet(varMap, page, font);
+
   progress("Creating Tooltip component set...");
   var tooltipSet = buildTooltipComponentSet(varMap, page, font);
 
@@ -481,7 +484,9 @@ async function buildComponents(varMap) {
   radioSet.y = 0;
   chipSet.x = radioSet.x + radioSet.width + compSetGap;
   chipSet.y = 0;
-  tooltipSet.x = chipSet.x + chipSet.width + compSetGap;
+  notificationSet.x = chipSet.x + chipSet.width + compSetGap;
+  notificationSet.y = 0;
+  tooltipSet.x = notificationSet.x + notificationSet.width + compSetGap;
   tooltipSet.y = 0;
   textInputSet.x = tooltipSet.x + tooltipSet.width + compSetGap;
   textInputSet.y = 0;
@@ -491,7 +496,7 @@ async function buildComponents(varMap) {
   tabsSet.y = 0;
 
   // Scroll viewport to show all component sets
-  figma.viewport.scrollAndZoomIntoView([buttonSet, switchSet, checkboxSet, radioSet, chipSet, tooltipSet, textInputSet, actionIconSet, tabsSet]);
+  figma.viewport.scrollAndZoomIntoView([buttonSet, switchSet, checkboxSet, radioSet, chipSet, notificationSet, tooltipSet, textInputSet, actionIconSet, tabsSet]);
 
   progress("Components created.");
 }
@@ -500,7 +505,7 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Tooltip" || child.name === "TextInput" || child.name === "ActionIcon" || child.name === "Tabs")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Tooltip" || child.name === "TextInput" || child.name === "ActionIcon" || child.name === "Tabs")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
@@ -1651,6 +1656,148 @@ function chipIconColorPath(variant, state) {
   if (variant === "outline") return "chip/outline-text-checked";
   if (variant === "light") return "chip/light-text-checked";
   return "chip/icon-color";
+}
+
+// ---------------------------------------------------------------------------
+// Notification Component Set
+// ---------------------------------------------------------------------------
+
+function buildNotificationComponentSet(varMap, page, font) {
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var borderStates = ["off", "on"];
+  var closeStates = ["off", "on"];
+  var iconStates = ["off", "on"];
+  var loadingStates = ["off", "on"];
+  var components = [];
+  var gap = 24;
+  var colWidth = 420;
+  var rowHeight = 130;
+
+  for (var ri = 0; ri < radii.length; ri++) {
+    var radius = radii[ri];
+    var capRadius = radius.toUpperCase();
+    for (var bi = 0; bi < borderStates.length; bi++) {
+      var withBorder = borderStates[bi] === "on";
+      for (var ci = 0; ci < closeStates.length; ci++) {
+        var withClose = closeStates[ci] === "on";
+        for (var ii = 0; ii < iconStates.length; ii++) {
+          var withIcon = iconStates[ii] === "on";
+          for (var li = 0; li < loadingStates.length; li++) {
+            var isLoading = loadingStates[li] === "on";
+
+            var comp = figma.createComponent();
+            comp.name =
+              "Radius=" + capRadius +
+              ", Border=" + borderStates[bi] +
+              ", Close=" + closeStates[ci] +
+              ", Icon=" + iconStates[ii] +
+              ", Loading=" + loadingStates[li];
+            comp.resize(360, 110);
+            comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            comp.strokes = withBorder ? [{ type: "SOLID", color: { r: 0.84, g: 0.84, b: 0.84 } }] : [];
+            comp.strokeWeight = withBorder ? 1 : 0;
+            comp.strokeAlign = "INSIDE";
+            comp.cornerRadius = 8;
+
+            if (varMap["notification/background"]) bindPaintVar(comp, "fills", 0, varMap["notification/background"]);
+            if (withBorder && varMap["notification/border"]) bindPaintVar(comp, "strokes", 0, varMap["notification/border"]);
+            if (varMap["notification/border-width"]) bindVar(comp, "strokeWeight", varMap["notification/border-width"]);
+            if (varMap["notification/radius-" + radius]) {
+              bindVar(comp, "topLeftRadius", varMap["notification/radius-" + radius]);
+              bindVar(comp, "topRightRadius", varMap["notification/radius-" + radius]);
+              bindVar(comp, "bottomLeftRadius", varMap["notification/radius-" + radius]);
+              bindVar(comp, "bottomRightRadius", varMap["notification/radius-" + radius]);
+            }
+
+            var accent = figma.createRectangle();
+            accent.name = "accent";
+            accent.resize(6, 94);
+            accent.x = 8;
+            accent.y = 8;
+            accent.cornerRadius = 3;
+            accent.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
+            if (varMap["notification/icon"]) bindPaintVar(accent, "fills", 0, varMap["notification/icon"]);
+            comp.appendChild(accent);
+
+            if (withIcon || isLoading) {
+              var iconNode = figma.createEllipse();
+              iconNode.name = isLoading ? "loader" : "icon";
+              iconNode.resize(14, 14);
+              iconNode.x = 24;
+              iconNode.y = 16;
+              if (isLoading) {
+                iconNode.fills = [];
+                iconNode.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
+                iconNode.strokeWeight = 2;
+                if (varMap["notification/icon"]) bindPaintVar(iconNode, "strokes", 0, varMap["notification/icon"]);
+              } else {
+                iconNode.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
+                if (varMap["notification/icon"]) bindPaintVar(iconNode, "fills", 0, varMap["notification/icon"]);
+              }
+              comp.appendChild(iconNode);
+            }
+
+            var textLeft = (withIcon || isLoading) ? 46 : 24;
+            var textWidth = withClose ? 280 : 305;
+
+            var titleNode = figma.createText();
+            titleNode.name = "title";
+            titleNode.fontName = font;
+            titleNode.characters = "We notify you that";
+            titleNode.fontSize = 14;
+            titleNode.x = textLeft;
+            titleNode.y = 12;
+            titleNode.textAutoResize = "HEIGHT";
+            titleNode.resize(textWidth, titleNode.height);
+            titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+            if (varMap["notification/title"]) bindPaintVar(titleNode, "fills", 0, varMap["notification/title"]);
+            if (varMap["notification/title-font-size"]) bindVar(titleNode, "fontSize", varMap["notification/title-font-size"]);
+            comp.appendChild(titleNode);
+
+            var descNode = figma.createText();
+            descNode.name = "description";
+            descNode.fontName = font;
+            descNode.characters = "You are now obligated to give a star to Mantine project on GitHub";
+            descNode.fontSize = 13;
+            descNode.x = textLeft;
+            descNode.y = 44;
+            descNode.textAutoResize = "HEIGHT";
+            descNode.resize(textWidth, descNode.height);
+            descNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+            if (varMap["notification/description"]) bindPaintVar(descNode, "fills", 0, varMap["notification/description"]);
+            if (varMap["notification/description-font-size"]) bindVar(descNode, "fontSize", varMap["notification/description-font-size"]);
+            comp.appendChild(descNode);
+
+            if (withClose) {
+              var closeNode = figma.createText();
+              closeNode.name = "close";
+              closeNode.fontName = font;
+              closeNode.characters = "×";
+              closeNode.fontSize = 14;
+              closeNode.x = 338;
+              closeNode.y = 12;
+              closeNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+              if (varMap["notification/close"]) bindPaintVar(closeNode, "fills", 0, varMap["notification/close"]);
+              comp.appendChild(closeNode);
+            }
+
+            var colIndex = ri * borderStates.length + bi;
+            var rowIndex = ((ci * iconStates.length + ii) * loadingStates.length) + li;
+            comp.x = colIndex * (colWidth + gap);
+            comp.y = rowIndex * (rowHeight + gap);
+
+            page.appendChild(comp);
+            components.push(comp);
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " notification variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Notification";
+  return componentSet;
 }
 
 // ---------------------------------------------------------------------------
