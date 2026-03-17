@@ -1,0 +1,59 @@
+import { Text } from "@mantine/core";
+import { resolveColor, resolveDimension } from "../../utils/resolveToken";
+import { COMPONENT_TOKENS } from "../../data/componentTokens";
+
+const WEIGHT_TOKEN_BY_MODE = {
+  regular: "text-font-weight-regular",
+  semibold: "text-font-weight-semibold",
+  bold: "text-font-weight-bold",
+};
+
+export default function TextPreview({
+  brands,
+  brandId,
+  size = "md",
+  weightMode = "regular",
+  styleMode = "normal",
+  decoration = "none",
+  align = "left",
+  transform = "none",
+  colorMode = "default",
+  lineClamp = 0,
+  truncate = "off",
+  text = "Build fully functional accessible web applications faster than ever.",
+}) {
+  const tokens = COMPONENT_TOKENS.text;
+  const colorToken =
+    colorMode === "brand"
+      ? "text-color-brand"
+      : colorMode === "dimmed"
+        ? "text-color-dimmed"
+        : "text-color";
+
+  const color = resolveColor(brands, brandId, tokens[colorToken]?.semantic, "light", colorToken);
+  const fontSize = resolveDimension(brands, brandId, "text-font-size", size);
+  const lineHeight = resolveDimension(brands, brandId, "text-line-height", size);
+  const fontWeight = resolveDimension(brands, brandId, WEIGHT_TOKEN_BY_MODE[weightMode]);
+  const maxWidth = resolveDimension(brands, brandId, "text-max-width");
+
+  return (
+    <div style={{ width: "100%", maxWidth }}>
+      <Text
+        size={fontSize}
+        fw={fontWeight}
+        fs={styleMode === "italic" ? "italic" : "normal"}
+        td={decoration}
+        ta={align}
+        tt={transform}
+        c={color}
+        lineClamp={lineClamp > 0 ? lineClamp : undefined}
+        truncate={truncate === "off" ? undefined : truncate}
+        style={{
+          lineHeight: lineHeight ? `${lineHeight}px` : undefined,
+        }}
+      >
+        {text}
+      </Text>
+    </div>
+  );
+}

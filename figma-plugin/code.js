@@ -449,6 +449,12 @@ async function buildComponents(varMap) {
   progress("Creating Switch component set...");
   var switchSet = buildSwitchComponentSet(varMap, page, font);
 
+  progress("Creating Slider component set...");
+  var sliderSet = buildSliderComponentSet(varMap, page, font);
+
+  progress("Creating RangeSlider component set...");
+  var rangeSliderSet = buildRangeSliderComponentSet(varMap, page, font);
+
   progress("Creating Checkbox component set...");
   var checkboxSet = await buildCheckboxComponentSet(varMap, page, font);
 
@@ -473,12 +479,22 @@ async function buildComponents(varMap) {
   progress("Creating Tabs component set...");
   var tabsSet = await buildTabsComponentSet(varMap, page, font);
 
+  progress("Creating Title component set...");
+  var titleSet = buildTitleComponentSet(varMap, page, font);
+
+  progress("Creating Text component set...");
+  var textSet = await buildTextComponentSet(varMap, page, font);
+
   // Position component sets side by side with gaps
   buttonSet.x = 0;
   buttonSet.y = 0;
   switchSet.x = buttonSet.x + buttonSet.width + compSetGap;
   switchSet.y = 0;
-  checkboxSet.x = switchSet.x + switchSet.width + compSetGap;
+  sliderSet.x = switchSet.x + switchSet.width + compSetGap;
+  sliderSet.y = 0;
+  rangeSliderSet.x = sliderSet.x + sliderSet.width + compSetGap;
+  rangeSliderSet.y = 0;
+  checkboxSet.x = rangeSliderSet.x + rangeSliderSet.width + compSetGap;
   checkboxSet.y = 0;
   radioSet.x = checkboxSet.x + checkboxSet.width + compSetGap;
   radioSet.y = 0;
@@ -494,9 +510,13 @@ async function buildComponents(varMap) {
   actionIconSet.y = 0;
   tabsSet.x = actionIconSet.x + actionIconSet.width + compSetGap;
   tabsSet.y = 0;
+  titleSet.x = tabsSet.x + tabsSet.width + compSetGap;
+  titleSet.y = 0;
+  textSet.x = titleSet.x + titleSet.width + compSetGap;
+  textSet.y = 0;
 
   // Scroll viewport to show all component sets
-  figma.viewport.scrollAndZoomIntoView([buttonSet, switchSet, checkboxSet, radioSet, chipSet, notificationSet, tooltipSet, textInputSet, actionIconSet, tabsSet]);
+  figma.viewport.scrollAndZoomIntoView([buttonSet, switchSet, sliderSet, rangeSliderSet, checkboxSet, radioSet, chipSet, notificationSet, tooltipSet, textInputSet, actionIconSet, tabsSet, titleSet, textSet]);
 
   progress("Components created.");
 }
@@ -505,7 +525,7 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Tooltip" || child.name === "TextInput" || child.name === "ActionIcon" || child.name === "Tabs")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Tooltip" || child.name === "TextInput" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Title" || child.name === "Text")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
@@ -933,6 +953,557 @@ function switchThumbBgPath(state) {
 function switchLabelTextPath(state) {
   if (state === "disabled") return "switch/label-text-disabled";
   return "switch/label-text";
+}
+
+// ---------------------------------------------------------------------------
+// Slider
+// ---------------------------------------------------------------------------
+
+function buildSliderComponentSet(varMap, page, font) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "focus", "disabled"];
+  var markModes = ["off", "on"];
+  var components = [];
+
+  var trackWidth = 260;
+  var sliderValuePercent = 40;
+  var gap = 18;
+  var colGap = 28;
+
+  var sizeThumb = { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 };
+  var sizeTrack = { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 };
+
+  var rowYOffsets = [];
+  var runningY = 0;
+  for (var rsi = 0; rsi < sizes.length; rsi++) {
+    for (var rsti = 0; rsti < states.length; rsti++) {
+      rowYOffsets.push(runningY);
+      var rowH = sizeThumb[sizes[rsi]] + 34;
+      runningY += rowH + gap;
+    }
+  }
+
+  var colWidth = trackWidth + colGap;
+
+  for (var mi = 0; mi < markModes.length; mi++) {
+    var withMarks = markModes[mi] === "on";
+    var capMarks = withMarks ? "On" : "Off";
+
+    for (var ri = 0; ri < radii.length; ri++) {
+      var radius = radii[ri];
+      var capRadius = radius.toUpperCase();
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size.toUpperCase();
+
+        for (var sti = 0; sti < states.length; sti++) {
+          var state = states[sti];
+          var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+          var comp = figma.createComponent();
+          comp.name =
+            "Size=" + capSize +
+            ", Radius=" + capRadius +
+            ", State=" + capState +
+            ", Marks=" + capMarks;
+          comp.resize(trackWidth, withMarks ? 58 : 28);
+          comp.fills = [];
+
+          var trackY = (sizeThumb[size] - sizeTrack[size]) / 2;
+
+          var track = figma.createRectangle();
+          track.name = "Track";
+          track.resize(trackWidth, sizeTrack[size]);
+          track.x = 0;
+          track.y = trackY;
+          track.cornerRadius = 999;
+          track.fills = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.28 } }];
+          bindPaintVar(track, "fills", 0, varMap[sliderTrackBgPath(state)]);
+          bindVar(track, "height", varMap["slider/track-height-" + size]);
+          bindVar(track, "topLeftRadius", varMap["slider/radius-" + radius]);
+          bindVar(track, "topRightRadius", varMap["slider/radius-" + radius]);
+          bindVar(track, "bottomLeftRadius", varMap["slider/radius-" + radius]);
+          bindVar(track, "bottomRightRadius", varMap["slider/radius-" + radius]);
+          comp.appendChild(track);
+
+          var bar = figma.createRectangle();
+          bar.name = "Bar";
+          bar.resize(Math.round((trackWidth * sliderValuePercent) / 100), sizeTrack[size]);
+          bar.x = 0;
+          bar.y = trackY;
+          bar.cornerRadius = 999;
+          bar.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          bindPaintVar(bar, "fills", 0, varMap[sliderBarBgPath(state)]);
+          bindVar(bar, "height", varMap["slider/track-height-" + size]);
+          bindVar(bar, "topLeftRadius", varMap["slider/radius-" + radius]);
+          bindVar(bar, "topRightRadius", varMap["slider/radius-" + radius]);
+          bindVar(bar, "bottomLeftRadius", varMap["slider/radius-" + radius]);
+          bindVar(bar, "bottomRightRadius", varMap["slider/radius-" + radius]);
+          comp.appendChild(bar);
+
+          var thumb = figma.createEllipse();
+          thumb.name = "Thumb";
+          thumb.resize(sizeThumb[size], sizeThumb[size]);
+          thumb.x = Math.round((trackWidth * sliderValuePercent) / 100) - Math.round(sizeThumb[size] / 2);
+          thumb.y = 0;
+          thumb.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          thumb.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          thumb.strokeWeight = 2;
+          bindPaintVar(thumb, "fills", 0, varMap[sliderThumbBgPath(state)]);
+          bindPaintVar(thumb, "strokes", 0, varMap[sliderThumbBorderPath(state)]);
+          bindVar(thumb, "width", varMap["slider/thumb-size-" + size]);
+          bindVar(thumb, "height", varMap["slider/thumb-size-" + size]);
+          bindVar(thumb, "strokeWeight", varMap["slider/thumb-border-width"]);
+          if (state === "focus") {
+            thumb.effects = [{
+              type: "DROP_SHADOW",
+              color: { r: 0.2, g: 0.53, b: 0.9, a: 0.35 },
+              offset: { x: 0, y: 0 },
+              radius: 0,
+              spread: 3,
+              visible: true,
+              blendMode: "NORMAL"
+            }];
+          }
+          comp.appendChild(thumb);
+
+          if (withMarks) {
+            var markValues = [20, 50, 80];
+            var labels = ["20%", "50%", "80%"];
+            for (var mki = 0; mki < markValues.length; mki++) {
+              var markX = Math.round((trackWidth * markValues[mki]) / 100);
+              var mark = figma.createEllipse();
+              mark.name = "Mark-" + labels[mki];
+              mark.resize(8, 8);
+              mark.x = markX - 4;
+              mark.y = trackY + Math.round(sizeTrack[size] / 2) - 4;
+              mark.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.52, b: 0.56 } }];
+              bindPaintVar(mark, "fills", 0, varMap[sliderMarkColorPath(state)]);
+              bindVar(mark, "width", varMap["slider/mark-size"]);
+              bindVar(mark, "height", varMap["slider/mark-size"]);
+              comp.appendChild(mark);
+
+              var labelNode = figma.createText();
+              labelNode.name = "MarkLabel-" + labels[mki];
+              labelNode.fontName = font;
+              labelNode.characters = labels[mki];
+              labelNode.fontSize = 12;
+              labelNode.fills = [{ type: "SOLID", color: { r: 0.7, g: 0.72, b: 0.75 } }];
+              bindPaintVar(labelNode, "fills", 0, varMap[sliderMarkLabelColorPath(state)]);
+              bindVar(labelNode, "fontSize", varMap["slider/mark-label-font-size-" + size]);
+              labelNode.x = markX - 12;
+              labelNode.y = trackY + sizeTrack[size] + 10;
+              comp.appendChild(labelNode);
+            }
+          }
+
+          if (state === "disabled") {
+            comp.opacity = 0.65;
+          }
+
+          var colIndex = mi * radii.length + ri;
+          var rowIndex = (si * states.length) + sti;
+          comp.x = colIndex * colWidth;
+          comp.y = rowYOffsets[rowIndex];
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " slider variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Slider";
+  return componentSet;
+}
+
+function sliderTrackBgPath(state) {
+  if (state === "disabled") return "slider/track-background-disabled";
+  return "slider/track-background";
+}
+
+function sliderBarBgPath(state) {
+  if (state === "default") return "slider/bar-background";
+  return "slider/bar-background-" + state;
+}
+
+function sliderThumbBgPath(state) {
+  if (state === "disabled") return "slider/thumb-background-disabled";
+  return "slider/thumb-background";
+}
+
+function sliderThumbBorderPath(state) {
+  if (state === "default") return "slider/thumb-border";
+  return "slider/thumb-border-" + state;
+}
+
+function sliderMarkColorPath(state) {
+  if (state === "disabled") return "slider/mark-color-disabled";
+  return "slider/mark-color";
+}
+
+function sliderMarkLabelColorPath(state) {
+  if (state === "disabled") return "slider/mark-label-color-disabled";
+  return "slider/mark-label-color";
+}
+
+function buildRangeSliderComponentSet(varMap, page, font) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "focus", "disabled"];
+  var markModes = ["off", "on"];
+  var components = [];
+
+  var trackWidth = 260;
+  var rangeValues = [20, 60];
+  var gap = 18;
+  var colGap = 28;
+
+  var sizeThumb = { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 };
+  var sizeTrack = { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 };
+
+  var rowYOffsets = [];
+  var runningY = 0;
+  for (var rsi = 0; rsi < sizes.length; rsi++) {
+    for (var rsti = 0; rsti < states.length; rsti++) {
+      rowYOffsets.push(runningY);
+      var rowH = sizeThumb[sizes[rsi]] + 34;
+      runningY += rowH + gap;
+    }
+  }
+
+  var colWidth = trackWidth + colGap;
+
+  for (var mi = 0; mi < markModes.length; mi++) {
+    var withMarks = markModes[mi] === "on";
+    var capMarks = withMarks ? "On" : "Off";
+
+    for (var ri = 0; ri < radii.length; ri++) {
+      var radius = radii[ri];
+      var capRadius = radius.toUpperCase();
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size.toUpperCase();
+
+        for (var sti = 0; sti < states.length; sti++) {
+          var state = states[sti];
+          var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+          var comp = figma.createComponent();
+          comp.name =
+            "Size=" + capSize +
+            ", Radius=" + capRadius +
+            ", State=" + capState +
+            ", Marks=" + capMarks;
+          comp.resize(trackWidth, withMarks ? 58 : 28);
+          comp.fills = [];
+
+          var trackY = (sizeThumb[size] - sizeTrack[size]) / 2;
+          var fromX = Math.round((trackWidth * rangeValues[0]) / 100);
+          var toX = Math.round((trackWidth * rangeValues[1]) / 100);
+
+          var track = figma.createRectangle();
+          track.name = "Track";
+          track.resize(trackWidth, sizeTrack[size]);
+          track.x = 0;
+          track.y = trackY;
+          track.cornerRadius = 999;
+          track.fills = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.28 } }];
+          bindPaintVar(track, "fills", 0, varMap[rangeSliderTrackBgPath(state)]);
+          bindVar(track, "height", varMap["rangeslider/track-height-" + size]);
+          bindVar(track, "topLeftRadius", varMap["rangeslider/radius-" + radius]);
+          bindVar(track, "topRightRadius", varMap["rangeslider/radius-" + radius]);
+          bindVar(track, "bottomLeftRadius", varMap["rangeslider/radius-" + radius]);
+          bindVar(track, "bottomRightRadius", varMap["rangeslider/radius-" + radius]);
+          comp.appendChild(track);
+
+          var bar = figma.createRectangle();
+          bar.name = "Bar";
+          bar.resize(toX - fromX, sizeTrack[size]);
+          bar.x = fromX;
+          bar.y = trackY;
+          bar.cornerRadius = 999;
+          bar.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          bindPaintVar(bar, "fills", 0, varMap[rangeSliderBarBgPath(state)]);
+          bindVar(bar, "height", varMap["rangeslider/track-height-" + size]);
+          bindVar(bar, "topLeftRadius", varMap["rangeslider/radius-" + radius]);
+          bindVar(bar, "topRightRadius", varMap["rangeslider/radius-" + radius]);
+          bindVar(bar, "bottomLeftRadius", varMap["rangeslider/radius-" + radius]);
+          bindVar(bar, "bottomRightRadius", varMap["rangeslider/radius-" + radius]);
+          comp.appendChild(bar);
+
+          var thumbFrom = figma.createEllipse();
+          thumbFrom.name = "ThumbFrom";
+          thumbFrom.resize(sizeThumb[size], sizeThumb[size]);
+          thumbFrom.x = fromX - Math.round(sizeThumb[size] / 2);
+          thumbFrom.y = 0;
+          thumbFrom.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          thumbFrom.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          thumbFrom.strokeWeight = 2;
+          bindPaintVar(thumbFrom, "fills", 0, varMap[rangeSliderThumbBgPath(state)]);
+          bindPaintVar(thumbFrom, "strokes", 0, varMap[rangeSliderThumbBorderPath(state)]);
+          bindVar(thumbFrom, "width", varMap["rangeslider/thumb-size-" + size]);
+          bindVar(thumbFrom, "height", varMap["rangeslider/thumb-size-" + size]);
+          bindVar(thumbFrom, "strokeWeight", varMap["rangeslider/thumb-border-width"]);
+          comp.appendChild(thumbFrom);
+
+          var thumbTo = figma.createEllipse();
+          thumbTo.name = "ThumbTo";
+          thumbTo.resize(sizeThumb[size], sizeThumb[size]);
+          thumbTo.x = toX - Math.round(sizeThumb[size] / 2);
+          thumbTo.y = 0;
+          thumbTo.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          thumbTo.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          thumbTo.strokeWeight = 2;
+          bindPaintVar(thumbTo, "fills", 0, varMap[rangeSliderThumbBgPath(state)]);
+          bindPaintVar(thumbTo, "strokes", 0, varMap[rangeSliderThumbBorderPath(state)]);
+          bindVar(thumbTo, "width", varMap["rangeslider/thumb-size-" + size]);
+          bindVar(thumbTo, "height", varMap["rangeslider/thumb-size-" + size]);
+          bindVar(thumbTo, "strokeWeight", varMap["rangeslider/thumb-border-width"]);
+          if (state === "focus") {
+            thumbTo.effects = [{
+              type: "DROP_SHADOW",
+              color: { r: 0.2, g: 0.53, b: 0.9, a: 0.35 },
+              offset: { x: 0, y: 0 },
+              radius: 0,
+              spread: 3,
+              visible: true,
+              blendMode: "NORMAL"
+            }];
+          }
+          comp.appendChild(thumbTo);
+
+          if (withMarks) {
+            var markValues = [20, 50, 80];
+            var labels = ["20%", "50%", "80%"];
+            for (var mki = 0; mki < markValues.length; mki++) {
+              var markX = Math.round((trackWidth * markValues[mki]) / 100);
+              var mark = figma.createEllipse();
+              mark.name = "Mark-" + labels[mki];
+              mark.resize(8, 8);
+              mark.x = markX - 4;
+              mark.y = trackY + Math.round(sizeTrack[size] / 2) - 4;
+              mark.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.52, b: 0.56 } }];
+              bindPaintVar(mark, "fills", 0, varMap[rangeSliderMarkColorPath(state)]);
+              bindVar(mark, "width", varMap["rangeslider/mark-size"]);
+              bindVar(mark, "height", varMap["rangeslider/mark-size"]);
+              comp.appendChild(mark);
+
+              var labelNode = figma.createText();
+              labelNode.name = "MarkLabel-" + labels[mki];
+              labelNode.fontName = font;
+              labelNode.characters = labels[mki];
+              labelNode.fontSize = 12;
+              labelNode.fills = [{ type: "SOLID", color: { r: 0.7, g: 0.72, b: 0.75 } }];
+              bindPaintVar(labelNode, "fills", 0, varMap[rangeSliderMarkLabelColorPath(state)]);
+              bindVar(labelNode, "fontSize", varMap["rangeslider/mark-label-font-size-" + size]);
+              labelNode.x = markX - 12;
+              labelNode.y = trackY + sizeTrack[size] + 10;
+              comp.appendChild(labelNode);
+            }
+          }
+
+          if (state === "disabled") {
+            comp.opacity = 0.65;
+          }
+
+          var colIndex = mi * radii.length + ri;
+          var rowIndex = (si * states.length) + sti;
+          comp.x = colIndex * colWidth;
+          comp.y = rowYOffsets[rowIndex];
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " range slider variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "RangeSlider";
+  return componentSet;
+}
+
+function rangeSliderTrackBgPath(state) {
+  if (state === "disabled") return "rangeslider/track-background-disabled";
+  return "rangeslider/track-background";
+}
+
+function rangeSliderBarBgPath(state) {
+  if (state === "default") return "rangeslider/bar-background";
+  return "rangeslider/bar-background-" + state;
+}
+
+function rangeSliderThumbBgPath(state) {
+  if (state === "disabled") return "rangeslider/thumb-background-disabled";
+  return "rangeslider/thumb-background";
+}
+
+function rangeSliderThumbBorderPath(state) {
+  if (state === "default") return "rangeslider/thumb-border";
+  return "rangeslider/thumb-border-" + state;
+}
+
+function rangeSliderMarkColorPath(state) {
+  if (state === "disabled") return "rangeslider/mark-color-disabled";
+  return "rangeslider/mark-color";
+}
+
+function rangeSliderMarkLabelColorPath(state) {
+  if (state === "disabled") return "rangeslider/mark-label-color-disabled";
+  return "rangeslider/mark-label-color";
+}
+
+function buildTitleComponentSet(varMap, page, font) {
+  var orders = [1, 2, 3, 4, 5, 6];
+  var sizeModes = ["auto", "h1", "h2", "h3", "h4", "h5", "h6"];
+  var components = [];
+
+  var colGap = 16;
+  var rowGap = 16;
+  var colWidth = 560 + colGap;
+  var rowHeight = 80 + rowGap;
+
+  var defaultFontSizeByOrder = { 1: 34, 2: 28, 3: 24, 4: 20, 5: 16, 6: 14 };
+
+  for (var oi = 0; oi < orders.length; oi++) {
+    var order = orders[oi];
+    for (var si = 0; si < sizeModes.length; si++) {
+      var sizeMode = sizeModes[si];
+      var capSize = sizeMode === "auto" ? "Auto" : sizeMode.toUpperCase();
+
+      var comp = figma.createComponent();
+      comp.name = "Order=" + order + ", Size=" + capSize;
+      comp.resize(560, 80);
+      comp.fills = [];
+
+      var textNode = figma.createText();
+      textNode.name = "title";
+      textNode.fontName = font;
+      textNode.characters = "Build fully functional accessible web applications faster than ever";
+      textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
+      textNode.fontSize = defaultFontSizeByOrder[order] || 20;
+      textNode.textAutoResize = "WIDTH_AND_HEIGHT";
+
+      var sizeKey = sizeMode === "auto" ? "h" + order : sizeMode;
+      var tokenVar = varMap["title/font-size-" + sizeKey];
+      bindVar(textNode, "fontSize", tokenVar);
+      bindPaintVar(textNode, "fills", 0, varMap["title/color"]);
+
+      comp.appendChild(textNode);
+
+      var colIndex = si;
+      var rowIndex = oi;
+      comp.x = colIndex * colWidth;
+      comp.y = rowIndex * rowHeight;
+      page.appendChild(comp);
+      components.push(comp);
+    }
+  }
+
+  progress("Created " + components.length + " title variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Title";
+  return componentSet;
+}
+
+async function buildTextComponentSet(varMap, page, fallbackFont) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var weights = ["regular", "semibold", "bold"];
+  var colors = ["default", "dimmed", "brand"];
+  var components = [];
+
+  var colGap = 18;
+  var rowGap = 16;
+  var colWidth = 560 + colGap;
+  var rowHeight = 84 + rowGap;
+
+  var fontByWeight = {
+    regular: fallbackFont,
+    semibold: fallbackFont,
+    bold: fallbackFont,
+  };
+
+  var regularCandidates = [
+    { family: "Inter", style: "Regular" },
+    { family: "Inter", style: "Medium" },
+  ];
+  var boldCandidates = [
+    { family: "Inter", style: "Bold" },
+    { family: "Inter", style: "Semi Bold" },
+    { family: "Inter", style: "SemiBold" },
+  ];
+
+  for (var rci = 0; rci < regularCandidates.length; rci++) {
+    try {
+      await figma.loadFontAsync(regularCandidates[rci]);
+      fontByWeight.regular = regularCandidates[rci];
+      break;
+    } catch (e) {}
+  }
+  for (var bci = 0; bci < boldCandidates.length; bci++) {
+    try {
+      await figma.loadFontAsync(boldCandidates[bci]);
+      fontByWeight.bold = boldCandidates[bci];
+      break;
+    } catch (e) {}
+  }
+
+  for (var si = 0; si < sizes.length; si++) {
+    var size = sizes[si];
+    var capSize = size.toUpperCase();
+    for (var wi = 0; wi < weights.length; wi++) {
+      var weight = weights[wi];
+      var capWeight = weight.charAt(0).toUpperCase() + weight.slice(1);
+      for (var ci = 0; ci < colors.length; ci++) {
+        var color = colors[ci];
+        var capColor = color.charAt(0).toUpperCase() + color.slice(1);
+
+        var comp = figma.createComponent();
+        comp.name =
+          "Size=" + capSize +
+          ", Weight=" + capWeight +
+          ", Color=" + capColor;
+        comp.resize(560, 84);
+        comp.fills = [];
+
+        var textNode = figma.createText();
+        textNode.name = "text";
+        textNode.fontName = fontByWeight[weight] || fallbackFont;
+        textNode.characters = "Build fully functional accessible web applications faster than ever.";
+        textNode.fontSize = 16;
+        textNode.textAutoResize = "WIDTH_AND_HEIGHT";
+        textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
+
+        bindVar(textNode, "fontSize", varMap["text/font-size-" + size]);
+        bindPaintVar(textNode, "fills", 0, varMap[textColorPath(color)]);
+
+        comp.appendChild(textNode);
+
+        var colIndex = (wi * colors.length) + ci;
+        var rowIndex = si;
+        comp.x = colIndex * colWidth;
+        comp.y = rowIndex * rowHeight;
+        page.appendChild(comp);
+        components.push(comp);
+      }
+    }
+  }
+
+  progress("Created " + components.length + " text variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Text";
+  return componentSet;
+}
+
+function textColorPath(mode) {
+  if (mode === "dimmed") return "text/color-dimmed";
+  if (mode === "brand") return "text/color-brand";
+  return "text/color";
 }
 
 // ---------------------------------------------------------------------------

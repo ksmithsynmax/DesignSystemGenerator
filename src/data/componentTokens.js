@@ -473,6 +473,84 @@ export const COMPONENT_TOKENS = {
     "chip-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "chip/border-width" },
   },
 
+  slider: {
+    // ── TRACK BACKGROUND ──
+    "slider-track-background": { type: "COLOR", semantic: "surface-default", figmaPath: "slider/track-background" },
+    "slider-track-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "slider/track-background-disabled" },
+
+    // ── FILLED BAR BACKGROUND (per state) ──
+    "slider-bar-background": { type: "COLOR", semantic: "interactive-primary", figmaPath: "slider/bar-background" },
+    "slider-bar-background-hover": { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "slider/bar-background-hover" },
+    "slider-bar-background-focus": { type: "COLOR", semantic: "interactive-primary", figmaPath: "slider/bar-background-focus" },
+    "slider-bar-background-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "slider/bar-background-pressed" },
+    "slider-bar-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "slider/bar-background-disabled" },
+
+    // ── THUMB ──
+    "slider-thumb-background": { type: "COLOR", semantic: "surface-default", figmaPath: "slider/thumb-background" },
+    "slider-thumb-background-disabled": { type: "COLOR", semantic: "surface-default", figmaPath: "slider/thumb-background-disabled" },
+    "slider-thumb-border": { type: "COLOR", semantic: "interactive-primary", figmaPath: "slider/thumb-border" },
+    "slider-thumb-border-hover": { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "slider/thumb-border-hover" },
+    "slider-thumb-border-focus": { type: "COLOR", semantic: "interactive-primary", figmaPath: "slider/thumb-border-focus" },
+    "slider-thumb-border-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "slider/thumb-border-pressed" },
+    "slider-thumb-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "slider/thumb-border-disabled" },
+
+    // ── MARKS & LABELS ──
+    "slider-mark-color": { type: "COLOR", semantic: "border-default", figmaPath: "slider/mark-color" },
+    "slider-mark-color-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "slider/mark-color-disabled" },
+    "slider-mark-label-color": { type: "COLOR", semantic: "text-default", figmaPath: "slider/mark-label-color" },
+    "slider-mark-label-color-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "slider/mark-label-color-disabled" },
+
+    // ── SHARED COLOR TOKEN ──
+    "slider-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "slider/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants) ──
+    "slider-track-height": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 }, figmaPath: "slider/track-height" },
+    "slider-thumb-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 }, figmaPath: "slider/thumb-size" },
+    "slider-mark-label-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "slider/mark-label-font-size" },
+    "slider-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "slider/radius" },
+
+    // ── FLOAT TOKENS (single value) ──
+    "slider-thumb-border-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "slider/thumb-border-width" },
+    "slider-mark-size": { type: "FLOAT", unit: "px", value: 8, figmaPath: "slider/mark-size" },
+  },
+
+  rangeslider: {
+    // ── TRACK BACKGROUND ──
+    "rangeslider-track-background": { type: "COLOR", semantic: "surface-default", figmaPath: "rangeslider/track-background" },
+    "rangeslider-track-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "rangeslider/track-background-disabled" },
+
+    // ── FILLED RANGE BAR ──
+    "rangeslider-bar-background": { type: "COLOR", semantic: "interactive-primary", figmaPath: "rangeslider/bar-background" },
+    "rangeslider-bar-background-focus": { type: "COLOR", semantic: "interactive-primary", figmaPath: "rangeslider/bar-background-focus" },
+    "rangeslider-bar-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "rangeslider/bar-background-disabled" },
+
+    // ── THUMB ──
+    "rangeslider-thumb-background": { type: "COLOR", semantic: "surface-default", figmaPath: "rangeslider/thumb-background" },
+    "rangeslider-thumb-background-disabled": { type: "COLOR", semantic: "surface-default", figmaPath: "rangeslider/thumb-background-disabled" },
+    "rangeslider-thumb-border": { type: "COLOR", semantic: "interactive-primary", figmaPath: "rangeslider/thumb-border" },
+    "rangeslider-thumb-border-focus": { type: "COLOR", semantic: "interactive-primary", figmaPath: "rangeslider/thumb-border-focus" },
+    "rangeslider-thumb-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "rangeslider/thumb-border-disabled" },
+
+    // ── MARKS & LABELS ──
+    "rangeslider-mark-color": { type: "COLOR", semantic: "border-default", figmaPath: "rangeslider/mark-color" },
+    "rangeslider-mark-color-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "rangeslider/mark-color-disabled" },
+    "rangeslider-mark-label-color": { type: "COLOR", semantic: "text-default", figmaPath: "rangeslider/mark-label-color" },
+    "rangeslider-mark-label-color-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "rangeslider/mark-label-color-disabled" },
+
+    // ── SHARED COLOR TOKEN ──
+    "rangeslider-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "rangeslider/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants) ──
+    "rangeslider-track-height": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 }, figmaPath: "rangeslider/track-height" },
+    "rangeslider-thumb-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 }, figmaPath: "rangeslider/thumb-size" },
+    "rangeslider-mark-label-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "rangeslider/mark-label-font-size" },
+    "rangeslider-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "rangeslider/radius" },
+
+    // ── FLOAT TOKENS (single value) ──
+    "rangeslider-thumb-border-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "rangeslider/thumb-border-width" },
+    "rangeslider-mark-size": { type: "FLOAT", unit: "px", value: 8, figmaPath: "rangeslider/mark-size" },
+  },
+
   notification: {
     // ── COLOR TOKENS ──
     "notification-background": { type: "COLOR", semantic: "surface-default", figmaPath: "notification/background" },
@@ -557,6 +635,56 @@ export const COMPONENT_TOKENS = {
     "textinput-error-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "textinput/error-font-size" },
     "textinput-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "textinput/error-gap" },
   },
+
+  title: {
+    // ── COLOR TOKENS ──
+    "title-color": { type: "COLOR", semantic: "text-default", figmaPath: "title/color" },
+
+    // ── FLOAT TOKENS (order/size variants: h1-h6) ──
+    "title-font-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { h1: 34, h2: 28, h3: 24, h4: 20, h5: 16, h6: 14 },
+      figmaPath: "title/font-size",
+    },
+    "title-line-height": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { h1: 42, h2: 36, h3: 32, h4: 28, h5: 24, h6: 20 },
+      figmaPath: "title/line-height",
+    },
+
+    // ── FLOAT TOKENS (single value) ──
+    "title-font-weight": { type: "FLOAT", unit: "", value: 700, figmaPath: "title/font-weight" },
+    "title-max-width": { type: "FLOAT", unit: "px", value: 520, figmaPath: "title/max-width" },
+  },
+
+  text: {
+    // ── COLOR TOKENS ──
+    "text-color": { type: "COLOR", semantic: "text-default", figmaPath: "text/color" },
+    "text-color-dimmed": { type: "COLOR", semantic: "text-disabled", figmaPath: "text/color-dimmed" },
+    "text-color-brand": { type: "COLOR", semantic: "interactive-primary", figmaPath: "text/color-brand" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "text-font-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },
+      figmaPath: "text/font-size",
+    },
+    "text-line-height": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },
+      figmaPath: "text/line-height",
+    },
+
+    // ── FLOAT TOKENS (single value) ──
+    "text-font-weight-regular": { type: "FLOAT", unit: "", value: 400, figmaPath: "text/font-weight-regular" },
+    "text-font-weight-semibold": { type: "FLOAT", unit: "", value: 600, figmaPath: "text/font-weight-semibold" },
+    "text-font-weight-bold": { type: "FLOAT", unit: "", value: 700, figmaPath: "text/font-weight-bold" },
+    "text-max-width": { type: "FLOAT", unit: "px", value: 520, figmaPath: "text/max-width" },
+  },
 };
 
 const PLACEHOLDER_COMPONENTS = [
@@ -570,6 +698,7 @@ const PLACEHOLDER_COMPONENTS = [
   "pill",
   "accordion",
   "badge",
+  "anchor",
   "text",
   "title",
   "multiselect",
@@ -586,9 +715,13 @@ export const COMPONENT_SIZE_KEYS = {
   checkbox: ["xs", "sm", "md", "lg", "xl"],
   radio: ["xs", "sm", "md", "lg", "xl"],
   chip: ["xs", "sm", "md", "lg", "xl"],
+  slider: ["xs", "sm", "md", "lg", "xl"],
+  rangeslider: ["xs", "sm", "md", "lg", "xl"],
   notification: ["xs", "sm", "md", "lg", "xl"],
   tooltip: [],
   textinput: ["xs", "sm", "md", "lg", "xl"],
+  title: ["h1", "h2", "h3", "h4", "h5", "h6"],
+  text: ["xs", "sm", "md", "lg", "xl"],
 };
 
 export function getColorTokens(componentName) {

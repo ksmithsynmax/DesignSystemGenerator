@@ -53,6 +53,22 @@ import {
   NotificationPreviewContent,
   NotificationPropertiesPanel,
 } from "./components/panels/NotificationPreviewPanel";
+import {
+  SliderPreviewContent,
+  SliderPropertiesPanel,
+} from "./components/panels/SliderPreviewPanel";
+import {
+  RangeSliderPreviewContent,
+  RangeSliderPropertiesPanel,
+} from "./components/panels/RangeSliderPreviewPanel";
+import {
+  TitlePreviewContent,
+  TitlePropertiesPanel,
+} from "./components/panels/TitlePreviewPanel";
+import {
+  TextPreviewContent,
+  TextPropertiesPanel,
+} from "./components/panels/TextPreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
@@ -85,9 +101,9 @@ export default function App() {
   const [storybookLoading, setStorybookLoading] = useState(false);
   const [storybookError, setStorybookError] = useState(null);
   const [leftPanelWidth, setLeftPanelWidth] = useState(420);
-  const [previewPanelWidth, setPreviewPanelWidth] = useState(640);
-  const [propertiesPanelWidth, setPropertiesPanelWidth] = useState(300);
-  const componentsPanelWidth = 260;
+  const previewPanelWidth = 640;
+  const propertiesPanelWidth = 300;
+  const componentsPanelWidth = 240;
   const [activeColorToken, setActiveColorToken] = useState(null);
   const [activeDimensionToken, setActiveDimensionToken] = useState(null);
   const [activeButtonState, setActiveButtonState] = useState("default");
@@ -119,8 +135,6 @@ export default function App() {
   }, []);
 
   const handleLeftPanelDrag = createResizeHandler(setLeftPanelWidth, 300, 760);
-  const handlePreviewPanelDrag = createResizeHandler(setPreviewPanelWidth, 420, 1200);
-  const handlePropertiesPanelDrag = createResizeHandler(setPropertiesPanelWidth, 240, 520);
 
   const brand = brands[activeBrand];
   const colorNames = Object.keys(brand.primitives);
@@ -132,6 +146,8 @@ export default function App() {
   const actionIconDefault = getComponentDefaultSize(brands, activeBrand, "actionicon") || "sm";
   const tabsDefault = getComponentDefaultSize(brands, activeBrand, "tabs") || "sm";
   const switchDefault = getComponentDefaultSize(brands, activeBrand, "switch") || "md";
+  const sliderDefault = getComponentDefaultSize(brands, activeBrand, "slider") || "md";
+  const rangeSliderDefault = getComponentDefaultSize(brands, activeBrand, "rangeslider") || "md";
   const checkboxDefault = getComponentDefaultSize(brands, activeBrand, "checkbox") || "md";
   const radioDefault = getComponentDefaultSize(brands, activeBrand, "radio") || "md";
   const chipDefault = getComponentDefaultSize(brands, activeBrand, "chip") || "md";
@@ -149,6 +165,37 @@ export default function App() {
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
   const [activeSwitchChecked, setActiveSwitchChecked] = useState(false);
   const [activeSwitchState, setActiveSwitchState] = useState("default");
+  const [activeSliderSize, setActiveSliderSize] = useState(sliderDefault);
+  const [activeSliderRadius, setActiveSliderRadius] = useState(sliderDefault);
+  const [activeSliderState, setActiveSliderState] = useState("default");
+  const [activeSliderMarks, setActiveSliderMarks] = useState(true);
+  const [activeSliderValue, setActiveSliderValue] = useState(40);
+  const [activeSliderLabelMode, setActiveSliderLabelMode] = useState("hover");
+  const [activeRangeSliderSize, setActiveRangeSliderSize] = useState(rangeSliderDefault);
+  const [activeRangeSliderRadius, setActiveRangeSliderRadius] = useState(rangeSliderDefault);
+  const [activeRangeSliderState, setActiveRangeSliderState] = useState("default");
+  const [activeRangeSliderMarks, setActiveRangeSliderMarks] = useState(true);
+  const [activeRangeSliderValue, setActiveRangeSliderValue] = useState([20, 60]);
+  const [activeRangeSliderLabelMode, setActiveRangeSliderLabelMode] = useState("hover");
+  const [activeTitleOrder, setActiveTitleOrder] = useState("1");
+  const [activeTitleSize, setActiveTitleSize] = useState("auto");
+  const [activeTitleTextWrap, setActiveTitleTextWrap] = useState("wrap");
+  const [activeTitleLineClamp, setActiveTitleLineClamp] = useState(0);
+  const [activeTitleText, setActiveTitleText] = useState(
+    "Build fully functional accessible web applications faster than ever"
+  );
+  const [activeTextSizeToken, setActiveTextSizeToken] = useState("md");
+  const [activeTextWeightMode, setActiveTextWeightMode] = useState("regular");
+  const [activeTextStyleMode, setActiveTextStyleMode] = useState("normal");
+  const [activeTextDecoration, setActiveTextDecoration] = useState("none");
+  const [activeTextAlign, setActiveTextAlign] = useState("left");
+  const [activeTextTransform, setActiveTextTransform] = useState("none");
+  const [activeTextColorMode, setActiveTextColorMode] = useState("default");
+  const [activeTextLineClamp, setActiveTextLineClamp] = useState(0);
+  const [activeTextTruncate, setActiveTextTruncate] = useState("off");
+  const [activeTextText, setActiveTextText] = useState(
+    "Build fully functional accessible web applications faster than ever."
+  );
   const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
   const [activeCheckboxRadius, setActiveCheckboxRadius] = useState(checkboxDefault);
   const [activeCheckboxSelection, setActiveCheckboxSelection] = useState("unchecked");
@@ -189,6 +236,8 @@ export default function App() {
     const aiDef = getComponentDefaultSize(brands, newBrand, "actionicon") || "sm";
     const tbDef = getComponentDefaultSize(brands, newBrand, "tabs") || "sm";
     const swDef = getComponentDefaultSize(brands, newBrand, "switch") || "md";
+    const slDef = getComponentDefaultSize(brands, newBrand, "slider") || "md";
+    const rslDef = getComponentDefaultSize(brands, newBrand, "rangeslider") || "md";
     const cbDef = getComponentDefaultSize(brands, newBrand, "checkbox") || "md";
     const rdDef = getComponentDefaultSize(brands, newBrand, "radio") || "md";
     const chDef = getComponentDefaultSize(brands, newBrand, "chip") || "md";
@@ -197,6 +246,10 @@ export default function App() {
     setActiveActionIconRadius(aiDef);
     setActiveTabsRadius(tbDef);
     setActiveSwitchSize(swDef);
+    setActiveSliderSize(slDef);
+    setActiveSliderRadius(slDef);
+    setActiveRangeSliderSize(rslDef);
+    setActiveRangeSliderRadius(rslDef);
     setActiveCheckboxSize(cbDef);
     setActiveCheckboxRadius(cbDef);
     setActiveRadioSize(rdDef);
@@ -232,6 +285,37 @@ export default function App() {
       setActiveSwitchSize(switchDefault);
       setActiveSwitchChecked(false);
       setActiveSwitchState("default");
+    } else if (newComp === "slider") {
+      setActiveSliderSize(sliderDefault);
+      setActiveSliderRadius(sliderDefault);
+      setActiveSliderState("default");
+      setActiveSliderMarks(true);
+      setActiveSliderValue(40);
+      setActiveSliderLabelMode("hover");
+    } else if (newComp === "rangeslider") {
+      setActiveRangeSliderSize(rangeSliderDefault);
+      setActiveRangeSliderRadius(rangeSliderDefault);
+      setActiveRangeSliderState("default");
+      setActiveRangeSliderMarks(true);
+      setActiveRangeSliderValue([20, 60]);
+      setActiveRangeSliderLabelMode("hover");
+    } else if (newComp === "title") {
+      setActiveTitleOrder("1");
+      setActiveTitleSize("auto");
+      setActiveTitleTextWrap("wrap");
+      setActiveTitleLineClamp(0);
+      setActiveTitleText("Build fully functional accessible web applications faster than ever");
+    } else if (newComp === "text") {
+      setActiveTextSizeToken("md");
+      setActiveTextWeightMode("regular");
+      setActiveTextStyleMode("normal");
+      setActiveTextDecoration("none");
+      setActiveTextAlign("left");
+      setActiveTextTransform("none");
+      setActiveTextColorMode("default");
+      setActiveTextLineClamp(0);
+      setActiveTextTruncate("off");
+      setActiveTextText("Build fully functional accessible web applications faster than ever.");
     } else if (newComp === "checkbox") {
       setActiveCheckboxSize(checkboxDefault);
       setActiveCheckboxRadius(checkboxDefault);
@@ -273,7 +357,7 @@ export default function App() {
       setActiveTooltipPosition("top");
       setActiveTooltipWithArrow(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -401,6 +485,10 @@ export default function App() {
           ? forcedState || activeTabsState
         : activeComponent === "switch"
           ? forcedState || activeSwitchState
+          : activeComponent === "slider"
+            ? forcedState || activeSliderState
+            : activeComponent === "rangeslider"
+              ? forcedState || activeRangeSliderState
           : activeComponent === "checkbox"
             ? forcedState || activeCheckboxState
           : activeComponent === "radio"
@@ -432,6 +520,26 @@ export default function App() {
         return isCheckedToken === Boolean(targetChecked);
       }
       return !isCheckedToken || Boolean(targetChecked);
+    }
+
+    if (activeComponent === "slider") {
+      if (token === "slider-focus-ring") return true;
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      const targetState = effectiveComponentState || "default";
+      if (tokenState === targetState) return true;
+      return tokenState === "default" && targetState !== "default" && !Boolean(colorTokens[`${token}-${targetState}`]);
+    }
+
+    if (activeComponent === "rangeslider") {
+      if (token === "rangeslider-focus-ring") return true;
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      const targetState = effectiveComponentState || "default";
+      if (tokenState === targetState) return true;
+      return tokenState === "default" && targetState !== "default" && !Boolean(colorTokens[`${token}-${targetState}`]);
     }
 
     if (activeComponent === "radio") {
@@ -586,6 +694,10 @@ export default function App() {
     button: activeSize,
     actionicon: activeActionIconSize,
     switch: activeSwitchSize,
+    slider: activeSliderSize,
+    rangeslider: activeRangeSliderSize,
+    title: activeTitleSize === "auto" ? `h${activeTitleOrder}` : activeTitleSize,
+    text: activeTextSizeToken,
     checkbox: activeCheckboxSize,
     radio: activeRadioSize,
     chip: activeChipSize,
@@ -610,6 +722,18 @@ export default function App() {
     }
     if (activeComponent === "notification" && tokenName === "notification-radius") {
       return activeNotificationRadius;
+    }
+    if (activeComponent === "slider" && tokenName === "slider-radius") {
+      return activeSliderRadius;
+    }
+    if (activeComponent === "rangeslider" && tokenName === "rangeslider-radius") {
+      return activeRangeSliderRadius;
+    }
+    if (
+      activeComponent === "title" &&
+      (tokenName === "title-font-size" || tokenName === "title-line-height")
+    ) {
+      return activeTitleSize === "auto" ? `h${activeTitleOrder}` : activeTitleSize;
     }
     return activeDimensionSize;
   };
@@ -690,13 +814,14 @@ export default function App() {
       </div>
 
       {activeTab === "preview" ? (
-        <div style={{ display: "flex", flex: 1, minHeight: 0, overflowX: "auto" }}>
+        <div style={{ display: "flex", flex: 1, minHeight: 0, overflowX: "hidden" }}>
           <div
             style={{
               width: leftPanelWidth,
               borderRight: "1px solid #2C2E33",
               overflowY: "auto",
               overflowX: "hidden",
+              scrollbarGutter: "stable",
               padding: "16px 20px",
               flexShrink: 0,
             }}
@@ -780,7 +905,16 @@ export default function App() {
             onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
           />
 
-          <div style={{ width: previewPanelWidth, overflowY: "auto", padding: "24px 32px", flexShrink: 0 }}>
+          <div
+            style={{
+              flexBasis: previewPanelWidth,
+              flexGrow: 1,
+              minWidth: 420,
+              overflowY: "auto",
+              scrollbarGutter: "stable",
+              padding: "24px 32px",
+            }}
+          >
             <div style={{ background: "#25262B", borderRadius: 8, padding: 24 }}>
               {activeComponent === "button" && (
                 <ButtonPreviewContent
@@ -831,6 +965,67 @@ export default function App() {
                   activeColorToken={activeColorToken}
                   selectedChecked={forcedChecked != null ? forcedChecked : activeSwitchChecked}
                   selectedState={forcedState || activeSwitchState}
+                />
+              )}
+
+              {activeComponent === "slider" && (
+                <SliderPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeSliderSize={activeSliderSize}
+                  activeSliderRadius={activeSliderRadius}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedState={forcedState || activeSliderState}
+                  showMarks={activeSliderMarks}
+                  value={activeSliderValue}
+                  labelMode={activeSliderLabelMode}
+                />
+              )}
+
+              {activeComponent === "rangeslider" && (
+                <RangeSliderPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeRangeSliderSize={activeRangeSliderSize}
+                  activeRangeSliderRadius={activeRangeSliderRadius}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedState={forcedState || activeRangeSliderState}
+                  showMarks={activeRangeSliderMarks}
+                  value={activeRangeSliderValue}
+                  labelMode={activeRangeSliderLabelMode}
+                />
+              )}
+
+              {activeComponent === "title" && (
+                <TitlePreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  order={activeTitleOrder}
+                  sizeKey={activeTitleSize}
+                  textWrap={activeTitleTextWrap}
+                  lineClamp={activeTitleLineClamp}
+                  text={activeTitleText}
+                />
+              )}
+
+              {activeComponent === "text" && (
+                <TextPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  size={activeTextSizeToken}
+                  weightMode={activeTextWeightMode}
+                  styleMode={activeTextStyleMode}
+                  decoration={activeTextDecoration}
+                  align={activeTextAlign}
+                  transform={activeTextTransform}
+                  colorMode={activeTextColorMode}
+                  lineClamp={activeTextLineClamp}
+                  truncate={activeTextTruncate}
+                  text={activeTextText}
                 />
               )}
 
@@ -928,18 +1123,12 @@ export default function App() {
           </div>
 
           <div
-            onMouseDown={handlePreviewPanelDrag}
-            style={{ width: 4, cursor: "col-resize", flexShrink: 0, background: "transparent", transition: "background 0.15s" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#373A40")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          />
-
-          <div
             style={{
               width: propertiesPanelWidth,
               borderLeft: "1px solid #2C2E33",
               borderRight: "1px solid #2C2E33",
               overflowY: "auto",
+              scrollbarGutter: "stable",
               padding: "16px 12px",
               flexShrink: 0,
             }}
@@ -1004,6 +1193,80 @@ export default function App() {
                   setSelectedState={setActiveSwitchState}
                   forcedChecked={forcedChecked}
                   forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "slider" && (
+                <SliderPropertiesPanel
+                  activeSliderSize={activeSliderSize}
+                  setActiveSliderSize={setActiveSliderSize}
+                  activeSliderRadius={activeSliderRadius}
+                  setActiveSliderRadius={setActiveSliderRadius}
+                  sizeKeys={sizeKeys}
+                  selectedState={forcedState || activeSliderState}
+                  setSelectedState={setActiveSliderState}
+                  showMarks={activeSliderMarks}
+                  setShowMarks={setActiveSliderMarks}
+                  value={activeSliderValue}
+                  setValue={setActiveSliderValue}
+                  labelMode={activeSliderLabelMode}
+                  setLabelMode={setActiveSliderLabelMode}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "rangeslider" && (
+                <RangeSliderPropertiesPanel
+                  activeRangeSliderSize={activeRangeSliderSize}
+                  setActiveRangeSliderSize={setActiveRangeSliderSize}
+                  activeRangeSliderRadius={activeRangeSliderRadius}
+                  setActiveRangeSliderRadius={setActiveRangeSliderRadius}
+                  sizeKeys={sizeKeys}
+                  selectedState={forcedState || activeRangeSliderState}
+                  setSelectedState={setActiveRangeSliderState}
+                  showMarks={activeRangeSliderMarks}
+                  setShowMarks={setActiveRangeSliderMarks}
+                  value={activeRangeSliderValue}
+                  setValue={setActiveRangeSliderValue}
+                  labelMode={activeRangeSliderLabelMode}
+                  setLabelMode={setActiveRangeSliderLabelMode}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "title" && (
+                <TitlePropertiesPanel
+                  order={activeTitleOrder}
+                  setOrder={setActiveTitleOrder}
+                  sizeKey={activeTitleSize}
+                  setSizeKey={setActiveTitleSize}
+                  textWrap={activeTitleTextWrap}
+                  setTextWrap={setActiveTitleTextWrap}
+                  lineClamp={activeTitleLineClamp}
+                  setLineClamp={setActiveTitleLineClamp}
+                  text={activeTitleText}
+                  setText={setActiveTitleText}
+                />
+              )}
+              {activeComponent === "text" && (
+                <TextPropertiesPanel
+                  size={activeTextSizeToken}
+                  setSize={setActiveTextSizeToken}
+                  weightMode={activeTextWeightMode}
+                  setWeightMode={setActiveTextWeightMode}
+                  styleMode={activeTextStyleMode}
+                  setStyleMode={setActiveTextStyleMode}
+                  decoration={activeTextDecoration}
+                  setDecoration={setActiveTextDecoration}
+                  align={activeTextAlign}
+                  setAlign={setActiveTextAlign}
+                  transform={activeTextTransform}
+                  setTransform={setActiveTextTransform}
+                  colorMode={activeTextColorMode}
+                  setColorMode={setActiveTextColorMode}
+                  lineClamp={activeTextLineClamp}
+                  setLineClamp={setActiveTextLineClamp}
+                  truncate={activeTextTruncate}
+                  setTruncate={setActiveTextTruncate}
+                  text={activeTextText}
+                  setText={setActiveTextText}
                 />
               )}
               {activeComponent === "checkbox" && (
@@ -1116,7 +1379,7 @@ export default function App() {
                   forcedState={forcedState}
                 />
               )}
-              {!["button", "actionicon", "tabs", "switch", "checkbox", "radio", "chip", "tooltip", "notification", "textinput"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "checkbox", "radio", "chip", "tooltip", "notification", "textinput"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>
@@ -1125,16 +1388,10 @@ export default function App() {
           </div>
 
           <div
-            onMouseDown={handlePropertiesPanelDrag}
-            style={{ width: 4, cursor: "col-resize", flexShrink: 0, background: "transparent", transition: "background 0.15s" }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = "#373A40")}
-            onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-          />
-
-          <div
             style={{
               width: componentsPanelWidth,
               overflowY: "auto",
+              scrollbarGutter: "stable",
               padding: "16px 12px",
               flexShrink: 0,
             }}
