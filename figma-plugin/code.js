@@ -473,6 +473,12 @@ async function buildComponents(varMap) {
   progress("Creating TextInput component set...");
   var textInputSet = buildTextInputComponentSet(varMap, page, font);
 
+  progress("Creating Select component set...");
+  var selectSet = await buildSelectComponentSet(varMap, page, font);
+
+  progress("Creating Card component set...");
+  var cardSet = buildCardComponentSet(varMap, page, font);
+
   progress("Creating ActionIcon component set...");
   var actionIconSet = await buildActionIconComponentSet(varMap, page);
 
@@ -485,38 +491,29 @@ async function buildComponents(varMap) {
   progress("Creating Text component set...");
   var textSet = await buildTextComponentSet(varMap, page, font);
 
-  // Position component sets side by side with gaps
-  buttonSet.x = 0;
-  buttonSet.y = 0;
-  switchSet.x = buttonSet.x + buttonSet.width + compSetGap;
-  switchSet.y = 0;
-  sliderSet.x = switchSet.x + switchSet.width + compSetGap;
-  sliderSet.y = 0;
-  rangeSliderSet.x = sliderSet.x + sliderSet.width + compSetGap;
-  rangeSliderSet.y = 0;
-  checkboxSet.x = rangeSliderSet.x + rangeSliderSet.width + compSetGap;
-  checkboxSet.y = 0;
-  radioSet.x = checkboxSet.x + checkboxSet.width + compSetGap;
-  radioSet.y = 0;
-  chipSet.x = radioSet.x + radioSet.width + compSetGap;
-  chipSet.y = 0;
-  notificationSet.x = chipSet.x + chipSet.width + compSetGap;
-  notificationSet.y = 0;
-  tooltipSet.x = notificationSet.x + notificationSet.width + compSetGap;
-  tooltipSet.y = 0;
-  textInputSet.x = tooltipSet.x + tooltipSet.width + compSetGap;
-  textInputSet.y = 0;
-  actionIconSet.x = textInputSet.x + textInputSet.width + compSetGap;
-  actionIconSet.y = 0;
-  tabsSet.x = actionIconSet.x + actionIconSet.width + compSetGap;
-  tabsSet.y = 0;
-  titleSet.x = tabsSet.x + tabsSet.width + compSetGap;
-  titleSet.y = 0;
-  textSet.x = titleSet.x + titleSet.width + compSetGap;
-  textSet.y = 0;
+  // Position component sets in wrapped rows using rendered bounds
+  var generatedSets = [
+    buttonSet,
+    switchSet,
+    sliderSet,
+    rangeSliderSet,
+    checkboxSet,
+    radioSet,
+    chipSet,
+    notificationSet,
+    tooltipSet,
+    textInputSet,
+    selectSet,
+    cardSet,
+    actionIconSet,
+    tabsSet,
+    titleSet,
+    textSet,
+  ];
+  positionComponentSets(generatedSets, compSetGap);
 
   // Scroll viewport to show all component sets
-  figma.viewport.scrollAndZoomIntoView([buttonSet, switchSet, sliderSet, rangeSliderSet, checkboxSet, radioSet, chipSet, notificationSet, tooltipSet, textInputSet, actionIconSet, tabsSet, titleSet, textSet]);
+  figma.viewport.scrollAndZoomIntoView(generatedSets);
 
   progress("Components created.");
 }
@@ -525,7 +522,7 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Tooltip" || child.name === "TextInput" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Title" || child.name === "Text")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Tooltip" || child.name === "TextInput" || child.name === "Select" || child.name === "Card" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Title" || child.name === "Text")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
@@ -536,6 +533,38 @@ function cleanupExistingComponents(page) {
     )) {
       child.remove();
     }
+  }
+}
+
+function nodeRenderedWidth(node) {
+  try {
+    if (node && node.absoluteRenderBounds && node.absoluteRenderBounds.width) {
+      return node.absoluteRenderBounds.width;
+    }
+  } catch (e) {}
+  if (node && node.width) return node.width;
+  return 0;
+}
+
+function nodeRenderedHeight(node) {
+  try {
+    if (node && node.absoluteRenderBounds && node.absoluteRenderBounds.height) {
+      return node.absoluteRenderBounds.height;
+    }
+  } catch (e) {}
+  if (node && node.height) return node.height;
+  return 0;
+}
+
+function positionComponentSets(sets, gap) {
+  var x = 0;
+  for (var i = 0; i < sets.length; i++) {
+    var set = sets[i];
+    if (!set) continue;
+    var w = nodeRenderedWidth(set);
+    set.x = x;
+    set.y = 0;
+    x += w + gap;
   }
 }
 
@@ -1366,7 +1395,7 @@ function buildTitleComponentSet(varMap, page, font) {
   var colGap = 16;
   var rowGap = 16;
   var colWidth = 560 + colGap;
-  var rowHeight = 80 + rowGap;
+  var rowHeight = 150 + rowGap;
 
   var defaultFontSizeByOrder = { 1: 34, 2: 28, 3: 24, 4: 20, 5: 16, 6: 14 };
 
@@ -1378,8 +1407,9 @@ function buildTitleComponentSet(varMap, page, font) {
 
       var comp = figma.createComponent();
       comp.name = "Order=" + order + ", Size=" + capSize;
-      comp.resize(560, 80);
+      comp.resize(560, 150);
       comp.fills = [];
+      comp.clipsContent = true;
 
       var textNode = figma.createText();
       textNode.name = "title";
@@ -1387,11 +1417,13 @@ function buildTitleComponentSet(varMap, page, font) {
       textNode.characters = "Build fully functional accessible web applications faster than ever";
       textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
       textNode.fontSize = defaultFontSizeByOrder[order] || 20;
-      textNode.textAutoResize = "WIDTH_AND_HEIGHT";
+      textNode.resize(520, 100);
+      textNode.textAutoResize = "HEIGHT";
 
       var sizeKey = sizeMode === "auto" ? "h" + order : sizeMode;
       var tokenVar = varMap["title/font-size-" + sizeKey];
       bindVar(textNode, "fontSize", tokenVar);
+      bindVar(textNode, "lineHeight", varMap["title/line-height-" + sizeKey]);
       bindPaintVar(textNode, "fills", 0, varMap["title/color"]);
 
       comp.appendChild(textNode);
@@ -1420,7 +1452,7 @@ async function buildTextComponentSet(varMap, page, fallbackFont) {
   var colGap = 18;
   var rowGap = 16;
   var colWidth = 560 + colGap;
-  var rowHeight = 84 + rowGap;
+  var rowHeight = 130 + rowGap;
 
   var fontByWeight = {
     regular: fallbackFont,
@@ -1468,18 +1500,21 @@ async function buildTextComponentSet(varMap, page, fallbackFont) {
           "Size=" + capSize +
           ", Weight=" + capWeight +
           ", Color=" + capColor;
-        comp.resize(560, 84);
+        comp.resize(560, 130);
         comp.fills = [];
+        comp.clipsContent = true;
 
         var textNode = figma.createText();
         textNode.name = "text";
         textNode.fontName = fontByWeight[weight] || fallbackFont;
         textNode.characters = "Build fully functional accessible web applications faster than ever.";
         textNode.fontSize = 16;
-        textNode.textAutoResize = "WIDTH_AND_HEIGHT";
+        textNode.resize(520, 90);
+        textNode.textAutoResize = "HEIGHT";
         textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
 
         bindVar(textNode, "fontSize", varMap["text/font-size-" + size]);
+        bindVar(textNode, "lineHeight", varMap["text/line-height-" + size]);
         bindPaintVar(textNode, "fills", 0, varMap[textColorPath(color)]);
 
         comp.appendChild(textNode);
@@ -2751,6 +2786,488 @@ function textInputColorPath(variant, property, state) {
     return "textinput/" + variant + "-" + property;
   }
   return "textinput/" + variant + "-" + property + "-" + state;
+}
+
+// ---------------------------------------------------------------------------
+// Select
+// ---------------------------------------------------------------------------
+
+async function buildSelectComponentSet(varMap, page, font) {
+  var variants = ["default", "filled"];
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "error", "disabled"];
+  var labelModes = ["none", "label", "required"];
+  var components = [];
+
+  // Find a chevron/down icon component from icon components or icon sets.
+  var chevronIconComp = await findSelectChevronIconComponent();
+  if (chevronIconComp) console.log("[Select] Found chevron icon: " + chevronIconComp.name);
+  else console.log("[Select] WARNING: chevron/down icon not found on icons page, falling back to text glyph");
+
+  var sizeHeights = { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
+  var gap = 20;
+  var colWidth = 220;
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+
+    for (var li = 0; li < labelModes.length; li++) {
+      var labelMode = labelModes[li];
+      var capLabelMode = labelMode.charAt(0).toUpperCase() + labelMode.slice(1);
+      var hasLabel = (labelMode !== "none");
+      var hasAsterisk = (labelMode === "required");
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size.toUpperCase();
+
+        for (var ri = 0; ri < radii.length; ri++) {
+          var rad = radii[ri];
+          var capRad = rad.toUpperCase();
+
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+            var comp = figma.createComponent();
+            comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", Radius=" + capRad + ", State=" + capState + ", Label=" + capLabelMode;
+            comp.layoutMode = "VERTICAL";
+            comp.primaryAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "AUTO";
+            comp.itemSpacing = 4;
+            comp.fills = [];
+
+            if (varMap["select/label-gap"]) {
+              bindVar(comp, "itemSpacing", varMap["select/label-gap"]);
+            }
+
+            if (hasLabel) {
+              var labelRow = figma.createFrame();
+              labelRow.name = "LabelRow";
+              labelRow.layoutMode = "HORIZONTAL";
+              labelRow.primaryAxisSizingMode = "AUTO";
+              labelRow.counterAxisSizingMode = "AUTO";
+              labelRow.itemSpacing = 2;
+              labelRow.fills = [];
+
+              var labelNode = figma.createText();
+              labelNode.name = "Label";
+              labelNode.fontName = font;
+              labelNode.characters = "Label";
+              labelNode.fontSize = 14;
+              labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              if (varMap["select/label-color"]) {
+                bindPaintVar(labelNode, "fills", 0, varMap["select/label-color"]);
+              }
+              if (varMap["select/label-font-size"]) {
+                bindVar(labelNode, "fontSize", varMap["select/label-font-size"]);
+              }
+              labelRow.appendChild(labelNode);
+
+              if (hasAsterisk) {
+                var asteriskNode = figma.createText();
+                asteriskNode.name = "Asterisk";
+                asteriskNode.fontName = font;
+                asteriskNode.characters = " *";
+                asteriskNode.fontSize = 14;
+                asteriskNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+                if (varMap["select/asterisk-color"]) {
+                  bindPaintVar(asteriskNode, "fills", 0, varMap["select/asterisk-color"]);
+                }
+                if (varMap["select/label-font-size"]) {
+                  bindVar(asteriskNode, "fontSize", varMap["select/label-font-size"]);
+                }
+                labelRow.appendChild(asteriskNode);
+              }
+
+              comp.appendChild(labelRow);
+            }
+
+            var input = figma.createFrame();
+            input.name = "SelectInput";
+            input.layoutMode = "HORIZONTAL";
+            input.primaryAxisSizingMode = "FIXED";
+            input.counterAxisSizingMode = "AUTO";
+            input.primaryAxisAlignItems = "SPACE_BETWEEN";
+            input.counterAxisAlignItems = "CENTER";
+            input.resize(200, sizeHeights[size]);
+            input.cornerRadius = 4;
+            input.paddingLeft = 10;
+            input.paddingRight = 10;
+            input.minHeight = sizeHeights[size];
+            input.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            input.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+            input.strokeWeight = 1;
+            input.strokeAlign = "INSIDE";
+
+            if (varMap["select/height-" + size]) bindVar(input, "minHeight", varMap["select/height-" + size]);
+            if (varMap["select/padding-x-" + size]) {
+              bindVar(input, "paddingLeft", varMap["select/padding-x-" + size]);
+              bindVar(input, "paddingRight", varMap["select/padding-x-" + size]);
+            }
+            if (varMap["select/radius-" + rad]) {
+              bindVar(input, "topLeftRadius", varMap["select/radius-" + rad]);
+              bindVar(input, "topRightRadius", varMap["select/radius-" + rad]);
+              bindVar(input, "bottomLeftRadius", varMap["select/radius-" + rad]);
+              bindVar(input, "bottomRightRadius", varMap["select/radius-" + rad]);
+            }
+            if (varMap["select/border-width"]) bindVar(input, "strokeWeight", varMap["select/border-width"]);
+
+            var bgPath = selectColorPath(variant, "background", state);
+            if (varMap[bgPath]) bindPaintVar(input, "fills", 0, varMap[bgPath]);
+            var borderPath = selectColorPath(variant, "border", state);
+            if (varMap[borderPath]) bindPaintVar(input, "strokes", 0, varMap[borderPath]);
+
+            var valueNode = figma.createText();
+            valueNode.name = (state === "focus") ? "Value" : "Placeholder";
+            valueNode.fontName = font;
+            valueNode.characters = (state === "focus") ? "Option one" : "Pick one";
+            valueNode.fontSize = 14;
+            valueNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+            if (state === "focus") {
+              if (varMap["select/text"]) bindPaintVar(valueNode, "fills", 0, varMap["select/text"]);
+            } else if (state === "disabled") {
+              if (varMap["select/text-disabled"]) bindPaintVar(valueNode, "fills", 0, varMap["select/text-disabled"]);
+            } else {
+              if (varMap["select/placeholder"]) bindPaintVar(valueNode, "fills", 0, varMap["select/placeholder"]);
+            }
+            if (varMap["select/font-size-" + size]) bindVar(valueNode, "fontSize", varMap["select/font-size-" + size]);
+            input.appendChild(valueNode);
+
+            var chevronSlot = figma.createFrame();
+            chevronSlot.name = "ChevronSlot";
+            chevronSlot.layoutMode = "HORIZONTAL";
+            chevronSlot.primaryAxisSizingMode = "FIXED";
+            chevronSlot.counterAxisSizingMode = "FIXED";
+            chevronSlot.primaryAxisAlignItems = "CENTER";
+            chevronSlot.counterAxisAlignItems = "CENTER";
+            chevronSlot.fills = [];
+            chevronSlot.strokes = [];
+            chevronSlot.resize(20, 20);
+            input.appendChild(chevronSlot);
+
+            if (chevronIconComp) {
+              var chevronInstance = chevronIconComp.createInstance();
+              chevronInstance.name = "Chevron";
+              try {
+                chevronInstance.resize(12, 12);
+              } catch (e) {
+                // Keep default icon size if resize is not allowed.
+              }
+              chevronSlot.appendChild(chevronInstance);
+            } else {
+              var chevronNode = figma.createText();
+              chevronNode.name = "Chevron";
+              chevronNode.fontName = font;
+              chevronNode.characters = "v";
+              chevronNode.fontSize = 12;
+              chevronNode.fills = [{ type: "SOLID", color: { r: 0.45, g: 0.45, b: 0.45 } }];
+              if (varMap["select/chevron-color"]) bindPaintVar(chevronNode, "fills", 0, varMap["select/chevron-color"]);
+              chevronSlot.appendChild(chevronNode);
+            }
+
+            if (state === "focus") {
+              input.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.87, a: 0.25 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
+
+            comp.appendChild(input);
+
+            if (state === "error") {
+              var errorNode = figma.createText();
+              errorNode.name = "Error";
+              errorNode.fontName = font;
+              errorNode.characters = "Error message";
+              errorNode.fontSize = 12;
+              errorNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+              if (varMap["select/error-color"]) bindPaintVar(errorNode, "fills", 0, varMap["select/error-color"]);
+              if (varMap["select/error-font-size"]) bindVar(errorNode, "fontSize", varMap["select/error-font-size"]);
+              comp.appendChild(errorNode);
+            }
+
+            if (state === "disabled") comp.opacity = 0.6;
+
+            var colIndex = vi * labelModes.length + li;
+            var rowIndex = (si * radii.length + ri) * states.length + sti;
+            comp.x = colIndex * (colWidth + gap);
+            comp.y = rowIndex * 80;
+            page.appendChild(comp);
+            components.push(comp);
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " select variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Select";
+  return componentSet;
+}
+
+function selectColorPath(variant, property, state) {
+  if (state === "default") return "select/" + variant + "-" + property;
+  return "select/" + variant + "-" + property + "-" + state;
+}
+
+async function findSelectChevronIconComponent() {
+  var iconCandidates = [];
+  var iconsPage = null;
+
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var page = figma.root.children[pi];
+    if (page.type !== "PAGE") continue;
+    await page.loadAsync();
+    if (!iconsPage && page.name && page.name.toLowerCase() === "icons") {
+      iconsPage = page;
+    }
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function(n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+
+  // Expand component sets so we can instance-swap from their child components.
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") {
+          iconCandidates.push(setChildren[ci]);
+        }
+      }
+    }
+  }
+
+  var preferred = null;
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var name = iconCandidates[j].name.toLowerCase();
+    if (
+      name.indexOf("chevron-down") >= 0 ||
+      (name.indexOf("chevron") >= 0 && name.indexOf("down") >= 0) ||
+      name.indexOf("caret-down") >= 0 ||
+      (name.indexOf("caret") >= 0 && name.indexOf("down") >= 0) ||
+      name.indexOf("angle-down") >= 0 ||
+      name.indexOf("arrow-down") >= 0
+    ) {
+      preferred = iconCandidates[j];
+      break;
+    }
+  }
+  if (preferred) return preferred;
+
+  // Fallback: any chevron/caret/arrow-style icon.
+  for (var k = 0; k < iconCandidates.length; k++) {
+    var fallbackName = iconCandidates[k].name.toLowerCase();
+    if (
+      fallbackName.indexOf("chevron") >= 0 ||
+      fallbackName.indexOf("caret") >= 0 ||
+      fallbackName.indexOf("arrow") >= 0
+    ) {
+      return iconCandidates[k];
+    }
+  }
+
+  // Last-resort fallback to first available icon component.
+  if (iconCandidates.length > 0) {
+    var sorted = iconCandidates.slice().sort(function(a, b) {
+      return a.name.localeCompare(b.name);
+    });
+    return sorted[0];
+  }
+
+  return null;
+}
+
+// ---------------------------------------------------------------------------
+// Card
+// ---------------------------------------------------------------------------
+
+function buildCardComponentSet(varMap, page, font) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var borderModes = ["on", "off"];
+  var shadowModes = ["off", "on"];
+  var components = [];
+
+  var rowGap = 24;
+  var colGap = 28;
+  var colWidth = 360 + colGap;
+  var rowHeight = 280 + rowGap;
+
+  for (var si = 0; si < sizes.length; si++) {
+    var size = sizes[si];
+    var capSize = size.toUpperCase();
+    for (var ri = 0; ri < radii.length; ri++) {
+      var radius = radii[ri];
+      var capRadius = radius.toUpperCase();
+      for (var bi = 0; bi < borderModes.length; bi++) {
+        var withBorder = borderModes[bi] === "on";
+        for (var shi = 0; shi < shadowModes.length; shi++) {
+          var withShadow = shadowModes[shi] === "on";
+          var comp = figma.createComponent();
+          comp.name =
+            "Size=" + capSize +
+            ", Radius=" + capRadius +
+            ", Border=" + (withBorder ? "On" : "Off") +
+            ", Shadow=" + (withShadow ? "On" : "Off") +
+            ", Section=On, Badge=On";
+
+          comp.layoutMode = "VERTICAL";
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "FIXED";
+          comp.counterAxisAlignItems = "MIN";
+          comp.itemSpacing = 0;
+          comp.resize(320, 180);
+          comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          comp.clipsContent = true;
+          if (varMap["card/background"]) bindPaintVar(comp, "fills", 0, varMap["card/background"]);
+          if (varMap["card/radius-" + radius]) {
+            bindVar(comp, "topLeftRadius", varMap["card/radius-" + radius]);
+            bindVar(comp, "topRightRadius", varMap["card/radius-" + radius]);
+            bindVar(comp, "bottomLeftRadius", varMap["card/radius-" + radius]);
+            bindVar(comp, "bottomRightRadius", varMap["card/radius-" + radius]);
+          }
+          if (varMap["card/padding-" + size]) {
+            bindVar(comp, "paddingLeft", varMap["card/padding-" + size]);
+            bindVar(comp, "paddingRight", varMap["card/padding-" + size]);
+            bindVar(comp, "paddingTop", varMap["card/padding-" + size]);
+            bindVar(comp, "paddingBottom", varMap["card/padding-" + size]);
+          } else {
+            comp.paddingLeft = 16;
+            comp.paddingRight = 16;
+            comp.paddingTop = 16;
+            comp.paddingBottom = 16;
+          }
+
+          comp.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+          if (varMap["card/border"]) bindPaintVar(comp, "strokes", 0, varMap["card/border"]);
+          if (withBorder) {
+            comp.strokeWeight = 1;
+            if (varMap["card/border-width"]) bindVar(comp, "strokeWeight", varMap["card/border-width"]);
+          } else {
+            comp.strokeWeight = 0;
+          }
+
+          if (withShadow) {
+            comp.effects = [{
+              type: "DROP_SHADOW",
+              color: { r: 0, g: 0, b: 0, a: 0.18 },
+              offset: { x: 0, y: 6 },
+              radius: 20,
+              spread: 0,
+              visible: true,
+              blendMode: "NORMAL"
+            }];
+          }
+
+          var section = figma.createFrame();
+          section.name = "Section";
+          section.layoutMode = "NONE";
+          section.primaryAxisSizingMode = "FIXED";
+          section.counterAxisSizingMode = "FIXED";
+          section.layoutAlign = "STRETCH";
+          section.resize(320, 110);
+          section.fills = [{ type: "SOLID", color: { r: 0.93, g: 0.95, b: 0.98 } }];
+          if (varMap["card/section-background"]) bindPaintVar(section, "fills", 0, varMap["card/section-background"]);
+          if (varMap["card/section-height"]) bindVar(section, "minHeight", varMap["card/section-height"]);
+          comp.appendChild(section);
+
+          var body = figma.createFrame();
+          body.name = "Body";
+          body.layoutMode = "VERTICAL";
+          body.primaryAxisSizingMode = "AUTO";
+          body.counterAxisSizingMode = "AUTO";
+          body.counterAxisAlignItems = "MIN";
+          body.itemSpacing = 8;
+          body.layoutAlign = "STRETCH";
+          body.fills = [];
+          if (varMap["card/gap-" + size]) bindVar(body, "itemSpacing", varMap["card/gap-" + size]);
+          comp.appendChild(body);
+
+          var topRow = figma.createFrame();
+          topRow.name = "TopRow";
+          topRow.layoutMode = "HORIZONTAL";
+          topRow.primaryAxisSizingMode = "AUTO";
+          topRow.counterAxisSizingMode = "AUTO";
+          topRow.primaryAxisAlignItems = "SPACE_BETWEEN";
+          topRow.counterAxisAlignItems = "CENTER";
+          topRow.layoutAlign = "STRETCH";
+          topRow.fills = [];
+          body.appendChild(topRow);
+
+          var titleNode = figma.createText();
+          titleNode.name = "Title";
+          titleNode.fontName = font;
+          titleNode.characters = "PlanetScope vessel";
+          titleNode.fontSize = 14;
+          titleNode.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.1 } }];
+          if (varMap["card/title"]) bindPaintVar(titleNode, "fills", 0, varMap["card/title"]);
+          if (varMap["card/title-font-size-" + size]) bindVar(titleNode, "fontSize", varMap["card/title-font-size-" + size]);
+          topRow.appendChild(titleNode);
+
+          var badge = figma.createFrame();
+          badge.name = "Badge";
+          badge.layoutMode = "HORIZONTAL";
+          badge.primaryAxisSizingMode = "AUTO";
+          badge.counterAxisSizingMode = "AUTO";
+          badge.paddingLeft = 8;
+          badge.paddingRight = 8;
+          badge.paddingTop = 4;
+          badge.paddingBottom = 4;
+          badge.cornerRadius = 999;
+          badge.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          if (varMap["card/badge-background"]) bindPaintVar(badge, "fills", 0, varMap["card/badge-background"]);
+
+          var badgeText = figma.createText();
+          badgeText.name = "BadgeText";
+          badgeText.fontName = font;
+          badgeText.characters = "New";
+          badgeText.fontSize = 12;
+          badgeText.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          if (varMap["card/badge-color"]) bindPaintVar(badgeText, "fills", 0, varMap["card/badge-color"]);
+          badge.appendChild(badgeText);
+          topRow.appendChild(badge);
+
+          var descriptionNode = figma.createText();
+          descriptionNode.name = "Description";
+          descriptionNode.fontName = font;
+          descriptionNode.characters = "Detected vessel metadata and imagery details from latest satellite capture.";
+          descriptionNode.fontSize = 12;
+          descriptionNode.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+          descriptionNode.textAutoResize = "HEIGHT";
+          descriptionNode.resize(288, descriptionNode.height);
+          if (varMap["card/description"]) bindPaintVar(descriptionNode, "fills", 0, varMap["card/description"]);
+          if (varMap["card/description-font-size-" + size]) bindVar(descriptionNode, "fontSize", varMap["card/description-font-size-" + size]);
+          body.appendChild(descriptionNode);
+
+          var colIndex = ri * borderModes.length * shadowModes.length + bi * shadowModes.length + shi;
+          var rowIndex = si;
+          comp.x = colIndex * colWidth;
+          comp.y = rowIndex * rowHeight;
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " card variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Card";
+  return componentSet;
 }
 
 // ---------------------------------------------------------------------------

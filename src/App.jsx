@@ -50,9 +50,17 @@ import {
   TextInputPropertiesPanel,
 } from "./components/panels/TextInputPreviewPanel";
 import {
+  SelectPreviewContent,
+  SelectPropertiesPanel,
+} from "./components/panels/SelectPreviewPanel";
+import {
   NotificationPreviewContent,
   NotificationPropertiesPanel,
 } from "./components/panels/NotificationPreviewPanel";
+import {
+  CardPreviewContent,
+  CardPropertiesPanel,
+} from "./components/panels/CardPreviewPanel";
 import {
   SliderPreviewContent,
   SliderPropertiesPanel,
@@ -81,6 +89,7 @@ const VARIANTS_BY_COMPONENT = {
   chip: ["filled", "light", "outline"],
   radio: ["filled", "outline"],
   textinput: ["default", "filled"],
+  select: ["default", "filled"],
 };
 
 export default function App() {
@@ -152,6 +161,8 @@ export default function App() {
   const radioDefault = getComponentDefaultSize(brands, activeBrand, "radio") || "md";
   const chipDefault = getComponentDefaultSize(brands, activeBrand, "chip") || "md";
   const textInputDefault = getComponentDefaultSize(brands, activeBrand, "textinput") || "sm";
+  const selectDefault = getComponentDefaultSize(brands, activeBrand, "select") || "sm";
+  const cardDefault = getComponentDefaultSize(brands, activeBrand, "card") || "md";
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
   const [activeActionIconSize, setActiveActionIconSize] = useState(actionIconDefault);
@@ -218,6 +229,26 @@ export default function App() {
   const [activeTextInputWithAsterisk, setActiveTextInputWithAsterisk] = useState(false);
   const [activeTextInputShowError, setActiveTextInputShowError] = useState(false);
   const [activeTextInputErrorText, setActiveTextInputErrorText] = useState("Error message");
+  const [activeSelectSize, setActiveSelectSize] = useState(selectDefault);
+  const [activeSelectRadius, setActiveSelectRadius] = useState(selectDefault);
+  const [activeSelectState, setActiveSelectState] = useState("default");
+  const [activeSelectShowLabel, setActiveSelectShowLabel] = useState(true);
+  const [activeSelectLabelText, setActiveSelectLabelText] = useState("Label");
+  const [activeSelectWithAsterisk, setActiveSelectWithAsterisk] = useState(false);
+  const [activeSelectShowError, setActiveSelectShowError] = useState(false);
+  const [activeSelectErrorText, setActiveSelectErrorText] = useState("Error message");
+  const [activeSelectSearchable, setActiveSelectSearchable] = useState(false);
+  const [activeSelectClearable, setActiveSelectClearable] = useState(false);
+  const [activeCardSize, setActiveCardSize] = useState(cardDefault);
+  const [activeCardRadius, setActiveCardRadius] = useState(cardDefault);
+  const [activeCardWithBorder, setActiveCardWithBorder] = useState(true);
+  const [activeCardWithShadow, setActiveCardWithShadow] = useState(false);
+  const [activeCardShowSection, setActiveCardShowSection] = useState(true);
+  const [activeCardShowBadge, setActiveCardShowBadge] = useState(true);
+  const [activeCardTitle, setActiveCardTitle] = useState("PlanetScope vessel");
+  const [activeCardDescription, setActiveCardDescription] = useState(
+    "Detected vessel metadata and imagery details from latest satellite capture."
+  );
   const [activeNotificationRadius, setActiveNotificationRadius] = useState("md");
   const [activeNotificationColor, setActiveNotificationColor] = useState("blue");
   const [activeNotificationWithBorder, setActiveNotificationWithBorder] = useState(false);
@@ -241,6 +272,7 @@ export default function App() {
     const cbDef = getComponentDefaultSize(brands, newBrand, "checkbox") || "md";
     const rdDef = getComponentDefaultSize(brands, newBrand, "radio") || "md";
     const chDef = getComponentDefaultSize(brands, newBrand, "chip") || "md";
+    const caDef = getComponentDefaultSize(brands, newBrand, "card") || "md";
     setActiveSize(btnDef);
     setActiveActionIconSize(aiDef);
     setActiveActionIconRadius(aiDef);
@@ -256,8 +288,13 @@ export default function App() {
     setActiveChipSize(chDef);
     setActiveChipRadius(chDef);
     const tiDef = getComponentDefaultSize(brands, newBrand, "textinput") || "sm";
+    const seDef = getComponentDefaultSize(brands, newBrand, "select") || "sm";
     setActiveTextInputSize(tiDef);
     setActiveTextInputRadius(tiDef);
+    setActiveSelectSize(seDef);
+    setActiveSelectRadius(seDef);
+    setActiveCardSize(caDef);
+    setActiveCardRadius(caDef);
   }, [brands]);
 
   // Sync active size when component changes
@@ -353,11 +390,32 @@ export default function App() {
       setActiveTextInputShowError(false);
       setActiveTextInputErrorText("Error message");
       setActiveVariant("default");
+    } else if (newComp === "select") {
+      setActiveSelectSize(selectDefault);
+      setActiveSelectRadius(selectDefault);
+      setActiveSelectState("default");
+      setActiveSelectShowLabel(true);
+      setActiveSelectLabelText("Label");
+      setActiveSelectWithAsterisk(false);
+      setActiveSelectShowError(false);
+      setActiveSelectErrorText("Error message");
+      setActiveSelectSearchable(false);
+      setActiveSelectClearable(false);
+      setActiveVariant("default");
+    } else if (newComp === "card") {
+      setActiveCardSize(cardDefault);
+      setActiveCardRadius(cardDefault);
+      setActiveCardWithBorder(true);
+      setActiveCardWithShadow(false);
+      setActiveCardShowSection(true);
+      setActiveCardShowBadge(true);
+      setActiveCardTitle("PlanetScope vessel");
+      setActiveCardDescription("Detected vessel metadata and imagery details from latest satellite capture.");
     } else if (newComp === "tooltip") {
       setActiveTooltipPosition("top");
       setActiveTooltipWithArrow(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -459,7 +517,7 @@ export default function App() {
       forcedIndeterminate = true;
     }
 
-    if (["button", "actionicon", "tabs", "checkbox", "chip", "radio", "textinput"].includes(activeComponent)) {
+    if (["button", "actionicon", "tabs", "checkbox", "chip", "radio", "textinput", "select"].includes(activeComponent)) {
       const variantSegment = parts[1];
       const knownVariants = {
         button: ["filled", "outlined", "ghost"],
@@ -469,6 +527,7 @@ export default function App() {
         chip: ["filled", "light", "outline"],
         radio: ["filled", "outline"],
         textinput: ["default", "filled"],
+        select: ["default", "filled"],
       };
       if (knownVariants[activeComponent]?.includes(variantSegment)) {
         forcedVariant = variantSegment;
@@ -497,6 +556,8 @@ export default function App() {
             ? forcedState || activeChipState
           : activeComponent === "textinput"
             ? forcedState || activeTextInputState
+          : activeComponent === "select"
+            ? forcedState || activeSelectState
           : forcedState;
 
   const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token]) => {
@@ -605,6 +666,7 @@ export default function App() {
       radio: ["filled", "outline"],
       chip: ["filled", "light", "outline"],
       textinput: ["default", "filled"],
+      select: ["default", "filled"],
     };
     const variants = variantsByComponent[activeComponent];
     if (!variants) return true;
@@ -646,6 +708,7 @@ export default function App() {
       activeComponent === "actionicon" ||
       activeComponent === "tabs" ||
       activeComponent === "textinput"
+      || activeComponent === "select"
     ) {
       if (!variants.includes(variantSegment)) return true;
       if (variantSegment !== activeVariant) return false;
@@ -671,6 +734,7 @@ export default function App() {
       checkbox: ["filled", "outlined"],
       radio: ["filled", "outline"],
       textinput: ["default", "filled"],
+      select: ["default", "filled"],
     };
     const variants = variantsByComponent[activeComponent];
     if (!variants) return;
@@ -702,6 +766,8 @@ export default function App() {
     radio: activeRadioSize,
     chip: activeChipSize,
     textinput: activeTextInputSize,
+    select: activeSelectSize,
+    card: activeCardSize,
   };
   const activeDimensionSize = activeSizeByComponent[activeComponent] || sizeKeys[0];
   const getSelectedDimensionSize = (tokenName) => {
@@ -713,6 +779,12 @@ export default function App() {
     }
     if (activeComponent === "textinput" && tokenName === "textinput-radius") {
       return activeTextInputRadius;
+    }
+    if (activeComponent === "select" && tokenName === "select-radius") {
+      return activeSelectRadius;
+    }
+    if (activeComponent === "card" && tokenName === "card-radius") {
+      return activeCardRadius;
     }
     if (activeComponent === "tabs" && tokenName === "tabs-radius") {
       return activeTabsRadius;
@@ -1119,6 +1191,40 @@ export default function App() {
                   errorText={activeTextInputErrorText}
                 />
               )}
+              {activeComponent === "select" && (
+                <SelectPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  activeSelectSize={activeSelectSize}
+                  activeSelectRadius={activeSelectRadius}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedState={forcedState || activeSelectState}
+                  showLabel={activeSelectShowLabel}
+                  labelText={activeSelectLabelText}
+                  withAsterisk={activeSelectWithAsterisk}
+                  showError={activeSelectShowError}
+                  errorText={activeSelectErrorText}
+                  searchable={activeSelectSearchable}
+                  clearable={activeSelectClearable}
+                />
+              )}
+              {activeComponent === "card" && (
+                <CardPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  size={activeCardSize}
+                  radius={activeCardRadius}
+                  withBorder={activeCardWithBorder}
+                  withShadow={activeCardWithShadow}
+                  showSection={activeCardShowSection}
+                  showBadge={activeCardShowBadge}
+                  title={activeCardTitle}
+                  description={activeCardDescription}
+                />
+              )}
             </div>
           </div>
 
@@ -1379,7 +1485,55 @@ export default function App() {
                   forcedState={forcedState}
                 />
               )}
-              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "checkbox", "radio", "chip", "tooltip", "notification", "textinput"].includes(activeComponent) && (
+              {activeComponent === "select" && (
+                <SelectPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeSelectSize={activeSelectSize}
+                  setActiveSelectSize={setActiveSelectSize}
+                  activeSelectRadius={activeSelectRadius}
+                  setActiveSelectRadius={setActiveSelectRadius}
+                  sizeKeys={sizeKeys}
+                  selectedState={forcedState || activeSelectState}
+                  setSelectedState={setActiveSelectState}
+                  showLabel={activeSelectShowLabel}
+                  setShowLabel={setActiveSelectShowLabel}
+                  labelText={activeSelectLabelText}
+                  setLabelText={setActiveSelectLabelText}
+                  withAsterisk={activeSelectWithAsterisk}
+                  setWithAsterisk={setActiveSelectWithAsterisk}
+                  showError={activeSelectShowError}
+                  setShowError={setActiveSelectShowError}
+                  errorText={activeSelectErrorText}
+                  setErrorText={setActiveSelectErrorText}
+                  searchable={activeSelectSearchable}
+                  setSearchable={setActiveSelectSearchable}
+                  clearable={activeSelectClearable}
+                  setClearable={setActiveSelectClearable}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "card" && (
+                <CardPropertiesPanel
+                  size={activeCardSize}
+                  setSize={setActiveCardSize}
+                  radius={activeCardRadius}
+                  setRadius={setActiveCardRadius}
+                  withBorder={activeCardWithBorder}
+                  setWithBorder={setActiveCardWithBorder}
+                  withShadow={activeCardWithShadow}
+                  setWithShadow={setActiveCardWithShadow}
+                  showSection={activeCardShowSection}
+                  setShowSection={setActiveCardShowSection}
+                  showBadge={activeCardShowBadge}
+                  setShowBadge={setActiveCardShowBadge}
+                  title={activeCardTitle}
+                  setTitle={setActiveCardTitle}
+                  description={activeCardDescription}
+                  setDescription={setActiveCardDescription}
+                />
+              )}
+              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "checkbox", "radio", "chip", "tooltip", "notification", "textinput", "select", "card"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

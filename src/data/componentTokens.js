@@ -551,6 +551,31 @@ export const COMPONENT_TOKENS = {
     "rangeslider-mark-size": { type: "FLOAT", unit: "px", value: 8, figmaPath: "rangeslider/mark-size" },
   },
 
+  card: {
+    // ── COLOR TOKENS ──
+    "card-background":         { type: "COLOR", semantic: "surface-default",      figmaPath: "card/background" },
+    "card-border":             { type: "COLOR", semantic: "border-default",       figmaPath: "card/border" },
+    "card-title":              { type: "COLOR", semantic: "text-default",         figmaPath: "card/title" },
+    "card-description":        { type: "COLOR", semantic: "text-default",         figmaPath: "card/description" },
+    "card-section-background": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "card/section-background" },
+    "card-badge-background":   { type: "COLOR", semantic: "interactive-primary",  figmaPath: "card/badge-background" },
+    "card-badge-color":        { type: "COLOR", semantic: "text-on-interactive",  figmaPath: "card/badge-color" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "card-padding":               { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 12, md: 16, lg: 20, xl: 24 }, figmaPath: "card/padding" },
+    "card-gap":                   { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 14, xl: 16 }, figmaPath: "card/gap" },
+    "card-radius":                { type: "FLOAT", unit: "px", sizes: { xs: 2,  sm: 4,  md: 8,  lg: 16, xl: 32 }, figmaPath: "card/radius" },
+    "card-title-font-size":       { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 13, md: 14, lg: 16, xl: 18 }, figmaPath: "card/title-font-size" },
+    "card-description-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "card/description-font-size" },
+
+    // ── FLOAT TOKENS (single value) ──
+    "card-border-width":   { type: "FLOAT", unit: "px", value: 1,  figmaPath: "card/border-width" },
+    "card-section-height": { type: "FLOAT", unit: "px", value: 110, figmaPath: "card/section-height" },
+    "card-shadow-blur":    { type: "FLOAT", unit: "px", value: 20, figmaPath: "card/shadow-blur" },
+    "card-shadow-offset-y":{ type: "FLOAT", unit: "px", value: 6,  figmaPath: "card/shadow-offset-y" },
+    "card-shadow-alpha":   { type: "FLOAT", unit: "", value: 18,   figmaPath: "card/shadow-alpha" },
+  },
+
   notification: {
     // ── COLOR TOKENS ──
     "notification-background": { type: "COLOR", semantic: "surface-default", figmaPath: "notification/background" },
@@ -636,6 +661,62 @@ export const COMPONENT_TOKENS = {
     "textinput-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "textinput/error-gap" },
   },
 
+  select: {
+    // ── DEFAULT VARIANT — BACKGROUND (per state) ──
+    "select-default-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "select/default-background" },
+    "select-default-background-hover":    { type: "COLOR", semantic: "surface-default",      figmaPath: "select/default-background-hover" },
+    "select-default-background-focus":    { type: "COLOR", semantic: "surface-default",      figmaPath: "select/default-background-focus" },
+    "select-default-background-error":    { type: "COLOR", semantic: "surface-default",      figmaPath: "select/default-background-error" },
+    "select-default-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "select/default-background-disabled" },
+
+    // ── DEFAULT VARIANT — BORDER (per state) ──
+    "select-default-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "select/default-border" },
+    "select-default-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "select/default-border-hover" },
+    "select-default-border-focus":    { type: "COLOR", semantic: "border-focus",    figmaPath: "select/default-border-focus" },
+    "select-default-border-error":    { type: "COLOR", semantic: "feedback-error",  figmaPath: "select/default-border-error" },
+    "select-default-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "select/default-border-disabled" },
+
+    // ── FILLED VARIANT — BACKGROUND (per state) ──
+    "select-filled-background":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "select/filled-background" },
+    "select-filled-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "select/filled-background-hover" },
+    "select-filled-background-focus":    { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "select/filled-background-focus" },
+    "select-filled-background-error":    { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "select/filled-background-error" },
+    "select-filled-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "select/filled-background-disabled" },
+
+    // ── FILLED VARIANT — BORDER (per state) ──
+    "select-filled-border":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "select/filled-border" },
+    "select-filled-border-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "select/filled-border-hover" },
+    "select-filled-border-focus":    { type: "COLOR", semantic: "border-focus",                figmaPath: "select/filled-border-focus" },
+    "select-filled-border-error":    { type: "COLOR", semantic: "feedback-error",              figmaPath: "select/filled-border-error" },
+    "select-filled-border-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "select/filled-border-disabled" },
+
+    // ── SHARED COLOR TOKENS ──
+    "select-text":           { type: "COLOR", semantic: "text-default",     figmaPath: "select/text" },
+    "select-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "select/text-disabled" },
+    "select-placeholder":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "select/placeholder" },
+    "select-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "select/label-color" },
+    "select-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/asterisk-color" },
+    "select-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/error-color" },
+    "select-chevron-color":  { type: "COLOR", semantic: "text-default",     figmaPath: "select/chevron-color" },
+    "select-focus-ring":     { type: "COLOR", semantic: "border-focus",     figmaPath: "select/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "select-height":       { type: "FLOAT", unit: "px", sizes: { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 }, figmaPath: "select/height" },
+    "select-font-size":    { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "select/font-size" },
+    "select-padding-x":    { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "select/padding-x" },
+    "select-section-size": { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 32, md: 36, lg: 40, xl: 44 }, figmaPath: "select/section-size" },
+
+    // ── FLOAT TOKENS (radius variants: xs, sm, md, lg, xl — independent from size) ──
+    "select-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "select/radius" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "select-border-width":    { type: "FLOAT", unit: "px", value: 1,  figmaPath: "select/border-width" },
+    "select-label-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "select/label-font-size" },
+    "select-label-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "select/label-gap" },
+    "select-error-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "select/error-font-size" },
+    "select-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "select/error-gap" },
+  },
+
   title: {
     // ── COLOR TOKENS ──
     "title-color": { type: "COLOR", semantic: "text-default", figmaPath: "title/color" },
@@ -717,9 +798,11 @@ export const COMPONENT_SIZE_KEYS = {
   chip: ["xs", "sm", "md", "lg", "xl"],
   slider: ["xs", "sm", "md", "lg", "xl"],
   rangeslider: ["xs", "sm", "md", "lg", "xl"],
+  card: ["xs", "sm", "md", "lg", "xl"],
   notification: ["xs", "sm", "md", "lg", "xl"],
   tooltip: [],
   textinput: ["xs", "sm", "md", "lg", "xl"],
+  select: ["xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
   text: ["xs", "sm", "md", "lg", "xl"],
 };
