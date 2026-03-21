@@ -442,54 +442,73 @@ async function buildComponents(varMap) {
   var font = await loadFont();
 
   var compSetGap = 300;
+  async function buildSet(name, builder) {
+    progress("Creating " + name + " component set...");
+    try {
+      return await builder();
+    } catch (e) {
+      progress("Failed to build " + name + " component set: " + String(e));
+      return null;
+    }
+  }
 
-  progress("Creating Button component set...");
-  var buttonSet = buildButtonComponentSet(varMap, page, font);
-
-  progress("Creating Switch component set...");
-  var switchSet = buildSwitchComponentSet(varMap, page, font);
-
-  progress("Creating Slider component set...");
-  var sliderSet = buildSliderComponentSet(varMap, page, font);
-
-  progress("Creating RangeSlider component set...");
-  var rangeSliderSet = buildRangeSliderComponentSet(varMap, page, font);
-
-  progress("Creating Checkbox component set...");
-  var checkboxSet = await buildCheckboxComponentSet(varMap, page, font);
-
-  progress("Creating Radio component set...");
-  var radioSet = buildRadioComponentSet(varMap, page, font);
-
-  progress("Creating Chip component set...");
-  var chipSet = await buildChipComponentSet(varMap, page, font);
-
-  progress("Creating Notification component set...");
-  var notificationSet = buildNotificationComponentSet(varMap, page, font);
-
-  progress("Creating Tooltip component set...");
-  var tooltipSet = buildTooltipComponentSet(varMap, page, font);
-
-  progress("Creating TextInput component set...");
-  var textInputSet = buildTextInputComponentSet(varMap, page, font);
-
-  progress("Creating Select component set...");
-  var selectSet = await buildSelectComponentSet(varMap, page, font);
-
-  progress("Creating Card component set...");
-  var cardSet = buildCardComponentSet(varMap, page, font);
-
-  progress("Creating ActionIcon component set...");
-  var actionIconSet = await buildActionIconComponentSet(varMap, page);
-
-  progress("Creating Tabs component set...");
-  var tabsSet = await buildTabsComponentSet(varMap, page, font);
-
-  progress("Creating Title component set...");
-  var titleSet = buildTitleComponentSet(varMap, page, font);
-
-  progress("Creating Text component set...");
-  var textSet = await buildTextComponentSet(varMap, page, font);
+  var buttonSet = await buildSet("Button", function () {
+    return buildButtonComponentSet(varMap, page, font);
+  });
+  var switchSet = await buildSet("Switch", function () {
+    return buildSwitchComponentSet(varMap, page, font);
+  });
+  var sliderSet = await buildSet("Slider", function () {
+    return buildSliderComponentSet(varMap, page, font);
+  });
+  var rangeSliderSet = await buildSet("RangeSlider", function () {
+    return buildRangeSliderComponentSet(varMap, page, font);
+  });
+  var checkboxSet = await buildSet("Checkbox", function () {
+    return buildCheckboxComponentSet(varMap, page, font);
+  });
+  var radioSet = await buildSet("Radio", function () {
+    return buildRadioComponentSet(varMap, page, font);
+  });
+  var chipSet = await buildSet("Chip", function () {
+    return buildChipComponentSet(varMap, page, font);
+  });
+  var notificationSet = await buildSet("Notification", function () {
+    return buildNotificationComponentSet(varMap, page, font);
+  });
+  var tooltipSet = await buildSet("Tooltip", function () {
+    return buildTooltipComponentSet(varMap, page, font);
+  });
+  var loaderSet = await buildSet("Loader", function () {
+    return buildLoaderComponentSet(varMap, page, font);
+  });
+  var pillSet = await buildSet("Pill", function () {
+    return buildPillComponentSet(varMap, page, font);
+  });
+  var badgeSet = await buildSet("Badge", function () {
+    return buildBadgeComponentSet(varMap, page, font);
+  });
+  var textInputSet = await buildSet("TextInput", function () {
+    return buildTextInputComponentSet(varMap, page, font);
+  });
+  var selectSet = await buildSet("Select", function () {
+    return buildSelectComponentSet(varMap, page, font);
+  });
+  var cardSet = await buildSet("Card", function () {
+    return buildCardComponentSet(varMap, page, font);
+  });
+  var actionIconSet = await buildSet("ActionIcon", function () {
+    return buildActionIconComponentSet(varMap, page);
+  });
+  var tabsSet = await buildSet("Tabs", function () {
+    return buildTabsComponentSet(varMap, page, font);
+  });
+  var titleSet = await buildSet("Title", function () {
+    return buildTitleComponentSet(varMap, page, font);
+  });
+  var textSet = await buildSet("Text", function () {
+    return buildTextComponentSet(varMap, page, font);
+  });
 
   // Position component sets in wrapped rows using rendered bounds
   var generatedSets = [
@@ -502,6 +521,9 @@ async function buildComponents(varMap) {
     chipSet,
     notificationSet,
     tooltipSet,
+    loaderSet,
+    pillSet,
+    badgeSet,
     textInputSet,
     selectSet,
     cardSet,
@@ -510,10 +532,11 @@ async function buildComponents(varMap) {
     titleSet,
     textSet,
   ];
-  positionComponentSets(generatedSets, compSetGap);
+  var validSets = generatedSets.filter(function (set) { return Boolean(set); });
+  positionComponentSets(validSets, compSetGap);
 
   // Scroll viewport to show all component sets
-  figma.viewport.scrollAndZoomIntoView(generatedSets);
+  figma.viewport.scrollAndZoomIntoView(validSets);
 
   progress("Components created.");
 }
@@ -522,7 +545,7 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Tooltip" || child.name === "TextInput" || child.name === "Select" || child.name === "Card" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Title" || child.name === "Text")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Tooltip" || child.name === "Loader" || child.name === "Pill" || child.name === "Badge" || child.name === "TextInput" || child.name === "Select" || child.name === "Card" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Title" || child.name === "Text")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
@@ -2546,6 +2569,325 @@ function buildTooltipComponentSet(varMap, page, font) {
 }
 
 // ---------------------------------------------------------------------------
+// Loader Component Set
+// ---------------------------------------------------------------------------
+
+function buildLoaderComponentSet(varMap, page, font) {
+  var types = ["oval", "bars", "dots"];
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var components = [];
+  var sizePx = { xs: 14, sm: 18, md: 22, lg: 28, xl: 34 };
+  var gap = 22;
+  var colWidth = 120;
+  var rowHeight = 80;
+
+  for (var ti = 0; ti < types.length; ti++) {
+    var type = types[ti];
+    var capType = type.charAt(0).toUpperCase() + type.slice(1);
+    for (var si = 0; si < sizes.length; si++) {
+      var size = sizes[si];
+      var capSize = size.toUpperCase();
+      var s = sizePx[size];
+
+      var comp = figma.createComponent();
+      comp.name = "Type=" + capType + ", Size=" + capSize;
+      comp.layoutMode = "HORIZONTAL";
+      comp.primaryAxisSizingMode = "FIXED";
+      comp.counterAxisSizingMode = "FIXED";
+      comp.primaryAxisAlignItems = "CENTER";
+      comp.counterAxisAlignItems = "CENTER";
+      comp.resize(72, 56);
+      comp.fills = [];
+
+      if (type === "oval") {
+        var ring = figma.createEllipse();
+        ring.name = "Loader";
+        ring.resize(s, s);
+        ring.fills = [];
+        ring.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+        ring.strokeWeight = Math.max(2, Math.round(s * 0.14));
+        ring.strokeAlign = "CENTER";
+        ring.arcData = { startingAngle: 0, endingAngle: Math.PI * 1.55, innerRadius: 0.72 };
+        bindPaintVar(ring, "strokes", 0, varMap["loader/color"]);
+        bindVar(ring, "width", varMap["loader/size-" + size]);
+        bindVar(ring, "height", varMap["loader/size-" + size]);
+        comp.appendChild(ring);
+      } else if (type === "bars") {
+        var bars = figma.createFrame();
+        bars.name = "Loader";
+        bars.layoutMode = "HORIZONTAL";
+        bars.primaryAxisSizingMode = "AUTO";
+        bars.counterAxisSizingMode = "AUTO";
+        bars.primaryAxisAlignItems = "CENTER";
+        bars.counterAxisAlignItems = "MAX";
+        bars.itemSpacing = Math.max(2, Math.round(s * 0.12));
+        bars.fills = [];
+        comp.appendChild(bars);
+
+        var barW = Math.max(2, Math.round(s * 0.14));
+        var heights = [Math.round(s * 0.45), Math.round(s * 0.8), Math.round(s * 0.62)];
+        for (var bi = 0; bi < 3; bi++) {
+          var bar = figma.createRectangle();
+          bar.name = "Bar " + (bi + 1);
+          bar.resize(barW, heights[bi]);
+          bar.cornerRadius = Math.max(1, Math.round(barW / 2));
+          bar.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          bindPaintVar(bar, "fills", 0, varMap["loader/color"]);
+          bars.appendChild(bar);
+        }
+      } else {
+        var dots = figma.createFrame();
+        dots.name = "Loader";
+        dots.layoutMode = "HORIZONTAL";
+        dots.primaryAxisSizingMode = "AUTO";
+        dots.counterAxisSizingMode = "AUTO";
+        dots.primaryAxisAlignItems = "CENTER";
+        dots.counterAxisAlignItems = "CENTER";
+        dots.itemSpacing = Math.max(3, Math.round(s * 0.18));
+        dots.fills = [];
+        comp.appendChild(dots);
+
+        var dotSize = Math.max(3, Math.round(s * 0.22));
+        for (var di = 0; di < 3; di++) {
+          var dot = figma.createEllipse();
+          dot.name = "Dot " + (di + 1);
+          dot.resize(dotSize, dotSize);
+          dot.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          bindPaintVar(dot, "fills", 0, varMap["loader/color"]);
+          dot.opacity = di === 0 ? 1 : 0.45;
+          dots.appendChild(dot);
+        }
+      }
+
+      var colIndex = ti;
+      var rowIndex = si;
+      comp.x = colIndex * (colWidth + gap);
+      comp.y = rowIndex * (rowHeight + gap);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+  }
+
+  progress("Created " + components.length + " loader variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Loader";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
+// Pill Component Set
+// ---------------------------------------------------------------------------
+
+function buildPillComponentSet(varMap, page, font) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var removeModes = ["off", "on"];
+  var components = [];
+  var heightBySize = { xs: 18, sm: 22, md: 26, lg: 30, xl: 36 };
+  var colWidth = 200;
+  var rowHeight = 70;
+  var gap = 20;
+
+  for (var ri = 0; ri < removeModes.length; ri++) {
+    var removeMode = removeModes[ri];
+    var withRemove = removeMode === "on";
+    var capRemove = withRemove ? "On" : "Off";
+
+    for (var si = 0; si < sizes.length; si++) {
+      var size = sizes[si];
+      var capSize = size.toUpperCase();
+      var h = heightBySize[size];
+
+      var comp = figma.createComponent();
+      comp.name = "Size=" + capSize + ", Remove=" + capRemove;
+      comp.layoutMode = "HORIZONTAL";
+      comp.primaryAxisSizingMode = "AUTO";
+      comp.counterAxisSizingMode = "AUTO";
+      comp.primaryAxisAlignItems = "CENTER";
+      comp.counterAxisAlignItems = "CENTER";
+      comp.itemSpacing = 6;
+      comp.paddingLeft = 10;
+      comp.paddingRight = 10;
+      comp.paddingTop = 0;
+      comp.paddingBottom = 0;
+      comp.minHeight = h;
+      comp.cornerRadius = 12;
+      comp.fills = [{ type: "SOLID", color: { r: 0.92, g: 0.96, b: 1 } }];
+      comp.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.82, b: 0.87 } }];
+      comp.strokeWeight = 1;
+      comp.strokeAlign = "INSIDE";
+
+      bindPaintVar(comp, "fills", 0, varMap["pill/background"]);
+      bindPaintVar(comp, "strokes", 0, varMap["pill/border"]);
+      bindVar(comp, "strokeWeight", varMap["pill/border-width"]);
+      bindVar(comp, "minHeight", varMap["pill/height-" + size]);
+      bindVar(comp, "paddingLeft", varMap["pill/padding-x-" + size]);
+      bindVar(comp, "paddingRight", varMap["pill/padding-x-" + size]);
+      bindVar(comp, "itemSpacing", varMap["pill/gap-" + size]);
+      bindVar(comp, "topLeftRadius", varMap["pill/radius-" + size]);
+      bindVar(comp, "topRightRadius", varMap["pill/radius-" + size]);
+      bindVar(comp, "bottomLeftRadius", varMap["pill/radius-" + size]);
+      bindVar(comp, "bottomRightRadius", varMap["pill/radius-" + size]);
+
+      var label = figma.createText();
+      label.name = "Label";
+      label.fontName = font;
+      label.characters = "React";
+      label.fontSize = 12;
+      label.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+      bindPaintVar(label, "fills", 0, varMap["pill/label"]);
+      bindVar(label, "fontSize", varMap["pill/font-size-" + size]);
+      comp.appendChild(label);
+
+      if (withRemove) {
+        var remove = figma.createText();
+        remove.name = "Remove";
+        remove.fontName = font;
+        remove.characters = "×";
+        remove.fontSize = 12;
+        remove.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+        bindPaintVar(remove, "fills", 0, varMap["pill/remove"]);
+        bindVar(remove, "fontSize", varMap["pill/remove-size-" + size]);
+        comp.appendChild(remove);
+      }
+
+      var colIndex = ri;
+      var rowIndex = si;
+      comp.x = colIndex * (colWidth + gap);
+      comp.y = rowIndex * (rowHeight + gap);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+  }
+
+  progress("Created " + components.length + " pill variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Pill";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
+// Badge Component Set
+// ---------------------------------------------------------------------------
+
+function buildBadgeComponentSet(varMap, page, font) {
+  var variants = ["filled", "light", "outline", "dot"];
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var circles = ["off", "on"];
+  var components = [];
+
+  var heightBySize = { xs: 16, sm: 18, md: 20, lg: 24, xl: 28 };
+  var colWidth = 260;
+  var rowHeight = 72;
+  var gap = 18;
+
+  function cap(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function colorPath(variant, property) {
+    return "badge/" + variant + "-" + property;
+  }
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = cap(variant);
+    var hasDot = variant === "dot";
+
+    for (var ci = 0; ci < circles.length; ci++) {
+      var circleMode = circles[ci];
+      var isCircle = circleMode === "on";
+      var capCircle = isCircle ? "On" : "Off";
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size.toUpperCase();
+        var height = heightBySize[size];
+
+        for (var ri = 0; ri < radii.length; ri++) {
+          var radius = radii[ri];
+          var capRadius = radius.toUpperCase();
+
+          var comp = figma.createComponent();
+          comp.name =
+            "Variant=" + capVariant +
+            ", Size=" + capSize +
+            ", Radius=" + capRadius +
+            ", Circle=" + capCircle;
+          comp.layoutMode = "HORIZONTAL";
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
+          comp.primaryAxisAlignItems = "CENTER";
+          comp.counterAxisAlignItems = "CENTER";
+          comp.itemSpacing = 6;
+          comp.paddingLeft = isCircle ? 0 : 10;
+          comp.paddingRight = isCircle ? 0 : 10;
+          comp.paddingTop = 0;
+          comp.paddingBottom = 0;
+          comp.minHeight = height;
+          comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          comp.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          comp.strokeWeight = 1;
+          comp.strokeAlign = "INSIDE";
+
+          bindPaintVar(comp, "fills", 0, varMap[colorPath(variant, "background")]);
+          bindPaintVar(comp, "strokes", 0, varMap[colorPath(variant, "border")]);
+          bindVar(comp, "strokeWeight", varMap["badge/border-width"]);
+          bindVar(comp, "minHeight", varMap["badge/height-" + size]);
+          bindVar(comp, "paddingLeft", varMap["badge/padding-x-" + size]);
+          bindVar(comp, "paddingRight", varMap["badge/padding-x-" + size]);
+          bindVar(comp, "topLeftRadius", varMap["badge/radius-" + radius]);
+          bindVar(comp, "topRightRadius", varMap["badge/radius-" + radius]);
+          bindVar(comp, "bottomLeftRadius", varMap["badge/radius-" + radius]);
+          bindVar(comp, "bottomRightRadius", varMap["badge/radius-" + radius]);
+
+          if (isCircle) {
+            var circleSize = Math.max(16, height);
+            comp.minWidth = circleSize;
+            comp.maxWidth = circleSize;
+          }
+
+          if (hasDot && !isCircle) {
+            var dot = figma.createEllipse();
+            dot.name = "Dot";
+            dot.resize(6, 6);
+            dot.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+            bindPaintVar(dot, "fills", 0, varMap["badge/dot-color"]);
+            bindVar(dot, "minWidth", varMap["badge/dot-size-" + size]);
+            bindVar(dot, "maxWidth", varMap["badge/dot-size-" + size]);
+            bindVar(dot, "minHeight", varMap["badge/dot-size-" + size]);
+            bindVar(dot, "maxHeight", varMap["badge/dot-size-" + size]);
+            comp.appendChild(dot);
+          }
+
+          var label = figma.createText();
+          label.name = "Label";
+          label.fontName = font;
+          label.characters = isCircle ? "8" : "Badge";
+          label.fontSize = 12;
+          label.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          bindPaintVar(label, "fills", 0, varMap[colorPath(variant, "text")]);
+          bindVar(label, "fontSize", varMap["badge/font-size-" + size]);
+          comp.appendChild(label);
+
+          var colIndex = vi * circles.length + ci;
+          var rowIndex = si * radii.length + ri;
+          comp.x = colIndex * (colWidth + gap);
+          comp.y = rowIndex * (rowHeight + gap);
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " badge variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Badge";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
 // TextInput
 // ---------------------------------------------------------------------------
 
@@ -2802,8 +3144,13 @@ async function buildSelectComponentSet(varMap, page, font) {
 
   // Find a chevron/down icon component from icon components or icon sets.
   var chevronIconComp = await findSelectChevronIconComponent();
-  if (chevronIconComp) console.log("[Select] Found chevron icon: " + chevronIconComp.name);
-  else console.log("[Select] WARNING: chevron/down icon not found on icons page, falling back to text glyph");
+  if (chevronIconComp) {
+    console.log("[Select] Icon source: " + chevronIconComp.name);
+    progress("[Select] Right icon source: " + chevronIconComp.name);
+  } else {
+    console.log("[Select] WARNING: no icon component found, using vector fallback");
+    progress("[Select] Warning: no icon component found, using vector fallback");
+  }
 
   var sizeHeights = { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
   var gap = 20;
@@ -2958,14 +3305,17 @@ async function buildSelectComponentSet(varMap, page, font) {
               }
               chevronSlot.appendChild(chevronInstance);
             } else {
-              var chevronNode = figma.createText();
-              chevronNode.name = "Chevron";
-              chevronNode.fontName = font;
-              chevronNode.characters = "v";
-              chevronNode.fontSize = 12;
-              chevronNode.fills = [{ type: "SOLID", color: { r: 0.45, g: 0.45, b: 0.45 } }];
-              if (varMap["select/chevron-color"]) bindPaintVar(chevronNode, "fills", 0, varMap["select/chevron-color"]);
-              chevronSlot.appendChild(chevronNode);
+              var chevronVector = figma.createVector();
+              chevronVector.name = "Chevron";
+              chevronVector.vectorPaths = [{ windingRule: "NONZERO", data: "M 1 1 L 6 6 L 11 1" }];
+              chevronVector.resize(12, 6);
+              chevronVector.fills = [];
+              chevronVector.strokes = [{ type: "SOLID", color: { r: 0.45, g: 0.45, b: 0.45 } }];
+              chevronVector.strokeWeight = 1.5;
+              chevronVector.strokeJoin = "ROUND";
+              chevronVector.strokeCap = "ROUND";
+              if (varMap["select/chevron-color"]) bindPaintVar(chevronVector, "strokes", 0, varMap["select/chevron-color"]);
+              chevronSlot.appendChild(chevronVector);
             }
 
             if (state === "focus") {
@@ -3067,6 +3417,18 @@ async function findSelectChevronIconComponent() {
     }
   }
   if (preferred) return preferred;
+
+  // Fallback: check/minus icons are known to exist in repos where
+  // Checkbox instancing works, so prefer those before generic matches.
+  for (var m = 0; m < iconCandidates.length; m++) {
+    var knownName = iconCandidates[m].name.toLowerCase();
+    if (
+      knownName.indexOf("check") >= 0 ||
+      knownName.indexOf("minus") >= 0
+    ) {
+      return iconCandidates[m];
+    }
+  }
 
   // Fallback: any chevron/caret/arrow-style icon.
   for (var k = 0; k < iconCandidates.length; k++) {

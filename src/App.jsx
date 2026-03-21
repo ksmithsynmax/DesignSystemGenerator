@@ -46,6 +46,18 @@ import {
   TooltipPropertiesPanel,
 } from "./components/panels/TooltipPreviewPanel";
 import {
+  LoaderPreviewContent,
+  LoaderPropertiesPanel,
+} from "./components/panels/LoaderPreviewPanel";
+import {
+  PillPreviewContent,
+  PillPropertiesPanel,
+} from "./components/panels/PillPreviewPanel";
+import {
+  BadgePreviewContent,
+  BadgePropertiesPanel,
+} from "./components/panels/BadgePreviewPanel";
+import {
   TextInputPreviewContent,
   TextInputPropertiesPanel,
 } from "./components/panels/TextInputPreviewPanel";
@@ -87,6 +99,7 @@ const VARIANTS_BY_COMPONENT = {
   tabs: ["default", "outlined", "pills"],
   checkbox: ["filled", "outlined"],
   chip: ["filled", "light", "outline"],
+  badge: ["filled", "light", "outline", "dot"],
   radio: ["filled", "outline"],
   textinput: ["default", "filled"],
   select: ["default", "filled"],
@@ -163,6 +176,9 @@ export default function App() {
   const textInputDefault = getComponentDefaultSize(brands, activeBrand, "textinput") || "sm";
   const selectDefault = getComponentDefaultSize(brands, activeBrand, "select") || "sm";
   const cardDefault = getComponentDefaultSize(brands, activeBrand, "card") || "md";
+  const loaderDefault = getComponentDefaultSize(brands, activeBrand, "loader") || "md";
+  const pillDefault = getComponentDefaultSize(brands, activeBrand, "pill") || "md";
+  const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "md";
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
   const [activeActionIconSize, setActiveActionIconSize] = useState(actionIconDefault);
@@ -221,6 +237,16 @@ export default function App() {
   const [activeChipState, setActiveChipState] = useState("default");
   const [activeTooltipPosition, setActiveTooltipPosition] = useState("top");
   const [activeTooltipWithArrow, setActiveTooltipWithArrow] = useState(true);
+  const [activeLoaderSize, setActiveLoaderSize] = useState(loaderDefault);
+  const [activeLoaderType, setActiveLoaderType] = useState("oval");
+  const [activePillSize, setActivePillSize] = useState(pillDefault);
+  const [activePillWithRemoveButton, setActivePillWithRemoveButton] = useState(false);
+  const [activePillText, setActivePillText] = useState("React");
+  const [activeBadgeSize, setActiveBadgeSize] = useState(badgeDefault);
+  const [activeBadgeRadius, setActiveBadgeRadius] = useState(badgeDefault);
+  const [activeBadgeCircle, setActiveBadgeCircle] = useState(false);
+  const [activeBadgeFullWidth, setActiveBadgeFullWidth] = useState(false);
+  const [activeBadgeText, setActiveBadgeText] = useState("Badge");
   const [activeTextInputSize, setActiveTextInputSize] = useState(textInputDefault);
   const [activeTextInputRadius, setActiveTextInputRadius] = useState(textInputDefault);
   const [activeTextInputState, setActiveTextInputState] = useState("default");
@@ -273,6 +299,9 @@ export default function App() {
     const rdDef = getComponentDefaultSize(brands, newBrand, "radio") || "md";
     const chDef = getComponentDefaultSize(brands, newBrand, "chip") || "md";
     const caDef = getComponentDefaultSize(brands, newBrand, "card") || "md";
+    const ldDef = getComponentDefaultSize(brands, newBrand, "loader") || "md";
+    const piDef = getComponentDefaultSize(brands, newBrand, "pill") || "md";
+    const baDef = getComponentDefaultSize(brands, newBrand, "badge") || "md";
     setActiveSize(btnDef);
     setActiveActionIconSize(aiDef);
     setActiveActionIconRadius(aiDef);
@@ -295,6 +324,10 @@ export default function App() {
     setActiveSelectRadius(seDef);
     setActiveCardSize(caDef);
     setActiveCardRadius(caDef);
+    setActiveLoaderSize(ldDef);
+    setActivePillSize(piDef);
+    setActiveBadgeSize(baDef);
+    setActiveBadgeRadius(baDef);
   }, [brands]);
 
   // Sync active size when component changes
@@ -411,11 +444,25 @@ export default function App() {
       setActiveCardShowBadge(true);
       setActiveCardTitle("PlanetScope vessel");
       setActiveCardDescription("Detected vessel metadata and imagery details from latest satellite capture.");
+    } else if (newComp === "loader") {
+      setActiveLoaderSize(loaderDefault);
+      setActiveLoaderType("oval");
+    } else if (newComp === "pill") {
+      setActivePillSize(pillDefault);
+      setActivePillWithRemoveButton(false);
+      setActivePillText("React");
+    } else if (newComp === "badge") {
+      setActiveBadgeSize(badgeDefault);
+      setActiveBadgeRadius(badgeDefault);
+      setActiveBadgeCircle(false);
+      setActiveBadgeFullWidth(false);
+      setActiveBadgeText("Badge");
+      setActiveVariant("filled");
     } else if (newComp === "tooltip") {
       setActiveTooltipPosition("top");
       setActiveTooltipWithArrow(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, loaderDefault, pillDefault, badgeDefault]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -517,7 +564,7 @@ export default function App() {
       forcedIndeterminate = true;
     }
 
-    if (["button", "actionicon", "tabs", "checkbox", "chip", "radio", "textinput", "select"].includes(activeComponent)) {
+    if (["button", "actionicon", "tabs", "checkbox", "chip", "badge", "radio", "textinput", "select"].includes(activeComponent)) {
       const variantSegment = parts[1];
       const knownVariants = {
         button: ["filled", "outlined", "ghost"],
@@ -525,6 +572,7 @@ export default function App() {
         tabs: ["default", "outlined", "pills"],
         checkbox: ["filled", "outlined"],
         chip: ["filled", "light", "outline"],
+        badge: ["filled", "light", "outline", "dot"],
         radio: ["filled", "outline"],
         textinput: ["default", "filled"],
         select: ["default", "filled"],
@@ -665,6 +713,7 @@ export default function App() {
       checkbox: ["filled", "outlined"],
       radio: ["filled", "outline"],
       chip: ["filled", "light", "outline"],
+      badge: ["filled", "light", "outline", "dot"],
       textinput: ["default", "filled"],
       select: ["default", "filled"],
     };
@@ -709,6 +758,7 @@ export default function App() {
       activeComponent === "tabs" ||
       activeComponent === "textinput"
       || activeComponent === "select"
+      || activeComponent === "badge"
     ) {
       if (!variants.includes(variantSegment)) return true;
       if (variantSegment !== activeVariant) return false;
@@ -733,6 +783,7 @@ export default function App() {
       tabs: ["default", "outlined", "pills"],
       checkbox: ["filled", "outlined"],
       radio: ["filled", "outline"],
+      badge: ["filled", "light", "outline", "dot"],
       textinput: ["default", "filled"],
       select: ["default", "filled"],
     };
@@ -768,6 +819,9 @@ export default function App() {
     textinput: activeTextInputSize,
     select: activeSelectSize,
     card: activeCardSize,
+    loader: activeLoaderSize,
+    pill: activePillSize,
+    badge: activeBadgeSize,
   };
   const activeDimensionSize = activeSizeByComponent[activeComponent] || sizeKeys[0];
   const getSelectedDimensionSize = (tokenName) => {
@@ -779,6 +833,9 @@ export default function App() {
     }
     if (activeComponent === "textinput" && tokenName === "textinput-radius") {
       return activeTextInputRadius;
+    }
+    if (activeComponent === "badge" && tokenName === "badge-radius") {
+      return activeBadgeRadius;
     }
     if (activeComponent === "select" && tokenName === "select-radius") {
       return activeSelectRadius;
@@ -1225,6 +1282,38 @@ export default function App() {
                   description={activeCardDescription}
                 />
               )}
+              {activeComponent === "loader" && (
+                <LoaderPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  size={activeLoaderSize}
+                  type={activeLoaderType}
+                />
+              )}
+              {activeComponent === "pill" && (
+                <PillPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  size={activePillSize}
+                  withRemoveButton={activePillWithRemoveButton}
+                  text={activePillText}
+                />
+              )}
+              {activeComponent === "badge" && (
+                <BadgePreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  activeVariant={forcedVariant || activeVariant}
+                  size={activeBadgeSize}
+                  radius={activeBadgeRadius}
+                  circle={activeBadgeCircle}
+                  fullWidth={activeBadgeFullWidth}
+                  text={activeBadgeText}
+                />
+              )}
             </div>
           </div>
 
@@ -1533,7 +1622,41 @@ export default function App() {
                   setDescription={setActiveCardDescription}
                 />
               )}
-              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "checkbox", "radio", "chip", "tooltip", "notification", "textinput", "select", "card"].includes(activeComponent) && (
+              {activeComponent === "loader" && (
+                <LoaderPropertiesPanel
+                  size={activeLoaderSize}
+                  setSize={setActiveLoaderSize}
+                  type={activeLoaderType}
+                  setType={setActiveLoaderType}
+                />
+              )}
+              {activeComponent === "pill" && (
+                <PillPropertiesPanel
+                  size={activePillSize}
+                  setSize={setActivePillSize}
+                  withRemoveButton={activePillWithRemoveButton}
+                  setWithRemoveButton={setActivePillWithRemoveButton}
+                  text={activePillText}
+                  setText={setActivePillText}
+                />
+              )}
+              {activeComponent === "badge" && (
+                <BadgePropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  size={activeBadgeSize}
+                  setSize={setActiveBadgeSize}
+                  radius={activeBadgeRadius}
+                  setRadius={setActiveBadgeRadius}
+                  circle={activeBadgeCircle}
+                  setCircle={setActiveBadgeCircle}
+                  fullWidth={activeBadgeFullWidth}
+                  setFullWidth={setActiveBadgeFullWidth}
+                  text={activeBadgeText}
+                  setText={setActiveBadgeText}
+                />
+              )}
+              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "checkbox", "radio", "chip", "tooltip", "notification", "textinput", "select", "card", "loader", "pill", "badge"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

@@ -607,6 +607,63 @@ export const COMPONENT_TOKENS = {
     "tooltip-arrow-size": { type: "FLOAT", unit: "px", value: 7,  figmaPath: "tooltip/arrow-size" },
   },
 
+  loader: {
+    // ── COLOR TOKENS ──
+    "loader-color": { type: "COLOR", semantic: "interactive-primary", figmaPath: "loader/color" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "loader-size": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 18, md: 22, lg: 28, xl: 34 }, figmaPath: "loader/size" },
+  },
+
+  pill: {
+    // ── COLOR TOKENS ──
+    "pill-background": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "pill/background" },
+    "pill-border": { type: "COLOR", semantic: "border-default", figmaPath: "pill/border" },
+    "pill-label": { type: "COLOR", semantic: "text-default", figmaPath: "pill/label" },
+    "pill-remove": { type: "COLOR", semantic: "text-default", figmaPath: "pill/remove" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "pill-height": { type: "FLOAT", unit: "px", sizes: { xs: 18, sm: 22, md: 26, lg: 30, xl: 36 }, figmaPath: "pill/height" },
+    "pill-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "pill/font-size" },
+    "pill-padding-x": { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 }, figmaPath: "pill/padding-x" },
+    "pill-radius": { type: "FLOAT", unit: "px", sizes: { xs: 8, sm: 10, md: 12, lg: 14, xl: 18 }, figmaPath: "pill/radius" },
+    "pill-gap": { type: "FLOAT", unit: "px", sizes: { xs: 4, sm: 5, md: 6, lg: 7, xl: 8 }, figmaPath: "pill/gap" },
+    "pill-remove-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 13, md: 14, lg: 16, xl: 18 }, figmaPath: "pill/remove-size" },
+
+    // ── FLOAT TOKENS (single value) ──
+    "pill-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "pill/border-width" },
+  },
+
+  badge: {
+    // ── COLOR TOKENS ──
+    "badge-filled-background": { type: "COLOR", semantic: "interactive-primary", figmaPath: "badge/filled-background" },
+    "badge-filled-text": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "badge/filled-text" },
+    "badge-filled-border": { type: "COLOR", semantic: "interactive-primary", figmaPath: "badge/filled-border" },
+
+    "badge-light-background": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "badge/light-background" },
+    "badge-light-text": { type: "COLOR", semantic: "interactive-primary", figmaPath: "badge/light-text" },
+    "badge-light-border": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "badge/light-border" },
+
+    "badge-outline-background": { type: "COLOR", semantic: "surface-default", figmaPath: "badge/outline-background" },
+    "badge-outline-text": { type: "COLOR", semantic: "interactive-primary", figmaPath: "badge/outline-text" },
+    "badge-outline-border": { type: "COLOR", semantic: "interactive-primary", figmaPath: "badge/outline-border" },
+
+    "badge-dot-background": { type: "COLOR", semantic: "surface-default", figmaPath: "badge/dot-background" },
+    "badge-dot-text": { type: "COLOR", semantic: "text-default", figmaPath: "badge/dot-text" },
+    "badge-dot-border": { type: "COLOR", semantic: "border-default", figmaPath: "badge/dot-border" },
+    "badge-dot-color": { type: "COLOR", semantic: "interactive-primary", figmaPath: "badge/dot-color" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "badge-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 18, md: 20, lg: 24, xl: 28 }, figmaPath: "badge/height" },
+    "badge-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "badge/font-size" },
+    "badge-padding-x": { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 7, md: 9, lg: 11, xl: 13 }, figmaPath: "badge/padding-x" },
+    "badge-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "badge/radius" },
+    "badge-dot-size": { type: "FLOAT", unit: "px", sizes: { xs: 4, sm: 5, md: 6, lg: 7, xl: 8 }, figmaPath: "badge/dot-size" },
+
+    // ── FLOAT TOKENS (single value) ──
+    "badge-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "badge/border-width" },
+  },
+
   textinput: {
     // ── DEFAULT VARIANT — BACKGROUND (per state) ──
     "textinput-default-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "textinput/default-background" },
@@ -801,6 +858,9 @@ export const COMPONENT_SIZE_KEYS = {
   card: ["xs", "sm", "md", "lg", "xl"],
   notification: ["xs", "sm", "md", "lg", "xl"],
   tooltip: [],
+  loader: ["xs", "sm", "md", "lg", "xl"],
+  pill: ["xs", "sm", "md", "lg", "xl"],
+  badge: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["xs", "sm", "md", "lg", "xl"],
   select: ["xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
