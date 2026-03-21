@@ -664,6 +664,46 @@ export const COMPONENT_TOKENS = {
     "badge-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "badge/border-width" },
   },
 
+  alert: {
+    // ── COLOR TOKENS ──
+    "alert-default-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/default-background" },
+    "alert-default-text": { type: "COLOR", semantic: "text-default", figmaPath: "alert/default-text" },
+    "alert-default-border": { type: "COLOR", semantic: "border-default", figmaPath: "alert/default-border" },
+
+    "alert-filled-background": { type: "COLOR", semantic: "interactive-primary", figmaPath: "alert/filled-background" },
+    "alert-filled-text": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "alert/filled-text" },
+    "alert-filled-border": { type: "COLOR", semantic: "interactive-primary", figmaPath: "alert/filled-border" },
+
+    "alert-light-background": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "alert/light-background" },
+    "alert-light-text": { type: "COLOR", semantic: "interactive-primary", figmaPath: "alert/light-text" },
+    "alert-light-border": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "alert/light-border" },
+
+    "alert-outline-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/outline-background" },
+    "alert-outline-text": { type: "COLOR", semantic: "interactive-primary", figmaPath: "alert/outline-text" },
+    "alert-outline-border": { type: "COLOR", semantic: "interactive-primary", figmaPath: "alert/outline-border" },
+
+    "alert-transparent-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/transparent-background" },
+    "alert-transparent-text": { type: "COLOR", semantic: "text-default", figmaPath: "alert/transparent-text" },
+    "alert-transparent-border": { type: "COLOR", semantic: "border-default", figmaPath: "alert/transparent-border" },
+
+    "alert-white-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/white-background" },
+    "alert-white-text": { type: "COLOR", semantic: "text-default", figmaPath: "alert/white-text" },
+    "alert-white-border": { type: "COLOR", semantic: "border-default", figmaPath: "alert/white-border" },
+
+    "alert-icon": { type: "COLOR", semantic: "interactive-primary", figmaPath: "alert/icon" },
+    "alert-close": { type: "COLOR", semantic: "text-default", figmaPath: "alert/close" },
+
+    // ── FLOAT TOKENS ──
+    "alert-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "alert/radius" },
+    "alert-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "alert/padding-x" },
+    "alert-padding-y": { type: "FLOAT", unit: "px", value: 10, figmaPath: "alert/padding-y" },
+    "alert-title-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "alert/title-font-size" },
+    "alert-message-font-size": { type: "FLOAT", unit: "px", value: 13, figmaPath: "alert/message-font-size" },
+    "alert-icon-title-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "alert/icon-title-gap" },
+    "alert-title-message-gap": { type: "FLOAT", unit: "px", value: 6, figmaPath: "alert/title-message-gap" },
+    "alert-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "alert/border-width" },
+  },
+
   textinput: {
     // ── DEFAULT VARIANT — BACKGROUND (per state) ──
     "textinput-default-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "textinput/default-background" },
@@ -861,6 +901,7 @@ export const COMPONENT_SIZE_KEYS = {
   loader: ["xs", "sm", "md", "lg", "xl"],
   pill: ["xs", "sm", "md", "lg", "xl"],
   badge: ["xs", "sm", "md", "lg", "xl"],
+  alert: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["xs", "sm", "md", "lg", "xl"],
   select: ["xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],

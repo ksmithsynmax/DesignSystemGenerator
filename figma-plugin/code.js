@@ -476,6 +476,9 @@ async function buildComponents(varMap) {
   var notificationSet = await buildSet("Notification", function () {
     return buildNotificationComponentSet(varMap, page, font);
   });
+  var alertSet = await buildSet("Alert", function () {
+    return buildAlertComponentSet(varMap, page, font);
+  });
   var tooltipSet = await buildSet("Tooltip", function () {
     return buildTooltipComponentSet(varMap, page, font);
   });
@@ -520,6 +523,7 @@ async function buildComponents(varMap) {
     radioSet,
     chipSet,
     notificationSet,
+    alertSet,
     tooltipSet,
     loaderSet,
     pillSet,
@@ -545,7 +549,7 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Tooltip" || child.name === "Loader" || child.name === "Pill" || child.name === "Badge" || child.name === "TextInput" || child.name === "Select" || child.name === "Card" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Title" || child.name === "Text")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Alert" || child.name === "Tooltip" || child.name === "Loader" || child.name === "Pill" || child.name === "Badge" || child.name === "TextInput" || child.name === "Select" || child.name === "Card" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Title" || child.name === "Text")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
@@ -2427,6 +2431,236 @@ function buildNotificationComponentSet(varMap, page, font) {
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Notification";
   return componentSet;
+}
+
+// ---------------------------------------------------------------------------
+// Alert Component Set
+// ---------------------------------------------------------------------------
+
+async function buildAlertComponentSet(varMap, page, font) {
+  var variants = ["default", "filled", "light", "outline", "transparent", "white"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var closeStates = ["off", "on"];
+  var iconStates = ["off", "on"];
+  var components = [];
+  var gap = 24;
+  var colWidth = 420;
+  var rowHeight = 130;
+
+  function cap(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  var alertIcons = await findAlertIconComponents();
+  if (alertIcons.warning) progress("[Alert] Icon source: " + alertIcons.warning.name);
+  else progress("[Alert] Warning icon not found");
+  if (alertIcons.close) progress("[Alert] Close source: " + alertIcons.close.name);
+  else progress("[Alert] Close icon not found");
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = cap(variant);
+
+    for (var ri = 0; ri < radii.length; ri++) {
+      var radius = radii[ri];
+      var capRadius = radius.toUpperCase();
+
+      for (var ci = 0; ci < closeStates.length; ci++) {
+        var withClose = closeStates[ci] === "on";
+        var capClose = withClose ? "On" : "Off";
+
+        for (var ii = 0; ii < iconStates.length; ii++) {
+          var withIcon = iconStates[ii] === "on";
+          var capIcon = withIcon ? "On" : "Off";
+
+          var comp = figma.createComponent();
+          comp.name =
+            "Variant=" + capVariant +
+            ", Radius=" + capRadius +
+            ", Close=" + capClose +
+            ", Icon=" + capIcon;
+          comp.resize(380, 110);
+          comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          comp.strokes = [{ type: "SOLID", color: { r: 0.84, g: 0.84, b: 0.84 } }];
+          comp.strokeWeight = 1;
+          comp.strokeAlign = "INSIDE";
+          comp.cornerRadius = 8;
+
+          bindPaintVar(comp, "fills", 0, varMap["alert/" + variant + "-background"]);
+          bindPaintVar(comp, "strokes", 0, varMap["alert/" + variant + "-border"]);
+          bindVar(comp, "strokeWeight", varMap["alert/border-width"]);
+          bindVar(comp, "topLeftRadius", varMap["alert/radius-" + radius]);
+          bindVar(comp, "topRightRadius", varMap["alert/radius-" + radius]);
+          bindVar(comp, "bottomLeftRadius", varMap["alert/radius-" + radius]);
+          bindVar(comp, "bottomRightRadius", varMap["alert/radius-" + radius]);
+
+          var textWidth = withClose ? 316 : 340;
+          var body = figma.createFrame();
+          body.name = "body";
+          body.layoutMode = "VERTICAL";
+          body.primaryAxisSizingMode = "AUTO";
+          body.counterAxisSizingMode = "AUTO";
+          body.primaryAxisAlignItems = "MIN";
+          body.counterAxisAlignItems = "MIN";
+          body.itemSpacing = 0;
+          body.fills = [];
+          body.x = 14;
+          body.y = 10;
+          comp.appendChild(body);
+
+          var titleRow = figma.createFrame();
+          titleRow.name = "title-row";
+          titleRow.layoutMode = "HORIZONTAL";
+          titleRow.primaryAxisSizingMode = "AUTO";
+          titleRow.counterAxisSizingMode = "AUTO";
+          titleRow.primaryAxisAlignItems = "MIN";
+          titleRow.counterAxisAlignItems = "CENTER";
+          titleRow.itemSpacing = 8;
+          titleRow.fills = [];
+          bindVar(titleRow, "itemSpacing", varMap["alert/icon-title-gap"]);
+          body.appendChild(titleRow);
+
+          if (withIcon) {
+            var warningSource = alertIcons.warning || alertIcons.fallback;
+            if (warningSource) {
+              var warningInst = warningSource.createInstance();
+              warningInst.name = "icon";
+              try { warningInst.resize(16, 16); } catch (e) {}
+              titleRow.appendChild(warningInst);
+            }
+          }
+
+          var titleNode = figma.createText();
+          titleNode.name = "title";
+          titleNode.fontName = font;
+          titleNode.characters = "Alert title";
+          titleNode.fontSize = 14;
+          titleNode.textAutoResize = "HEIGHT";
+          titleNode.resize(textWidth, titleNode.height);
+          titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+          bindPaintVar(titleNode, "fills", 0, varMap["alert/" + variant + "-text"]);
+          bindVar(titleNode, "fontSize", varMap["alert/title-font-size"]);
+          titleRow.appendChild(titleNode);
+
+          var messageWrap = figma.createFrame();
+          messageWrap.name = "message-wrap";
+          messageWrap.layoutMode = "VERTICAL";
+          messageWrap.primaryAxisSizingMode = "AUTO";
+          messageWrap.counterAxisSizingMode = "AUTO";
+          messageWrap.primaryAxisAlignItems = "MIN";
+          messageWrap.counterAxisAlignItems = "MIN";
+          messageWrap.paddingTop = 6;
+          messageWrap.fills = [];
+          bindVar(messageWrap, "paddingTop", varMap["alert/title-message-gap"]);
+          body.appendChild(messageWrap);
+
+          var messageNode = figma.createText();
+          messageNode.name = "message";
+          messageNode.fontName = font;
+          messageNode.characters = "Lorem ipsum dolor sit amet consectetur adipiscing elit.";
+          messageNode.fontSize = 13;
+          messageNode.textAutoResize = "HEIGHT";
+          messageNode.resize(textWidth, messageNode.height);
+          messageNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+          bindPaintVar(messageNode, "fills", 0, varMap["alert/" + variant + "-text"]);
+          bindVar(messageNode, "fontSize", varMap["alert/message-font-size"]);
+          messageWrap.appendChild(messageNode);
+
+          if (withClose) {
+            var closeSource = alertIcons.close || alertIcons.fallback;
+            if (closeSource) {
+              var closeInst = closeSource.createInstance();
+              closeInst.name = "close";
+              try { closeInst.resize(16, 16); } catch (e) {}
+              closeInst.x = 356;
+              closeInst.y = 10;
+              comp.appendChild(closeInst);
+            }
+          }
+
+          var colIndex = vi * radii.length + ri;
+          var rowIndex = ci * iconStates.length + ii;
+          comp.x = colIndex * (colWidth + gap);
+          comp.y = rowIndex * (rowHeight + gap);
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " alert variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Alert";
+  return componentSet;
+}
+
+async function findAlertIconComponents() {
+  var iconCandidates = [];
+  var iconsPage = null;
+
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var page = figma.root.children[pi];
+    if (page.type !== "PAGE") continue;
+    await page.loadAsync();
+    if (!iconsPage && page.name && page.name.toLowerCase() === "icons") {
+      iconsPage = page;
+    }
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function(n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") iconCandidates.push(setChildren[ci]);
+      }
+    }
+  }
+
+  function normalizeName(name) {
+    return String(name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+  }
+
+  function pickBest(target) {
+    if (!iconCandidates.length) return null;
+    var scored = [];
+    for (var j = 0; j < iconCandidates.length; j++) {
+      var raw = String(iconCandidates[j].name || "").toLowerCase();
+      var n = normalizeName(raw);
+      var score = 0;
+      if (target === "warning") {
+        if (n.indexOf("alerttriangle") >= 0) score += 100;
+        if (n.indexOf("warning") >= 0) score += 70;
+        if (n.indexOf("alert") >= 0) score += 30;
+        if (n.indexOf("triangle") >= 0) score += 20;
+      } else if (target === "close") {
+        if (n.indexOf("xclose") >= 0) score += 100;
+        if (n.indexOf("close") >= 0) score += 70;
+        if (n.indexOf("x") >= 0) score += 15;
+      }
+      // Prefer line/icon sets over random components.
+      if (raw.indexOf("icon") >= 0 || raw.indexOf("line") >= 0) score += 10;
+      if (score > 0) scored.push({ comp: iconCandidates[j], score: score });
+    }
+    if (!scored.length) return null;
+    scored.sort(function(a, b) { return b.score - a.score; });
+    return scored[0].comp;
+  }
+
+  var warningIcon = pickBest("warning");
+  var closeIcon = pickBest("close");
+  var fallbackIcon = iconCandidates.length
+    ? iconCandidates.slice().sort(function(a, b) { return a.name.localeCompare(b.name); })[0]
+    : null;
+
+  return { warning: warningIcon, close: closeIcon, fallback: fallbackIcon };
 }
 
 // ---------------------------------------------------------------------------

@@ -70,6 +70,10 @@ import {
   NotificationPropertiesPanel,
 } from "./components/panels/NotificationPreviewPanel";
 import {
+  AlertPreviewContent,
+  AlertPropertiesPanel,
+} from "./components/panels/AlertPreviewPanel";
+import {
   CardPreviewContent,
   CardPropertiesPanel,
 } from "./components/panels/CardPreviewPanel";
@@ -100,6 +104,7 @@ const VARIANTS_BY_COMPONENT = {
   checkbox: ["filled", "outlined"],
   chip: ["filled", "light", "outline"],
   badge: ["filled", "light", "outline", "dot"],
+  alert: ["default", "filled", "light", "outline", "transparent", "white"],
   radio: ["filled", "outline"],
   textinput: ["default", "filled"],
   select: ["default", "filled"],
@@ -161,6 +166,7 @@ export default function App() {
   const brand = brands[activeBrand];
   const colorNames = Object.keys(brand.primitives);
   const globalColorNames = Object.keys(GLOBAL_PRIMITIVES);
+  const defaultBrandColor = colorNames.includes("blue") ? "blue" : (colorNames[0] || "blue");
   const sizeKeys = COMPONENT_SIZE_KEYS[activeComponent] || [];
 
   // Derive default size per component from brand data
@@ -276,7 +282,7 @@ export default function App() {
     "Detected vessel metadata and imagery details from latest satellite capture."
   );
   const [activeNotificationRadius, setActiveNotificationRadius] = useState("md");
-  const [activeNotificationColor, setActiveNotificationColor] = useState("blue");
+  const [activeNotificationColor, setActiveNotificationColor] = useState(defaultBrandColor);
   const [activeNotificationWithBorder, setActiveNotificationWithBorder] = useState(false);
   const [activeNotificationWithCloseButton, setActiveNotificationWithCloseButton] = useState(false);
   const [activeNotificationWithIcon, setActiveNotificationWithIcon] = useState(false);
@@ -284,6 +290,14 @@ export default function App() {
   const [activeNotificationTitle, setActiveNotificationTitle] = useState("We notify you that");
   const [activeNotificationDescription, setActiveNotificationDescription] = useState(
     "You are now obligated to give a star to Mantine project on GitHub"
+  );
+  const [activeAlertRadius, setActiveAlertRadius] = useState("md");
+  const [activeAlertColor, setActiveAlertColor] = useState(defaultBrandColor);
+  const [activeAlertWithCloseButton, setActiveAlertWithCloseButton] = useState(false);
+  const [activeAlertWithIcon, setActiveAlertWithIcon] = useState(true);
+  const [activeAlertTitle, setActiveAlertTitle] = useState("Alert title");
+  const [activeAlertMessage, setActiveAlertMessage] = useState(
+    "Lorem ipsum dolor sit, amet consectetur adipisicing elit. At officiis, quae tempore necessitatibus placeat saepe."
   );
 
   // Sync active sizes when brand changes
@@ -328,6 +342,10 @@ export default function App() {
     setActivePillSize(piDef);
     setActiveBadgeSize(baDef);
     setActiveBadgeRadius(baDef);
+    const nextBrandColors = Object.keys(brands[newBrand]?.primitives || {});
+    const nextDefaultColor = nextBrandColors.includes("blue") ? "blue" : (nextBrandColors[0] || "blue");
+    setActiveNotificationColor(nextDefaultColor);
+    setActiveAlertColor(nextDefaultColor);
   }, [brands]);
 
   // Sync active size when component changes
@@ -406,13 +424,21 @@ export default function App() {
       setActiveVariant("filled");
     } else if (newComp === "notification") {
       setActiveNotificationRadius("md");
-      setActiveNotificationColor("blue");
+      setActiveNotificationColor(defaultBrandColor);
       setActiveNotificationWithBorder(false);
       setActiveNotificationWithCloseButton(false);
       setActiveNotificationWithIcon(false);
       setActiveNotificationLoading(false);
       setActiveNotificationTitle("We notify you that");
       setActiveNotificationDescription("You are now obligated to give a star to Mantine project on GitHub");
+    } else if (newComp === "alert") {
+      setActiveAlertRadius("md");
+      setActiveAlertColor(defaultBrandColor);
+      setActiveAlertWithCloseButton(false);
+      setActiveAlertWithIcon(true);
+      setActiveAlertTitle("Alert title");
+      setActiveAlertMessage("Lorem ipsum dolor sit, amet consectetur adipisicing elit. At officiis, quae tempore necessitatibus placeat saepe.");
+      setActiveVariant("light");
     } else if (newComp === "textinput") {
       setActiveTextInputSize(textInputDefault);
       setActiveTextInputRadius(textInputDefault);
@@ -462,7 +488,7 @@ export default function App() {
       setActiveTooltipPosition("top");
       setActiveTooltipWithArrow(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, loaderDefault, pillDefault, badgeDefault]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, loaderDefault, pillDefault, badgeDefault, defaultBrandColor]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -564,7 +590,7 @@ export default function App() {
       forcedIndeterminate = true;
     }
 
-    if (["button", "actionicon", "tabs", "checkbox", "chip", "badge", "radio", "textinput", "select"].includes(activeComponent)) {
+    if (["button", "actionicon", "tabs", "checkbox", "chip", "badge", "alert", "radio", "textinput", "select"].includes(activeComponent)) {
       const variantSegment = parts[1];
       const knownVariants = {
         button: ["filled", "outlined", "ghost"],
@@ -573,6 +599,7 @@ export default function App() {
         checkbox: ["filled", "outlined"],
         chip: ["filled", "light", "outline"],
         badge: ["filled", "light", "outline", "dot"],
+        alert: ["default", "filled", "light", "outline", "transparent", "white"],
         radio: ["filled", "outline"],
         textinput: ["default", "filled"],
         select: ["default", "filled"],
@@ -714,6 +741,7 @@ export default function App() {
       radio: ["filled", "outline"],
       chip: ["filled", "light", "outline"],
       badge: ["filled", "light", "outline", "dot"],
+      alert: ["default", "filled", "light", "outline", "transparent", "white"],
       textinput: ["default", "filled"],
       select: ["default", "filled"],
     };
@@ -759,6 +787,7 @@ export default function App() {
       activeComponent === "textinput"
       || activeComponent === "select"
       || activeComponent === "badge"
+      || activeComponent === "alert"
     ) {
       if (!variants.includes(variantSegment)) return true;
       if (variantSegment !== activeVariant) return false;
@@ -784,6 +813,7 @@ export default function App() {
       checkbox: ["filled", "outlined"],
       radio: ["filled", "outline"],
       badge: ["filled", "light", "outline", "dot"],
+      alert: ["default", "filled", "light", "outline", "transparent", "white"],
       textinput: ["default", "filled"],
       select: ["default", "filled"],
     };
@@ -822,6 +852,7 @@ export default function App() {
     loader: activeLoaderSize,
     pill: activePillSize,
     badge: activeBadgeSize,
+    alert: activeAlertRadius,
   };
   const activeDimensionSize = activeSizeByComponent[activeComponent] || sizeKeys[0];
   const getSelectedDimensionSize = (tokenName) => {
@@ -851,6 +882,9 @@ export default function App() {
     }
     if (activeComponent === "notification" && tokenName === "notification-radius") {
       return activeNotificationRadius;
+    }
+    if (activeComponent === "alert" && tokenName === "alert-radius") {
+      return activeAlertRadius;
     }
     if (activeComponent === "slider" && tokenName === "slider-radius") {
       return activeSliderRadius;
@@ -1230,6 +1264,20 @@ export default function App() {
                   loading={activeNotificationLoading}
                 />
               )}
+              {activeComponent === "alert" && (
+                <AlertPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  variant={forcedVariant || activeVariant}
+                  color={activeAlertColor}
+                  radius={activeAlertRadius}
+                  withCloseButton={activeAlertWithCloseButton}
+                  withIcon={activeAlertWithIcon}
+                  title={activeAlertTitle}
+                  message={activeAlertMessage}
+                />
+              )}
 
               {activeComponent === "textinput" && (
                 <TextInputPreviewContent
@@ -1550,6 +1598,25 @@ export default function App() {
                   setDescription={setActiveNotificationDescription}
                 />
               )}
+              {activeComponent === "alert" && (
+                <AlertPropertiesPanel
+                  variant={forcedVariant || activeVariant}
+                  setVariant={setActiveVariant}
+                  color={activeAlertColor}
+                  setColor={setActiveAlertColor}
+                  colorOptions={colorNames}
+                  radius={activeAlertRadius}
+                  setRadius={setActiveAlertRadius}
+                  withCloseButton={activeAlertWithCloseButton}
+                  setWithCloseButton={setActiveAlertWithCloseButton}
+                  withIcon={activeAlertWithIcon}
+                  setWithIcon={setActiveAlertWithIcon}
+                  title={activeAlertTitle}
+                  setTitle={setActiveAlertTitle}
+                  message={activeAlertMessage}
+                  setMessage={setActiveAlertMessage}
+                />
+              )}
               {activeComponent === "textinput" && (
                 <TextInputPropertiesPanel
                   activeVariant={forcedVariant || activeVariant}
@@ -1656,7 +1723,7 @@ export default function App() {
                   setText={setActiveBadgeText}
                 />
               )}
-              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "checkbox", "radio", "chip", "tooltip", "notification", "textinput", "select", "card", "loader", "pill", "badge"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "card", "loader", "pill", "badge"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>
