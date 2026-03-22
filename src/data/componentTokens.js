@@ -704,6 +704,30 @@ export const COMPONENT_TOKENS = {
     "alert-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "alert/border-width" },
   },
 
+  modal: {
+    // ── COLOR TOKENS ──
+    "modal-background": { type: "COLOR", semantic: "surface-default", figmaPath: "modal/background" },
+    "modal-header-background": { type: "COLOR", semantic: "surface-default", figmaPath: "modal/header-background" },
+    "modal-footer-background": { type: "COLOR", semantic: "surface-default", figmaPath: "modal/footer-background" },
+    "modal-border": { type: "COLOR", semantic: "border-default", figmaPath: "modal/border" },
+    "modal-title": { type: "COLOR", semantic: "text-default", figmaPath: "modal/title" },
+    "modal-body": { type: "COLOR", semantic: "text-default", figmaPath: "modal/body" },
+    "modal-overlay": { type: "COLOR", semantic: "surface-inverse", figmaPath: "modal/overlay" },
+    "modal-close": { type: "COLOR", semantic: "text-default", figmaPath: "modal/close" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "modal-width": { type: "FLOAT", unit: "px", sizes: { xs: 280, sm: 340, md: 420, lg: 520, xl: 640 }, figmaPath: "modal/width" },
+    "modal-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "modal/radius" },
+
+    // ── FLOAT TOKENS (single value) ──
+    "modal-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/padding-x" },
+    "modal-padding-y": { type: "FLOAT", unit: "px", value: 14, figmaPath: "modal/padding-y" },
+    "modal-title-font-size": { type: "FLOAT", unit: "px", value: 18, figmaPath: "modal/title-font-size" },
+    "modal-body-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "modal/body-font-size" },
+    "modal-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "modal/border-width" },
+    "modal-overlay-opacity": { type: "FLOAT", unit: "", value: 45, figmaPath: "modal/overlay-opacity" },
+  },
+
   textinput: {
     // ── DEFAULT VARIANT — BACKGROUND (per state) ──
     "textinput-default-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "textinput/default-background" },
@@ -814,6 +838,33 @@ export const COMPONENT_TOKENS = {
     "select-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "select/error-gap" },
   },
 
+  anchor: {
+    // ── COLOR TOKENS ──
+    "anchor-color":          { type: "COLOR", semantic: "interactive-primary",       figmaPath: "anchor/color" },
+    "anchor-color-hover":    { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "anchor/color-hover" },
+    "anchor-color-visited":  { type: "COLOR", semantic: "interactive-primary",       figmaPath: "anchor/color-visited" },
+    "anchor-color-disabled": { type: "COLOR", semantic: "text-disabled",             figmaPath: "anchor/color-disabled" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "anchor-font-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },
+      figmaPath: "anchor/font-size",
+    },
+    "anchor-line-height": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },
+      figmaPath: "anchor/line-height",
+    },
+
+    // ── FLOAT TOKENS (single value) ──
+    "anchor-font-weight-regular":  { type: "FLOAT", unit: "", value: 400, figmaPath: "anchor/font-weight-regular" },
+    "anchor-font-weight-semibold": { type: "FLOAT", unit: "", value: 600, figmaPath: "anchor/font-weight-semibold" },
+    "anchor-font-weight-bold":     { type: "FLOAT", unit: "", value: 700, figmaPath: "anchor/font-weight-bold" },
+  },
+
   title: {
     // ── COLOR TOKENS ──
     "title-color": { type: "COLOR", semantic: "text-default", figmaPath: "title/color" },
@@ -902,6 +953,8 @@ export const COMPONENT_SIZE_KEYS = {
   pill: ["xs", "sm", "md", "lg", "xl"],
   badge: ["xs", "sm", "md", "lg", "xl"],
   alert: ["xs", "sm", "md", "lg", "xl"],
+  modal: ["xs", "sm", "md", "lg", "xl"],
+  anchor: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["xs", "sm", "md", "lg", "xl"],
   select: ["xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],

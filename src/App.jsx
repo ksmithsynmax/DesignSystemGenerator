@@ -93,6 +93,14 @@ import {
   TextPreviewContent,
   TextPropertiesPanel,
 } from "./components/panels/TextPreviewPanel";
+import {
+  ModalPreviewContent,
+  ModalPropertiesPanel,
+} from "./components/panels/ModalPreviewPanel";
+import {
+  AnchorPreviewContent,
+  AnchorPropertiesPanel,
+} from "./components/panels/AnchorPreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
@@ -185,6 +193,8 @@ export default function App() {
   const loaderDefault = getComponentDefaultSize(brands, activeBrand, "loader") || "md";
   const pillDefault = getComponentDefaultSize(brands, activeBrand, "pill") || "md";
   const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "md";
+  const modalDefault = getComponentDefaultSize(brands, activeBrand, "modal") || "md";
+  const anchorDefault = getComponentDefaultSize(brands, activeBrand, "anchor") || "md";
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
   const [activeActionIconSize, setActiveActionIconSize] = useState(actionIconDefault);
@@ -299,6 +309,21 @@ export default function App() {
   const [activeAlertMessage, setActiveAlertMessage] = useState(
     "Lorem ipsum dolor sit, amet consectetur adipisicing elit. At officiis, quae tempore necessitatibus placeat saepe."
   );
+  const [activeAnchorSize, setActiveAnchorSize] = useState(anchorDefault);
+  const [activeAnchorUnderline, setActiveAnchorUnderline] = useState("always");
+  const [activeAnchorWeightMode, setActiveAnchorWeightMode] = useState("regular");
+  const [activeAnchorState, setActiveAnchorState] = useState("default");
+  const [activeAnchorText, setActiveAnchorText] = useState("View documentation");
+  const [activeModalSize, setActiveModalSize] = useState(modalDefault);
+  const [activeModalRadius, setActiveModalRadius] = useState(modalDefault);
+  const [activeModalLayout, setActiveModalLayout] = useState("basic");
+  const [activeModalWithOverlay, setActiveModalWithOverlay] = useState(true);
+  const [activeModalWithCloseButton, setActiveModalWithCloseButton] = useState(true);
+  const [activeModalCentered, setActiveModalCentered] = useState(true);
+  const [activeModalTitle, setActiveModalTitle] = useState("Modal title");
+  const [activeModalBody, setActiveModalBody] = useState(
+    "This action cannot be undone. Please confirm you want to proceed."
+  );
 
   // Sync active sizes when brand changes
   const handleBrandChange = useCallback((newBrand) => {
@@ -316,6 +341,8 @@ export default function App() {
     const ldDef = getComponentDefaultSize(brands, newBrand, "loader") || "md";
     const piDef = getComponentDefaultSize(brands, newBrand, "pill") || "md";
     const baDef = getComponentDefaultSize(brands, newBrand, "badge") || "md";
+    const moDef = getComponentDefaultSize(brands, newBrand, "modal") || "md";
+    const anDef = getComponentDefaultSize(brands, newBrand, "anchor") || "md";
     setActiveSize(btnDef);
     setActiveActionIconSize(aiDef);
     setActiveActionIconRadius(aiDef);
@@ -342,6 +369,9 @@ export default function App() {
     setActivePillSize(piDef);
     setActiveBadgeSize(baDef);
     setActiveBadgeRadius(baDef);
+    setActiveModalSize(moDef);
+    setActiveModalRadius(moDef);
+    setActiveAnchorSize(anDef);
     const nextBrandColors = Object.keys(brands[newBrand]?.primitives || {});
     const nextDefaultColor = nextBrandColors.includes("blue") ? "blue" : (nextBrandColors[0] || "blue");
     setActiveNotificationColor(nextDefaultColor);
@@ -404,6 +434,21 @@ export default function App() {
       setActiveTextLineClamp(0);
       setActiveTextTruncate("off");
       setActiveTextText("Build fully functional accessible web applications faster than ever.");
+    } else if (newComp === "anchor") {
+      setActiveAnchorSize(anchorDefault);
+      setActiveAnchorUnderline("always");
+      setActiveAnchorWeightMode("regular");
+      setActiveAnchorState("default");
+      setActiveAnchorText("View documentation");
+    } else if (newComp === "modal") {
+      setActiveModalSize(modalDefault);
+      setActiveModalRadius(modalDefault);
+      setActiveModalLayout("basic");
+      setActiveModalWithOverlay(true);
+      setActiveModalWithCloseButton(true);
+      setActiveModalCentered(true);
+      setActiveModalTitle("Modal title");
+      setActiveModalBody("This action cannot be undone. Please confirm you want to proceed.");
     } else if (newComp === "checkbox") {
       setActiveCheckboxSize(checkboxDefault);
       setActiveCheckboxRadius(checkboxDefault);
@@ -488,7 +533,7 @@ export default function App() {
       setActiveTooltipPosition("top");
       setActiveTooltipWithArrow(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, loaderDefault, pillDefault, badgeDefault, defaultBrandColor]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, loaderDefault, pillDefault, badgeDefault, modalDefault, anchorDefault, defaultBrandColor]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -569,7 +614,7 @@ export default function App() {
   const dimensionTokens = getDimensionTokens(activeComponent);
 
   // Parse forced state/checked/variant from the active token card
-  const INTERACTIVE_STATES = ["active", "hover", "focus", "pressed", "disabled", "error"];
+  const INTERACTIVE_STATES = ["active", "hover", "focus", "pressed", "disabled", "error", "visited"];
   let forcedState = null;
   let forcedChecked = null;
   let forcedIndeterminate = false;
@@ -843,6 +888,7 @@ export default function App() {
     rangeslider: activeRangeSliderSize,
     title: activeTitleSize === "auto" ? `h${activeTitleOrder}` : activeTitleSize,
     text: activeTextSizeToken,
+    anchor: activeAnchorSize,
     checkbox: activeCheckboxSize,
     radio: activeRadioSize,
     chip: activeChipSize,
@@ -852,6 +898,7 @@ export default function App() {
     loader: activeLoaderSize,
     pill: activePillSize,
     badge: activeBadgeSize,
+    modal: activeModalSize,
     alert: activeAlertRadius,
   };
   const activeDimensionSize = activeSizeByComponent[activeComponent] || sizeKeys[0];
@@ -885,6 +932,9 @@ export default function App() {
     }
     if (activeComponent === "alert" && tokenName === "alert-radius") {
       return activeAlertRadius;
+    }
+    if (activeComponent === "modal" && tokenName === "modal-radius") {
+      return activeModalRadius;
     }
     if (activeComponent === "slider" && tokenName === "slider-radius") {
       return activeSliderRadius;
@@ -1189,6 +1239,33 @@ export default function App() {
                   lineClamp={activeTextLineClamp}
                   truncate={activeTextTruncate}
                   text={activeTextText}
+                />
+              )}
+              {activeComponent === "anchor" && (
+                <AnchorPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  size={activeAnchorSize}
+                  underline={activeAnchorUnderline}
+                  weightMode={activeAnchorWeightMode}
+                  state={forcedState || activeAnchorState}
+                  text={activeAnchorText}
+                />
+              )}
+              {activeComponent === "modal" && (
+                <ModalPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  size={activeModalSize}
+                  radius={activeModalRadius}
+                  layout={activeModalLayout}
+                  withOverlay={activeModalWithOverlay}
+                  withCloseButton={activeModalWithCloseButton}
+                  centered={activeModalCentered}
+                  title={activeModalTitle}
+                  body={activeModalBody}
                 />
               )}
 
@@ -1512,6 +1589,40 @@ export default function App() {
                   setText={setActiveTextText}
                 />
               )}
+              {activeComponent === "anchor" && (
+                <AnchorPropertiesPanel
+                  size={activeAnchorSize}
+                  setSize={setActiveAnchorSize}
+                  underline={activeAnchorUnderline}
+                  setUnderline={setActiveAnchorUnderline}
+                  weightMode={activeAnchorWeightMode}
+                  setWeightMode={setActiveAnchorWeightMode}
+                  state={forcedState || activeAnchorState}
+                  setState={setActiveAnchorState}
+                  text={activeAnchorText}
+                  setText={setActiveAnchorText}
+                />
+              )}
+              {activeComponent === "modal" && (
+                <ModalPropertiesPanel
+                  size={activeModalSize}
+                  setSize={setActiveModalSize}
+                  radius={activeModalRadius}
+                  setRadius={setActiveModalRadius}
+                  layout={activeModalLayout}
+                  setLayout={setActiveModalLayout}
+                  withOverlay={activeModalWithOverlay}
+                  setWithOverlay={setActiveModalWithOverlay}
+                  withCloseButton={activeModalWithCloseButton}
+                  setWithCloseButton={setActiveModalWithCloseButton}
+                  centered={activeModalCentered}
+                  setCentered={setActiveModalCentered}
+                  title={activeModalTitle}
+                  setTitle={setActiveModalTitle}
+                  body={activeModalBody}
+                  setBody={setActiveModalBody}
+                />
+              )}
               {activeComponent === "checkbox" && (
                 <CheckboxPropertiesPanel
                   activeVariant={forcedVariant || activeVariant}
@@ -1723,7 +1834,7 @@ export default function App() {
                   setText={setActiveBadgeText}
                 />
               )}
-              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "card", "loader", "pill", "badge"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "card", "loader", "pill", "badge"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

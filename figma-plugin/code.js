@@ -506,11 +506,21 @@ async function buildComponents(varMap) {
   var tabsSet = await buildSet("Tabs", function () {
     return buildTabsComponentSet(varMap, page, font);
   });
+  var anchorSet = await buildSet("Anchor", function () {
+    return buildAnchorComponentSet(varMap, page, font);
+  });
   var titleSet = await buildSet("Title", function () {
     return buildTitleComponentSet(varMap, page, font);
   });
   var textSet = await buildSet("Text", function () {
     return buildTextComponentSet(varMap, page, font);
+  });
+  var modalSet = await buildSet("Modal", function () {
+    return buildModalComponentSet(varMap, page, font, {
+      buttonSet: buttonSet,
+      titleSet: titleSet,
+      textSet: textSet,
+    });
   });
 
   // Position component sets in wrapped rows using rendered bounds
@@ -524,6 +534,7 @@ async function buildComponents(varMap) {
     chipSet,
     notificationSet,
     alertSet,
+    modalSet,
     tooltipSet,
     loaderSet,
     pillSet,
@@ -533,6 +544,7 @@ async function buildComponents(varMap) {
     cardSet,
     actionIconSet,
     tabsSet,
+    anchorSet,
     titleSet,
     textSet,
   ];
@@ -549,7 +561,7 @@ function cleanupExistingComponents(page) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Alert" || child.name === "Tooltip" || child.name === "Loader" || child.name === "Pill" || child.name === "Badge" || child.name === "TextInput" || child.name === "Select" || child.name === "Card" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Title" || child.name === "Text")) {
+    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Alert" || child.name === "Modal" || child.name === "Tooltip" || child.name === "Loader" || child.name === "Pill" || child.name === "Badge" || child.name === "TextInput" || child.name === "Select" || child.name === "Card" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Anchor" || child.name === "Title" || child.name === "Text")) {
       child.remove();
     }
     // Also clean up standalone components from failed previous runs
@@ -1412,6 +1424,101 @@ function rangeSliderMarkColorPath(state) {
 function rangeSliderMarkLabelColorPath(state) {
   if (state === "disabled") return "rangeslider/mark-label-color-disabled";
   return "rangeslider/mark-label-color";
+}
+
+function buildAnchorComponentSet(varMap, page, font) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var underlines = ["always", "hover", "never"];
+  var weights = ["regular", "semibold", "bold"];
+  var states = ["default", "hover", "visited", "disabled"];
+  var components = [];
+
+  var colGap = 16;
+  var rowGap = 16;
+  var colWidth = 460 + colGap;
+  var rowHeight = 86 + rowGap;
+
+  function cap(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function anchorColorPath(state) {
+    if (state === "hover") return "anchor/color-hover";
+    if (state === "visited") return "anchor/color-visited";
+    if (state === "disabled") return "anchor/color-disabled";
+    return "anchor/color";
+  }
+
+  var fontByWeight = {
+    regular: font,
+    semibold: font,
+    bold: font,
+  };
+
+  for (var si = 0; si < sizes.length; si++) {
+    var size = sizes[si];
+    var capSize = size.toUpperCase();
+
+    for (var ui = 0; ui < underlines.length; ui++) {
+      var underline = underlines[ui];
+      var capUnderline = cap(underline);
+
+      for (var wi = 0; wi < weights.length; wi++) {
+        var weight = weights[wi];
+        var capWeight = cap(weight);
+
+        for (var sti = 0; sti < states.length; sti++) {
+          var state = states[sti];
+          var capState = cap(state);
+
+          var comp = figma.createComponent();
+          comp.name =
+            "Size=" + capSize +
+            ", Underline=" + capUnderline +
+            ", Weight=" + capWeight +
+            ", State=" + capState;
+          comp.resize(460, 86);
+          comp.fills = [];
+          comp.clipsContent = true;
+
+          var anchorText = figma.createText();
+          anchorText.name = "anchor";
+          anchorText.fontName = fontByWeight[weight] || font;
+          anchorText.characters = "View documentation";
+          anchorText.fontSize = 16;
+          anchorText.textAutoResize = "HEIGHT";
+          anchorText.resize(420, anchorText.height);
+          anchorText.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+
+          bindVar(anchorText, "fontSize", varMap["anchor/font-size-" + size]);
+          bindVar(anchorText, "lineHeight", varMap["anchor/line-height-" + size]);
+          bindVar(anchorText, "fontWeight", varMap["anchor/font-weight-" + weight]);
+          bindPaintVar(anchorText, "fills", 0, varMap[anchorColorPath(state)]);
+
+          if (underline === "always" || (underline === "hover" && state === "hover")) {
+            anchorText.textDecoration = "UNDERLINE";
+          } else {
+            anchorText.textDecoration = "NONE";
+          }
+          if (state === "disabled") anchorText.opacity = 0.7;
+
+          comp.appendChild(anchorText);
+
+          var colIndex = (ui * weights.length) + wi;
+          var rowIndex = (si * states.length) + sti;
+          comp.x = colIndex * colWidth;
+          comp.y = rowIndex * rowHeight;
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " anchor variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Anchor";
+  return componentSet;
 }
 
 function buildTitleComponentSet(varMap, page, font) {
@@ -2592,6 +2699,359 @@ async function buildAlertComponentSet(varMap, page, font) {
   progress("Created " + components.length + " alert variants");
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Alert";
+  return componentSet;
+}
+
+async function buildModalComponentSet(varMap, page, font, sourceSets) {
+  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var overlayStates = ["off", "on"];
+  var closeStates = ["off", "on"];
+  var layouts = ["basic", "actions-right", "centered-ack"];
+  var components = [];
+  var buttonSet = sourceSets && sourceSets.buttonSet ? sourceSets.buttonSet : null;
+  var titleSet = sourceSets && sourceSets.titleSet ? sourceSets.titleSet : null;
+  var textSet = sourceSets && sourceSets.textSet ? sourceSets.textSet : null;
+
+  var widthBySize = { xs: 280, sm: 340, md: 420, lg: 520, xl: 640 };
+  var colGap = 28;
+  var rowGap = 22;
+  var colWidth = 700 + colGap;
+  var rowHeight = 420 + rowGap;
+
+  function cap(str) {
+    return str.charAt(0).toUpperCase() + str.slice(1);
+  }
+
+  function findVariantComponent(componentSet, criteria) {
+    if (!componentSet || !componentSet.children || !criteria) return null;
+    var children = componentSet.children;
+    for (var i = 0; i < children.length; i++) {
+      var child = children[i];
+      if (child.type !== "COMPONENT") continue;
+      var normalizedName = child.name.toLowerCase().replace(/\s+/g, "");
+      var matches = true;
+      for (var key in criteria) {
+        if (!Object.prototype.hasOwnProperty.call(criteria, key)) continue;
+        var token = (String(key) + "=" + String(criteria[key])).toLowerCase().replace(/\s+/g, "");
+        if (normalizedName.indexOf(token) === -1) {
+          matches = false;
+          break;
+        }
+      }
+      if (matches) return child;
+    }
+    return null;
+  }
+
+  var titleVariant = findVariantComponent(titleSet, { Order: "4", Size: "Auto" });
+  var bodyTextVariant = findVariantComponent(textSet, { Size: "MD", Weight: "Regular", Color: "Default" });
+  var cancelButtonVariant = findVariantComponent(buttonSet, { Variant: "Outlined", Size: "MD", State: "Default" });
+  var confirmButtonVariant = findVariantComponent(buttonSet, { Variant: "Filled", Size: "MD", State: "Default" });
+  var alertIcons = await findAlertIconComponents();
+  var modalCloseIconSource = alertIcons.close || alertIcons.fallback;
+
+  for (var si = 0; si < sizes.length; si++) {
+    var size = sizes[si];
+    var capSize = size.toUpperCase();
+    var panelW = widthBySize[size] || 420;
+
+    for (var ri = 0; ri < radii.length; ri++) {
+      var radius = radii[ri];
+      var capRadius = radius.toUpperCase();
+
+      for (var oi = 0; oi < overlayStates.length; oi++) {
+        var withOverlay = overlayStates[oi] === "on";
+        var capOverlay = withOverlay ? "On" : "Off";
+
+        for (var ci = 0; ci < closeStates.length; ci++) {
+          var withClose = closeStates[ci] === "on";
+          var capClose = withClose ? "On" : "Off";
+
+          for (var li = 0; li < layouts.length; li++) {
+            var layout = layouts[li];
+            var centered = layout === "centered-ack";
+            var capLayout = cap(layout);
+
+            var comp = figma.createComponent();
+            comp.name =
+              "Size=" + capSize +
+              ", Radius=" + capRadius +
+              ", Overlay=" + capOverlay +
+              ", Close=" + capClose +
+              ", Layout=" + capLayout;
+            comp.resize(700, 420);
+            comp.fills = [];
+
+            var overlay = figma.createRectangle();
+            overlay.name = "overlay";
+            overlay.resize(700, 420);
+            overlay.x = 0;
+            overlay.y = 0;
+            overlay.fills = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }];
+            overlay.opacity = withOverlay ? 0.45 : 0;
+            bindPaintVar(overlay, "fills", 0, varMap["modal/overlay"]);
+            bindVar(overlay, "opacity", varMap["modal/overlay-opacity"]);
+            comp.appendChild(overlay);
+
+            var panel = figma.createFrame();
+            panel.name = "modal";
+            panel.layoutMode = "VERTICAL";
+            panel.primaryAxisSizingMode = "AUTO";
+            panel.counterAxisSizingMode = "FIXED";
+            panel.counterAxisAlignItems = "MIN";
+            panel.itemSpacing = 0;
+            panel.resize(panelW, 220);
+            panel.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            panel.strokes = [{ type: "SOLID", color: { r: 0.86, g: 0.86, b: 0.86 } }];
+            panel.strokeWeight = 1;
+            panel.strokeAlign = "INSIDE";
+            panel.cornerRadius = 8;
+            panel.clipsContent = true;
+            bindPaintVar(panel, "fills", 0, varMap["modal/background"]);
+            bindPaintVar(panel, "strokes", 0, varMap["modal/border"]);
+            bindVar(panel, "strokeWeight", varMap["modal/border-width"]);
+            bindVar(panel, "minWidth", varMap["modal/width-" + size]);
+            bindVar(panel, "maxWidth", varMap["modal/width-" + size]);
+            bindVar(panel, "topLeftRadius", varMap["modal/radius-" + radius]);
+            bindVar(panel, "topRightRadius", varMap["modal/radius-" + radius]);
+            bindVar(panel, "bottomLeftRadius", varMap["modal/radius-" + radius]);
+            bindVar(panel, "bottomRightRadius", varMap["modal/radius-" + radius]);
+
+            panel.x = Math.round((700 - panelW) / 2);
+            panel.y = centered ? 104 : 28;
+            comp.appendChild(panel);
+
+            var header = figma.createFrame();
+            header.name = "header";
+            header.layoutMode = "HORIZONTAL";
+            header.primaryAxisSizingMode = "FIXED";
+            header.counterAxisSizingMode = "AUTO";
+            header.primaryAxisAlignItems = layout === "centered-ack" ? "CENTER" : "SPACE_BETWEEN";
+            header.counterAxisAlignItems = "CENTER";
+            header.resize(panelW, 56);
+            header.paddingLeft = 16;
+            header.paddingRight = 16;
+            header.paddingTop = 14;
+            header.paddingBottom = 14;
+            header.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            bindVar(header, "paddingLeft", varMap["modal/padding-x"]);
+            bindVar(header, "paddingRight", varMap["modal/padding-x"]);
+            bindVar(header, "paddingTop", varMap["modal/padding-y"]);
+            bindVar(header, "paddingBottom", varMap["modal/padding-y"]);
+            bindPaintVar(header, "fills", 0, varMap["modal/header-background"]);
+            panel.appendChild(header);
+
+            var titleNode = null;
+            if (titleVariant) {
+              titleNode = titleVariant.createInstance();
+              titleNode.name = "title";
+              try {
+                titleNode.resize(Math.max(120, panelW - (withClose ? 88 : 32)), 28);
+              } catch (e) {}
+            } else {
+              titleNode = figma.createText();
+              titleNode.name = "title";
+              titleNode.fontName = font;
+              titleNode.characters = "Modal title";
+              titleNode.fontSize = 18;
+              titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              bindPaintVar(titleNode, "fills", 0, varMap["modal/title"]);
+              bindVar(titleNode, "fontSize", varMap["modal/title-font-size"]);
+            }
+            header.appendChild(titleNode);
+
+            if (withClose) {
+              if (modalCloseIconSource) {
+                var closeIconInst = modalCloseIconSource.createInstance();
+                closeIconInst.name = "close";
+                try { closeIconInst.resize(16, 16); } catch (e) {}
+                header.appendChild(closeIconInst);
+              } else {
+                var closeNode = figma.createText();
+                closeNode.name = "close";
+                closeNode.fontName = font;
+                closeNode.characters = "×";
+                closeNode.fontSize = 18;
+                closeNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+                bindPaintVar(closeNode, "fills", 0, varMap["modal/close"]);
+                header.appendChild(closeNode);
+              }
+            }
+
+            var bodyWrap = figma.createFrame();
+            bodyWrap.name = "body-wrap";
+            bodyWrap.layoutMode = "VERTICAL";
+            bodyWrap.primaryAxisSizingMode = "FIXED";
+            bodyWrap.counterAxisSizingMode = "AUTO";
+            bodyWrap.counterAxisAlignItems = "MIN";
+            bodyWrap.resize(panelW, layout === "actions-right" ? 130 : 100);
+            bodyWrap.paddingLeft = 16;
+            bodyWrap.paddingRight = 16;
+            bodyWrap.paddingBottom = 14;
+            bodyWrap.itemSpacing = 10;
+            bodyWrap.fills = [];
+            bindVar(bodyWrap, "paddingLeft", varMap["modal/padding-x"]);
+            bindVar(bodyWrap, "paddingRight", varMap["modal/padding-x"]);
+            bindVar(bodyWrap, "paddingBottom", varMap["modal/padding-y"]);
+            panel.appendChild(bodyWrap);
+
+            var bodyNode = null;
+            if (bodyTextVariant) {
+              bodyNode = bodyTextVariant.createInstance();
+              bodyNode.name = "body";
+              try {
+                bodyNode.resize(panelW - 32, layout === "actions-right" ? 68 : 58);
+              } catch (e) {}
+            } else {
+              bodyNode = figma.createText();
+              bodyNode.name = "body";
+              bodyNode.fontName = font;
+              bodyNode.characters = "This action cannot be undone. Please confirm you want to proceed.";
+              bodyNode.fontSize = 14;
+              bodyNode.textAutoResize = "HEIGHT";
+              bodyNode.resize(panelW - 32, bodyNode.height);
+              bodyNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+              bindPaintVar(bodyNode, "fills", 0, varMap["modal/body"]);
+              bindVar(bodyNode, "fontSize", varMap["modal/body-font-size"]);
+            }
+            bodyWrap.appendChild(bodyNode);
+
+            if (layout === "actions-right") {
+              var actionRow = figma.createFrame();
+              actionRow.name = "actions";
+              actionRow.layoutMode = "HORIZONTAL";
+              actionRow.primaryAxisSizingMode = "FIXED";
+              actionRow.counterAxisSizingMode = "AUTO";
+              actionRow.primaryAxisAlignItems = "MAX";
+              actionRow.counterAxisAlignItems = "CENTER";
+              actionRow.itemSpacing = 10;
+              actionRow.resize(panelW - 32, 34);
+              actionRow.fills = [];
+              bodyWrap.appendChild(actionRow);
+
+              if (cancelButtonVariant && confirmButtonVariant) {
+                var cancelBtnInstance = cancelButtonVariant.createInstance();
+                cancelBtnInstance.name = "Cancel";
+                actionRow.appendChild(cancelBtnInstance);
+
+                var yesBtnInstance = confirmButtonVariant.createInstance();
+                yesBtnInstance.name = "Yes";
+                actionRow.appendChild(yesBtnInstance);
+              } else {
+                var cancelBtn = figma.createFrame();
+                cancelBtn.name = "Cancel";
+                cancelBtn.layoutMode = "HORIZONTAL";
+                cancelBtn.primaryAxisSizingMode = "AUTO";
+                cancelBtn.counterAxisSizingMode = "AUTO";
+                cancelBtn.primaryAxisAlignItems = "CENTER";
+                cancelBtn.counterAxisAlignItems = "CENTER";
+                cancelBtn.paddingLeft = 14;
+                cancelBtn.paddingRight = 14;
+                cancelBtn.paddingTop = 8;
+                cancelBtn.paddingBottom = 8;
+                cancelBtn.cornerRadius = 6;
+                cancelBtn.fills = [];
+                cancelBtn.strokes = [{ type: "SOLID", color: { r: 0.75, g: 0.75, b: 0.75 } }];
+                actionRow.appendChild(cancelBtn);
+
+                var cancelTxt = figma.createText();
+                cancelTxt.fontName = font;
+                cancelTxt.characters = "Cancel";
+                cancelTxt.fontSize = 14;
+                cancelTxt.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                cancelBtn.appendChild(cancelTxt);
+
+                var yesBtn = figma.createFrame();
+                yesBtn.name = "Yes";
+                yesBtn.layoutMode = "HORIZONTAL";
+                yesBtn.primaryAxisSizingMode = "AUTO";
+                yesBtn.counterAxisSizingMode = "AUTO";
+                yesBtn.primaryAxisAlignItems = "CENTER";
+                yesBtn.counterAxisAlignItems = "CENTER";
+                yesBtn.paddingLeft = 16;
+                yesBtn.paddingRight = 16;
+                yesBtn.paddingTop = 8;
+                yesBtn.paddingBottom = 8;
+                yesBtn.cornerRadius = 6;
+                yesBtn.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+                actionRow.appendChild(yesBtn);
+
+                var yesTxt = figma.createText();
+                yesTxt.fontName = font;
+                yesTxt.characters = "Yes";
+                yesTxt.fontSize = 14;
+                yesTxt.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                yesBtn.appendChild(yesTxt);
+              }
+            }
+
+            if (layout === "centered-ack") {
+              var divider = figma.createLine();
+              divider.name = "divider";
+              divider.resize(panelW - 32, 1);
+              divider.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+              divider.strokeWeight = 1;
+              divider.x = 16;
+              divider.y = panel.height - 56;
+              panel.appendChild(divider);
+
+              var footer = figma.createFrame();
+              footer.name = "footer";
+              footer.layoutMode = "HORIZONTAL";
+              footer.primaryAxisSizingMode = "FIXED";
+              footer.counterAxisSizingMode = "AUTO";
+              footer.primaryAxisAlignItems = "SPACE_BETWEEN";
+              footer.counterAxisAlignItems = "CENTER";
+              footer.resize(panelW, 56);
+              footer.paddingLeft = 16;
+              footer.paddingRight = 16;
+              footer.paddingTop = 10;
+              footer.paddingBottom = 10;
+              footer.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              bindPaintVar(footer, "fills", 0, varMap["modal/footer-background"]);
+              panel.appendChild(footer);
+
+              if (cancelButtonVariant && confirmButtonVariant) {
+                var declineBtnInstance = cancelButtonVariant.createInstance();
+                declineBtnInstance.name = "Decline";
+                footer.appendChild(declineBtnInstance);
+
+                var acceptBtnInstance = confirmButtonVariant.createInstance();
+                acceptBtnInstance.name = "Accept";
+                footer.appendChild(acceptBtnInstance);
+              } else {
+                var decline = figma.createText();
+                decline.fontName = font;
+                decline.characters = "Decline";
+                decline.fontSize = 14;
+                decline.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                footer.appendChild(decline);
+
+                var accept = figma.createText();
+                accept.fontName = font;
+                accept.characters = "Accept";
+                accept.fontSize = 14;
+                accept.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+                footer.appendChild(accept);
+              }
+            }
+
+            var colIndex = (ri * overlayStates.length + oi) * closeStates.length + ci;
+            var rowIndex = si * layouts.length + li;
+            comp.x = colIndex * colWidth;
+            comp.y = rowIndex * rowHeight;
+            page.appendChild(comp);
+            components.push(comp);
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " modal variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Modal";
   return componentSet;
 }
 
