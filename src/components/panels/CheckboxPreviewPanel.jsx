@@ -74,6 +74,7 @@ export function CheckboxPreviewContent({
           variant={activeVariant}
           size={activeCheckboxSize}
           radius={activeCheckboxRadius}
+          label="Checkbox label"
           checked={selectedChecked}
           indeterminate={selectedIndeterminate}
           state={selectedState === "default" ? undefined : selectedState}
@@ -93,6 +94,7 @@ export function CheckboxPreviewContent({
             variant={activeVariant}
             size={s}
             radius={activeCheckboxRadius}
+            label="Checkbox label"
             checked={row.checked}
             indeterminate={row.indeterminate}
             state={selectedState === "default" ? undefined : selectedState}

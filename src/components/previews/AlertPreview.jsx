@@ -31,7 +31,13 @@ export default function AlertPreview({
   const paddingX = resolveDimension(brands, brandId, "alert-padding-x");
   const paddingY = resolveDimension(brands, brandId, "alert-padding-y");
   const titleFontSize = resolveDimension(brands, brandId, "alert-title-font-size");
+  const titleFontFamily = resolveDimension(brands, brandId, "alert-title-font-family");
+  const titleFontWeight = resolveDimension(brands, brandId, "alert-title-font-weight");
+  const titleLineHeight = resolveDimension(brands, brandId, "alert-title-line-height");
   const messageFontSize = resolveDimension(brands, brandId, "alert-message-font-size");
+  const messageFontFamily = resolveDimension(brands, brandId, "alert-message-font-family");
+  const messageFontWeight = resolveDimension(brands, brandId, "alert-message-font-weight");
+  const messageLineHeight = resolveDimension(brands, brandId, "alert-message-line-height");
   const iconTitleGap = resolveDimension(brands, brandId, "alert-icon-title-gap") ?? 8;
   const titleMessageGap = resolveDimension(brands, brandId, "alert-title-message-gap") ?? 6;
 
@@ -118,7 +124,9 @@ export default function AlertPreview({
         label: {
           color: variantTextColor,
           fontSize: `${titleFontSize}px`,
-          fontWeight: 600,
+          fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
+          fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
+          lineHeight: titleLineHeight ? `${titleLineHeight}px` : undefined,
           margin: 0,
         },
         body: {
@@ -129,6 +137,9 @@ export default function AlertPreview({
         message: {
           color: variantTextColor,
           fontSize: `${messageFontSize}px`,
+          fontFamily: messageFontFamily ? `"${messageFontFamily}", sans-serif` : undefined,
+          fontWeight: messageFontWeight === "Semi Bold" ? 600 : messageFontWeight === "Bold" ? 700 : 400,
+          lineHeight: messageLineHeight ? `${messageLineHeight}px` : undefined,
           margin: 0,
         },
         icon: {

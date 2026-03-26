@@ -1,5 +1,6 @@
 import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
 import { resolveDimension, getDefaultSizeKey } from "../../utils/resolveToken";
+import { GLOBAL_FONTS, GLOBAL_WEIGHTS } from "../../data/brands";
 
 export default function DimensionTokenRow({
   tokenName,
@@ -18,7 +19,12 @@ export default function DimensionTokenRow({
     brand.dimensionOverrides?.[tokenName]?.[size] !== undefined;
 
   const isString = tokenDef.type === "STRING";
-  const allowedValues = tokenDef.allowedValues;
+  let allowedValues = tokenDef.allowedValues;
+  if (!allowedValues) {
+    if (tokenName.includes("font-family")) allowedValues = Object.values(GLOBAL_FONTS);
+    if (tokenName.includes("font-weight")) allowedValues = Object.values(GLOBAL_WEIGHTS);
+  }
+
   const isSingleValue = tokenDef.value !== undefined && !tokenDef.sizes;
   const visibleSizes =
     !isSingleValue && selectedSize && sizeKeys.includes(selectedSize)
@@ -120,6 +126,22 @@ export default function DimensionTokenRow({
                     <option key={v} value={v}>{v}</option>
                   ))}
                 </select>
+              ) : isString ? (
+                <input
+                  type="text"
+                  value={resolveDimension(brands, brandId, tokenName) ?? ""}
+                  onChange={(e) => onUpdateDimension(tokenName, "_value", e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: "6px 10px",
+                    background: "#1A1B1E",
+                    border: "1px solid #373A40",
+                    borderRadius: 4,
+                    color: "#C1C2C5",
+                    fontSize: 12,
+                    fontFamily: "monospace",
+                  }}
+                />
               ) : (
                 <>
                   <input
@@ -196,6 +218,22 @@ export default function DimensionTokenRow({
                           <option key={v} value={v}>{v}</option>
                         ))}
                       </select>
+                    ) : isString ? (
+                      <input
+                        type="text"
+                        value={val ?? ""}
+                        onChange={(e) => onUpdateDimension(tokenName, size, e.target.value)}
+                        style={{
+                          width: 80,
+                          padding: "4px 6px",
+                          background: isOverridden ? "#2C2E33" : "#1A1B1E",
+                          border: `1px solid ${isOverridden ? "#E9ECEF" : "#373A40"}`,
+                          borderRadius: 4,
+                          color: "#C1C2C5",
+                          fontSize: 11,
+                          fontFamily: "monospace",
+                        }}
+                      />
                     ) : (
                       <input
                         type="number"

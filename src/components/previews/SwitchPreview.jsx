@@ -10,6 +10,7 @@ export default function SwitchPreview({
   checked: controlledChecked,
   readOnly,
   state,
+  label,
 }) {
   const [internalChecked, setInternalChecked] = useState(false);
   const isControlled = controlledChecked !== undefined;
@@ -44,16 +45,21 @@ export default function SwitchPreview({
   const trackBorder = getTokenColor("switch-track-border");
   const thumbBg = getTokenColor("switch-thumb-background");
   const focusRing = resolveColor(brands, brandId, tokens["switch-focus-ring"]?.semantic, "light", "switch-focus-ring");
+  const labelColor = resolveColor(brands, brandId, tokens[isDisabled ? "switch-label-text-disabled" : "switch-label-text"]?.semantic, "light", isDisabled ? "switch-label-text-disabled" : "switch-label-text");
   const isDisabled = state === "disabled";
 
   const width = resolveDimension(brands, brandId, "switch-width", size);
   const height = resolveDimension(brands, brandId, "switch-height", size);
   const thumbSize = resolveDimension(brands, brandId, "switch-thumb-size", size);
   const borderRadius = resolveDimension(brands, brandId, "switch-border-radius", size);
+  const labelFontSize = resolveDimension(brands, brandId, "switch-label-font-size", size);
+  const labelFontFamily = resolveDimension(brands, brandId, "switch-label-font-family");
+  const labelFontWeight = resolveDimension(brands, brandId, "switch-label-font-weight");
 
   return (
     <Switch
       checked={checked}
+      label={label}
       onChange={readOnly ? undefined : () => setInternalChecked((v) => !v)}
       readOnly={readOnly || isDisabled}
       disabled={isDisabled}
@@ -81,6 +87,12 @@ export default function SwitchPreview({
               outlineOffset: 2,
             }
           : undefined,
+        label: {
+          color: labelColor,
+          fontSize: labelFontSize ? `${labelFontSize}px` : undefined,
+          fontFamily: labelFontFamily ? `"${labelFontFamily}", sans-serif` : undefined,
+          fontWeight: labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400,
+        }
       }}
     />
   );

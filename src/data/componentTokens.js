@@ -17,11 +17,11 @@ export const COMPONENT_TOKENS = {
     "button-filled-text-focus":          { type: "COLOR", semantic: "text-on-interactive",         figmaPath: "button/filled-text-focus" },
     "button-filled-text-pressed":        { type: "COLOR", semantic: "text-on-interactive",         figmaPath: "button/filled-text-pressed" },
     "button-filled-text-disabled":       { type: "COLOR", semantic: "text-disabled",               figmaPath: "button/filled-text-disabled" },
-    "button-filled-border":              { type: "COLOR", semantic: null,                          figmaPath: "button/filled-border" },
-    "button-filled-border-hover":        { type: "COLOR", semantic: null,                          figmaPath: "button/filled-border-hover" },
-    "button-filled-border-focus":        { type: "COLOR", semantic: null,                          figmaPath: "button/filled-border-focus" },
-    "button-filled-border-pressed":      { type: "COLOR", semantic: null,                          figmaPath: "button/filled-border-pressed" },
-    "button-filled-border-disabled":     { type: "COLOR", semantic: null,                          figmaPath: "button/filled-border-disabled" },
+    "button-filled-border":              { type: "COLOR", semantic: "transparent",                          figmaPath: "button/filled-border" },
+    "button-filled-border-hover":        { type: "COLOR", semantic: "transparent",                          figmaPath: "button/filled-border-hover" },
+    "button-filled-border-focus":        { type: "COLOR", semantic: "transparent",                          figmaPath: "button/filled-border-focus" },
+    "button-filled-border-pressed":      { type: "COLOR", semantic: "transparent",                          figmaPath: "button/filled-border-pressed" },
+    "button-filled-border-disabled":     { type: "COLOR", semantic: "transparent",                          figmaPath: "button/filled-border-disabled" },
 
     // ── OUTLINED COLOR TOKENS (all states) ──
     "button-outlined-background":          { type: "COLOR", semantic: "surface-default",             figmaPath: "button/outlined-background" },
@@ -41,21 +41,21 @@ export const COMPONENT_TOKENS = {
     "button-outlined-border-disabled":     { type: "COLOR", semantic: "border-disabled",             figmaPath: "button/outlined-border-disabled" },
 
     // ── GHOST COLOR TOKENS (all states) ──
-    "button-ghost-background":          { type: "COLOR", semantic: null,                          figmaPath: "button/ghost-background" },
+    "button-ghost-background":          { type: "COLOR", semantic: "transparent",                          figmaPath: "button/ghost-background" },
     "button-ghost-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "button/ghost-background-hover" },
-    "button-ghost-background-focus":    { type: "COLOR", semantic: null,                          figmaPath: "button/ghost-background-focus" },
+    "button-ghost-background-focus":    { type: "COLOR", semantic: "transparent",                          figmaPath: "button/ghost-background-focus" },
     "button-ghost-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "button/ghost-background-pressed" },
-    "button-ghost-background-disabled": { type: "COLOR", semantic: null,                          figmaPath: "button/ghost-background-disabled" },
+    "button-ghost-background-disabled": { type: "COLOR", semantic: "transparent",                          figmaPath: "button/ghost-background-disabled" },
     "button-ghost-text":                { type: "COLOR", semantic: "interactive-primary",          figmaPath: "button/ghost-text" },
     "button-ghost-text-hover":          { type: "COLOR", semantic: "interactive-primary",          figmaPath: "button/ghost-text-hover" },
     "button-ghost-text-focus":          { type: "COLOR", semantic: "interactive-primary",          figmaPath: "button/ghost-text-focus" },
     "button-ghost-text-pressed":        { type: "COLOR", semantic: "interactive-primary",          figmaPath: "button/ghost-text-pressed" },
     "button-ghost-text-disabled":       { type: "COLOR", semantic: "text-disabled",               figmaPath: "button/ghost-text-disabled" },
-    "button-ghost-border":              { type: "COLOR", semantic: null,                          figmaPath: "button/ghost-border" },
-    "button-ghost-border-hover":        { type: "COLOR", semantic: null,                          figmaPath: "button/ghost-border-hover" },
-    "button-ghost-border-focus":        { type: "COLOR", semantic: null,                          figmaPath: "button/ghost-border-focus" },
-    "button-ghost-border-pressed":      { type: "COLOR", semantic: null,                          figmaPath: "button/ghost-border-pressed" },
-    "button-ghost-border-disabled":     { type: "COLOR", semantic: null,                          figmaPath: "button/ghost-border-disabled" },
+    "button-ghost-border":              { type: "COLOR", semantic: "transparent",                          figmaPath: "button/ghost-border" },
+    "button-ghost-border-hover":        { type: "COLOR", semantic: "transparent",                          figmaPath: "button/ghost-border-hover" },
+    "button-ghost-border-focus":        { type: "COLOR", semantic: "transparent",                          figmaPath: "button/ghost-border-focus" },
+    "button-ghost-border-pressed":      { type: "COLOR", semantic: "transparent",                          figmaPath: "button/ghost-border-pressed" },
+    "button-ghost-border-disabled":     { type: "COLOR", semantic: "transparent",                          figmaPath: "button/ghost-border-disabled" },
 
     // ── SHARED COLOR TOKEN ──
     "button-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "button/focus-ring" },
@@ -65,15 +65,15 @@ export const COMPONENT_TOKENS = {
     "button-padding-y":     { type: "FLOAT", unit: "px", sizes: { xs: 4,  sm: 6,  md: 8,  lg: 10, xl: 14 },   figmaPath: "button/padding-y" },
     "button-height":        { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 36, md: 42, lg: 50, xl: 60 },   figmaPath: "button/height" },
     "button-font-size":     { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },   figmaPath: "button/font-size" },
-    "button-line-height":   { type: "FLOAT", unit: "px", sizes: { xs: 14.4, sm: 16.8, md: 19.2, lg: 21.6, xl: 24 }, figmaPath: "button/line-height" },
+    "button-line-height":   { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "button/line-height" },
+    "button-font-family":   { type: "STRING", value: "Inter", figmaPath: "button/font-family" },
     "button-icon-size":     { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },   figmaPath: "button/icon-size" },
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "button-border-radius": { type: "FLOAT", unit: "px", value: 8,   figmaPath: "button/border-radius" },
     "button-border-width":  { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "button/border-width" },
 
     // ── STRING TOKENS (single value) ──
-    "button-font-weight":   { type: "STRING", value: "Semi Bold", figmaPath: "button/font-weight",
-      allowedValues: ["Thin", "Extra Light", "Light", "Regular", "Medium", "Semi Bold", "Bold", "Extra Bold", "Black"] },
+    "button-font-weight":   { type: "STRING", value: "Semi Bold", figmaPath: "button/font-weight" },
   },
 
   actionicon: {
@@ -105,11 +105,11 @@ export const COMPONENT_TOKENS = {
     "actionicon-filled-icon-focus":          { type: "COLOR", semantic: "text-on-interactive",         figmaPath: "actionicon/filled-icon-focus" },
     "actionicon-filled-icon-pressed":        { type: "COLOR", semantic: "text-on-interactive",         figmaPath: "actionicon/filled-icon-pressed" },
     "actionicon-filled-icon-disabled":       { type: "COLOR", semantic: "text-disabled",               figmaPath: "actionicon/filled-icon-disabled" },
-    "actionicon-filled-border":              { type: "COLOR", semantic: null,                          figmaPath: "actionicon/filled-border" },
-    "actionicon-filled-border-hover":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/filled-border-hover" },
-    "actionicon-filled-border-focus":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/filled-border-focus" },
-    "actionicon-filled-border-pressed":      { type: "COLOR", semantic: null,                          figmaPath: "actionicon/filled-border-pressed" },
-    "actionicon-filled-border-disabled":     { type: "COLOR", semantic: null,                          figmaPath: "actionicon/filled-border-disabled" },
+    "actionicon-filled-border":              { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/filled-border" },
+    "actionicon-filled-border-hover":        { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/filled-border-hover" },
+    "actionicon-filled-border-focus":        { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/filled-border-focus" },
+    "actionicon-filled-border-pressed":      { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/filled-border-pressed" },
+    "actionicon-filled-border-disabled":     { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/filled-border-disabled" },
 
     // ── LIGHT VARIANT (all states) ──
     "actionicon-light-background":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "actionicon/light-background" },
@@ -122,11 +122,11 @@ export const COMPONENT_TOKENS = {
     "actionicon-light-icon-focus":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "actionicon/light-icon-focus" },
     "actionicon-light-icon-pressed":        { type: "COLOR", semantic: "interactive-primary",         figmaPath: "actionicon/light-icon-pressed" },
     "actionicon-light-icon-disabled":       { type: "COLOR", semantic: "text-disabled",               figmaPath: "actionicon/light-icon-disabled" },
-    "actionicon-light-border":              { type: "COLOR", semantic: null,                          figmaPath: "actionicon/light-border" },
-    "actionicon-light-border-hover":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/light-border-hover" },
-    "actionicon-light-border-focus":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/light-border-focus" },
-    "actionicon-light-border-pressed":      { type: "COLOR", semantic: null,                          figmaPath: "actionicon/light-border-pressed" },
-    "actionicon-light-border-disabled":     { type: "COLOR", semantic: null,                          figmaPath: "actionicon/light-border-disabled" },
+    "actionicon-light-border":              { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/light-border" },
+    "actionicon-light-border-hover":        { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/light-border-hover" },
+    "actionicon-light-border-focus":        { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/light-border-focus" },
+    "actionicon-light-border-pressed":      { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/light-border-pressed" },
+    "actionicon-light-border-disabled":     { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/light-border-disabled" },
 
     // ── OUTLINED VARIANT (all states) ──
     "actionicon-outlined-background":          { type: "COLOR", semantic: "surface-default",             figmaPath: "actionicon/outlined-background" },
@@ -146,21 +146,21 @@ export const COMPONENT_TOKENS = {
     "actionicon-outlined-border-disabled":     { type: "COLOR", semantic: "border-disabled",             figmaPath: "actionicon/outlined-border-disabled" },
 
     // ── TRANSPARENT VARIANT (all states) ──
-    "actionicon-transparent-background":          { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-background" },
+    "actionicon-transparent-background":          { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/transparent-background" },
     "actionicon-transparent-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "actionicon/transparent-background-hover" },
-    "actionicon-transparent-background-focus":    { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-background-focus" },
+    "actionicon-transparent-background-focus":    { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/transparent-background-focus" },
     "actionicon-transparent-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "actionicon/transparent-background-pressed" },
-    "actionicon-transparent-background-disabled": { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-background-disabled" },
+    "actionicon-transparent-background-disabled": { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/transparent-background-disabled" },
     "actionicon-transparent-icon":                { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/transparent-icon" },
     "actionicon-transparent-icon-hover":          { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/transparent-icon-hover" },
     "actionicon-transparent-icon-focus":          { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/transparent-icon-focus" },
     "actionicon-transparent-icon-pressed":        { type: "COLOR", semantic: "interactive-primary",          figmaPath: "actionicon/transparent-icon-pressed" },
     "actionicon-transparent-icon-disabled":       { type: "COLOR", semantic: "text-disabled",               figmaPath: "actionicon/transparent-icon-disabled" },
-    "actionicon-transparent-border":              { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-border" },
-    "actionicon-transparent-border-hover":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-border-hover" },
-    "actionicon-transparent-border-focus":        { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-border-focus" },
-    "actionicon-transparent-border-pressed":      { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-border-pressed" },
-    "actionicon-transparent-border-disabled":     { type: "COLOR", semantic: null,                          figmaPath: "actionicon/transparent-border-disabled" },
+    "actionicon-transparent-border":              { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/transparent-border" },
+    "actionicon-transparent-border-hover":        { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/transparent-border-hover" },
+    "actionicon-transparent-border-focus":        { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/transparent-border-focus" },
+    "actionicon-transparent-border-pressed":      { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/transparent-border-pressed" },
+    "actionicon-transparent-border-disabled":     { type: "COLOR", semantic: "transparent",                          figmaPath: "actionicon/transparent-border-disabled" },
 
     // ── SHARED COLOR TOKEN ──
     "actionicon-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "actionicon/focus-ring" },
@@ -238,6 +238,9 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS ──
     "tabs-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "tabs/radius" },
     "tabs-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "tabs/font-size" },
+    "tabs-font-family": { type: "STRING", value: "Inter", figmaPath: "tabs/font-family" },
+    "tabs-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "tabs/font-weight" },
+    "tabs-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "tabs/line-height" },
     "tabs-tab-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/tab-padding-x" },
     "tabs-tab-padding-y": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/tab-padding-y" },
     "tabs-list-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/list-gap" },
@@ -287,7 +290,9 @@ export const COMPONENT_TOKENS = {
     "switch-thumb-size":         { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 18, lg: 24, xl: 30 },           figmaPath: "switch/thumb-size" },
     "switch-border-radius":      { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 9,  md: 11, lg: 14, xl: 17 },           figmaPath: "switch/border-radius" },
     "switch-label-font-size":    { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },           figmaPath: "switch/label-font-size" },
-    "switch-label-line-height":  { type: "FLOAT", unit: "px", sizes: { xs: 14.4, sm: 16.8, md: 19.2, lg: 21.6, xl: 24 },   figmaPath: "switch/label-line-height" },
+    "switch-label-line-height":  { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },   figmaPath: "switch/label-line-height" },
+    "switch-label-font-family":  { type: "STRING", value: "Inter", figmaPath: "switch/label-font-family" },
+    "switch-label-font-weight":  { type: "STRING", value: "Regular", figmaPath: "switch/label-font-weight" },
     "switch-label-gap":          { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 },             figmaPath: "switch/label-gap" },
 
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
@@ -353,7 +358,9 @@ export const COMPONENT_TOKENS = {
     "checkbox-radius":            { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },              figmaPath: "checkbox/radius" },
     "checkbox-icon-size":         { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 12, md: 14, lg: 16, xl: 18 },           figmaPath: "checkbox/icon-size" },
     "checkbox-label-font-size":   { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },           figmaPath: "checkbox/label-font-size" },
-    "checkbox-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14.4, sm: 16.8, md: 19.2, lg: 21.6, xl: 24 },   figmaPath: "checkbox/label-line-height" },
+    "checkbox-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },   figmaPath: "checkbox/label-line-height" },
+    "checkbox-label-font-family": { type: "STRING", value: "Inter", figmaPath: "checkbox/label-font-family" },
+    "checkbox-label-font-weight": { type: "STRING", value: "Regular", figmaPath: "checkbox/label-font-weight" },
     "checkbox-label-gap":         { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 },             figmaPath: "checkbox/label-gap" },
 
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
@@ -404,7 +411,9 @@ export const COMPONENT_TOKENS = {
     "radio-size":              { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },           figmaPath: "radio/size" },
     "radio-icon-size":         { type: "FLOAT", unit: "px", sizes: { xs: 6,  sm: 8,  md: 10, lg: 12, xl: 14 },           figmaPath: "radio/icon-size" },
     "radio-label-font-size":   { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },           figmaPath: "radio/label-font-size" },
-    "radio-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14.4, sm: 16.8, md: 19.2, lg: 21.6, xl: 24 },   figmaPath: "radio/label-line-height" },
+    "radio-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },   figmaPath: "radio/label-line-height" },
+    "radio-label-font-family": { type: "STRING", value: "Inter", figmaPath: "radio/label-font-family" },
+    "radio-label-font-weight": { type: "STRING", value: "Regular", figmaPath: "radio/label-font-weight" },
     "radio-label-gap":         { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 },             figmaPath: "radio/label-gap" },
 
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
@@ -464,9 +473,12 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "chip-height":          { type: "FLOAT", unit: "px", sizes: { xs: 23, sm: 28, md: 32, lg: 36, xl: 40 },              figmaPath: "chip/height" },
     "chip-padding":         { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },              figmaPath: "chip/padding" },
-    "chip-checked-padding": { type: "FLOAT", unit: "px", sizes: { xs: 8.2, sm: 10, md: 11.7, lg: 13.5, xl: 15.7 },      figmaPath: "chip/checked-padding" },
+    "chip-checked-padding": { type: "FLOAT", unit: "px", sizes: { xs: 8, sm: 10, md: 12, lg: 14, xl: 16 },      figmaPath: "chip/checked-padding" },
     "chip-icon-size":       { type: "FLOAT", unit: "px", sizes: { xs: 9, sm: 12, md: 14, lg: 16, xl: 18 },               figmaPath: "chip/icon-size" },
     "chip-font-size":       { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 12, md: 14, lg: 16, xl: 18 },              figmaPath: "chip/font-size" },
+    "chip-font-family":     { type: "STRING", value: "Inter", figmaPath: "chip/font-family" },
+    "chip-font-weight":     { type: "STRING", value: "Regular", figmaPath: "chip/font-weight" },
+    "chip-line-height":     { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 16, md: 20, lg: 24, xl: 28 }, figmaPath: "chip/line-height" },
     "chip-radius":          { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },                 figmaPath: "chip/radius" },
     "chip-spacing":         { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 4, lg: 6, xl: 8 },                 figmaPath: "chip/spacing" },
 
@@ -508,6 +520,9 @@ export const COMPONENT_TOKENS = {
     "slider-track-height": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 }, figmaPath: "slider/track-height" },
     "slider-thumb-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 }, figmaPath: "slider/thumb-size" },
     "slider-mark-label-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "slider/mark-label-font-size" },
+    "slider-mark-label-font-family": { type: "STRING", value: "Inter", figmaPath: "slider/mark-label-font-family" },
+    "slider-mark-label-font-weight": { type: "STRING", value: "Regular", figmaPath: "slider/mark-label-font-weight" },
+    "slider-mark-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "slider/mark-label-line-height" },
     "slider-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "slider/radius" },
 
     // ── FLOAT TOKENS (single value) ──
@@ -545,6 +560,9 @@ export const COMPONENT_TOKENS = {
     "rangeslider-track-height": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 }, figmaPath: "rangeslider/track-height" },
     "rangeslider-thumb-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 }, figmaPath: "rangeslider/thumb-size" },
     "rangeslider-mark-label-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "rangeslider/mark-label-font-size" },
+    "rangeslider-mark-label-font-family": { type: "STRING", value: "Inter", figmaPath: "rangeslider/mark-label-font-family" },
+    "rangeslider-mark-label-font-weight": { type: "STRING", value: "Regular", figmaPath: "rangeslider/mark-label-font-weight" },
+    "rangeslider-mark-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "rangeslider/mark-label-line-height" },
     "rangeslider-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "rangeslider/radius" },
 
     // ── FLOAT TOKENS (single value) ──
@@ -567,7 +585,13 @@ export const COMPONENT_TOKENS = {
     "card-gap":                   { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 14, xl: 16 }, figmaPath: "card/gap" },
     "card-radius":                { type: "FLOAT", unit: "px", sizes: { xs: 2,  sm: 4,  md: 8,  lg: 16, xl: 32 }, figmaPath: "card/radius" },
     "card-title-font-size":       { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 13, md: 14, lg: 16, xl: 18 }, figmaPath: "card/title-font-size" },
+    "card-title-font-family":     { type: "STRING", value: "Inter", figmaPath: "card/title-font-family" },
+    "card-title-font-weight":     { type: "STRING", value: "Semi Bold", figmaPath: "card/title-font-weight" },
+    "card-title-line-height":     { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 20, lg: 24, xl: 28 }, figmaPath: "card/title-line-height" },
     "card-description-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "card/description-font-size" },
+    "card-description-font-family": { type: "STRING", value: "Inter", figmaPath: "card/description-font-family" },
+    "card-description-font-weight": { type: "STRING", value: "Regular", figmaPath: "card/description-font-weight" },
+    "card-description-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 16, md: 16, lg: 20, xl: 20 }, figmaPath: "card/description-line-height" },
 
     // ── FLOAT TOKENS (single value) ──
     "card-border-width":   { type: "FLOAT", unit: "px", value: 1,  figmaPath: "card/border-width" },
@@ -591,7 +615,13 @@ export const COMPONENT_TOKENS = {
     "notification-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "notification/padding-x" },
     "notification-padding-y": { type: "FLOAT", unit: "px", value: 10, figmaPath: "notification/padding-y" },
     "notification-title-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "notification/title-font-size" },
+    "notification-title-font-family": { type: "STRING", value: "Inter", figmaPath: "notification/title-font-family" },
+    "notification-title-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "notification/title-font-weight" },
+    "notification-title-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "notification/title-line-height" },
     "notification-description-font-size": { type: "FLOAT", unit: "px", value: 13, figmaPath: "notification/description-font-size" },
+    "notification-description-font-family": { type: "STRING", value: "Inter", figmaPath: "notification/description-font-family" },
+    "notification-description-font-weight": { type: "STRING", value: "Regular", figmaPath: "notification/description-font-weight" },
+    "notification-description-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "notification/description-line-height" },
     "notification-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "notification/border-width" },
   },
 
@@ -605,6 +635,9 @@ export const COMPONENT_TOKENS = {
     "tooltip-padding-x":  { type: "FLOAT", unit: "px", value: 8,  figmaPath: "tooltip/padding-x" },
     "tooltip-padding-y":  { type: "FLOAT", unit: "px", value: 4,  figmaPath: "tooltip/padding-y" },
     "tooltip-font-size":  { type: "FLOAT", unit: "px", value: 12, figmaPath: "tooltip/font-size" },
+    "tooltip-font-family": { type: "STRING", value: "Inter", figmaPath: "tooltip/font-family" },
+    "tooltip-font-weight": { type: "STRING", value: "Regular", figmaPath: "tooltip/font-weight" },
+    "tooltip-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "tooltip/line-height" },
     "tooltip-arrow-size": { type: "FLOAT", unit: "px", value: 7,  figmaPath: "tooltip/arrow-size" },
   },
 
@@ -626,6 +659,9 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "pill-height": { type: "FLOAT", unit: "px", sizes: { xs: 18, sm: 22, md: 26, lg: 30, xl: 36 }, figmaPath: "pill/height" },
     "pill-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "pill/font-size" },
+    "pill-font-family": { type: "STRING", value: "Inter", figmaPath: "pill/font-family" },
+    "pill-font-weight": { type: "STRING", value: "Regular", figmaPath: "pill/font-weight" },
+    "pill-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "pill/line-height" },
     "pill-padding-x": { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 }, figmaPath: "pill/padding-x" },
     "pill-radius": { type: "FLOAT", unit: "px", sizes: { xs: 8, sm: 10, md: 12, lg: 14, xl: 18 }, figmaPath: "pill/radius" },
     "pill-gap": { type: "FLOAT", unit: "px", sizes: { xs: 4, sm: 5, md: 6, lg: 7, xl: 8 }, figmaPath: "pill/gap" },
@@ -657,6 +693,9 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "badge-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 18, md: 20, lg: 24, xl: 28 }, figmaPath: "badge/height" },
     "badge-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "badge/font-size" },
+    "badge-font-family": { type: "STRING", value: "Inter", figmaPath: "badge/font-family" },
+    "badge-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "badge/font-weight" },
+    "badge-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "badge/line-height" },
     "badge-padding-x": { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 7, md: 9, lg: 11, xl: 13 }, figmaPath: "badge/padding-x" },
     "badge-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "badge/radius" },
     "badge-dot-size": { type: "FLOAT", unit: "px", sizes: { xs: 4, sm: 5, md: 6, lg: 7, xl: 8 }, figmaPath: "badge/dot-size" },
@@ -699,7 +738,13 @@ export const COMPONENT_TOKENS = {
     "alert-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "alert/padding-x" },
     "alert-padding-y": { type: "FLOAT", unit: "px", value: 10, figmaPath: "alert/padding-y" },
     "alert-title-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "alert/title-font-size" },
+    "alert-title-font-family": { type: "STRING", value: "Inter", figmaPath: "alert/title-font-family" },
+    "alert-title-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "alert/title-font-weight" },
+    "alert-title-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "alert/title-line-height" },
     "alert-message-font-size": { type: "FLOAT", unit: "px", value: 13, figmaPath: "alert/message-font-size" },
+    "alert-message-font-family": { type: "STRING", value: "Inter", figmaPath: "alert/message-font-family" },
+    "alert-message-font-weight": { type: "STRING", value: "Regular", figmaPath: "alert/message-font-weight" },
+    "alert-message-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "alert/message-line-height" },
     "alert-icon-title-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "alert/icon-title-gap" },
     "alert-title-message-gap": { type: "FLOAT", unit: "px", value: 6, figmaPath: "alert/title-message-gap" },
     "alert-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "alert/border-width" },
@@ -724,7 +769,13 @@ export const COMPONENT_TOKENS = {
     "modal-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/padding-x" },
     "modal-padding-y": { type: "FLOAT", unit: "px", value: 14, figmaPath: "modal/padding-y" },
     "modal-title-font-size": { type: "FLOAT", unit: "px", value: 18, figmaPath: "modal/title-font-size" },
+    "modal-title-font-family": { type: "STRING", value: "Inter", figmaPath: "modal/title-font-family" },
+    "modal-title-font-weight": { type: "STRING", value: "Bold", figmaPath: "modal/title-font-weight" },
+    "modal-title-line-height": { type: "FLOAT", unit: "px", value: 24, figmaPath: "modal/title-line-height" },
     "modal-body-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "modal/body-font-size" },
+    "modal-body-font-family": { type: "STRING", value: "Inter", figmaPath: "modal/body-font-family" },
+    "modal-body-font-weight": { type: "STRING", value: "Regular", figmaPath: "modal/body-font-weight" },
+    "modal-body-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "modal/body-line-height" },
     "modal-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "modal/border-width" },
     "modal-overlay-opacity": { type: "FLOAT", unit: "", value: 45, figmaPath: "modal/overlay-opacity" },
   },
@@ -770,6 +821,9 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "textinput-height":    { type: "FLOAT", unit: "px", sizes: { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 },  figmaPath: "textinput/height" },
     "textinput-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },  figmaPath: "textinput/font-size" },
+    "textinput-font-family": { type: "STRING", value: "Inter", figmaPath: "textinput/font-family" },
+    "textinput-font-weight": { type: "STRING", value: "Regular", figmaPath: "textinput/font-weight" },
+    "textinput-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "textinput/line-height" },
     "textinput-padding-x": { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 },  figmaPath: "textinput/padding-x" },
 
     // ── FLOAT TOKENS (radius variants: xs, sm, md, lg, xl — independent from size) ──
@@ -778,8 +832,14 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "textinput-border-width":    { type: "FLOAT", unit: "px", value: 1,  figmaPath: "textinput/border-width" },
     "textinput-label-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "textinput/label-font-size" },
+    "textinput-label-font-family": { type: "STRING", value: "Inter", figmaPath: "textinput/label-font-family" },
+    "textinput-label-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "textinput/label-font-weight" },
+    "textinput-label-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "textinput/label-line-height" },
     "textinput-label-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "textinput/label-gap" },
     "textinput-error-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "textinput/error-font-size" },
+    "textinput-error-font-family": { type: "STRING", value: "Inter", figmaPath: "textinput/error-font-family" },
+    "textinput-error-font-weight": { type: "STRING", value: "Regular", figmaPath: "textinput/error-font-weight" },
+    "textinput-error-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "textinput/error-line-height" },
     "textinput-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "textinput/error-gap" },
   },
 
@@ -825,6 +885,9 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "select-height":       { type: "FLOAT", unit: "px", sizes: { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 }, figmaPath: "select/height" },
     "select-font-size":    { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "select/font-size" },
+    "select-font-family": { type: "STRING", value: "Inter", figmaPath: "select/font-family" },
+    "select-font-weight": { type: "STRING", value: "Regular", figmaPath: "select/font-weight" },
+    "select-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "select/line-height" },
     "select-padding-x":    { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "select/padding-x" },
     "select-section-size": { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 32, md: 36, lg: 40, xl: 44 }, figmaPath: "select/section-size" },
 
@@ -834,8 +897,14 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "select-border-width":    { type: "FLOAT", unit: "px", value: 1,  figmaPath: "select/border-width" },
     "select-label-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "select/label-font-size" },
+    "select-label-font-family": { type: "STRING", value: "Inter", figmaPath: "select/label-font-family" },
+    "select-label-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "select/label-font-weight" },
+    "select-label-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "select/label-line-height" },
     "select-label-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "select/label-gap" },
     "select-error-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "select/error-font-size" },
+    "select-error-font-family": { type: "STRING", value: "Inter", figmaPath: "select/error-font-family" },
+    "select-error-font-weight": { type: "STRING", value: "Regular", figmaPath: "select/error-font-weight" },
+    "select-error-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "select/error-line-height" },
     "select-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "select/error-gap" },
   },
 
@@ -847,6 +916,7 @@ export const COMPONENT_TOKENS = {
     "anchor-color-disabled": { type: "COLOR", semantic: "text-disabled",             figmaPath: "anchor/color-disabled" },
 
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "anchor-font-family": { type: "STRING", value: "Inter", figmaPath: "anchor/font-family" },
     "anchor-font-size": {
       type: "FLOAT",
       unit: "px",
@@ -860,10 +930,10 @@ export const COMPONENT_TOKENS = {
       figmaPath: "anchor/line-height",
     },
 
-    // ── FLOAT TOKENS (single value) ──
-    "anchor-font-weight-regular":  { type: "FLOAT", unit: "", value: 400, figmaPath: "anchor/font-weight-regular" },
-    "anchor-font-weight-semibold": { type: "FLOAT", unit: "", value: 600, figmaPath: "anchor/font-weight-semibold" },
-    "anchor-font-weight-bold":     { type: "FLOAT", unit: "", value: 700, figmaPath: "anchor/font-weight-bold" },
+    // ── STRING TOKENS (single value) ──
+    "anchor-font-weight-regular":  { type: "STRING", value: "Regular", figmaPath: "anchor/font-weight-regular" },
+    "anchor-font-weight-semibold": { type: "STRING", value: "Semi Bold", figmaPath: "anchor/font-weight-semibold" },
+    "anchor-font-weight-bold":     { type: "STRING", value: "Bold", figmaPath: "anchor/font-weight-bold" },
   },
 
   title: {
@@ -871,6 +941,7 @@ export const COMPONENT_TOKENS = {
     "title-color": { type: "COLOR", semantic: "text-default", figmaPath: "title/color" },
 
     // ── FLOAT TOKENS (order/size variants: h1-h6) ──
+    "title-font-family": { type: "STRING", value: "Inter", figmaPath: "title/font-family" },
     "title-font-size": {
       type: "FLOAT",
       unit: "px",
@@ -884,8 +955,8 @@ export const COMPONENT_TOKENS = {
       figmaPath: "title/line-height",
     },
 
-    // ── FLOAT TOKENS (single value) ──
-    "title-font-weight": { type: "FLOAT", unit: "", value: 700, figmaPath: "title/font-weight" },
+    // ── STRING TOKENS (single value) ──
+    "title-font-weight": { type: "STRING", value: "Bold", figmaPath: "title/font-weight" },
     "title-max-width": { type: "FLOAT", unit: "px", value: 520, figmaPath: "title/max-width" },
   },
 
@@ -896,6 +967,7 @@ export const COMPONENT_TOKENS = {
     "text-color-brand": { type: "COLOR", semantic: "interactive-primary", figmaPath: "text/color-brand" },
 
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "text-font-family": { type: "STRING", value: "Inter", figmaPath: "text/font-family" },
     "text-font-size": {
       type: "FLOAT",
       unit: "px",
@@ -909,10 +981,10 @@ export const COMPONENT_TOKENS = {
       figmaPath: "text/line-height",
     },
 
-    // ── FLOAT TOKENS (single value) ──
-    "text-font-weight-regular": { type: "FLOAT", unit: "", value: 400, figmaPath: "text/font-weight-regular" },
-    "text-font-weight-semibold": { type: "FLOAT", unit: "", value: 600, figmaPath: "text/font-weight-semibold" },
-    "text-font-weight-bold": { type: "FLOAT", unit: "", value: 700, figmaPath: "text/font-weight-bold" },
+    // ── STRING TOKENS (single value) ──
+    "text-font-weight-regular": { type: "STRING", value: "Regular", figmaPath: "text/font-weight-regular" },
+    "text-font-weight-semibold": { type: "STRING", value: "Semi Bold", figmaPath: "text/font-weight-semibold" },
+    "text-font-weight-bold": { type: "STRING", value: "Bold", figmaPath: "text/font-weight-bold" },
     "text-max-width": { type: "FLOAT", unit: "px", value: 520, figmaPath: "text/max-width" },
   },
 };

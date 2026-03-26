@@ -54,6 +54,7 @@ export default function ButtonPreview({
   const borderRadius = resolveDimension(brands, brandId, "button-border-radius");
   const borderWidth = resolveDimension(brands, brandId, "button-border-width");
   const fontWeight = resolveDimension(brands, brandId, "button-font-weight");
+  const fontFamily = resolveDimension(brands, brandId, "button-font-family");
 
   const mantineVariant = VARIANT_MAP[variant] || "filled";
   const iconSize = tokenIconSize || Math.max(14, Math.round((fontSize || 14) * 1.1));
@@ -89,6 +90,7 @@ export default function ButtonPreview({
       styles={{
         root: {
           fontWeight: WEIGHT_TO_CSS[fontWeight] ?? 600,
+          fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
           lineHeight: lineHeight ? `${lineHeight}px` : undefined,
           "&:active, &[data-active], &:active:hover": {
             transform: "none !important",

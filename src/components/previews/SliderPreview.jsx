@@ -34,6 +34,9 @@ export default function SliderPreview({
   const trackHeight = resolveDimension(brands, brandId, "slider-track-height", size);
   const thumbSize = resolveDimension(brands, brandId, "slider-thumb-size", size);
   const labelFontSize = resolveDimension(brands, brandId, "slider-mark-label-font-size", size);
+  const labelFontFamily = resolveDimension(brands, brandId, "slider-mark-label-font-family");
+  const labelFontWeight = resolveDimension(brands, brandId, "slider-mark-label-font-weight");
+  const labelLineHeight = resolveDimension(brands, brandId, "slider-mark-label-line-height", size);
   const sliderRadius = resolveDimension(brands, brandId, "slider-radius", radius);
   const thumbBorderWidth = resolveDimension(brands, brandId, "slider-thumb-border-width");
   const markSize = resolveDimension(brands, brandId, "slider-mark-size");
@@ -86,6 +89,9 @@ export default function SliderPreview({
           markLabel: {
             color: markLabelColor,
             fontSize: labelFontSize,
+            fontFamily: labelFontFamily ? `"${labelFontFamily}", sans-serif` : undefined,
+            fontWeight: labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400,
+            lineHeight: labelLineHeight ? `${labelLineHeight}px` : undefined,
           },
         }}
       />

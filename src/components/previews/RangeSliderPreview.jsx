@@ -40,6 +40,9 @@ export default function RangeSliderPreview({
   const trackHeight = resolveDimension(brands, brandId, "rangeslider-track-height", size);
   const thumbSize = resolveDimension(brands, brandId, "rangeslider-thumb-size", size);
   const labelFontSize = resolveDimension(brands, brandId, "rangeslider-mark-label-font-size", size);
+  const labelFontFamily = resolveDimension(brands, brandId, "rangeslider-mark-label-font-family");
+  const labelFontWeight = resolveDimension(brands, brandId, "rangeslider-mark-label-font-weight");
+  const labelLineHeight = resolveDimension(brands, brandId, "rangeslider-mark-label-line-height", size);
   const sliderRadius = resolveDimension(brands, brandId, "rangeslider-radius", radius);
   const thumbBorderWidth = resolveDimension(brands, brandId, "rangeslider-thumb-border-width");
   const markSize = resolveDimension(brands, brandId, "rangeslider-mark-size");
@@ -92,6 +95,9 @@ export default function RangeSliderPreview({
           markLabel: {
             color: markLabelColor,
             fontSize: labelFontSize,
+            fontFamily: labelFontFamily ? `"${labelFontFamily}", sans-serif` : undefined,
+            fontWeight: labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400,
+            lineHeight: labelLineHeight ? `${labelLineHeight}px` : undefined,
           },
         }}
       />

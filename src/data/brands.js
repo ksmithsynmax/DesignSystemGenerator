@@ -1,10 +1,28 @@
 // Primitive/Global — shared across all brands (single mode)
 export const GLOBAL_PRIMITIVES = {
+  transparent:    ["transparent"],
   neutral:        ["#FFFFFF", "#F2F2F2", "#E5E5E5", "#CCCCCC", "#B2B2B2", "#999999", "#808080", "#4D4D4D", "#333333", "#000000"],
   navy:           ["#E5E8F2", "#CBD1E6", "#9BA8CF", "#697DB4", "#495980", "#2B354F", "#232C42", "#1A2133", "#131928", "#0A0E19"],
   "slate-purple": ["#F7F6F8", "#E8E7EB", "#D0CFD8", "#B9B8C4", "#A1A0B1", "#8A889D", "#727089", "#434162", "#2C294F", "#14113B"],
   "slate-gray":   ["#F0F1F2", "#E1E2E5", "#C5C6CF", "#A6ABB7", "#888F9E", "#6F7581", "#595E69", "#424750", "#2F3038", "#1A1C1F"],
 };
+
+// Primitive/Global FLOAT scale
+export const GLOBAL_SPACING = [2, 4, 6, 7, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 30, 32, 36, 40, 42, 48, 50, 60, 64];
+
+export const GLOBAL_FONTS = {
+  sans: "Inter",
+  mono: "Roboto Mono"
+};
+
+export const GLOBAL_WEIGHTS = {
+  regular: "Regular",
+  medium: "Medium",
+  semibold: "Semi Bold",
+  bold: "Bold"
+};
+
+export const GLOBAL_BORDER_WIDTHS = [0, 1, 1.5, 2, 4];
 
 export const INITIAL_BRANDS = {
   theia: {
@@ -17,6 +35,7 @@ export const INITIAL_BRANDS = {
       steel:  ["#E7EAF2", "#B7C2D9", "#95A3C5", "#7B88B6", "#6972A7", "#5D6398", "#50537D", "#393C56", "#24263C", "#181926"],
     },
     semanticMap: {
+      "transparent":               { color: "transparent", index: 0 },
       "interactive-primary":       { color: "blue", index: 5 },
       "interactive-primary-hover": { color: "blue", index: 6 },
       "interactive-primary-pressed": { color: "blue", index: 7 },
@@ -108,6 +127,7 @@ export const INITIAL_BRANDS = {
       yellow: ["#FFFEED", "#FFFCDB", "#FFF9B7", "#FFF8A5", "#FFF693", "#FFF36F", "#FCEC38", "#FCEC38", "#B3A835", "#807826"],
     },
     semanticMap: {
+      "transparent":               { color: "transparent", index: 0 },
       "interactive-primary":       { color: "green", index: 6 },
       "interactive-primary-hover": { color: "green", index: 7 },
       "interactive-primary-pressed": { color: "green", index: 8 },

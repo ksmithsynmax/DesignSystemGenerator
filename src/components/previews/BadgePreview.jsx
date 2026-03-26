@@ -25,6 +25,9 @@ export default function BadgePreview({
 
   const height = resolveDimension(brands, brandId, "badge-height", size);
   const fontSize = resolveDimension(brands, brandId, "badge-font-size", size);
+  const fontFamily = resolveDimension(brands, brandId, "badge-font-family");
+  const fontWeight = resolveDimension(brands, brandId, "badge-font-weight");
+  const lineHeight = resolveDimension(brands, brandId, "badge-line-height", size);
   const paddingX = resolveDimension(brands, brandId, "badge-padding-x", size);
   const borderRadius = resolveDimension(brands, brandId, "badge-radius", radius);
   const borderWidth = resolveDimension(brands, brandId, "badge-border-width");
@@ -49,7 +52,9 @@ export default function BadgePreview({
             borderRadius: `${borderRadius}px`,
             paddingInline: circle ? undefined : `${paddingX}px`,
             fontSize: `${fontSize}px`,
-            fontWeight: 600,
+            fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
+            fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
+            lineHeight: lineHeight ? `${lineHeight}px` : undefined,
             ...(variant === "dot" && !circle
               ? {
                   "&::before": {

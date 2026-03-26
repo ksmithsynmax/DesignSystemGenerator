@@ -39,7 +39,13 @@ export default function CardPreview({
   const cardPadding = resolveDimension(brands, brandId, "card-padding", size);
   const cardRadius = resolveDimension(brands, brandId, "card-radius", radius);
   const titleFontSize = resolveDimension(brands, brandId, "card-title-font-size", size);
+  const titleFontFamily = resolveDimension(brands, brandId, "card-title-font-family");
+  const titleFontWeight = resolveDimension(brands, brandId, "card-title-font-weight");
+  const titleLineHeight = resolveDimension(brands, brandId, "card-title-line-height", size);
   const descriptionFontSize = resolveDimension(brands, brandId, "card-description-font-size", size);
+  const descriptionFontFamily = resolveDimension(brands, brandId, "card-description-font-family");
+  const descriptionFontWeight = resolveDimension(brands, brandId, "card-description-font-weight");
+  const descriptionLineHeight = resolveDimension(brands, brandId, "card-description-line-height", size);
   const sectionHeight = resolveDimension(brands, brandId, "card-section-height");
   const gap = resolveDimension(brands, brandId, "card-gap", size);
   const borderWidth = resolveDimension(brands, brandId, "card-border-width");
@@ -76,7 +82,15 @@ export default function CardPreview({
       )}
       <div style={{ paddingTop: showSection ? gap : 0 }}>
         <Group justify="space-between" align="center" mb={6}>
-          <Text fw={600} style={{ color: titleColor, fontSize: titleFontSize }}>
+          <Text
+            style={{
+              color: titleColor,
+              fontSize: titleFontSize,
+              fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
+              fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
+              lineHeight: titleLineHeight ? `${titleLineHeight}px` : undefined,
+            }}
+          >
             {title}
           </Text>
           {showBadge && (
@@ -85,13 +99,24 @@ export default function CardPreview({
               style={{
                 background: badgeBackground,
                 color: badgeColor,
+                fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
               }}
             >
               New
             </Badge>
           )}
         </Group>
-        <Text style={{ color: descriptionColor, fontSize: descriptionFontSize }}>{description}</Text>
+        <Text
+          style={{
+            color: descriptionColor,
+            fontSize: descriptionFontSize,
+            fontFamily: descriptionFontFamily ? `"${descriptionFontFamily}", sans-serif` : undefined,
+            fontWeight: descriptionFontWeight === "Semi Bold" ? 600 : descriptionFontWeight === "Bold" ? 700 : 400,
+            lineHeight: descriptionLineHeight ? `${descriptionLineHeight}px` : undefined,
+          }}
+        >
+          {description}
+        </Text>
       </div>
     </Card>
   );

@@ -53,6 +53,9 @@ export default function TabsPreview({
 
   const tabsRadius = resolveDimension(brands, brandId, "tabs-radius", radius);
   const tabsFontSize = resolveDimension(brands, brandId, "tabs-font-size");
+  const tabsFontFamily = resolveDimension(brands, brandId, "tabs-font-family");
+  const tabsFontWeight = resolveDimension(brands, brandId, "tabs-font-weight");
+  const tabsLineHeight = resolveDimension(brands, brandId, "tabs-line-height");
   const tabPaddingX = resolveDimension(brands, brandId, "tabs-tab-padding-x");
   const tabPaddingY = resolveDimension(brands, brandId, "tabs-tab-padding-y");
   const listGap = resolveDimension(brands, brandId, "tabs-list-gap");
@@ -151,6 +154,9 @@ export default function TabsPreview({
             borderRadius: `${tabsRadius}px`,
             padding: `${tabPaddingY}px ${tabPaddingX}px`,
             fontSize: `${tabsFontSize}px`,
+            fontFamily: tabsFontFamily ? `"${tabsFontFamily}", sans-serif` : undefined,
+            fontWeight: tabsFontWeight === "Semi Bold" ? 600 : tabsFontWeight === "Bold" ? 700 : 400,
+            lineHeight: `${tabsLineHeight}px`,
             cursor: "pointer",
           },
           panel: {

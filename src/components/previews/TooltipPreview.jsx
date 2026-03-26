@@ -18,6 +18,9 @@ export default function TooltipPreview({
   const paddingX = resolveDimension(brands, brandId, "tooltip-padding-x");
   const paddingY = resolveDimension(brands, brandId, "tooltip-padding-y");
   const fontSize = resolveDimension(brands, brandId, "tooltip-font-size");
+  const fontFamily = resolveDimension(brands, brandId, "tooltip-font-family");
+  const fontWeight = resolveDimension(brands, brandId, "tooltip-font-weight");
+  const lineHeight = resolveDimension(brands, brandId, "tooltip-line-height");
   const arrowSize = resolveDimension(brands, brandId, "tooltip-arrow-size");
 
   return (
@@ -41,6 +44,9 @@ export default function TooltipPreview({
           borderRadius: radius,
           padding: `${paddingY}px ${paddingX}px`,
           fontSize: fontSize,
+          fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
+          fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
+          lineHeight: lineHeight ? `${lineHeight}px` : undefined,
         },
         arrow: {
           backgroundColor: bg,

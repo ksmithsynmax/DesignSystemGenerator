@@ -1,6 +1,6 @@
 import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/componentTokens";
 import { resolveColor, resolveDimension, getDefaultSizeKey } from "./resolveToken";
-import { GLOBAL_PRIMITIVES } from "../data/brands";
+import { GLOBAL_PRIMITIVES, GLOBAL_SPACING, GLOBAL_FONTS, GLOBAL_WEIGHTS, GLOBAL_BORDER_WIDTHS } from "../data/brands";
 
 function normalizeOpacity(opacity) {
   const parsed = Number(opacity);
@@ -41,7 +41,13 @@ function applyOpacity(hex, opacity) {
  * Returns a plain object (not serialized).
  */
 export function buildExportPayload(brands, options) {
-  const out = { globalPrimitives: GLOBAL_PRIMITIVES };
+  const out = { 
+    globalPrimitives: GLOBAL_PRIMITIVES, 
+    globalSpacing: GLOBAL_SPACING,
+    globalFonts: GLOBAL_FONTS,
+    globalWeights: GLOBAL_WEIGHTS,
+    globalBorderWidths: GLOBAL_BORDER_WIDTHS
+  };
   if (options && Array.isArray(options.componentsToBuild)) {
     out.__buildOptions = {
       componentsToBuild: options.componentsToBuild,
@@ -52,16 +58,13 @@ export function buildExportPayload(brands, options) {
   const resolveSemanticMap = (brand, map) => {
     const resolved = {};
     Object.entries(map).forEach(([key, mapping]) => {
-      const isTransparent = mapping.color === "transparent";
-      const baseValue = isTransparent
-        ? "transparent"
-        : brand.primitives[mapping.color]?.[mapping.index]
+      const baseValue = brand.primitives[mapping.color]?.[mapping.index]
           ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
           ?? null;
       const opacity = normalizeOpacity(mapping.opacity);
       const value = baseValue ? applyOpacity(baseValue, opacity) : null;
-      const alias = isTransparent
-        ? "transparent"
+      const alias = mapping.color === "transparent" 
+        ? "transparent" 
         : `${mapping.color}/${mapping.index}${opacity !== 100 ? ` @ ${opacity}%` : ""}`;
       resolved[key] = {
         type: "COLOR",
@@ -100,12 +103,20 @@ export function buildExportPayload(brands, options) {
             alias: hasComponentOverride ? null : (def.semantic || null),
           };
         } else if (def.type === TOKEN_TYPES.FLOAT) {
+          const resolveFloatAlias = (val) => {
+            if (def.figmaPath.includes("border-width")) {
+              return GLOBAL_BORDER_WIDTHS.includes(Number(val)) ? `border-width/${String(val).replace('.', '_')}` : null;
+            }
+            return GLOBAL_SPACING.includes(Number(val)) ? `spacing/${val}` : null;
+          };
+
           if (def.sizes) {
             sizeKeys.forEach((size) => {
               const val = resolveDimension(brands, brandId, tokenName, size);
               out[brandId].components[`${def.figmaPath}-${size}`] = {
                 type: "FLOAT",
                 value: val,
+                alias: resolveFloatAlias(val)
               };
             });
             const defaultSize = getDefaultSizeKey(brands, brandId, tokenName);
@@ -122,13 +133,24 @@ export function buildExportPayload(brands, options) {
             out[brandId].components[def.figmaPath] = {
               type: "FLOAT",
               value: val,
+              alias: resolveFloatAlias(val)
             };
           }
         } else if (def.type === TOKEN_TYPES.STRING) {
           const val = resolveDimension(brands, brandId, tokenName);
+          let alias = null;
+          if (def.figmaPath.includes("font-family")) {
+            const key = Object.keys(GLOBAL_FONTS).find(k => GLOBAL_FONTS[k] === val);
+            if (key) alias = `font-family/${key}`;
+          } else if (def.figmaPath.includes("font-weight")) {
+            const key = Object.keys(GLOBAL_WEIGHTS).find(k => GLOBAL_WEIGHTS[k] === val);
+            if (key) alias = `font-weight/${key}`;
+          }
+          
           out[brandId].components[def.figmaPath] = {
             type: "STRING",
             value: val,
+            alias: alias
           };
         }
       });

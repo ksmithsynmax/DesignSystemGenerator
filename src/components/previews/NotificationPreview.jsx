@@ -64,11 +64,17 @@ export default function NotificationPreview({
   const paddingX = resolveDimension(brands, brandId, "notification-padding-x");
   const paddingY = resolveDimension(brands, brandId, "notification-padding-y");
   const titleFontSize = resolveDimension(brands, brandId, "notification-title-font-size");
+  const titleFontFamily = resolveDimension(brands, brandId, "notification-title-font-family");
+  const titleFontWeight = resolveDimension(brands, brandId, "notification-title-font-weight");
+  const titleLineHeight = resolveDimension(brands, brandId, "notification-title-line-height");
   const descriptionFontSize = resolveDimension(
     brands,
     brandId,
     "notification-description-font-size"
   );
+  const descriptionFontFamily = resolveDimension(brands, brandId, "notification-description-font-family");
+  const descriptionFontWeight = resolveDimension(brands, brandId, "notification-description-font-weight");
+  const descriptionLineHeight = resolveDimension(brands, brandId, "notification-description-line-height");
 
   const iconNode = withIcon ? (
     <div
@@ -101,11 +107,16 @@ export default function NotificationPreview({
         title: {
           color: titleColor,
           fontSize: titleFontSize,
-          fontWeight: 600,
+          fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
+          fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
+          lineHeight: titleLineHeight ? `${titleLineHeight}px` : undefined,
         },
         description: {
           color: descriptionColor,
           fontSize: descriptionFontSize,
+          fontFamily: descriptionFontFamily ? `"${descriptionFontFamily}", sans-serif` : undefined,
+          fontWeight: descriptionFontWeight === "Semi Bold" ? 600 : descriptionFontWeight === "Bold" ? 700 : 400,
+          lineHeight: descriptionLineHeight ? `${descriptionLineHeight}px` : undefined,
         },
         closeButton: {
           color: closeColor,

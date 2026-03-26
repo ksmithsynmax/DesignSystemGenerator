@@ -31,6 +31,7 @@ export default function AnchorPreview({
   const fontSize = resolveDimension(brands, brandId, "anchor-font-size", size);
   const lineHeight = resolveDimension(brands, brandId, "anchor-line-height", size);
   const fontWeight = resolveDimension(brands, brandId, WEIGHT_TOKEN_BY_MODE[weightMode]);
+  const fontFamily = resolveDimension(brands, brandId, "anchor-font-family");
 
   const textDecoration =
     underline === "always"
@@ -49,7 +50,8 @@ export default function AnchorPreview({
         color,
         fontSize: `${fontSize}px`,
         lineHeight: lineHeight ? `${lineHeight}px` : undefined,
-        fontWeight,
+        fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
+        fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
         textDecoration,
         opacity: state === "disabled" ? 0.7 : 1,
         pointerEvents: state === "disabled" ? "none" : "auto",

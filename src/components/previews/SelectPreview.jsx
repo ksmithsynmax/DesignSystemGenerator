@@ -55,12 +55,21 @@ export default function SelectPreview({
 
   const height = resolveDimension(brands, brandId, "select-height", size);
   const fontSize = resolveDimension(brands, brandId, "select-font-size", size);
+  const fontFamily = resolveDimension(brands, brandId, "select-font-family");
+  const fontWeight = resolveDimension(brands, brandId, "select-font-weight");
+  const lineHeight = resolveDimension(brands, brandId, "select-line-height", size);
   const paddingX = resolveDimension(brands, brandId, "select-padding-x", size);
   const borderRadius = resolveDimension(brands, brandId, "select-radius", radius);
   const borderWidth = resolveDimension(brands, brandId, "select-border-width");
   const labelFontSize = resolveDimension(brands, brandId, "select-label-font-size");
+  const labelFontFamily = resolveDimension(brands, brandId, "select-label-font-family");
+  const labelFontWeight = resolveDimension(brands, brandId, "select-label-font-weight");
+  const labelLineHeight = resolveDimension(brands, brandId, "select-label-line-height");
   const labelGap = resolveDimension(brands, brandId, "select-label-gap");
   const errorFontSize = resolveDimension(brands, brandId, "select-error-font-size");
+  const errorFontFamily = resolveDimension(brands, brandId, "select-error-font-family");
+  const errorFontWeight = resolveDimension(brands, brandId, "select-error-font-weight");
+  const errorLineHeight = resolveDimension(brands, brandId, "select-error-line-height");
   const errorGap = resolveDimension(brands, brandId, "select-error-gap");
   const sectionSize = resolveDimension(brands, brandId, "select-section-size", size);
 
@@ -94,12 +103,17 @@ export default function SelectPreview({
         label: {
           color: labelColor,
           fontSize: labelFontSize,
+          fontFamily: labelFontFamily ? `"${labelFontFamily}", sans-serif` : undefined,
+          fontWeight: labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400,
+          lineHeight: labelLineHeight ? `${labelLineHeight}px` : undefined,
           marginBottom: labelGap,
-          fontWeight: 500,
         },
         input: {
           backgroundColor: bg,
           color: textColor,
+          fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
+          fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
+          lineHeight: lineHeight ? `${lineHeight}px` : undefined,
           "--_input-placeholder-color": placeholderColor,
           ...(isFocus
             ? {
@@ -113,6 +127,9 @@ export default function SelectPreview({
         error: {
           color: errorColor,
           fontSize: errorFontSize,
+          fontFamily: errorFontFamily ? `"${errorFontFamily}", sans-serif` : undefined,
+          fontWeight: errorFontWeight === "Semi Bold" ? 600 : errorFontWeight === "Bold" ? 700 : 400,
+          lineHeight: errorLineHeight ? `${errorLineHeight}px` : undefined,
           marginTop: errorGap,
         },
         required: {

@@ -52,12 +52,21 @@ export default function TextInputPreview({
 
   const height = resolveDimension(brands, brandId, "textinput-height", size);
   const fontSize = resolveDimension(brands, brandId, "textinput-font-size", size);
+  const fontFamily = resolveDimension(brands, brandId, "textinput-font-family");
+  const fontWeight = resolveDimension(brands, brandId, "textinput-font-weight");
+  const lineHeight = resolveDimension(brands, brandId, "textinput-line-height", size);
   const paddingX = resolveDimension(brands, brandId, "textinput-padding-x", size);
   const borderRadius = resolveDimension(brands, brandId, "textinput-radius", radius);
   const borderWidth = resolveDimension(brands, brandId, "textinput-border-width");
   const labelFontSize = resolveDimension(brands, brandId, "textinput-label-font-size");
+  const labelFontFamily = resolveDimension(brands, brandId, "textinput-label-font-family");
+  const labelFontWeight = resolveDimension(brands, brandId, "textinput-label-font-weight");
+  const labelLineHeight = resolveDimension(brands, brandId, "textinput-label-line-height");
   const labelGap = resolveDimension(brands, brandId, "textinput-label-gap");
   const errorFontSize = resolveDimension(brands, brandId, "textinput-error-font-size");
+  const errorFontFamily = resolveDimension(brands, brandId, "textinput-error-font-family");
+  const errorFontWeight = resolveDimension(brands, brandId, "textinput-error-font-weight");
+  const errorLineHeight = resolveDimension(brands, brandId, "textinput-error-line-height");
   const errorGap = resolveDimension(brands, brandId, "textinput-error-gap");
 
   const mantineVariant = variant === "filled" ? "filled" : "default";
@@ -84,12 +93,17 @@ export default function TextInputPreview({
         label: {
           color: labelColor,
           fontSize: labelFontSize,
+          fontFamily: labelFontFamily ? `"${labelFontFamily}", sans-serif` : undefined,
+          fontWeight: labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400,
+          lineHeight: labelLineHeight ? `${labelLineHeight}px` : undefined,
           marginBottom: labelGap,
-          fontWeight: 500,
         },
         input: {
           backgroundColor: bg,
           color: textColor,
+          fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
+          fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
+          lineHeight: lineHeight ? `${lineHeight}px` : undefined,
           "--_input-placeholder-color": placeholderColor,
           ...(isFocus
             ? {
@@ -100,6 +114,9 @@ export default function TextInputPreview({
         error: {
           color: errorColor,
           fontSize: errorFontSize,
+          fontFamily: errorFontFamily ? `"${errorFontFamily}", sans-serif` : undefined,
+          fontWeight: errorFontWeight === "Semi Bold" ? 600 : errorFontWeight === "Bold" ? 700 : 400,
+          lineHeight: errorLineHeight ? `${errorLineHeight}px` : undefined,
           marginTop: errorGap,
         },
         required: {

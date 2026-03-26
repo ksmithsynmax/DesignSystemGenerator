@@ -30,6 +30,7 @@ export default function TitlePreview({
   const fontSize = resolveDimension(brands, brandId, "title-font-size", effectiveSizeKey);
   const lineHeight = resolveDimension(brands, brandId, "title-line-height", effectiveSizeKey);
   const fontWeight = resolveDimension(brands, brandId, "title-font-weight");
+  const fontFamily = resolveDimension(brands, brandId, "title-font-family");
   const maxWidth = resolveDimension(brands, brandId, "title-max-width");
 
   return (
@@ -40,9 +41,10 @@ export default function TitlePreview({
         lineClamp={lineClamp > 0 ? lineClamp : undefined}
         style={{
           color,
-          fontSize,
+          fontSize: fontSize ? `${fontSize}px` : undefined,
           lineHeight: lineHeight ? `${lineHeight}px` : undefined,
-          fontWeight,
+          fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
+          fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
         }}
       >
         {text}

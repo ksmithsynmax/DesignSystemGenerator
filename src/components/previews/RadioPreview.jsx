@@ -48,6 +48,9 @@ export default function RadioPreview({
 
   const radioSize = resolveDimension(brands, brandId, "radio-size", size);
   const iconSize = resolveDimension(brands, brandId, "radio-icon-size", size);
+  const labelFontSize = resolveDimension(brands, brandId, "radio-label-font-size", size);
+  const labelFontFamily = resolveDimension(brands, brandId, "radio-label-font-family");
+  const labelFontWeight = resolveDimension(brands, brandId, "radio-label-font-weight");
 
   // --radio-color: accent color used for filled bg (when checked) and outline ring (when checked)
   // Both variants use the primary brand color for the accent
@@ -80,7 +83,12 @@ export default function RadioPreview({
           borderColor: checked && variant !== "outline" ? "transparent" : borderColor,
           boxShadow: state === "focus" ? `0 0 0 2px ${focusRing}40` : "none",
         },
-        label: { color: labelColor },
+        label: {
+          color: labelColor,
+          fontSize: labelFontSize ? `${labelFontSize}px` : undefined,
+          fontFamily: labelFontFamily ? `"${labelFontFamily}", sans-serif` : undefined,
+          fontWeight: labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400,
+        },
       }}
     />
   );

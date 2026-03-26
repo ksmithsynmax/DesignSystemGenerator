@@ -15,10 +15,18 @@ async function syncTokens(payload) {
 
   // Extract globalPrimitives and brand IDs from payload
   var globalPrimitives = payload.globalPrimitives || {};
+  var globalSpacing = payload.globalSpacing || [];
   var allKeys = Object.keys(payload);
   var brandIds = [];
   for (var ki = 0; ki < allKeys.length; ki++) {
-    if (allKeys[ki] !== "globalPrimitives" && allKeys[ki] !== "__buildOptions") {
+    if (
+      allKeys[ki] !== "globalPrimitives" && 
+      allKeys[ki] !== "globalSpacing" && 
+      allKeys[ki] !== "globalFonts" && 
+      allKeys[ki] !== "globalWeights" && 
+      allKeys[ki] !== "globalBorderWidths" && 
+      allKeys[ki] !== "__buildOptions"
+    ) {
       brandIds.push(allKeys[ki]);
     }
   }
@@ -131,7 +139,21 @@ async function syncTokens(payload) {
       }
       oldPrimCol.remove();
       progress("Old 'Primitives' collection removed.");
-      break;
+    }
+  }
+
+  // ── Clean up accidental collections ──
+  var accidentalCollections = ["Primitive/GlobalFonts", "Primitive/GlobalWeights", "Primitive/GlobalBorderWidths"];
+  for (var oci = 0; oci < collections.length; oci++) {
+    if (accidentalCollections.indexOf(collections[oci].name) !== -1) {
+      progress("Removing accidental collection: " + collections[oci].name);
+      var oldCol = collections[oci];
+      for (var ovi = 0; ovi < allVars.length; ovi++) {
+        if (allVars[ovi].variableCollectionId === oldCol.id) {
+          allVars[ovi].remove();
+        }
+      }
+      oldCol.remove();
     }
   }
 
@@ -140,7 +162,7 @@ async function syncTokens(payload) {
   var totalAliases = 0;
 
   // ══════════════════════════════════════════════════════════════
-  // PHASE 1a: Primitive/Global — single mode, raw COLOR values
+  // PHASE 1a: Primitive/Global — single mode, raw COLOR + FLOAT values
   // ══════════════════════════════════════════════════════════════
   progress("Phase 1a: Syncing Primitive/Global...");
   var globalModeId = globalPrimCol.modes[0].modeId;
@@ -149,30 +171,120 @@ async function syncTokens(payload) {
     var gPalette = globalPaletteNames[gpi];
     var gPaletteArr = globalPrimitives[gPalette];
     for (var gIdx = 0; gIdx < gPaletteArr.length; gIdx++) {
-      var gVarName = gPalette + "/" + gIdx;
+      var gVarName = gPalette === "transparent" ? "transparent" : (gPalette + "/" + gIdx);
       var gVar = globalPrimVarMap[gVarName];
       if (!gVar) {
-        gVar = figma.variables.createVariable(gVarName, globalPrimCol, "COLOR");
+        try {
+          gVar = figma.variables.createVariable(gVarName, globalPrimCol, "COLOR");
+        } catch (e) {
+          throw new Error("Failed to create global color var: '" + gVarName + "' - " + String(e));
+        }
         globalPrimVarMap[gVarName] = gVar;
         totalCreated++;
       }
       gVar.setValueForMode(globalModeId, hexToFigmaRgb(gPaletteArr[gIdx]));
     }
   }
+
+  // Global spacing scale (FLOAT)
+  for (var gsi = 0; gsi < globalSpacing.length; gsi++) {
+    var spacingValue = Number(globalSpacing[gsi]);
+    if (!isFinite(spacingValue)) continue;
+    var spacingVarName = "spacing/" + spacingValue;
+    var spacingVar = globalPrimVarMap[spacingVarName];
+    if (!spacingVar) {
+      try {
+        spacingVar = figma.variables.createVariable(spacingVarName, globalPrimCol, "FLOAT");
+      } catch (e) {
+        throw new Error("Failed to create spacing var: '" + spacingVarName + "' - " + String(e));
+      }
+      globalPrimVarMap[spacingVarName] = spacingVar;
+      totalCreated++;
+    }
+    spacingVar.setValueForMode(globalModeId, spacingValue);
+  }
+
+  // Global fonts (STRING)
+  var globalFonts = payload.globalFonts || {};
+  var fontKeys = Object.keys(globalFonts);
+  for (var fi = 0; fi < fontKeys.length; fi++) {
+    var fontKey = fontKeys[fi];
+    var fontVal = globalFonts[fontKey];
+    var fontVarName = "font-family/" + fontKey;
+    var fontVar = globalPrimVarMap[fontVarName];
+    if (!fontVar) {
+      try {
+        fontVar = figma.variables.createVariable(fontVarName, globalPrimCol, "STRING");
+      } catch (e) {
+        throw new Error("Failed to create font var: '" + fontVarName + "' - " + String(e));
+      }
+      globalPrimVarMap[fontVarName] = fontVar;
+      totalCreated++;
+    }
+    fontVar.setValueForMode(globalModeId, fontVal);
+  }
+
+  // Global weights (STRING)
+  var globalWeights = payload.globalWeights || {};
+  var weightKeys = Object.keys(globalWeights);
+  for (var wi = 0; wi < weightKeys.length; wi++) {
+    var weightKey = weightKeys[wi];
+    var weightVal = globalWeights[weightKey];
+    var weightVarName = "font-weight/" + weightKey;
+    var weightVar = globalPrimVarMap[weightVarName];
+    if (!weightVar) {
+      try {
+        weightVar = figma.variables.createVariable(weightVarName, globalPrimCol, "STRING");
+      } catch (e) {
+        throw new Error("Failed to create weight var: '" + weightVarName + "' - " + String(e));
+      }
+      globalPrimVarMap[weightVarName] = weightVar;
+      totalCreated++;
+    }
+    weightVar.setValueForMode(globalModeId, weightVal);
+  }
+
+  // Global border widths (FLOAT)
+  var globalBorderWidths = payload.globalBorderWidths || [];
+  for (var bi = 0; bi < globalBorderWidths.length; bi++) {
+    var bwVal = Number(globalBorderWidths[bi]);
+    if (!isFinite(bwVal)) continue;
+    var bwVarName = "border-width/" + String(bwVal).replace('.', '_');
+    var bwVar = globalPrimVarMap[bwVarName];
+    if (!bwVar) {
+      try {
+        bwVar = figma.variables.createVariable(bwVarName, globalPrimCol, "FLOAT");
+      } catch (e) {
+        throw new Error("Failed to create border width var: '" + bwVarName + "' - " + String(e));
+      }
+      globalPrimVarMap[bwVarName] = bwVar;
+      totalCreated++;
+    }
+    bwVar.setValueForMode(globalModeId, bwVal);
+  }
+
   // Remove stale global primitive variables (from previous syncs with different palettes)
   var globalExpected = {};
   for (var gei = 0; gei < globalPaletteNames.length; gei++) {
     var gePalette = globalPaletteNames[gei];
     for (var geIdx = 0; geIdx < globalPrimitives[gePalette].length; geIdx++) {
-      globalExpected[gePalette + "/" + geIdx] = true;
+      var expectedName = gePalette === "transparent" ? "transparent" : (gePalette + "/" + geIdx);
+      globalExpected[expectedName] = true;
     }
   }
+  for (var gex = 0; gex < globalSpacing.length; gex++) {
+    var expectedSpacing = Number(globalSpacing[gex]);
+    if (isFinite(expectedSpacing)) globalExpected["spacing/" + expectedSpacing] = true;
+  }
+  for (var fi = 0; fi < fontKeys.length; fi++) globalExpected["font-family/" + fontKeys[fi]] = true;
+  for (var wi = 0; wi < weightKeys.length; wi++) globalExpected["font-weight/" + weightKeys[wi]] = true;
+  for (var bi = 0; bi < globalBorderWidths.length; bi++) globalExpected["border-width/" + String(globalBorderWidths[bi]).replace('.', '_')] = true;
   var globalStale = 0;
   var globalVarNames = Object.keys(globalPrimVarMap);
-  for (var gsi = 0; gsi < globalVarNames.length; gsi++) {
-    if (!globalExpected[globalVarNames[gsi]]) {
-      globalPrimVarMap[globalVarNames[gsi]].remove();
-      delete globalPrimVarMap[globalVarNames[gsi]];
+  for (var gsvi = 0; gsvi < globalVarNames.length; gsvi++) {
+    if (!globalExpected[globalVarNames[gsvi]]) {
+      globalPrimVarMap[globalVarNames[gsvi]].remove();
+      delete globalPrimVarMap[globalVarNames[gsvi]];
       globalStale++;
     }
   }
@@ -197,7 +309,11 @@ async function syncTokens(payload) {
         var bpVarName = bpPalette + "/" + bpIdx;
         var bpVar = brandPrimVarMaps[bpId][bpVarName];
         if (!bpVar) {
-          bpVar = figma.variables.createVariable(bpVarName, bpCol, "COLOR");
+          try {
+            bpVar = figma.variables.createVariable(bpVarName, bpCol, "COLOR");
+          } catch (e) {
+            throw new Error("Failed to create brand prim var: '" + bpVarName + "' - " + String(e));
+          }
           brandPrimVarMaps[bpId][bpVarName] = bpVar;
           totalCreated++;
         }
@@ -235,11 +351,15 @@ async function syncTokens(payload) {
   for (var si = 0; si < semanticKeys.length; si++) {
     var semKey = semanticKeys[si];
     var semVar = semanticVarMap[semKey];
-    if (!semVar) {
-      semVar = figma.variables.createVariable(semKey, semanticCol, "COLOR");
-      semanticVarMap[semKey] = semVar;
-      totalCreated++;
-    }
+      if (!semVar) {
+        try {
+          semVar = figma.variables.createVariable(semKey, semanticCol, "COLOR");
+        } catch (e) {
+          throw new Error("Failed to create semantic var: '" + semKey + "' - " + String(e));
+        }
+        semanticVarMap[semKey] = semVar;
+        totalCreated++;
+      }
     for (var smi2 = 0; smi2 < syncModes.length; smi2++) {
       var mode = syncModes[smi2];
       var modeSemantic = payload[mode.brandId].semantic[mode.theme];
@@ -276,12 +396,22 @@ async function syncTokens(payload) {
     if (tokenDef.aliasOf) continue;
 
     var compVar = componentVarMap[figmaPath];
-    if (!compVar) {
-      var resolvedType = "FLOAT";
-      if (tokenDef.type === "COLOR") resolvedType = "COLOR";
-      else if (tokenDef.type === "STRING") resolvedType = "STRING";
+    var resolvedType = "FLOAT";
+    if (tokenDef.type === "COLOR") resolvedType = "COLOR";
+    else if (tokenDef.type === "STRING") resolvedType = "STRING";
 
-      compVar = figma.variables.createVariable(figmaPath, componentsCol, resolvedType);
+    if (compVar && compVar.resolvedType !== resolvedType) {
+      // Type mismatch (e.g. changed from FLOAT to STRING). Delete and recreate.
+      compVar.remove();
+      compVar = null;
+    }
+
+    if (!compVar) {
+      try {
+        compVar = figma.variables.createVariable(figmaPath, componentsCol, resolvedType);
+      } catch (e) {
+        throw new Error("Failed to create component var: '" + figmaPath + "' - " + String(e));
+      }
       componentVarMap[figmaPath] = compVar;
       compCreated++;
     }
@@ -303,11 +433,37 @@ async function syncTokens(payload) {
           // No semantic (transparent/null) — set raw value
           compVar.setValueForMode(cModeId, hexToFigmaRgb(brandToken.value));
         }
-      } else if (brandToken.type === "FLOAT") {
-        compVar.setValueForMode(cModeId, (brandToken.value != null) ? brandToken.value : 0);
-      } else if (brandToken.type === "STRING") {
-        compVar.setValueForMode(cModeId, (brandToken.value != null) ? brandToken.value : "");
-      }
+        } else if (brandToken.type === "FLOAT") {
+          var floatAliasTarget = null;
+          if (brandToken.alias) {
+            if (brandPrimVarMaps[cMode.brandId] && brandPrimVarMaps[cMode.brandId][brandToken.alias]) {
+              floatAliasTarget = brandPrimVarMaps[cMode.brandId][brandToken.alias];
+            } else {
+              floatAliasTarget = globalPrimVarMap[brandToken.alias];
+            }
+          }
+          if (floatAliasTarget) {
+            compVar.setValueForMode(cModeId, figma.variables.createVariableAlias(floatAliasTarget));
+            compAliases++;
+          } else {
+            compVar.setValueForMode(cModeId, (brandToken.value != null) ? brandToken.value : 0);
+          }
+        } else if (brandToken.type === "STRING") {
+          var stringAliasTarget = null;
+          if (brandToken.alias) {
+            if (brandPrimVarMaps[cMode.brandId] && brandPrimVarMaps[cMode.brandId][brandToken.alias]) {
+              stringAliasTarget = brandPrimVarMaps[cMode.brandId][brandToken.alias];
+            } else {
+              stringAliasTarget = globalPrimVarMap[brandToken.alias];
+            }
+          }
+          if (stringAliasTarget) {
+            compVar.setValueForMode(cModeId, figma.variables.createVariableAlias(stringAliasTarget));
+            compAliases++;
+          } else {
+            compVar.setValueForMode(cModeId, (brandToken.value != null) ? brandToken.value : "");
+          }
+        }
     }
   }
 
@@ -318,9 +474,19 @@ async function syncTokens(payload) {
     if (!aliasDef.aliasOf) continue;
 
     var aliasVar = componentVarMap[aliasPath];
+    var aliasType = (aliasDef.type === "STRING") ? "STRING" : "FLOAT";
+
+    if (aliasVar && aliasVar.resolvedType !== aliasType) {
+      aliasVar.remove();
+      aliasVar = null;
+    }
+
     if (!aliasVar) {
-      var aliasType = (aliasDef.type === "STRING") ? "STRING" : "FLOAT";
-      aliasVar = figma.variables.createVariable(aliasPath, componentsCol, aliasType);
+      try {
+        aliasVar = figma.variables.createVariable(aliasPath, componentsCol, aliasType);
+      } catch (e) {
+        throw new Error("Failed to create alias var: '" + aliasPath + "' - " + String(e));
+      }
       componentVarMap[aliasPath] = aliasVar;
       compCreated++;
     }
@@ -851,6 +1017,9 @@ async function buildButtonComponentSet(varMap, page, font) {
 
             // Bind SIZE-SPECIFIC font size
             bindVar(textNode, "fontSize", varMap["button/font-size-" + size]);
+            bindVar(textNode, "fontFamily", varMap["button/font-family"]);
+            bindVar(textNode, "fontStyle", varMap["button/font-weight"]);
+            bindVar(textNode, "lineHeight", varMap["button/line-height-" + size]);
 
             comp.appendChild(textNode);
 
@@ -1116,6 +1285,9 @@ function buildSwitchComponentSet(varMap, page, font) {
             labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
             bindPaintVar(labelNode, "fills", 0, varMap[labelTextPath]);
             bindVar(labelNode, "fontSize", varMap["switch/label-font-size-" + size]);
+            bindVar(labelNode, "fontFamily", varMap["switch/label-font-family"]);
+            bindVar(labelNode, "fontStyle", varMap["switch/label-font-weight"]);
+            bindVar(labelNode, "lineHeight", varMap["switch/label-line-height-" + size]);
             comp.appendChild(labelNode);
           }
 
@@ -1318,6 +1490,9 @@ function buildSliderComponentSet(varMap, page, font) {
               labelNode.fills = [{ type: "SOLID", color: { r: 0.7, g: 0.72, b: 0.75 } }];
               bindPaintVar(labelNode, "fills", 0, varMap[sliderMarkLabelColorPath(state)]);
               bindVar(labelNode, "fontSize", varMap["slider/mark-label-font-size-" + size]);
+              bindVar(labelNode, "fontFamily", varMap["slider/mark-label-font-family"]);
+              bindVar(labelNode, "fontStyle", varMap["slider/mark-label-font-weight"]);
+              bindVar(labelNode, "lineHeight", varMap["slider/mark-label-line-height-" + size]);
               labelNode.x = markX - 12;
               labelNode.y = trackY + sizeTrack[size] + 10;
               comp.appendChild(labelNode);
@@ -1526,6 +1701,9 @@ function buildRangeSliderComponentSet(varMap, page, font) {
               labelNode.fills = [{ type: "SOLID", color: { r: 0.7, g: 0.72, b: 0.75 } }];
               bindPaintVar(labelNode, "fills", 0, varMap[rangeSliderMarkLabelColorPath(state)]);
               bindVar(labelNode, "fontSize", varMap["rangeslider/mark-label-font-size-" + size]);
+              bindVar(labelNode, "fontFamily", varMap["rangeslider/mark-label-font-family"]);
+              bindVar(labelNode, "fontStyle", varMap["rangeslider/mark-label-font-weight"]);
+              bindVar(labelNode, "lineHeight", varMap["rangeslider/mark-label-line-height-" + size]);
               labelNode.x = markX - 12;
               labelNode.y = trackY + sizeTrack[size] + 10;
               comp.appendChild(labelNode);
@@ -1688,8 +1866,9 @@ async function buildAnchorComponentSet(varMap, page, font) {
           anchorText.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
 
           bindVar(anchorText, "fontSize", varMap["anchor/font-size-" + size]);
+          bindVar(anchorText, "fontFamily", varMap["anchor/font-family"]);
           bindVar(anchorText, "lineHeight", varMap["anchor/line-height-" + size]);
-          bindVar(anchorText, "fontWeight", varMap["anchor/font-weight-" + weight]);
+          bindVar(anchorText, "fontStyle", varMap["anchor/font-weight-" + weight]);
           bindPaintVar(anchorText, "fills", 0, varMap[anchorColorPath(state)]);
 
           if (underline === "always" || (underline === "hover" && state === "hover")) {
@@ -1790,6 +1969,8 @@ function buildTitleComponentSet(varMap, page, font) {
           var sizeKey = sizeMode === "auto" ? "h" + order : sizeMode;
           var tokenVar = varMap["title/font-size-" + sizeKey];
           bindVar(textNode, "fontSize", tokenVar);
+          bindVar(textNode, "fontFamily", varMap["title/font-family"]);
+          bindVar(textNode, "fontStyle", varMap["title/font-weight"]);
           bindVar(textNode, "lineHeight", varMap["title/line-height-" + sizeKey]);
           bindPaintVar(textNode, "fills", 0, varMap["title/color"]);
 
@@ -1896,6 +2077,8 @@ async function buildTextComponentSet(varMap, page, fallbackFont) {
         textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
 
         bindVar(textNode, "fontSize", varMap["text/font-size-" + size]);
+        bindVar(textNode, "fontFamily", varMap["text/font-family"]);
+        bindVar(textNode, "fontStyle", varMap["text/font-weight-" + weight]);
         bindVar(textNode, "lineHeight", varMap["text/line-height-" + size]);
         bindPaintVar(textNode, "fills", 0, varMap[textColorPath(color)]);
 
@@ -2122,6 +2305,9 @@ async function buildCheckboxComponentSet(varMap, page, font) {
             labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
             bindPaintVar(labelNode, "fills", 0, varMap[labelTextPath]);
             bindVar(labelNode, "fontSize", varMap["checkbox/label-font-size-" + size]);
+            bindVar(labelNode, "fontFamily", varMap["checkbox/label-font-family"]);
+            bindVar(labelNode, "fontStyle", varMap["checkbox/label-font-weight"]);
+            bindVar(labelNode, "lineHeight", varMap["checkbox/label-line-height-" + size]);
             comp.appendChild(labelNode);
           }
 
@@ -2332,6 +2518,9 @@ function buildRadioComponentSet(varMap, page, font) {
               labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
               bindPaintVar(labelNode, "fills", 0, varMap[labelTextPath]);
               bindVar(labelNode, "fontSize", varMap["radio/label-font-size-" + size]);
+              bindVar(labelNode, "fontFamily", varMap["radio/label-font-family"]);
+              bindVar(labelNode, "fontStyle", varMap["radio/label-font-weight"]);
+              bindVar(labelNode, "lineHeight", varMap["radio/label-line-height-" + size]);
               comp.appendChild(labelNode);
             }
 
@@ -2572,6 +2761,9 @@ async function buildChipComponentSet(varMap, page, font) {
           textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
           bindPaintVar(textNode, "fills", 0, varMap[textColorPath]);
           bindVar(textNode, "fontSize", varMap["chip/font-size-" + size]);
+          bindVar(textNode, "fontFamily", varMap["chip/font-family"]);
+          bindVar(textNode, "fontStyle", varMap["chip/font-weight"]);
+          bindVar(textNode, "lineHeight", varMap["chip/line-height-" + size]);
           comp.appendChild(textNode);
 
           // Focus ring
@@ -2740,6 +2932,9 @@ function buildNotificationComponentSet(varMap, page, font) {
             titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
             if (varMap["notification/title"]) bindPaintVar(titleNode, "fills", 0, varMap["notification/title"]);
             if (varMap["notification/title-font-size"]) bindVar(titleNode, "fontSize", varMap["notification/title-font-size"]);
+            bindVar(titleNode, "fontFamily", varMap["notification/title-font-family"]);
+            bindVar(titleNode, "fontStyle", varMap["notification/title-font-weight"]);
+            bindVar(titleNode, "lineHeight", varMap["notification/title-line-height"]);
             comp.appendChild(titleNode);
 
             var descNode = figma.createText();
@@ -2754,6 +2949,9 @@ function buildNotificationComponentSet(varMap, page, font) {
             descNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
             if (varMap["notification/description"]) bindPaintVar(descNode, "fills", 0, varMap["notification/description"]);
             if (varMap["notification/description-font-size"]) bindVar(descNode, "fontSize", varMap["notification/description-font-size"]);
+            bindVar(descNode, "fontFamily", varMap["notification/description-font-family"]);
+            bindVar(descNode, "fontStyle", varMap["notification/description-font-weight"]);
+            bindVar(descNode, "lineHeight", varMap["notification/description-line-height"]);
             comp.appendChild(descNode);
 
             if (withClose) {
@@ -2895,6 +3093,9 @@ async function buildAlertComponentSet(varMap, page, font) {
           titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
           bindPaintVar(titleNode, "fills", 0, varMap["alert/" + variant + "-text"]);
           bindVar(titleNode, "fontSize", varMap["alert/title-font-size"]);
+          bindVar(titleNode, "fontFamily", varMap["alert/title-font-family"]);
+          bindVar(titleNode, "fontStyle", varMap["alert/title-font-weight"]);
+          bindVar(titleNode, "lineHeight", varMap["alert/title-line-height"]);
           titleRow.appendChild(titleNode);
 
           var messageWrap = figma.createFrame();
@@ -2919,6 +3120,9 @@ async function buildAlertComponentSet(varMap, page, font) {
           messageNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
           bindPaintVar(messageNode, "fills", 0, varMap["alert/" + variant + "-text"]);
           bindVar(messageNode, "fontSize", varMap["alert/message-font-size"]);
+          bindVar(messageNode, "fontFamily", varMap["alert/message-font-family"]);
+          bindVar(messageNode, "fontStyle", varMap["alert/message-font-weight"]);
+          bindVar(messageNode, "lineHeight", varMap["alert/message-line-height"]);
           messageWrap.appendChild(messageNode);
 
           if (withClose) {
@@ -3106,6 +3310,9 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
               bindPaintVar(titleNode, "fills", 0, varMap["modal/title"]);
               bindVar(titleNode, "fontSize", varMap["modal/title-font-size"]);
+              bindVar(titleNode, "fontFamily", varMap["modal/title-font-family"]);
+              bindVar(titleNode, "fontStyle", varMap["modal/title-font-weight"]);
+              bindVar(titleNode, "lineHeight", varMap["modal/title-line-height"]);
             }
             header.appendChild(titleNode);
 
@@ -3162,6 +3369,9 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               bodyNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
               bindPaintVar(bodyNode, "fills", 0, varMap["modal/body"]);
               bindVar(bodyNode, "fontSize", varMap["modal/body-font-size"]);
+              bindVar(bodyNode, "fontFamily", varMap["modal/body-font-family"]);
+              bindVar(bodyNode, "fontStyle", varMap["modal/body-font-weight"]);
+              bindVar(bodyNode, "lineHeight", varMap["modal/body-line-height"]);
             }
             bodyWrap.appendChild(bodyNode);
 
@@ -3444,6 +3654,9 @@ function buildTooltipComponentSet(varMap, page, font) {
       }
       if (varMap["tooltip/font-size"]) {
         bindVar(textNode, "fontSize", varMap["tooltip/font-size"]);
+        bindVar(textNode, "fontFamily", varMap["tooltip/font-family"]);
+        bindVar(textNode, "fontStyle", varMap["tooltip/font-weight"]);
+        bindVar(textNode, "lineHeight", varMap["tooltip/line-height"]);
       }
       body.appendChild(textNode);
 
@@ -3678,6 +3891,9 @@ function buildPillComponentSet(varMap, page, font) {
       label.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
       bindPaintVar(label, "fills", 0, varMap["pill/label"]);
       bindVar(label, "fontSize", varMap["pill/font-size-" + size]);
+      bindVar(label, "fontFamily", varMap["pill/font-family"]);
+      bindVar(label, "fontStyle", varMap["pill/font-weight"]);
+      bindVar(label, "lineHeight", varMap["pill/line-height-" + size]);
       comp.appendChild(label);
 
       if (withRemove) {
@@ -3810,6 +4026,9 @@ function buildBadgeComponentSet(varMap, page, font) {
           label.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
           bindPaintVar(label, "fills", 0, varMap[colorPath(variant, "text")]);
           bindVar(label, "fontSize", varMap["badge/font-size-" + size]);
+          bindVar(label, "fontFamily", varMap["badge/font-family"]);
+          bindVar(label, "fontStyle", varMap["badge/font-weight"]);
+          bindVar(label, "lineHeight", varMap["badge/line-height-" + size]);
           comp.appendChild(label);
 
           var colIndex = vi * circles.length + ci;
@@ -3902,6 +4121,9 @@ function buildTextInputComponentSet(varMap, page, font) {
               }
               if (varMap["textinput/label-font-size"]) {
                 bindVar(labelNode, "fontSize", varMap["textinput/label-font-size"]);
+                bindVar(labelNode, "fontFamily", varMap["textinput/label-font-family"]);
+                bindVar(labelNode, "fontStyle", varMap["textinput/label-font-weight"]);
+                bindVar(labelNode, "lineHeight", varMap["textinput/label-line-height"]);
               }
               labelRow.appendChild(labelNode);
 
@@ -3917,6 +4139,9 @@ function buildTextInputComponentSet(varMap, page, font) {
                 }
                 if (varMap["textinput/label-font-size"]) {
                   bindVar(asteriskNode, "fontSize", varMap["textinput/label-font-size"]);
+                  bindVar(asteriskNode, "fontFamily", varMap["textinput/label-font-family"]);
+                  bindVar(asteriskNode, "fontStyle", varMap["textinput/label-font-weight"]);
+                  bindVar(asteriskNode, "lineHeight", varMap["textinput/label-line-height"]);
                 }
                 labelRow.appendChild(asteriskNode);
               }
@@ -4004,6 +4229,9 @@ function buildTextInputComponentSet(varMap, page, font) {
             }
             if (varMap["textinput/font-size-" + size]) {
               bindVar(textNode, "fontSize", varMap["textinput/font-size-" + size]);
+              bindVar(textNode, "fontFamily", varMap["textinput/font-family"]);
+              bindVar(textNode, "fontStyle", varMap["textinput/font-weight"]);
+              bindVar(textNode, "lineHeight", varMap["textinput/line-height-" + size]);
             }
 
             input.appendChild(textNode);
@@ -4036,6 +4264,9 @@ function buildTextInputComponentSet(varMap, page, font) {
               }
               if (varMap["textinput/error-font-size"]) {
                 bindVar(errorNode, "fontSize", varMap["textinput/error-font-size"]);
+                bindVar(errorNode, "fontFamily", varMap["textinput/error-font-family"]);
+                bindVar(errorNode, "fontStyle", varMap["textinput/error-font-weight"]);
+                bindVar(errorNode, "lineHeight", varMap["textinput/error-line-height"]);
               }
               comp.appendChild(errorNode);
             }
@@ -4152,6 +4383,9 @@ async function buildSelectComponentSet(varMap, page, font) {
               }
               if (varMap["select/label-font-size"]) {
                 bindVar(labelNode, "fontSize", varMap["select/label-font-size"]);
+                bindVar(labelNode, "fontFamily", varMap["select/label-font-family"]);
+                bindVar(labelNode, "fontStyle", varMap["select/label-font-weight"]);
+                bindVar(labelNode, "lineHeight", varMap["select/label-line-height"]);
               }
               labelRow.appendChild(labelNode);
 
@@ -4167,6 +4401,9 @@ async function buildSelectComponentSet(varMap, page, font) {
                 }
                 if (varMap["select/label-font-size"]) {
                   bindVar(asteriskNode, "fontSize", varMap["select/label-font-size"]);
+                  bindVar(asteriskNode, "fontFamily", varMap["select/label-font-family"]);
+                  bindVar(asteriskNode, "fontStyle", varMap["select/label-font-weight"]);
+                  bindVar(asteriskNode, "lineHeight", varMap["select/label-line-height"]);
                 }
                 labelRow.appendChild(asteriskNode);
               }
@@ -4222,7 +4459,12 @@ async function buildSelectComponentSet(varMap, page, font) {
             } else {
               if (varMap["select/placeholder"]) bindPaintVar(valueNode, "fills", 0, varMap["select/placeholder"]);
             }
-            if (varMap["select/font-size-" + size]) bindVar(valueNode, "fontSize", varMap["select/font-size-" + size]);
+            if (varMap["select/font-size-" + size]) {
+              bindVar(valueNode, "fontSize", varMap["select/font-size-" + size]);
+              bindVar(valueNode, "fontFamily", varMap["select/font-family"]);
+              bindVar(valueNode, "fontStyle", varMap["select/font-weight"]);
+              bindVar(valueNode, "lineHeight", varMap["select/line-height-" + size]);
+            }
             input.appendChild(valueNode);
 
             var chevronSlot = figma.createFrame();
@@ -4282,7 +4524,12 @@ async function buildSelectComponentSet(varMap, page, font) {
               errorNode.fontSize = 12;
               errorNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
               if (varMap["select/error-color"]) bindPaintVar(errorNode, "fills", 0, varMap["select/error-color"]);
-              if (varMap["select/error-font-size"]) bindVar(errorNode, "fontSize", varMap["select/error-font-size"]);
+              if (varMap["select/error-font-size"]) {
+                bindVar(errorNode, "fontSize", varMap["select/error-font-size"]);
+                bindVar(errorNode, "fontFamily", varMap["select/error-font-family"]);
+                bindVar(errorNode, "fontStyle", varMap["select/error-font-weight"]);
+                bindVar(errorNode, "lineHeight", varMap["select/error-line-height"]);
+              }
               comp.appendChild(errorNode);
             }
 
@@ -4520,6 +4767,9 @@ function buildCardComponentSet(varMap, page, font) {
           titleNode.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.1 } }];
           if (varMap["card/title"]) bindPaintVar(titleNode, "fills", 0, varMap["card/title"]);
           if (varMap["card/title-font-size-" + size]) bindVar(titleNode, "fontSize", varMap["card/title-font-size-" + size]);
+          bindVar(titleNode, "fontFamily", varMap["card/title-font-family"]);
+          bindVar(titleNode, "fontStyle", varMap["card/title-font-weight"]);
+          if (varMap["card/title-line-height-" + size]) bindVar(titleNode, "lineHeight", varMap["card/title-line-height-" + size]);
           topRow.appendChild(titleNode);
 
           var badge = figma.createFrame();
@@ -4555,6 +4805,9 @@ function buildCardComponentSet(varMap, page, font) {
           descriptionNode.resize(288, descriptionNode.height);
           if (varMap["card/description"]) bindPaintVar(descriptionNode, "fills", 0, varMap["card/description"]);
           if (varMap["card/description-font-size-" + size]) bindVar(descriptionNode, "fontSize", varMap["card/description-font-size-" + size]);
+          bindVar(descriptionNode, "fontFamily", varMap["card/description-font-family"]);
+          bindVar(descriptionNode, "fontStyle", varMap["card/description-font-weight"]);
+          if (varMap["card/description-line-height-" + size]) bindVar(descriptionNode, "lineHeight", varMap["card/description-line-height-" + size]);
           body.appendChild(descriptionNode);
 
           var colIndex = ri * borderModes.length * shadowModes.length + bi * shadowModes.length + shi;
@@ -4908,6 +5161,9 @@ async function buildTabsComponentSet(varMap, page, font) {
               labelNode.fontSize = 14;
               labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
               bindVar(labelNode, "fontSize", varMap["tabs/font-size"]);
+              bindVar(labelNode, "fontFamily", varMap["tabs/font-family"]);
+              bindVar(labelNode, "fontStyle", varMap["tabs/font-weight"]);
+              bindVar(labelNode, "lineHeight", varMap["tabs/line-height"]);
               bindPaintVar(labelNode, "fills", 0, varMap[tabTextPath]);
 
               tab.appendChild(labelNode);

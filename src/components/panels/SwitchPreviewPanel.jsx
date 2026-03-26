@@ -63,6 +63,7 @@ export function SwitchPreviewContent({
           brands={brands}
           brandId={activeBrand}
           size={activeSwitchSize}
+          label="Switch label"
           checked={selectedChecked}
           readOnly
           state={selectedState === "default" ? undefined : selectedState}
@@ -79,6 +80,7 @@ export function SwitchPreviewContent({
             brands={brands}
             brandId={activeBrand}
             size={s}
+            label="Switch label"
             checked={row.checked}
             readOnly
             state={selectedState === "default" ? undefined : selectedState}

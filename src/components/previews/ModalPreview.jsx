@@ -52,7 +52,13 @@ export default function ModalPreview({
   const paddingX = resolveDimension(brands, brandId, "modal-padding-x");
   const paddingY = resolveDimension(brands, brandId, "modal-padding-y");
   const titleFontSize = resolveDimension(brands, brandId, "modal-title-font-size");
+  const titleFontFamily = resolveDimension(brands, brandId, "modal-title-font-family");
+  const titleFontWeight = resolveDimension(brands, brandId, "modal-title-font-weight");
+  const titleLineHeight = resolveDimension(brands, brandId, "modal-title-line-height");
   const bodyFontSize = resolveDimension(brands, brandId, "modal-body-font-size");
+  const bodyFontFamily = resolveDimension(brands, brandId, "modal-body-font-family");
+  const bodyFontWeight = resolveDimension(brands, brandId, "modal-body-font-weight");
+  const bodyLineHeight = resolveDimension(brands, brandId, "modal-body-line-height");
   const borderWidth = resolveDimension(brands, brandId, "modal-border-width");
   const overlayOpacity = resolveDimension(brands, brandId, "modal-overlay-opacity");
 
@@ -108,7 +114,9 @@ export default function ModalPreview({
                   padding: `${paddingY}px ${paddingX}px`,
                   borderBottom: `${borderWidth}px solid ${dividerColor}`,
                   fontSize: `${titleFontSize}px`,
-                  fontWeight: 500,
+                  fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
+                  fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
+                  lineHeight: titleLineHeight ? `${titleLineHeight}px` : undefined,
                   color: titleColor,
                   background: headerBackground,
                 }}
@@ -119,8 +127,10 @@ export default function ModalPreview({
                 style={{
                   color: bodyColor,
                   fontSize: `${bodyFontSize}px`,
+                  fontFamily: bodyFontFamily ? `"${bodyFontFamily}", sans-serif` : undefined,
+                  fontWeight: bodyFontWeight === "Semi Bold" ? 600 : bodyFontWeight === "Bold" ? 700 : 400,
+                  lineHeight: bodyLineHeight ? `${bodyLineHeight}px` : 1.35,
                   padding: `${paddingY}px ${paddingX}px`,
-                  lineHeight: 1.35,
                 }}
               >
                 {body}
@@ -176,7 +186,13 @@ export default function ModalPreview({
                   background: headerBackground,
                 }}
               >
-                <div style={{ color: titleColor, fontSize: `${titleFontSize}px`, fontWeight: 600 }}>{title}</div>
+                <div style={{
+                  color: titleColor,
+                  fontSize: `${titleFontSize}px`,
+                  fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
+                  fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
+                  lineHeight: titleLineHeight ? `${titleLineHeight}px` : undefined,
+                }}>{title}</div>
                 {withCloseButton ? (
                   <div style={{ color: closeColor, fontSize: 18, lineHeight: 1, userSelect: "none" }}>×</div>
                 ) : null}
@@ -185,8 +201,10 @@ export default function ModalPreview({
                 style={{
                   color: bodyColor,
                   fontSize: `${bodyFontSize}px`,
+                  fontFamily: bodyFontFamily ? `"${bodyFontFamily}", sans-serif` : undefined,
+                  fontWeight: bodyFontWeight === "Semi Bold" ? 600 : bodyFontWeight === "Bold" ? 700 : 400,
+                  lineHeight: bodyLineHeight ? `${bodyLineHeight}px` : 1.45,
                   padding: `0 ${paddingX}px ${paddingY}px ${paddingX}px`,
-                  lineHeight: 1.45,
                 }}
               >
                 {body}

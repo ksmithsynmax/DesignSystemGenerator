@@ -52,6 +52,9 @@ export default function ChipPreview({
   const chipCheckedPadding = resolveDimension(brands, brandId, "chip-checked-padding", size);
   const chipIconSize = resolveDimension(brands, brandId, "chip-icon-size", size);
   const chipFontSize = resolveDimension(brands, brandId, "chip-font-size", size);
+  const chipFontFamily = resolveDimension(brands, brandId, "chip-font-family");
+  const chipFontWeight = resolveDimension(brands, brandId, "chip-font-weight");
+  const chipLineHeight = resolveDimension(brands, brandId, "chip-line-height", size);
   const chipRadius = resolveDimension(brands, brandId, "chip-radius", radius || size);
   const chipSpacing = resolveDimension(brands, brandId, "chip-spacing", size);
   const chipBorderWidth = resolveDimension(brands, brandId, "chip-border-width");
@@ -100,6 +103,9 @@ export default function ChipPreview({
           borderWidth: chipBorderWidth,
           color: checked ? checkedText : textColor,
           boxShadow: state === "focus" ? `0 0 0 2px ${focusRing}40` : "none",
+          fontFamily: chipFontFamily ? `"${chipFontFamily}", sans-serif` : undefined,
+          fontWeight: chipFontWeight === "Semi Bold" ? 600 : chipFontWeight === "Bold" ? 700 : 400,
+          lineHeight: chipLineHeight ? `${chipLineHeight}px` : undefined,
         },
       }}
     >

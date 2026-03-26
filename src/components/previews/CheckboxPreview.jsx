@@ -13,6 +13,7 @@ export default function CheckboxPreview({
   indeterminate,
   state,
   readOnly,
+  label,
 }) {
   const [internalChecked, setInternalChecked] = useState(false);
   const isControlled = controlledChecked !== undefined;
@@ -65,9 +66,13 @@ export default function CheckboxPreview({
     "checkbox-icon-color-disabled",
   ]);
   const focusRing = resolveFirst(["checkbox-focus-ring"]);
+  const labelColor = resolveFirst([isDisabled ? "checkbox-label-text-disabled" : "checkbox-label-text"]);
 
   const boxSize = resolveDimension(brands, brandId, "checkbox-size", size);
   const borderRadius = resolveDimension(brands, brandId, "checkbox-radius", radius || size);
+  const labelFontSize = resolveDimension(brands, brandId, "checkbox-label-font-size", size);
+  const labelFontFamily = resolveDimension(brands, brandId, "checkbox-label-font-family");
+  const labelFontWeight = resolveDimension(brands, brandId, "checkbox-label-font-weight");
   const isActive = checked || indeterminate;
   const bg = isDisabled ? disabledBg : isActive ? checkedBg : uncheckedBg;
   const bd = isDisabled ? disabledBorderColor : isActive ? checkedBorderColor : borderColor;
@@ -76,6 +81,7 @@ export default function CheckboxPreview({
   return (
     <Checkbox
       checked={checked}
+      label={label}
       indeterminate={indeterminate}
       onChange={readOnly || isDisabled ? undefined : () => setInternalChecked((v) => !v)}
       readOnly={readOnly || isDisabled}
@@ -94,6 +100,12 @@ export default function CheckboxPreview({
           borderColor: bd,
           boxShadow: state === "focus" ? `0 0 0 2px ${focusRing}40` : "none",
         },
+        label: {
+          color: labelColor,
+          fontSize: labelFontSize ? `${labelFontSize}px` : undefined,
+          fontFamily: labelFontFamily ? `"${labelFontFamily}", sans-serif` : undefined,
+          fontWeight: labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400,
+        }
       }}
     />
   );
