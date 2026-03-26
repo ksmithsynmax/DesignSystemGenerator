@@ -1,14 +1,83 @@
-import { useCallback } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { buildExportPayload } from "../utils/buildExportPayload";
 import { useFigmaSync } from "../hooks/useFigmaSync";
 
+const BUILDABLE_COMPONENTS = [
+  "button",
+  "switch",
+  "slider",
+  "rangeslider",
+  "checkbox",
+  "radio",
+  "chip",
+  "notification",
+  "alert",
+  "modal",
+  "tooltip",
+  "loader",
+  "pill",
+  "badge",
+  "textinput",
+  "select",
+  "card",
+  "actionicon",
+  "tabs",
+  "anchor",
+  "title",
+  "text",
+];
+
+const COMPONENT_LABELS = {
+  actionicon: "ActionIcon",
+  rangeslider: "RangeSlider",
+  textinput: "TextInput",
+};
+
 export default function FigmaSyncButton({ brands }) {
   const { status, pluginConnected, sync, error, lastSyncMessage } = useFigmaSync();
+  const [buildMode, setBuildMode] = useState("all");
+  const [selectedComponents, setSelectedComponents] = useState(BUILDABLE_COMPONENTS);
+
+  const selectedCount = selectedComponents.length;
+  const selectionError = buildMode === "selected" && selectedCount === 0
+    ? "Pick at least one component for selected build mode."
+    : null;
+
+  const componentLabel = useCallback((name) => {
+    return COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
+  }, []);
+
+  const selectedSummary = useMemo(() => {
+    if (buildMode === "all") return "All components";
+    return selectedCount + " selected";
+  }, [buildMode, selectedCount]);
 
   const handleSync = useCallback(() => {
-    const payload = buildExportPayload(brands);
+    if (buildMode === "selected" && selectedComponents.length === 0) return;
+    var buildOptions = null;
+    if (buildMode === "selected") {
+      buildOptions = { componentsToBuild: selectedComponents.slice() };
+    }
+    const payload = buildExportPayload(brands, buildOptions);
     sync(payload);
-  }, [brands, sync]);
+  }, [brands, buildMode, selectedComponents, sync]);
+
+  const toggleComponent = useCallback((name) => {
+    setSelectedComponents((curr) => {
+      if (curr.indexOf(name) >= 0) {
+        return curr.filter((item) => item !== name);
+      }
+      return curr.concat(name);
+    });
+  }, []);
+
+  const selectAllComponents = useCallback(() => {
+    setSelectedComponents(BUILDABLE_COMPONENTS.slice());
+  }, []);
+
+  const clearComponents = useCallback(() => {
+    setSelectedComponents([]);
+  }, []);
 
   const dotColor = {
     disconnected: "#868E96",
@@ -23,7 +92,8 @@ export default function FigmaSyncButton({ brands }) {
     status === "disconnected" ||
     status === "connecting" ||
     status === "syncing" ||
-    !pluginConnected;
+    !pluginConnected ||
+    Boolean(selectionError);
 
   const statusLabel =
     status === "syncing" ? "Syncing..." :
@@ -35,28 +105,126 @@ export default function FigmaSyncButton({ brands }) {
     <div
       style={{
         display: "flex",
-        alignItems: "center",
+        flexDirection: "column",
+        alignItems: "stretch",
         gap: 12,
         padding: "12px 0",
       }}
     >
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <div
-          style={{
-            width: 8,
-            height: 8,
-            borderRadius: "50%",
-            background: dotColor,
-            boxShadow: status === "syncing" ? `0 0 6px ${dotColor}` : "none",
-          }}
-        />
-        <span style={{ fontSize: 11, color: "#868E96" }}>{statusLabel}</span>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div
+            style={{
+              width: 8,
+              height: 8,
+              borderRadius: "50%",
+              background: dotColor,
+              boxShadow: status === "syncing" ? `0 0 6px ${dotColor}` : "none",
+            }}
+          />
+          <span style={{ fontSize: 11, color: "#868E96" }}>{statusLabel}</span>
+        </div>
+        <span style={{ fontSize: 11, color: "#ADB5BD" }}>Build: {selectedSummary}</span>
+      </div>
+
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          gap: 8,
+          border: "1px solid #2c2f36",
+          borderRadius: 6,
+          padding: 10,
+        }}
+      >
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#CED4DA" }}>
+            <input
+              type="radio"
+              name="build-mode"
+              checked={buildMode === "all"}
+              onChange={() => setBuildMode("all")}
+            />
+            All components
+          </label>
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#CED4DA" }}>
+            <input
+              type="radio"
+              name="build-mode"
+              checked={buildMode === "selected"}
+              onChange={() => setBuildMode("selected")}
+            />
+            Selected components
+          </label>
+        </div>
+
+        {buildMode === "selected" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={selectAllComponents}
+                style={{
+                  background: "#2f9e44",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "4px 8px",
+                  fontSize: 11,
+                  cursor: "pointer",
+                }}
+              >
+                Select all
+              </button>
+              <button
+                onClick={clearComponents}
+                style={{
+                  background: "#495057",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "4px 8px",
+                  fontSize: 11,
+                  cursor: "pointer",
+                }}
+              >
+                Clear
+              </button>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: 6,
+                maxHeight: 176,
+                overflowY: "auto",
+                border: "1px solid #2c2f36",
+                borderRadius: 6,
+                padding: 8,
+              }}
+            >
+              {BUILDABLE_COMPONENTS.map((name) => (
+                <label
+                  key={name}
+                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#CED4DA" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedComponents.indexOf(name) >= 0}
+                    onChange={() => toggleComponent(name)}
+                  />
+                  {componentLabel(name)}
+                </label>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <button
         onClick={handleSync}
         disabled={buttonDisabled}
         style={{
+          alignSelf: "flex-start",
           background: buttonDisabled ? "#373A40" : "#228BE6",
           color: buttonDisabled ? "#5C5F66" : "#fff",
           border: "none",
@@ -70,9 +238,8 @@ export default function FigmaSyncButton({ brands }) {
         Sync to Figma
       </button>
 
-      {error && (
-        <span style={{ fontSize: 11, color: "#FA5252" }}>{error}</span>
-      )}
+      {selectionError && <span style={{ fontSize: 11, color: "#FA5252" }}>{selectionError}</span>}
+      {error && <span style={{ fontSize: 11, color: "#FA5252" }}>{error}</span>}
       {lastSyncMessage && !error && (
         <span style={{ fontSize: 11, color: "#51CF66" }}>{lastSyncMessage}</span>
       )}

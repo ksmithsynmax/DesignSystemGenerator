@@ -40,8 +40,13 @@ function applyOpacity(hex, opacity) {
  * Builds the fully-resolved token payload for all brands.
  * Returns a plain object (not serialized).
  */
-export function buildExportPayload(brands) {
+export function buildExportPayload(brands, options) {
   const out = { globalPrimitives: GLOBAL_PRIMITIVES };
+  if (options && Array.isArray(options.componentsToBuild)) {
+    out.__buildOptions = {
+      componentsToBuild: options.componentsToBuild,
+    };
+  }
 
   // Helper: resolve a semantic map into { key: { type, value, alias } }
   const resolveSemanticMap = (brand, map) => {

@@ -11,12 +11,14 @@ figma.ui.onmessage = async function (msg) {
 };
 
 async function syncTokens(payload) {
+  var buildOptions = payload.__buildOptions || {};
+
   // Extract globalPrimitives and brand IDs from payload
   var globalPrimitives = payload.globalPrimitives || {};
   var allKeys = Object.keys(payload);
   var brandIds = [];
   for (var ki = 0; ki < allKeys.length; ki++) {
-    if (allKeys[ki] !== "globalPrimitives") {
+    if (allKeys[ki] !== "globalPrimitives" && allKeys[ki] !== "__buildOptions") {
       brandIds.push(allKeys[ki]);
     }
   }
@@ -344,7 +346,7 @@ async function syncTokens(payload) {
 
   // ── Build visual components ──
   progress("Building visual components...");
-  var componentBuild = await buildComponents(componentVarMap);
+  var componentBuild = await buildComponents(componentVarMap, buildOptions.componentsToBuild || null);
   var componentFailures = (componentBuild && componentBuild.failures) ? componentBuild.failures : [];
 
   var doneMsg = "Sync complete! " + totalCreated + " vars, " + totalAliases + " aliases, " + syncModes.length + " modes, components built.";
@@ -436,18 +438,41 @@ function ensureCollectionModes(collection, modeEntries) {
 // Component builders
 // ---------------------------------------------------------------------------
 
-async function buildComponents(varMap) {
+function normalizeComponentKey(name) {
+  return String(name || "").toLowerCase().replace(/[^a-z]/g, "");
+}
+
+async function buildComponents(varMap, componentsToBuild) {
   var page = figma.currentPage;
   var buildFailures = [];
+  var requestedSet = null;
 
-  // Remove previously generated component sets to avoid duplicates
-  cleanupExistingComponents(page);
+  if (componentsToBuild && componentsToBuild.length > 0) {
+    requestedSet = {};
+    for (var rci = 0; rci < componentsToBuild.length; rci++) {
+      requestedSet[normalizeComponentKey(componentsToBuild[rci])] = true;
+    }
+    // Modal previews depend on these sets during generation.
+    if (requestedSet.modal) {
+      requestedSet.button = true;
+      requestedSet.title = true;
+      requestedSet.text = true;
+    }
+  }
+
+  // Remove previously generated sets for selected components only.
+  cleanupExistingComponents(page, requestedSet);
 
   // Load font for button text and switch labels
   var font = await loadFont();
 
   var compSetGap = 300;
   async function buildSet(name, builder) {
+    var setKey = normalizeComponentKey(name);
+    if (requestedSet && !requestedSet[setKey]) {
+      progress("Skipping " + name + " component set...");
+      return null;
+    }
     progress("Creating " + name + " component set...");
     var preExistingChildren = page.children.slice();
     try {
@@ -576,12 +601,15 @@ async function buildComponents(varMap) {
   return { failures: buildFailures };
 }
 
-function cleanupExistingComponents(page) {
+function cleanupExistingComponents(page, requestedSet) {
   var children = page.children;
   for (var i = children.length - 1; i >= 0; i--) {
     var child = children[i];
     if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Alert" || child.name === "Modal" || child.name === "Tooltip" || child.name === "Loader" || child.name === "Pill" || child.name === "Badge" || child.name === "TextInput" || child.name === "Select" || child.name === "Card" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Anchor" || child.name === "Title" || child.name === "Text")) {
-      child.remove();
+      var componentKey = normalizeComponentKey(child.name);
+      if (!requestedSet || requestedSet[componentKey]) {
+        child.remove();
+      }
     }
     // Also clean up standalone components from failed previous runs
     if (child.type === "COMPONENT" && (
