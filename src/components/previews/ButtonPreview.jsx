@@ -1,4 +1,6 @@
 import { Button } from "@mantine/core";
+import PlusIcon from "@untitledui-icons/react/line/PlusIcon";
+import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
@@ -20,7 +22,15 @@ const WEIGHT_TO_CSS = {
   "Black": 900,
 };
 
-export default function ButtonPreview({ brands, brandId, variant, size, state }) {
+export default function ButtonPreview({
+  brands,
+  brandId,
+  variant,
+  size,
+  state,
+  showLeftIcon = false,
+  showRightIcon = false,
+}) {
   const tokens = COMPONENT_TOKENS.button;
   const prefix = `button-${variant}`;
   const suffix = state ? `-${state}` : "";
@@ -40,11 +50,13 @@ export default function ButtonPreview({ brands, brandId, variant, size, state })
   const paddingX = resolveDimension(brands, brandId, "button-padding-x", size);
   const fontSize = resolveDimension(brands, brandId, "button-font-size", size);
   const lineHeight = resolveDimension(brands, brandId, "button-line-height", size);
+  const tokenIconSize = resolveDimension(brands, brandId, "button-icon-size", size);
   const borderRadius = resolveDimension(brands, brandId, "button-border-radius");
   const borderWidth = resolveDimension(brands, brandId, "button-border-width");
   const fontWeight = resolveDimension(brands, brandId, "button-font-weight");
 
   const mantineVariant = VARIANT_MAP[variant] || "filled";
+  const iconSize = tokenIconSize || Math.max(14, Math.round((fontSize || 14) * 1.1));
 
   const bdValue =
     border !== "transparent"
@@ -56,6 +68,12 @@ export default function ButtonPreview({ brands, brandId, variant, size, state })
       variant={mantineVariant}
       disabled={state === "disabled"}
       style={state ? { pointerEvents: "none" } : undefined}
+      leftSection={
+        showLeftIcon ? <PlusIcon width={iconSize} height={iconSize} style={{ color: text }} /> : undefined
+      }
+      rightSection={
+        showRightIcon ? <ChevronRightIcon width={iconSize} height={iconSize} style={{ color: text }} /> : undefined
+      }
       vars={() => ({
         root: {
           "--button-bg": bg,
@@ -72,6 +90,9 @@ export default function ButtonPreview({ brands, brandId, variant, size, state })
         root: {
           fontWeight: WEIGHT_TO_CSS[fontWeight] ?? 600,
           lineHeight: lineHeight ? `${lineHeight}px` : undefined,
+          "&:active, &[data-active], &:active:hover": {
+            transform: "none !important",
+          },
         },
       }}
     >

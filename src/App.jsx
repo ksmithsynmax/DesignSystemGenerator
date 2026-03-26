@@ -142,6 +142,8 @@ export default function App() {
   const [activeColorToken, setActiveColorToken] = useState(null);
   const [activeDimensionToken, setActiveDimensionToken] = useState(null);
   const [activeButtonState, setActiveButtonState] = useState("default");
+  const [activeButtonLeftIcon, setActiveButtonLeftIcon] = useState(false);
+  const [activeButtonRightIcon, setActiveButtonRightIcon] = useState(false);
   const [activeActionIconState, setActiveActionIconState] = useState("default");
 
   const createResizeHandler = useCallback((setter, min, max) => {
@@ -387,6 +389,8 @@ export default function App() {
       setActiveSize(buttonDefault);
       setActiveVariant("filled");
       setActiveButtonState("default");
+      setActiveButtonLeftIcon(false);
+      setActiveButtonRightIcon(false);
     } else if (newComp === "actionicon") {
       setActiveActionIconSize(actionIconDefault);
       setActiveActionIconRadius(actionIconDefault);
@@ -1138,6 +1142,8 @@ export default function App() {
                   selectedState={forcedState || activeButtonState}
                   activeColorToken={activeColorToken}
                   sizeKeys={sizeKeys}
+                  showLeftIcon={activeButtonLeftIcon}
+                  showRightIcon={activeButtonRightIcon}
                 />
               )}
 
@@ -1467,6 +1473,10 @@ export default function App() {
                   selectedState={forcedState || activeButtonState}
                   setSelectedState={setActiveButtonState}
                   forcedState={forcedState}
+                  showLeftIcon={activeButtonLeftIcon}
+                  setShowLeftIcon={setActiveButtonLeftIcon}
+                  showRightIcon={activeButtonRightIcon}
+                  setShowRightIcon={setActiveButtonRightIcon}
                 />
               )}
               {activeComponent === "actionicon" && (

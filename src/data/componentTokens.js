@@ -66,6 +66,7 @@ export const COMPONENT_TOKENS = {
     "button-height":        { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 36, md: 42, lg: 50, xl: 60 },   figmaPath: "button/height" },
     "button-font-size":     { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },   figmaPath: "button/font-size" },
     "button-line-height":   { type: "FLOAT", unit: "px", sizes: { xs: 14.4, sm: 16.8, md: 19.2, lg: 21.6, xl: 24 }, figmaPath: "button/line-height" },
+    "button-icon-size":     { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },   figmaPath: "button/icon-size" },
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "button-border-radius": { type: "FLOAT", unit: "px", value: 8,   figmaPath: "button/border-radius" },
     "button-border-width":  { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "button/border-width" },

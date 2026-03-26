@@ -701,11 +701,14 @@ function bindPaintVar(node, paintType, paintIndex, variable) {
 // Button
 // ---------------------------------------------------------------------------
 
-function buildButtonComponentSet(varMap, page, font) {
+async function buildButtonComponentSet(varMap, page, font) {
   var variants = ["filled", "outlined", "ghost"];
   var sizes = ["xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
+  var leftIconModes = ["off", "on"];
+  var rightIconModes = ["off", "on"];
   var components = [];
+  var iconComponents = await findButtonIconComponents();
 
   // Known button heights per size for accurate spacing
   var sizeHeights = { xs: 28, sm: 36, md: 42, lg: 50, xl: 60 };
@@ -722,8 +725,8 @@ function buildButtonComponentSet(varMap, page, font) {
     }
   }
 
-  // Estimate column width: widest button (xl) has ~28px padding each side + ~60px text
-  var colWidth = 160 + colGap;
+  // Allocate extra width when icon combinations are enabled.
+  var colWidth = 230 + colGap;
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
@@ -733,107 +736,155 @@ function buildButtonComponentSet(varMap, page, font) {
       var size = sizes[si];
       var capSize = size.toUpperCase();
 
-      for (var sti = 0; sti < states.length; sti++) {
-        var state = states[sti];
-        var capState = state.charAt(0).toUpperCase() + state.slice(1);
+      for (var li = 0; li < leftIconModes.length; li++) {
+        var leftMode = leftIconModes[li];
+        var hasLeftIcon = leftMode === "on";
+        var capLeftIcon = hasLeftIcon ? "On" : "Off";
 
-        var comp = figma.createComponent();
-        comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", State=" + capState;
+        for (var ri = 0; ri < rightIconModes.length; ri++) {
+          var rightMode = rightIconModes[ri];
+          var hasRightIcon = rightMode === "on";
+          var capRightIcon = hasRightIcon ? "On" : "Off";
 
-        // Auto-layout: horizontal, center-aligned
-        comp.layoutMode = "HORIZONTAL";
-        comp.primaryAxisAlignItems = "CENTER";
-        comp.counterAxisAlignItems = "CENTER";
-        comp.primaryAxisSizingMode = "AUTO";
-        comp.counterAxisSizingMode = "AUTO";
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
 
-        // Initial dimensions (overridden by variable bindings)
-        comp.paddingLeft = 14;
-        comp.paddingRight = 14;
-        comp.paddingTop = 6;
-        comp.paddingBottom = 6;
-        comp.cornerRadius = 8;
-        comp.minHeight = 36;
+            var comp = figma.createComponent();
+            comp.name =
+              "Variant=" + capVariant +
+              ", Size=" + capSize +
+              ", LeftIcon=" + capLeftIcon +
+              ", RightIcon=" + capRightIcon +
+              ", State=" + capState;
 
-        // --- Color variable paths for this state ---
-        var bgPath = btnColorPath(variant, "background", state);
-        var textPath = btnColorPath(variant, "text", state);
-        var borderPath = btnColorPath(variant, "border", state);
+            // Auto-layout: horizontal, center-aligned
+            comp.layoutMode = "HORIZONTAL";
+            comp.primaryAxisAlignItems = "CENTER";
+            comp.counterAxisAlignItems = "CENTER";
+            comp.primaryAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "AUTO";
+            comp.itemSpacing = 8;
 
-        // Background fill
-        var bgVar = varMap[bgPath];
-        if (variant === "ghost" && (state === "default" || state === "focus" || state === "disabled")) {
-          comp.fills = [];
-        } else {
-          comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-          bindPaintVar(comp, "fills", 0, bgVar);
+            // Initial dimensions (overridden by variable bindings)
+            comp.paddingLeft = 14;
+            comp.paddingRight = 14;
+            comp.paddingTop = 6;
+            comp.paddingBottom = 6;
+            comp.cornerRadius = 8;
+            comp.minHeight = 36;
+
+            // --- Color variable paths for this state ---
+            var bgPath = btnColorPath(variant, "background", state);
+            var textPath = btnColorPath(variant, "text", state);
+            var borderPath = btnColorPath(variant, "border", state);
+
+            // Background fill
+            var bgVar = varMap[bgPath];
+            if (variant === "ghost" && (state === "default" || state === "focus" || state === "disabled")) {
+              comp.fills = [];
+            } else {
+              comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+              bindPaintVar(comp, "fills", 0, bgVar);
+            }
+
+            // Stroke/border
+            var borderVar = varMap[borderPath];
+            if (variant === "outlined" && borderVar) {
+              comp.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+              comp.strokeWeight = 1.5;
+              bindPaintVar(comp, "strokes", 0, borderVar);
+            } else {
+              comp.strokes = [];
+            }
+
+            // Bind SIZE-SPECIFIC dimensions
+            bindVar(comp, "paddingLeft", varMap["button/padding-x-" + size]);
+            bindVar(comp, "paddingRight", varMap["button/padding-x-" + size]);
+            bindVar(comp, "paddingTop", varMap["button/padding-y-" + size]);
+            bindVar(comp, "paddingBottom", varMap["button/padding-y-" + size]);
+            bindVar(comp, "topLeftRadius", varMap["button/border-radius"]);
+            bindVar(comp, "topRightRadius", varMap["button/border-radius"]);
+            bindVar(comp, "bottomLeftRadius", varMap["button/border-radius"]);
+            bindVar(comp, "bottomRightRadius", varMap["button/border-radius"]);
+            bindVar(comp, "minHeight", varMap["button/height-" + size]);
+            bindVar(comp, "strokeWeight", varMap["button/border-width"]);
+
+            function appendIcon(iconComp, iconName) {
+              if (!iconComp) return;
+              var iconInst = iconComp.createInstance();
+              iconInst.name = iconName;
+              try { iconInst.resize(16, 16); } catch (e) {}
+              bindVar(iconInst, "width", varMap["button/icon-size-" + size]);
+              bindVar(iconInst, "height", varMap["button/icon-size-" + size]);
+              var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
+              for (var vci = 0; vci < vectors.length; vci++) {
+                if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
+                  vectors[vci].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                  bindPaintVar(vectors[vci], "strokes", 0, varMap[textPath]);
+                }
+                if (vectors[vci].fills && vectors[vci].fills.length > 0) {
+                  vectors[vci].fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                  bindPaintVar(vectors[vci], "fills", 0, varMap[textPath]);
+                }
+              }
+              comp.appendChild(iconInst);
+            }
+
+            if (hasLeftIcon) {
+              appendIcon(iconComponents.left || iconComponents.fallback, "LeftIcon");
+            }
+
+            // Text node
+            var textNode = figma.createText();
+            textNode.fontName = font;
+            textNode.characters = "Button";
+            textNode.fontSize = 14;
+
+            // Text color
+            if (variant === "filled" && state !== "disabled") {
+              textNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            } else {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+            }
+            bindPaintVar(textNode, "fills", 0, varMap[textPath]);
+
+            // Bind SIZE-SPECIFIC font size
+            bindVar(textNode, "fontSize", varMap["button/font-size-" + size]);
+
+            comp.appendChild(textNode);
+
+            if (hasRightIcon) {
+              appendIcon(iconComponents.right || iconComponents.fallback, "RightIcon");
+            }
+
+            // Focus ring effect
+            if (state === "focus") {
+              comp.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
+
+            // Disabled opacity
+            if (state === "disabled") {
+              comp.opacity = 0.6;
+            }
+
+            // Grid layout: columns = variants × icon modes, rows = size groups × states
+            var colIndex = ((vi * leftIconModes.length + li) * rightIconModes.length) + ri;
+            var rowIndex = (si * states.length) + sti;
+            comp.x = colIndex * colWidth;
+            comp.y = rowYOffsets[rowIndex];
+            page.appendChild(comp);
+            components.push(comp);
+          }
         }
-
-        // Stroke/border
-        var borderVar = varMap[borderPath];
-        if (variant === "outlined" && borderVar) {
-          comp.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-          comp.strokeWeight = 1.5;
-          bindPaintVar(comp, "strokes", 0, borderVar);
-        } else {
-          comp.strokes = [];
-        }
-
-        // Bind SIZE-SPECIFIC dimensions
-        bindVar(comp, "paddingLeft", varMap["button/padding-x-" + size]);
-        bindVar(comp, "paddingRight", varMap["button/padding-x-" + size]);
-        bindVar(comp, "paddingTop", varMap["button/padding-y-" + size]);
-        bindVar(comp, "paddingBottom", varMap["button/padding-y-" + size]);
-        bindVar(comp, "topLeftRadius", varMap["button/border-radius"]);
-        bindVar(comp, "topRightRadius", varMap["button/border-radius"]);
-        bindVar(comp, "bottomLeftRadius", varMap["button/border-radius"]);
-        bindVar(comp, "bottomRightRadius", varMap["button/border-radius"]);
-        bindVar(comp, "minHeight", varMap["button/height-" + size]);
-        bindVar(comp, "strokeWeight", varMap["button/border-width"]);
-
-        // Text node
-        var textNode = figma.createText();
-        textNode.fontName = font;
-        textNode.characters = "Button";
-        textNode.fontSize = 14;
-
-        // Text color
-        if (variant === "filled" && state !== "disabled") {
-          textNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-        } else {
-          textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-        }
-        bindPaintVar(textNode, "fills", 0, varMap[textPath]);
-
-        // Bind SIZE-SPECIFIC font size
-        bindVar(textNode, "fontSize", varMap["button/font-size-" + size]);
-
-        comp.appendChild(textNode);
-
-        // Focus ring effect
-        if (state === "focus") {
-          comp.effects = [{
-            type: "DROP_SHADOW",
-            color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
-            offset: { x: 0, y: 0 },
-            radius: 0,
-            spread: 3,
-            visible: true,
-            blendMode: "NORMAL"
-          }];
-        }
-
-        // Disabled opacity
-        if (state === "disabled") {
-          comp.opacity = 0.6;
-        }
-
-        // Grid layout: columns = variants, rows = size groups × states
-        var rowIndex = (si * states.length) + sti;
-        comp.x = vi * colWidth;
-        comp.y = rowYOffsets[rowIndex];
-        page.appendChild(comp);
-        components.push(comp);
       }
     }
   }
@@ -850,6 +901,65 @@ function btnColorPath(variant, property, state) {
     return "button/" + variant + "-" + property;
   }
   return "button/" + variant + "-" + property + "-" + state;
+}
+
+async function findButtonIconComponents() {
+  var result = { left: null, right: null, fallback: null };
+  var iconCandidates = [];
+  var iconsPage = null;
+
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var page = figma.root.children[pi];
+    if (page.type !== "PAGE") continue;
+    await page.loadAsync();
+    if (!iconsPage && page.name && page.name.toLowerCase() === "icons") {
+      iconsPage = page;
+    }
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function(n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") {
+          iconCandidates.push(setChildren[ci]);
+        }
+      }
+    }
+  }
+
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var name = String(iconCandidates[j].name || "").toLowerCase();
+    var normalized = name.replace(/[\s_\-\/]+/g, "");
+    if (!result.left && (normalized.indexOf("check") >= 0 || normalized.indexOf("plus") >= 0 || normalized.indexOf("add") >= 0)) {
+      result.left = iconCandidates[j];
+    }
+    if (!result.right && (normalized.indexOf("chevronright") >= 0 || normalized.indexOf("arrowright") >= 0 || normalized.indexOf("right") >= 0)) {
+      result.right = iconCandidates[j];
+    }
+  }
+
+  if (iconCandidates.length > 0) {
+    var sorted = iconCandidates.slice().sort(function(a, b) {
+      return a.name.localeCompare(b.name);
+    });
+    result.fallback = sorted[0];
+  }
+
+  if (result.left) progress("[Button] Left icon source: " + result.left.name);
+  if (result.right) progress("[Button] Right icon source: " + result.right.name);
+  if (!result.left || !result.right) {
+    progress("[Button] Warning: could not find both icon sources; using fallback when needed.");
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------

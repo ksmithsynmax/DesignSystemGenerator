@@ -6,6 +6,7 @@ import PreviewMatrix from "../shared/PreviewMatrix";
 
 const BUTTON_VARIANTS = ["filled", "outlined", "ghost"];
 const BUTTON_STATES = ["default", "hover", "focus", "pressed", "disabled"];
+const ON_OFF_OPTIONS = ["off", "on"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -52,6 +53,8 @@ export function ButtonPreviewContent({
   selectedState,
   activeColorToken,
   sizeKeys,
+  showLeftIcon,
+  showRightIcon,
 }) {
   const matrixRows = BUTTON_VARIANTS.map((v) => ({ label: v, variant: v }));
   return (
@@ -63,6 +66,8 @@ export function ButtonPreviewContent({
           variant={activeVariant}
           size={activeSize}
           state={selectedState === "default" ? undefined : selectedState}
+          showLeftIcon={showLeftIcon}
+          showRightIcon={showRightIcon}
         />
       </PreviewStage>
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
@@ -76,6 +81,8 @@ export function ButtonPreviewContent({
             brandId={activeBrand}
             variant={row.variant}
             size={s}
+            showLeftIcon={showLeftIcon}
+            showRightIcon={showRightIcon}
           />
         )}
       />
@@ -92,11 +99,27 @@ export function ButtonPropertiesPanel({
   selectedState,
   setSelectedState,
   forcedState,
+  showLeftIcon,
+  setShowLeftIcon,
+  showRightIcon,
+  setShowRightIcon,
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={BUTTON_VARIANTS} />
       <PropertyRow label="Size" value={activeSize} onChange={setActiveSize} options={sizeKeys} />
+      <PropertyRow
+        label="Left Icon"
+        value={showLeftIcon ? "on" : "off"}
+        onChange={(value) => setShowLeftIcon(value === "on")}
+        options={ON_OFF_OPTIONS}
+      />
+      <PropertyRow
+        label="Right Icon"
+        value={showRightIcon ? "on" : "off"}
+        onChange={(value) => setShowRightIcon(value === "on")}
+        options={ON_OFF_OPTIONS}
+      />
       <PropertyRow
         label="State"
         value={selectedState}
@@ -122,6 +145,10 @@ export default function ButtonPreviewPanel(props) {
         selectedState={selectedState}
         setSelectedState={setActiveState}
         forcedState={props.forcedState}
+        showLeftIcon={props.showLeftIcon}
+        setShowLeftIcon={props.setShowLeftIcon}
+        showRightIcon={props.showRightIcon}
+        setShowRightIcon={props.setShowRightIcon}
       />
       <div style={{ marginTop: 24 }}>
         <ButtonPreviewContent
@@ -132,6 +159,8 @@ export default function ButtonPreviewPanel(props) {
           selectedState={selectedState}
           activeColorToken={props.activeColorToken}
           sizeKeys={props.sizeKeys}
+          showLeftIcon={props.showLeftIcon}
+          showRightIcon={props.showRightIcon}
         />
       </div>
     </div>
