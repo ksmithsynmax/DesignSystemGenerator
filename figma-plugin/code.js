@@ -1631,12 +1631,14 @@ async function buildAnchorComponentSet(varMap, page, font) {
 function buildTitleComponentSet(varMap, page, font) {
   var orders = [1, 2, 3, 4, 5, 6];
   var sizeModes = ["auto", "h1", "h2", "h3", "h4", "h5", "h6"];
+  var wrapModes = ["wrap", "balance", "nowrap"];
+  var clampModes = ["off", "2", "3"];
   var components = [];
 
   var colGap = 16;
   var rowGap = 16;
-  var colWidth = 560 + colGap;
   var rowHeight = 150 + rowGap;
+  var rowXOffsets = [];
 
   var defaultFontSizeByOrder = { 1: 34, 2: 28, 3: 24, 4: 20, 5: 16, 6: 14 };
 
@@ -1645,36 +1647,61 @@ function buildTitleComponentSet(varMap, page, font) {
     for (var si = 0; si < sizeModes.length; si++) {
       var sizeMode = sizeModes[si];
       var capSize = sizeMode === "auto" ? "Auto" : sizeMode.toUpperCase();
+      for (var wmi = 0; wmi < wrapModes.length; wmi++) {
+        var wrapMode = wrapModes[wmi];
+        var capWrap = wrapMode.charAt(0).toUpperCase() + wrapMode.slice(1);
+        for (var cmi = 0; cmi < clampModes.length; cmi++) {
+          var clampMode = clampModes[cmi];
+          var capClamp = clampMode === "off" ? "Off" : clampMode;
 
-      var comp = figma.createComponent();
-      comp.name = "Order=" + order + ", Size=" + capSize;
-      comp.resize(560, 150);
-      comp.fills = [];
-      comp.clipsContent = true;
+          var comp = figma.createComponent();
+          comp.name =
+            "Order=" + order +
+            ", Size=" + capSize +
+            ", Wrap=" + capWrap +
+            ", Clamp=" + capClamp;
+          comp.layoutMode = "HORIZONTAL";
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
+          comp.primaryAxisAlignItems = "MIN";
+          comp.counterAxisAlignItems = "CENTER";
+          comp.itemSpacing = 0;
+          comp.fills = [];
+          comp.clipsContent = false;
 
-      var textNode = figma.createText();
-      textNode.name = "title";
-      textNode.fontName = font;
-      textNode.characters = "Build fully functional accessible web applications faster than ever";
-      textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
-      textNode.fontSize = defaultFontSizeByOrder[order] || 20;
-      textNode.resize(520, 100);
-      textNode.textAutoResize = "HEIGHT";
+          var textNode = figma.createText();
+          textNode.name = "title";
+          textNode.fontName = font;
+          textNode.characters = "Build fully functional accessible web applications faster than ever";
+          textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
+          textNode.fontSize = defaultFontSizeByOrder[order] || 20;
+          textNode.textAutoResize = "WIDTH_AND_HEIGHT";
 
-      var sizeKey = sizeMode === "auto" ? "h" + order : sizeMode;
-      var tokenVar = varMap["title/font-size-" + sizeKey];
-      bindVar(textNode, "fontSize", tokenVar);
-      bindVar(textNode, "lineHeight", varMap["title/line-height-" + sizeKey]);
-      bindPaintVar(textNode, "fills", 0, varMap["title/color"]);
+          var sizeKey = sizeMode === "auto" ? "h" + order : sizeMode;
+          var tokenVar = varMap["title/font-size-" + sizeKey];
+          bindVar(textNode, "fontSize", tokenVar);
+          bindVar(textNode, "lineHeight", varMap["title/line-height-" + sizeKey]);
+          bindPaintVar(textNode, "fills", 0, varMap["title/color"]);
 
-      comp.appendChild(textNode);
+          // Figma currently has limited direct API support for text-wrap modes.
+          // Keep all modes as variant properties; clamp is best-effort when supported.
+          if (clampMode !== "off") {
+            try {
+              textNode.textTruncation = "ENDING";
+              textNode.maxLines = parseInt(clampMode, 10);
+            } catch (e) {}
+          }
 
-      var colIndex = si;
-      var rowIndex = oi;
-      comp.x = colIndex * colWidth;
-      comp.y = rowIndex * rowHeight;
-      page.appendChild(comp);
-      components.push(comp);
+          comp.appendChild(textNode);
+
+          if (typeof rowXOffsets[oi] === "undefined") rowXOffsets[oi] = 0;
+          page.appendChild(comp);
+          comp.x = rowXOffsets[oi];
+          comp.y = oi * rowHeight;
+          rowXOffsets[oi] += Math.ceil(nodeRenderedWidth(comp)) + colGap;
+          components.push(comp);
+        }
+      }
     }
   }
 
@@ -1692,8 +1719,8 @@ async function buildTextComponentSet(varMap, page, fallbackFont) {
 
   var colGap = 18;
   var rowGap = 16;
-  var colWidth = 560 + colGap;
   var rowHeight = 130 + rowGap;
+  var rowXOffsets = [];
 
   var fontByWeight = {
     regular: fallbackFont,
@@ -1741,17 +1768,21 @@ async function buildTextComponentSet(varMap, page, fallbackFont) {
           "Size=" + capSize +
           ", Weight=" + capWeight +
           ", Color=" + capColor;
-        comp.resize(560, 130);
+        comp.layoutMode = "HORIZONTAL";
+        comp.primaryAxisSizingMode = "AUTO";
+        comp.counterAxisSizingMode = "AUTO";
+        comp.primaryAxisAlignItems = "MIN";
+        comp.counterAxisAlignItems = "CENTER";
+        comp.itemSpacing = 0;
         comp.fills = [];
-        comp.clipsContent = true;
+        comp.clipsContent = false;
 
         var textNode = figma.createText();
         textNode.name = "text";
         textNode.fontName = fontByWeight[weight] || fallbackFont;
         textNode.characters = "Build fully functional accessible web applications faster than ever.";
         textNode.fontSize = 16;
-        textNode.resize(520, 90);
-        textNode.textAutoResize = "HEIGHT";
+        textNode.textAutoResize = "WIDTH_AND_HEIGHT";
         textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
 
         bindVar(textNode, "fontSize", varMap["text/font-size-" + size]);
@@ -1760,11 +1791,11 @@ async function buildTextComponentSet(varMap, page, fallbackFont) {
 
         comp.appendChild(textNode);
 
-        var colIndex = (wi * colors.length) + ci;
-        var rowIndex = si;
-        comp.x = colIndex * colWidth;
-        comp.y = rowIndex * rowHeight;
         page.appendChild(comp);
+        if (typeof rowXOffsets[si] === "undefined") rowXOffsets[si] = 0;
+        comp.x = rowXOffsets[si];
+        comp.y = si * rowHeight;
+        rowXOffsets[si] += Math.ceil(nodeRenderedWidth(comp)) + colGap;
         components.push(comp);
       }
     }
