@@ -344,11 +344,15 @@ async function syncTokens(payload) {
 
   // ── Build visual components ──
   progress("Building visual components...");
-  await buildComponents(componentVarMap);
+  var componentBuild = await buildComponents(componentVarMap);
+  var componentFailures = (componentBuild && componentBuild.failures) ? componentBuild.failures : [];
 
   var doneMsg = "Sync complete! " + totalCreated + " vars, " + totalAliases + " aliases, " + syncModes.length + " modes, components built.";
   if (syncModes.length < modeEntries.length) {
     doneMsg += " (" + (modeEntries.length - syncModes.length) + " modes skipped)";
+  }
+  if (componentFailures.length > 0) {
+    doneMsg += " Component build failures: " + componentFailures.join(" | ");
   }
   progress(doneMsg);
   figma.ui.postMessage({ type: "sync-complete", success: true, message: doneMsg });
@@ -434,6 +438,7 @@ function ensureCollectionModes(collection, modeEntries) {
 
 async function buildComponents(varMap) {
   var page = figma.currentPage;
+  var buildFailures = [];
 
   // Remove previously generated component sets to avoid duplicates
   cleanupExistingComponents(page);
@@ -444,9 +449,18 @@ async function buildComponents(varMap) {
   var compSetGap = 300;
   async function buildSet(name, builder) {
     progress("Creating " + name + " component set...");
+    var preExistingChildren = page.children.slice();
     try {
       return await builder();
     } catch (e) {
+      // Remove nodes created by a failed builder so they do not overlap other sets.
+      var createdNodes = page.children.filter(function(node) {
+        return preExistingChildren.indexOf(node) === -1;
+      });
+      for (var cni = 0; cni < createdNodes.length; cni++) {
+        try { createdNodes[cni].remove(); } catch (removeErr) {}
+      }
+      buildFailures.push(name + ": " + String(e));
       progress("Failed to build " + name + " component set: " + String(e));
       return null;
     }
@@ -554,7 +568,12 @@ async function buildComponents(varMap) {
   // Scroll viewport to show all component sets
   figma.viewport.scrollAndZoomIntoView(validSets);
 
+  if (buildFailures.length > 0) {
+    progress("Component set failures: " + buildFailures.join(" | "));
+  }
+
   progress("Components created.");
+  return { failures: buildFailures };
 }
 
 function cleanupExistingComponents(page) {
@@ -1426,7 +1445,7 @@ function rangeSliderMarkLabelColorPath(state) {
   return "rangeslider/mark-label-color";
 }
 
-function buildAnchorComponentSet(varMap, page, font) {
+async function buildAnchorComponentSet(varMap, page, font) {
   var sizes = ["xs", "sm", "md", "lg", "xl"];
   var underlines = ["always", "hover", "never"];
   var weights = ["regular", "semibold", "bold"];
@@ -1455,6 +1474,42 @@ function buildAnchorComponentSet(varMap, page, font) {
     bold: font,
   };
 
+  var regularCandidates = [
+    { family: "Inter", style: "Regular" },
+    { family: "Inter", style: "Medium" },
+  ];
+  var semiboldCandidates = [
+    { family: "Inter", style: "Semi Bold" },
+    { family: "Inter", style: "SemiBold" },
+    { family: "Inter", style: "Medium" },
+  ];
+  var boldCandidates = [
+    { family: "Inter", style: "Bold" },
+    { family: "Inter", style: "Extra Bold" },
+  ];
+
+  for (var rci = 0; rci < regularCandidates.length; rci++) {
+    try {
+      await figma.loadFontAsync(regularCandidates[rci]);
+      fontByWeight.regular = regularCandidates[rci];
+      break;
+    } catch (e) {}
+  }
+  for (var sci = 0; sci < semiboldCandidates.length; sci++) {
+    try {
+      await figma.loadFontAsync(semiboldCandidates[sci]);
+      fontByWeight.semibold = semiboldCandidates[sci];
+      break;
+    } catch (e) {}
+  }
+  for (var bci = 0; bci < boldCandidates.length; bci++) {
+    try {
+      await figma.loadFontAsync(boldCandidates[bci]);
+      fontByWeight.bold = boldCandidates[bci];
+      break;
+    } catch (e) {}
+  }
+
   for (var si = 0; si < sizes.length; si++) {
     var size = sizes[si];
     var capSize = size.toUpperCase();
@@ -1477,17 +1532,21 @@ function buildAnchorComponentSet(varMap, page, font) {
             ", Underline=" + capUnderline +
             ", Weight=" + capWeight +
             ", State=" + capState;
-          comp.resize(460, 86);
+          comp.layoutMode = "HORIZONTAL";
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
+          comp.primaryAxisAlignItems = "MIN";
+          comp.counterAxisAlignItems = "CENTER";
+          comp.itemSpacing = 0;
           comp.fills = [];
-          comp.clipsContent = true;
+          comp.clipsContent = false;
 
           var anchorText = figma.createText();
           anchorText.name = "anchor";
           anchorText.fontName = fontByWeight[weight] || font;
           anchorText.characters = "View documentation";
           anchorText.fontSize = 16;
-          anchorText.textAutoResize = "HEIGHT";
-          anchorText.resize(420, anchorText.height);
+          anchorText.textAutoResize = "WIDTH_AND_HEIGHT";
           anchorText.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
 
           bindVar(anchorText, "fontSize", varMap["anchor/font-size-" + size]);
@@ -1516,9 +1575,29 @@ function buildAnchorComponentSet(varMap, page, font) {
   }
 
   progress("Created " + components.length + " anchor variants");
-  var componentSet = figma.combineAsVariants(components, page);
-  componentSet.name = "Anchor";
-  return componentSet;
+  try {
+    var componentSet = figma.combineAsVariants(components, page);
+    componentSet.name = "Anchor";
+    return componentSet;
+  } catch (err) {
+    // Retry with simpler variant keys to avoid parser edge-cases.
+    for (var ci = 0; ci < components.length; ci++) {
+      var n = components[ci].name;
+      n = n.replace("Size=", "Sz=");
+      n = n.replace("Underline=", "Ul=");
+      n = n.replace("Weight=", "Wt=");
+      n = n.replace("State=", "St=");
+      components[ci].name = n;
+    }
+    try {
+      var retrySet = figma.combineAsVariants(components, page);
+      retrySet.name = "Anchor";
+      progress("Anchor combine retry succeeded with simplified variant keys.");
+      return retrySet;
+    } catch (retryErr) {
+      throw new Error("Anchor combine failed. First error: " + String(err) + " | Retry error: " + String(retryErr));
+    }
+  }
 }
 
 function buildTitleComponentSet(varMap, page, font) {
