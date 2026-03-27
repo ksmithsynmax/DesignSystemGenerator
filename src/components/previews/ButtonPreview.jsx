@@ -28,6 +28,7 @@ export default function ButtonPreview({
   variant,
   size,
   state,
+  focusRingStyle = "offset",
   showLeftIcon = false,
   showRightIcon = false,
 }) {
@@ -81,11 +82,17 @@ export default function ButtonPreview({
       : `${borderWidth}px solid transparent`;
 
   const focusStyles = isFocus
-    ? {
-        outline: `${focusRingWidth || 2}px solid ${focusRing || "#228BE6"}`,
-        outlineOffset: `${focusRingSpacing || 3}px`,
-        borderRadius: `${focusRingRadius || 11}px`,
-      }
+    ? focusRingStyle === "attached"
+      ? {
+          outline: `${focusRingWidth || 2}px solid ${focusRing || "#228BE6"}`,
+          outlineOffset: "0px",
+          borderRadius: `${borderRadius || 8}px`,
+        }
+      : {
+          outline: `${focusRingWidth || 2}px solid ${focusRing || "#228BE6"}`,
+          outlineOffset: `${focusRingSpacing || 3}px`,
+          borderRadius: `${focusRingRadius || 11}px`,
+        }
     : null;
 
   return (

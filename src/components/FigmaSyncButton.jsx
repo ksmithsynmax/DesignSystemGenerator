@@ -33,7 +33,7 @@ const COMPONENT_LABELS = {
   textinput: "TextInput",
 };
 
-export default function FigmaSyncButton({ brands }) {
+export default function FigmaSyncButton({ brands, syncBuildOptions }) {
   const { status, pluginConnected, sync, error, lastSyncMessage } = useFigmaSync();
   const [buildMode, setBuildMode] = useState("all");
   const [selectedComponents, setSelectedComponents] = useState(BUILDABLE_COMPONENTS);
@@ -54,13 +54,14 @@ export default function FigmaSyncButton({ brands }) {
 
   const handleSync = useCallback(() => {
     if (buildMode === "selected" && selectedComponents.length === 0) return;
-    var buildOptions = null;
+    var buildOptions = Object.assign({}, syncBuildOptions || {});
     if (buildMode === "selected") {
-      buildOptions = { componentsToBuild: selectedComponents.slice() };
+      buildOptions.componentsToBuild = selectedComponents.slice();
     }
+    if (Object.keys(buildOptions).length === 0) buildOptions = null;
     const payload = buildExportPayload(brands, buildOptions);
     sync(payload);
-  }, [brands, buildMode, selectedComponents, sync]);
+  }, [brands, buildMode, selectedComponents, sync, syncBuildOptions]);
 
   const toggleComponent = useCallback((name) => {
     setSelectedComponents((curr) => {

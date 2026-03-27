@@ -144,6 +144,7 @@ export default function App() {
   const [activeButtonState, setActiveButtonState] = useState("default");
   const [activeButtonLeftIcon, setActiveButtonLeftIcon] = useState(false);
   const [activeButtonRightIcon, setActiveButtonRightIcon] = useState(false);
+  const [activeButtonFocusRingStyle, setActiveButtonFocusRingStyle] = useState("offset");
   const [activeActionIconState, setActiveActionIconState] = useState("default");
 
   const createResizeHandler = useCallback((setter, min, max) => {
@@ -1142,6 +1143,7 @@ export default function App() {
                   selectedState={forcedState || activeButtonState}
                   activeColorToken={activeColorToken}
                   sizeKeys={sizeKeys}
+                  focusRingStyle={activeButtonFocusRingStyle}
                   showLeftIcon={activeButtonLeftIcon}
                   showRightIcon={activeButtonRightIcon}
                 />
@@ -1470,6 +1472,8 @@ export default function App() {
                   activeSize={activeSize}
                   setActiveSize={setActiveSize}
                   sizeKeys={sizeKeys}
+                  focusRingStyle={activeButtonFocusRingStyle}
+                  setFocusRingStyle={setActiveButtonFocusRingStyle}
                   selectedState={forcedState || activeButtonState}
                   setSelectedState={setActiveButtonState}
                   forcedState={forcedState}
@@ -1915,7 +1919,10 @@ export default function App() {
               <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
                 Sync resolved token data to Figma variables via the relay server.
               </p>
-              <FigmaSyncButton brands={brands} />
+              <FigmaSyncButton
+                brands={brands}
+                syncBuildOptions={{ buttonFocusRingStyle: activeButtonFocusRingStyle }}
+              />
 
               <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
                 <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>

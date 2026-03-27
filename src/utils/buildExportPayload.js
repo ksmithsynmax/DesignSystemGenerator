@@ -58,10 +58,8 @@ export function buildExportPayload(brands, options) {
     globalFontSizes: GLOBAL_FONT_SIZES,
     globalLineHeights: GLOBAL_LINE_HEIGHTS,
   };
-  if (options && Array.isArray(options.componentsToBuild)) {
-    out.__buildOptions = {
-      componentsToBuild: options.componentsToBuild,
-    };
+  if (options && typeof options === "object" && Object.keys(options).length > 0) {
+    out.__buildOptions = { ...options };
   }
 
   // Helper: resolve a semantic map into { key: { type, value, alias } }

@@ -554,7 +554,7 @@ async function syncTokens(payload) {
 
   // ── Build visual components ──
   progress("Building visual components...");
-  var componentBuild = await buildComponents(componentVarMap, buildOptions.componentsToBuild || null);
+  var componentBuild = await buildComponents(componentVarMap, buildOptions.componentsToBuild || null, buildOptions);
   var componentFailures = (componentBuild && componentBuild.failures) ? componentBuild.failures : [];
 
   var doneMsg = "Sync complete! " + totalCreated + " vars, " + totalAliases + " aliases, " + syncModes.length + " modes, components built.";
@@ -650,7 +650,7 @@ function normalizeComponentKey(name) {
   return String(name || "").toLowerCase().replace(/[^a-z]/g, "");
 }
 
-async function buildComponents(varMap, componentsToBuild) {
+async function buildComponents(varMap, componentsToBuild, buildOptions) {
   var page = figma.currentPage;
   var buildFailures = [];
   var requestedSet = null;
@@ -675,6 +675,7 @@ async function buildComponents(varMap, componentsToBuild) {
   var font = await loadFont();
 
   var compSetGap = 300;
+  var buttonFocusRingStyle = (buildOptions && buildOptions.buttonFocusRingStyle === "attached") ? "attached" : "offset";
   async function buildSet(name, builder) {
     var setKey = normalizeComponentKey(name);
     if (requestedSet && !requestedSet[setKey]) {
@@ -700,7 +701,7 @@ async function buildComponents(varMap, componentsToBuild) {
   }
 
   var buttonSet = await buildSet("Button", function () {
-    return buildButtonComponentSet(varMap, page, font);
+    return buildButtonComponentSet(varMap, page, font, buttonFocusRingStyle);
   });
   var switchSet = await buildSet("Switch", function () {
     return buildSwitchComponentSet(varMap, page, font);
@@ -909,7 +910,7 @@ function bindPaintVar(node, paintType, paintIndex, variable) {
 // Button
 // ---------------------------------------------------------------------------
 
-async function buildButtonComponentSet(varMap, page, font) {
+async function buildButtonComponentSet(varMap, page, font, focusRingStyle) {
   var variants = ["filled", "outlined", "ghost"];
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
@@ -976,7 +977,7 @@ async function buildButtonComponentSet(varMap, page, font) {
             comp.clipsContent = false;
             var buttonNode = comp;
 
-            if (state === "focus") {
+            if (state === "focus" && focusRingStyle !== "attached") {
               // Focus wrapper: configurable outer ring with spacing around the real button surface.
               comp.itemSpacing = 0;
               comp.paddingLeft = 3;
@@ -1105,6 +1106,16 @@ async function buildButtonComponentSet(varMap, page, font) {
 
             if (hasRightIcon) {
               appendIcon(iconComponents.right || iconComponents.fallback, "RightIcon");
+            }
+
+            if (state === "focus" && focusRingStyle === "attached") {
+              buttonNode.strokeAlign = "OUTSIDE";
+              buttonNode.strokeWeight = 2;
+              if (!buttonNode.strokes || buttonNode.strokes.length === 0) {
+                buttonNode.strokes = [{ type: "SOLID", color: { r: 0.17, g: 0.63, b: 0.98 } }];
+              }
+              bindPaintVar(buttonNode, "strokes", 0, varMap["button/focus-ring"]);
+              bindVar(buttonNode, "strokeWeight", varMap["button/focus-ring-width"]);
             }
 
             // Disabled opacity

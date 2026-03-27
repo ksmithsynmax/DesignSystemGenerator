@@ -7,6 +7,7 @@ import PreviewMatrix from "../shared/PreviewMatrix";
 const BUTTON_VARIANTS = ["filled", "outlined", "ghost"];
 const BUTTON_STATES = ["default", "hover", "focus", "pressed", "disabled"];
 const ON_OFF_OPTIONS = ["off", "on"];
+const FOCUS_RING_STYLE_OPTIONS = ["offset", "attached"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -53,6 +54,7 @@ export function ButtonPreviewContent({
   selectedState,
   activeColorToken,
   sizeKeys,
+  focusRingStyle,
   showLeftIcon,
   showRightIcon,
 }) {
@@ -66,6 +68,7 @@ export function ButtonPreviewContent({
           variant={activeVariant}
           size={activeSize}
           state={selectedState === "default" ? undefined : selectedState}
+          focusRingStyle={focusRingStyle}
           showLeftIcon={showLeftIcon}
           showRightIcon={showRightIcon}
         />
@@ -81,6 +84,7 @@ export function ButtonPreviewContent({
             brandId={activeBrand}
             variant={row.variant}
             size={s}
+            focusRingStyle={focusRingStyle}
             showLeftIcon={showLeftIcon}
             showRightIcon={showRightIcon}
           />
@@ -96,6 +100,8 @@ export function ButtonPropertiesPanel({
   activeSize,
   setActiveSize,
   sizeKeys,
+  focusRingStyle,
+  setFocusRingStyle,
   selectedState,
   setSelectedState,
   forcedState,
@@ -109,6 +115,14 @@ export function ButtonPropertiesPanel({
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={BUTTON_VARIANTS} />
       <PropertyRow label="Size" value={activeSize} onChange={setActiveSize} options={buttonSizeOptions} />
+      {selectedState === "focus" && (
+        <PropertyRow
+          label="Focus Ring Style"
+          value={focusRingStyle}
+          onChange={setFocusRingStyle}
+          options={FOCUS_RING_STYLE_OPTIONS}
+        />
+      )}
       <PropertyRow
         label="Left Icon"
         value={showLeftIcon ? "on" : "off"}
@@ -143,6 +157,8 @@ export default function ButtonPreviewPanel(props) {
         activeSize={props.activeSize}
         setActiveSize={props.setActiveSize}
         sizeKeys={props.sizeKeys}
+        focusRingStyle={props.focusRingStyle}
+        setFocusRingStyle={props.setFocusRingStyle}
         selectedState={selectedState}
         setSelectedState={setActiveState}
         forcedState={props.forcedState}
@@ -160,6 +176,7 @@ export default function ButtonPreviewPanel(props) {
           selectedState={selectedState}
           activeColorToken={props.activeColorToken}
           sizeKeys={props.sizeKeys.includes("default") ? props.sizeKeys : ["default", ...props.sizeKeys]}
+          focusRingStyle={props.focusRingStyle}
           showLeftIcon={props.showLeftIcon}
           showRightIcon={props.showRightIcon}
         />
