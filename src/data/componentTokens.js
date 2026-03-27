@@ -68,6 +68,7 @@ export const COMPONENT_TOKENS = {
     "button-line-height":   { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "button/line-height" },
     "button-font-family":   { type: "STRING", value: "Inter", figmaPath: "button/font-family" },
     "button-icon-size":     { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },   figmaPath: "button/icon-size" },
+    "button-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 }, figmaPath: "button/icon-stroke-width" },
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "button-border-radius": { type: "FLOAT", unit: "px", value: 8,   figmaPath: "button/border-radius" },
     "button-border-width":  { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "button/border-width" },
@@ -168,6 +169,7 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "actionicon-size":      { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 32, md: 36, lg: 42, xl: 48 }, figmaPath: "actionicon/size" },
     "actionicon-icon-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "actionicon/icon-size" },
+    "actionicon-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 }, figmaPath: "actionicon/icon-stroke-width" },
     "actionicon-radius":    { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },    figmaPath: "actionicon/radius" },
 
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
@@ -248,6 +250,7 @@ export const COMPONENT_TOKENS = {
     "tabs-tab-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "tabs/tab-border-width" },
     "tabs-panel-padding": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/panel-padding" },
     "tabs-icon-size": { type: "FLOAT", unit: "px", value: 16, figmaPath: "tabs/icon-size" },
+    "tabs-icon-stroke-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "tabs/icon-stroke-width" },
     "tabs-icon-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/icon-gap" },
   },
 
@@ -357,6 +360,7 @@ export const COMPONENT_TOKENS = {
     "checkbox-border-radius":     { type: "FLOAT", unit: "px", sizes: { xs: 4,  sm: 4,  md: 5,  lg: 6,  xl: 7 },            figmaPath: "checkbox/border-radius" },
     "checkbox-radius":            { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },              figmaPath: "checkbox/radius" },
     "checkbox-icon-size":         { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 12, md: 14, lg: 16, xl: 18 },           figmaPath: "checkbox/icon-size" },
+    "checkbox-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 },     figmaPath: "checkbox/icon-stroke-width" },
     "checkbox-label-font-size":   { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },           figmaPath: "checkbox/label-font-size" },
     "checkbox-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },   figmaPath: "checkbox/label-line-height" },
     "checkbox-label-font-family": { type: "STRING", value: "Inter", figmaPath: "checkbox/label-font-family" },
@@ -475,6 +479,7 @@ export const COMPONENT_TOKENS = {
     "chip-padding":         { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },              figmaPath: "chip/padding" },
     "chip-checked-padding": { type: "FLOAT", unit: "px", sizes: { xs: 8, sm: 10, md: 12, lg: 14, xl: 16 },      figmaPath: "chip/checked-padding" },
     "chip-icon-size":       { type: "FLOAT", unit: "px", sizes: { xs: 9, sm: 12, md: 14, lg: 16, xl: 18 },               figmaPath: "chip/icon-size" },
+    "chip-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 },        figmaPath: "chip/icon-stroke-width" },
     "chip-font-size":       { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 12, md: 14, lg: 16, xl: 18 },              figmaPath: "chip/font-size" },
     "chip-font-family":     { type: "STRING", value: "Inter", figmaPath: "chip/font-family" },
     "chip-font-weight":     { type: "STRING", value: "Regular", figmaPath: "chip/font-weight" },
@@ -748,6 +753,7 @@ export const COMPONENT_TOKENS = {
     "alert-icon-title-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "alert/icon-title-gap" },
     "alert-title-message-gap": { type: "FLOAT", unit: "px", value: 6, figmaPath: "alert/title-message-gap" },
     "alert-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "alert/border-width" },
+    "alert-icon-stroke-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "alert/icon-stroke-width" },
   },
 
   modal: {
@@ -778,6 +784,7 @@ export const COMPONENT_TOKENS = {
     "modal-body-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "modal/body-line-height" },
     "modal-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "modal/border-width" },
     "modal-overlay-opacity": { type: "FLOAT", unit: "", value: 45, figmaPath: "modal/overlay-opacity" },
+    "modal-close-icon-stroke-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "modal/close-icon-stroke-width" },
   },
 
   textinput: {

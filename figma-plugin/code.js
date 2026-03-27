@@ -869,7 +869,7 @@ function bindPaintVar(node, paintType, paintIndex, variable) {
 
 async function buildButtonComponentSet(varMap, page, font) {
   var variants = ["filled", "outlined", "ghost"];
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
   var leftIconModes = ["off", "on"];
   var rightIconModes = ["off", "on"];
@@ -877,7 +877,7 @@ async function buildButtonComponentSet(varMap, page, font) {
   var iconComponents = await findButtonIconComponents();
 
   // Known button heights per size for accurate spacing
-  var sizeHeights = { xs: 28, sm: 36, md: 42, lg: 50, xl: 60 };
+  var sizeHeights = { default: 36, xs: 28, sm: 36, md: 42, lg: 50, xl: 60 };
   var gap = 16;
   var colGap = 16;
 
@@ -900,7 +900,7 @@ async function buildButtonComponentSet(varMap, page, font) {
 
     for (var si = 0; si < sizes.length; si++) {
       var size = sizes[si];
-      var capSize = size.toUpperCase();
+      var capSize = size === "default" ? "Default" : size.toUpperCase();
 
       for (var li = 0; li < leftIconModes.length; li++) {
         var leftMode = leftIconModes[li];
@@ -931,6 +931,7 @@ async function buildButtonComponentSet(varMap, page, font) {
             comp.primaryAxisSizingMode = "AUTO";
             comp.counterAxisSizingMode = "AUTO";
             comp.itemSpacing = 8;
+            comp.clipsContent = false;
 
             // Initial dimensions (overridden by variable bindings)
             comp.paddingLeft = 14;
@@ -985,6 +986,7 @@ async function buildButtonComponentSet(varMap, page, font) {
               bindVar(iconInst, "height", varMap["button/icon-size-" + size]);
               var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
               for (var vci = 0; vci < vectors.length; vci++) {
+                bindVar(vectors[vci], "strokeWeight", varMap["button/icon-stroke-width-" + size]);
                 if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
                   vectors[vci].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                   bindPaintVar(vectors[vci], "strokes", 0, varMap[textPath]);
@@ -1029,15 +1031,27 @@ async function buildButtonComponentSet(varMap, page, font) {
 
             // Focus ring effect
             if (state === "focus") {
-              comp.effects = [{
-                type: "DROP_SHADOW",
-                color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
-                offset: { x: 0, y: 0 },
-                radius: 0,
-                spread: 3,
-                visible: true,
-                blendMode: "NORMAL"
-              }];
+              comp.effects = [
+                {
+                  // Inner separation ring so focus does not read as button border.
+                  type: "DROP_SHADOW",
+                  color: { r: 0.07, g: 0.08, b: 0.12, a: 1 },
+                  offset: { x: 0, y: 0 },
+                  radius: 0,
+                  spread: 2,
+                  visible: true,
+                  blendMode: "NORMAL"
+                },
+                {
+                  type: "DROP_SHADOW",
+                  color: { r: 0.17, g: 0.63, b: 0.98, a: 1 },
+                  offset: { x: 0, y: 0 },
+                  radius: 0,
+                  spread: 4,
+                  visible: true,
+                  blendMode: "NORMAL"
+                }
+              ];
             }
 
             // Disabled opacity
@@ -2259,6 +2273,7 @@ async function buildCheckboxComponentSet(varMap, page, font) {
             var iconColorPath = checkboxIconColorPath(state);
             var vectors = checkInst.findAll(function(n) { return n.type === "VECTOR"; });
             for (var vi = 0; vi < vectors.length; vi++) {
+                bindVar(vectors[vi], "strokeWeight", varMap["checkbox/icon-stroke-width-" + size]);
               if (vectors[vi].strokes && vectors[vi].strokes.length > 0) {
                 vectors[vi].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                 bindPaintVar(vectors[vi], "strokes", 0, varMap[iconColorPath]);
@@ -2280,6 +2295,7 @@ async function buildCheckboxComponentSet(varMap, page, font) {
             var dashColorPath = checkboxIconColorPath(state);
             var dashVectors = minusInst.findAll(function(n) { return n.type === "VECTOR"; });
             for (var dvi = 0; dvi < dashVectors.length; dvi++) {
+              bindVar(dashVectors[dvi], "strokeWeight", varMap["checkbox/icon-stroke-width-" + size]);
               if (dashVectors[dvi].strokes && dashVectors[dvi].strokes.length > 0) {
                 dashVectors[dvi].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                 bindPaintVar(dashVectors[dvi], "strokes", 0, varMap[dashColorPath]);
@@ -2737,6 +2753,7 @@ async function buildChipComponentSet(varMap, page, font) {
             var iconColorPath = chipIconColorPath(variant, state);
             var vectors = checkInst.findAll(function(n) { return n.type === "VECTOR"; });
             for (var vci = 0; vci < vectors.length; vci++) {
+              bindVar(vectors[vci], "strokeWeight", varMap["chip/icon-stroke-width-" + size]);
               if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
                 vectors[vci].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                 bindPaintVar(vectors[vci], "strokes", 0, varMap[iconColorPath]);
@@ -3079,6 +3096,10 @@ async function buildAlertComponentSet(varMap, page, font) {
               var warningInst = warningSource.createInstance();
               warningInst.name = "icon";
               try { warningInst.resize(16, 16); } catch (e) {}
+              var warningVectors = warningInst.findAll(function(n) { return n.type === "VECTOR"; });
+              for (var wvi = 0; wvi < warningVectors.length; wvi++) {
+                bindVar(warningVectors[wvi], "strokeWeight", varMap["alert/icon-stroke-width"]);
+              }
               titleRow.appendChild(warningInst);
             }
           }
@@ -3131,6 +3152,10 @@ async function buildAlertComponentSet(varMap, page, font) {
               var closeInst = closeSource.createInstance();
               closeInst.name = "close";
               try { closeInst.resize(16, 16); } catch (e) {}
+              var closeVectors = closeInst.findAll(function(n) { return n.type === "VECTOR"; });
+              for (var cvi = 0; cvi < closeVectors.length; cvi++) {
+                bindVar(closeVectors[cvi], "strokeWeight", varMap["alert/icon-stroke-width"]);
+              }
               closeInst.x = 356;
               closeInst.y = 10;
               comp.appendChild(closeInst);
@@ -3321,6 +3346,10 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 var closeIconInst = modalCloseIconSource.createInstance();
                 closeIconInst.name = "close";
                 try { closeIconInst.resize(16, 16); } catch (e) {}
+                var modalCloseVectors = closeIconInst.findAll(function(n) { return n.type === "VECTOR"; });
+                for (var mcvi = 0; mcvi < modalCloseVectors.length; mcvi++) {
+                  bindVar(modalCloseVectors[mcvi], "strokeWeight", varMap["modal/close-icon-stroke-width"]);
+                }
                 header.appendChild(closeIconInst);
               } else {
                 var closeNode = figma.createText();
@@ -4953,6 +4982,7 @@ async function buildActionIconComponentSet(varMap, page) {
 
               var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
               for (var vci = 0; vci < vectors.length; vci++) {
+                bindVar(vectors[vci], "strokeWeight", varMap["actionicon/icon-stroke-width-" + size]);
                 if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
                   vectors[vci].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                   bindPaintVar(vectors[vci], "strokes", 0, varMap[iconPath]);
@@ -5140,6 +5170,7 @@ async function buildTabsComponentSet(varMap, page, font) {
 
                   var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
                   for (var vci = 0; vci < vectors.length; vci++) {
+                    bindVar(vectors[vci], "strokeWeight", varMap["tabs/icon-stroke-width"]);
                     if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
                       vectors[vci].strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
                       bindPaintVar(vectors[vci], "strokes", 0, varMap[tabTextPath]);
@@ -5289,6 +5320,7 @@ function validateTabsVariables(varMap) {
     "tabs/list-border-width",
     "tabs/tab-border-width",
     "tabs/icon-size",
+    "tabs/icon-stroke-width",
     "tabs/icon-gap",
     "tabs/focus-ring"
   ];

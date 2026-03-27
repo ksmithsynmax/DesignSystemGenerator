@@ -104,7 +104,7 @@ export function buildExportPayload(brands, options) {
           };
         } else if (def.type === TOKEN_TYPES.FLOAT) {
           const resolveFloatAlias = (val) => {
-            if (def.figmaPath.includes("border-width")) {
+            if (def.figmaPath.includes("border-width") || def.figmaPath.includes("stroke-width")) {
               return GLOBAL_BORDER_WIDTHS.includes(Number(val)) ? `border-width/${String(val).replace('.', '_')}` : null;
             }
             return GLOBAL_SPACING.includes(Number(val)) ? `spacing/${val}` : null;

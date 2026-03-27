@@ -22,7 +22,7 @@ export const GLOBAL_WEIGHTS = {
   bold: "Bold"
 };
 
-export const GLOBAL_BORDER_WIDTHS = [0, 1, 1.5, 2, 4];
+export const GLOBAL_BORDER_WIDTHS = [0, 1, 1.25, 1.5, 1.75, 2, 2.25, 4];
 
 export const INITIAL_BRANDS = {
   theia: {
@@ -78,6 +78,8 @@ export const INITIAL_BRANDS = {
       "button-height-default": "sm",
       "button-font-size-default": "sm",
       "button-line-height-default": "sm",
+      "button-icon-size-default": "sm",
+      "button-icon-stroke-width-default": "sm",
       "actionicon-size-default": "sm",
       "actionicon-icon-size-default": "sm",
       "actionicon-radius-default": "sm",
@@ -170,6 +172,8 @@ export const INITIAL_BRANDS = {
       "button-height-default": "md",
       "button-font-size-default": "md",
       "button-line-height-default": "md",
+      "button-icon-size-default": "md",
+      "button-icon-stroke-width-default": "md",
       "actionicon-size-default": "md",
       "actionicon-icon-size-default": "md",
       "actionicon-radius-default": "md",
