@@ -72,6 +72,9 @@ export const COMPONENT_TOKENS = {
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "button-border-radius": { type: "FLOAT", unit: "px", value: 8,   figmaPath: "button/border-radius" },
     "button-border-width":  { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "button/border-width" },
+    "button-focus-ring-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "button/focus-ring-width" },
+    "button-focus-ring-spacing": { type: "FLOAT", unit: "px", value: 3, figmaPath: "button/focus-ring-spacing" },
+    "button-focus-ring-radius": { type: "FLOAT", unit: "px", value: 11, figmaPath: "button/focus-ring-radius" },
 
     // ── STRING TOKENS (single value) ──
     "button-font-weight":   { type: "STRING", value: "Semi Bold", figmaPath: "button/font-weight" },

@@ -974,14 +974,50 @@ async function buildButtonComponentSet(varMap, page, font) {
             comp.counterAxisSizingMode = "AUTO";
             comp.itemSpacing = 8;
             comp.clipsContent = false;
+            var buttonNode = comp;
+
+            if (state === "focus") {
+              // Focus wrapper: configurable outer ring with spacing around the real button surface.
+              comp.itemSpacing = 0;
+              comp.paddingLeft = 3;
+              comp.paddingRight = 3;
+              comp.paddingTop = 3;
+              comp.paddingBottom = 3;
+              comp.fills = [];
+              comp.strokes = [{ type: "SOLID", color: { r: 0.17, g: 0.63, b: 0.98 } }];
+              comp.strokeAlign = "OUTSIDE";
+              comp.strokeWeight = 2;
+              comp.cornerRadius = 11;
+              bindPaintVar(comp, "strokes", 0, varMap["button/focus-ring"]);
+              bindVar(comp, "strokeWeight", varMap["button/focus-ring-width"]);
+              bindVar(comp, "paddingLeft", varMap["button/focus-ring-spacing"]);
+              bindVar(comp, "paddingRight", varMap["button/focus-ring-spacing"]);
+              bindVar(comp, "paddingTop", varMap["button/focus-ring-spacing"]);
+              bindVar(comp, "paddingBottom", varMap["button/focus-ring-spacing"]);
+              bindVar(comp, "topLeftRadius", varMap["button/focus-ring-radius"]);
+              bindVar(comp, "topRightRadius", varMap["button/focus-ring-radius"]);
+              bindVar(comp, "bottomLeftRadius", varMap["button/focus-ring-radius"]);
+              bindVar(comp, "bottomRightRadius", varMap["button/focus-ring-radius"]);
+
+              buttonNode = figma.createFrame();
+              buttonNode.name = "ButtonSurface";
+              buttonNode.layoutMode = "HORIZONTAL";
+              buttonNode.primaryAxisAlignItems = "CENTER";
+              buttonNode.counterAxisAlignItems = "CENTER";
+              buttonNode.primaryAxisSizingMode = "AUTO";
+              buttonNode.counterAxisSizingMode = "AUTO";
+              buttonNode.itemSpacing = 8;
+              buttonNode.clipsContent = false;
+              comp.appendChild(buttonNode);
+            }
 
             // Initial dimensions (overridden by variable bindings)
-            comp.paddingLeft = 14;
-            comp.paddingRight = 14;
-            comp.paddingTop = 6;
-            comp.paddingBottom = 6;
-            comp.cornerRadius = 8;
-            comp.minHeight = 36;
+            buttonNode.paddingLeft = 14;
+            buttonNode.paddingRight = 14;
+            buttonNode.paddingTop = 6;
+            buttonNode.paddingBottom = 6;
+            buttonNode.cornerRadius = 8;
+            buttonNode.minHeight = 36;
 
             // --- Color variable paths for this state ---
             var bgPath = btnColorPath(variant, "background", state);
@@ -991,33 +1027,33 @@ async function buildButtonComponentSet(varMap, page, font) {
             // Background fill
             var bgVar = varMap[bgPath];
             if (variant === "ghost" && (state === "default" || state === "focus" || state === "disabled")) {
-              comp.fills = [];
+              buttonNode.fills = [];
             } else {
-              comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-              bindPaintVar(comp, "fills", 0, bgVar);
+              buttonNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+              bindPaintVar(buttonNode, "fills", 0, bgVar);
             }
 
             // Stroke/border
             var borderVar = varMap[borderPath];
             if (variant === "outlined" && borderVar) {
-              comp.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-              comp.strokeWeight = 1.5;
-              bindPaintVar(comp, "strokes", 0, borderVar);
+              buttonNode.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+              buttonNode.strokeWeight = 1.5;
+              bindPaintVar(buttonNode, "strokes", 0, borderVar);
             } else {
-              comp.strokes = [];
+              buttonNode.strokes = [];
             }
 
             // Bind SIZE-SPECIFIC dimensions
-            bindVar(comp, "paddingLeft", varMap["button/padding-x-" + size]);
-            bindVar(comp, "paddingRight", varMap["button/padding-x-" + size]);
-            bindVar(comp, "paddingTop", varMap["button/padding-y-" + size]);
-            bindVar(comp, "paddingBottom", varMap["button/padding-y-" + size]);
-            bindVar(comp, "topLeftRadius", varMap["button/border-radius"]);
-            bindVar(comp, "topRightRadius", varMap["button/border-radius"]);
-            bindVar(comp, "bottomLeftRadius", varMap["button/border-radius"]);
-            bindVar(comp, "bottomRightRadius", varMap["button/border-radius"]);
-            bindVar(comp, "minHeight", varMap["button/height-" + size]);
-            bindVar(comp, "strokeWeight", varMap["button/border-width"]);
+            bindVar(buttonNode, "paddingLeft", varMap["button/padding-x-" + size]);
+            bindVar(buttonNode, "paddingRight", varMap["button/padding-x-" + size]);
+            bindVar(buttonNode, "paddingTop", varMap["button/padding-y-" + size]);
+            bindVar(buttonNode, "paddingBottom", varMap["button/padding-y-" + size]);
+            bindVar(buttonNode, "topLeftRadius", varMap["button/border-radius"]);
+            bindVar(buttonNode, "topRightRadius", varMap["button/border-radius"]);
+            bindVar(buttonNode, "bottomLeftRadius", varMap["button/border-radius"]);
+            bindVar(buttonNode, "bottomRightRadius", varMap["button/border-radius"]);
+            bindVar(buttonNode, "minHeight", varMap["button/height-" + size]);
+            bindVar(buttonNode, "strokeWeight", varMap["button/border-width"]);
 
             function appendIcon(iconComp, iconName) {
               if (!iconComp) return;
@@ -1038,7 +1074,7 @@ async function buildButtonComponentSet(varMap, page, font) {
                   bindPaintVar(vectors[vci], "fills", 0, varMap[textPath]);
                 }
               }
-              comp.appendChild(iconInst);
+              buttonNode.appendChild(iconInst);
             }
 
             if (hasLeftIcon) {
@@ -1065,35 +1101,10 @@ async function buildButtonComponentSet(varMap, page, font) {
             bindVar(textNode, "fontStyle", varMap["button/font-weight"]);
             bindVar(textNode, "lineHeight", varMap["button/line-height-" + size]);
 
-            comp.appendChild(textNode);
+            buttonNode.appendChild(textNode);
 
             if (hasRightIcon) {
               appendIcon(iconComponents.right || iconComponents.fallback, "RightIcon");
-            }
-
-            // Focus ring effect
-            if (state === "focus") {
-              comp.effects = [
-                {
-                  // Inner separation ring so focus does not read as button border.
-                  type: "DROP_SHADOW",
-                  color: { r: 0.07, g: 0.08, b: 0.12, a: 1 },
-                  offset: { x: 0, y: 0 },
-                  radius: 0,
-                  spread: 2,
-                  visible: true,
-                  blendMode: "NORMAL"
-                },
-                {
-                  type: "DROP_SHADOW",
-                  color: { r: 0.17, g: 0.63, b: 0.98, a: 1 },
-                  offset: { x: 0, y: 0 },
-                  radius: 0,
-                  spread: 4,
-                  visible: true,
-                  blendMode: "NORMAL"
-                }
-              ];
             }
 
             // Disabled opacity

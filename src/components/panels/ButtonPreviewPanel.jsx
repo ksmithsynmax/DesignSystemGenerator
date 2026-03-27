@@ -104,10 +104,11 @@ export function ButtonPropertiesPanel({
   showRightIcon,
   setShowRightIcon,
 }) {
+  const buttonSizeOptions = sizeKeys.includes("default") ? sizeKeys : ["default", ...sizeKeys];
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={BUTTON_VARIANTS} />
-      <PropertyRow label="Size" value={activeSize} onChange={setActiveSize} options={sizeKeys} />
+      <PropertyRow label="Size" value={activeSize} onChange={setActiveSize} options={buttonSizeOptions} />
       <PropertyRow
         label="Left Icon"
         value={showLeftIcon ? "on" : "off"}
@@ -158,7 +159,7 @@ export default function ButtonPreviewPanel(props) {
           activeSize={props.activeSize}
           selectedState={selectedState}
           activeColorToken={props.activeColorToken}
-          sizeKeys={props.sizeKeys}
+          sizeKeys={props.sizeKeys.includes("default") ? props.sizeKeys : ["default", ...props.sizeKeys]}
           showLeftIcon={props.showLeftIcon}
           showRightIcon={props.showRightIcon}
         />
