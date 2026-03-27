@@ -23,6 +23,8 @@ export const GLOBAL_WEIGHTS = {
 };
 
 export const GLOBAL_BORDER_WIDTHS = [0, 1, 1.25, 1.5, 1.75, 2, 2.25, 4];
+export const GLOBAL_FONT_SIZES = [8, 10, 12, 13, 14, 16, 18, 20, 24, 28, 30, 32, 36, 40, 48, 64];
+export const GLOBAL_LINE_HEIGHTS = [8, 10, 12, 14, 16, 17, 18, 20, 22, 24, 28, 32, 36, 42];
 
 export const INITIAL_BRANDS = {
   theia: {

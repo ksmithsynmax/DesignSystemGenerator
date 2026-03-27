@@ -25,6 +25,8 @@ async function syncTokens(payload) {
       allKeys[ki] !== "globalFonts" && 
       allKeys[ki] !== "globalWeights" && 
       allKeys[ki] !== "globalBorderWidths" && 
+      allKeys[ki] !== "globalFontSizes" &&
+      allKeys[ki] !== "globalLineHeights" &&
       allKeys[ki] !== "__buildOptions"
     ) {
       brandIds.push(allKeys[ki]);
@@ -210,7 +212,7 @@ async function syncTokens(payload) {
   for (var fi = 0; fi < fontKeys.length; fi++) {
     var fontKey = fontKeys[fi];
     var fontVal = globalFonts[fontKey];
-    var fontVarName = "font-family/" + fontKey;
+    var fontVarName = "typography/font-family/" + fontKey;
     var fontVar = globalPrimVarMap[fontVarName];
     if (!fontVar) {
       try {
@@ -230,7 +232,7 @@ async function syncTokens(payload) {
   for (var wi = 0; wi < weightKeys.length; wi++) {
     var weightKey = weightKeys[wi];
     var weightVal = globalWeights[weightKey];
-    var weightVarName = "font-weight/" + weightKey;
+    var weightVarName = "typography/font-weight/" + weightKey;
     var weightVar = globalPrimVarMap[weightVarName];
     if (!weightVar) {
       try {
@@ -263,6 +265,44 @@ async function syncTokens(payload) {
     bwVar.setValueForMode(globalModeId, bwVal);
   }
 
+  // Global typography font sizes (FLOAT)
+  var globalFontSizes = payload.globalFontSizes || [];
+  for (var fsi = 0; fsi < globalFontSizes.length; fsi++) {
+    var fsVal = Number(globalFontSizes[fsi]);
+    if (!isFinite(fsVal)) continue;
+    var fsVarName = "typography/font-size/" + String(fsVal).replace('.', '_');
+    var fsVar = globalPrimVarMap[fsVarName];
+    if (!fsVar) {
+      try {
+        fsVar = figma.variables.createVariable(fsVarName, globalPrimCol, "FLOAT");
+      } catch (e) {
+        throw new Error("Failed to create font size var: '" + fsVarName + "' - " + String(e));
+      }
+      globalPrimVarMap[fsVarName] = fsVar;
+      totalCreated++;
+    }
+    fsVar.setValueForMode(globalModeId, fsVal);
+  }
+
+  // Global typography line heights (FLOAT)
+  var globalLineHeights = payload.globalLineHeights || [];
+  for (var lhi = 0; lhi < globalLineHeights.length; lhi++) {
+    var lhVal = Number(globalLineHeights[lhi]);
+    if (!isFinite(lhVal)) continue;
+    var lhVarName = "typography/line-height/" + String(lhVal).replace('.', '_');
+    var lhVar = globalPrimVarMap[lhVarName];
+    if (!lhVar) {
+      try {
+        lhVar = figma.variables.createVariable(lhVarName, globalPrimCol, "FLOAT");
+      } catch (e) {
+        throw new Error("Failed to create line height var: '" + lhVarName + "' - " + String(e));
+      }
+      globalPrimVarMap[lhVarName] = lhVar;
+      totalCreated++;
+    }
+    lhVar.setValueForMode(globalModeId, lhVal);
+  }
+
   // Remove stale global primitive variables (from previous syncs with different palettes)
   var globalExpected = {};
   for (var gei = 0; gei < globalPaletteNames.length; gei++) {
@@ -276,9 +316,11 @@ async function syncTokens(payload) {
     var expectedSpacing = Number(globalSpacing[gex]);
     if (isFinite(expectedSpacing)) globalExpected["spacing/" + expectedSpacing] = true;
   }
-  for (var fi = 0; fi < fontKeys.length; fi++) globalExpected["font-family/" + fontKeys[fi]] = true;
-  for (var wi = 0; wi < weightKeys.length; wi++) globalExpected["font-weight/" + weightKeys[wi]] = true;
+  for (var fi = 0; fi < fontKeys.length; fi++) globalExpected["typography/font-family/" + fontKeys[fi]] = true;
+  for (var wi = 0; wi < weightKeys.length; wi++) globalExpected["typography/font-weight/" + weightKeys[wi]] = true;
   for (var bi = 0; bi < globalBorderWidths.length; bi++) globalExpected["border-width/" + String(globalBorderWidths[bi]).replace('.', '_')] = true;
+  for (var fsi = 0; fsi < globalFontSizes.length; fsi++) globalExpected["typography/font-size/" + String(globalFontSizes[fsi]).replace('.', '_')] = true;
+  for (var lhi = 0; lhi < globalLineHeights.length; lhi++) globalExpected["typography/line-height/" + String(globalLineHeights[lhi]).replace('.', '_')] = true;
   var globalStale = 0;
   var globalVarNames = Object.keys(globalPrimVarMap);
   for (var gsvi = 0; gsvi < globalVarNames.length; gsvi++) {

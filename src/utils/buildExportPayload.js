@@ -1,6 +1,14 @@
 import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/componentTokens";
 import { resolveColor, resolveDimension, getDefaultSizeKey } from "./resolveToken";
-import { GLOBAL_PRIMITIVES, GLOBAL_SPACING, GLOBAL_FONTS, GLOBAL_WEIGHTS, GLOBAL_BORDER_WIDTHS } from "../data/brands";
+import {
+  GLOBAL_PRIMITIVES,
+  GLOBAL_SPACING,
+  GLOBAL_FONTS,
+  GLOBAL_WEIGHTS,
+  GLOBAL_BORDER_WIDTHS,
+  GLOBAL_FONT_SIZES,
+  GLOBAL_LINE_HEIGHTS,
+} from "../data/brands";
 
 function normalizeOpacity(opacity) {
   const parsed = Number(opacity);
@@ -46,7 +54,9 @@ export function buildExportPayload(brands, options) {
     globalSpacing: GLOBAL_SPACING,
     globalFonts: GLOBAL_FONTS,
     globalWeights: GLOBAL_WEIGHTS,
-    globalBorderWidths: GLOBAL_BORDER_WIDTHS
+    globalBorderWidths: GLOBAL_BORDER_WIDTHS,
+    globalFontSizes: GLOBAL_FONT_SIZES,
+    globalLineHeights: GLOBAL_LINE_HEIGHTS,
   };
   if (options && Array.isArray(options.componentsToBuild)) {
     out.__buildOptions = {
@@ -104,8 +114,15 @@ export function buildExportPayload(brands, options) {
           };
         } else if (def.type === TOKEN_TYPES.FLOAT) {
           const resolveFloatAlias = (val) => {
+            const norm = String(val).replace(".", "_");
             if (def.figmaPath.includes("border-width") || def.figmaPath.includes("stroke-width")) {
-              return GLOBAL_BORDER_WIDTHS.includes(Number(val)) ? `border-width/${String(val).replace('.', '_')}` : null;
+              return GLOBAL_BORDER_WIDTHS.includes(Number(val)) ? `border-width/${norm}` : null;
+            }
+            if (def.figmaPath.includes("font-size")) {
+              return GLOBAL_FONT_SIZES.includes(Number(val)) ? `typography/font-size/${norm}` : null;
+            }
+            if (def.figmaPath.includes("line-height")) {
+              return GLOBAL_LINE_HEIGHTS.includes(Number(val)) ? `typography/line-height/${norm}` : null;
             }
             return GLOBAL_SPACING.includes(Number(val)) ? `spacing/${val}` : null;
           };
@@ -141,10 +158,10 @@ export function buildExportPayload(brands, options) {
           let alias = null;
           if (def.figmaPath.includes("font-family")) {
             const key = Object.keys(GLOBAL_FONTS).find(k => GLOBAL_FONTS[k] === val);
-            if (key) alias = `font-family/${key}`;
+            if (key) alias = `typography/font-family/${key}`;
           } else if (def.figmaPath.includes("font-weight")) {
             const key = Object.keys(GLOBAL_WEIGHTS).find(k => GLOBAL_WEIGHTS[k] === val);
-            if (key) alias = `font-weight/${key}`;
+            if (key) alias = `typography/font-weight/${key}`;
           }
           
           out[brandId].components[def.figmaPath] = {
