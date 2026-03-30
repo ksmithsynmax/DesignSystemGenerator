@@ -146,6 +146,10 @@ export default function App() {
   const [activeButtonRightIcon, setActiveButtonRightIcon] = useState(false);
   const [activeButtonFocusRingStyle, setActiveButtonFocusRingStyle] = useState("offset");
   const [activeActionIconState, setActiveActionIconState] = useState("default");
+  const [activeActionIconFocusRingStyle, setActiveActionIconFocusRingStyle] = useState("offset");
+  const [buildButtonVariants, setBuildButtonVariants] = useState(() => [...VARIANTS_BY_COMPONENT.button]);
+  const [buildActionIconVariants, setBuildActionIconVariants] = useState(() => [...VARIANTS_BY_COMPONENT.actionicon]);
+  const [buildTabsVariants, setBuildTabsVariants] = useState(() => [...VARIANTS_BY_COMPONENT.tabs]);
 
   const createResizeHandler = useCallback((setter, min, max) => {
     return (e) => {
@@ -402,7 +406,8 @@ export default function App() {
       setActiveTabsRadius(tabsDefault);
       setActiveTabsOrientation("horizontal");
       setActiveTabsShowPanel(false);
-      setActiveTabsShowIcons(false);
+      setActiveTabsShowLeftIcon(false);
+      setActiveTabsShowRightIcon(false);
       setActiveTabsState("default");
       setActiveVariant("default");
     } else if (newComp === "switch") {
@@ -1158,6 +1163,7 @@ export default function App() {
                   activeActionIconSize={activeActionIconSize}
                   activeActionIconRadius={activeActionIconRadius}
                   activeActionIconIcon={activeActionIconIcon}
+                  focusRingStyle={activeActionIconFocusRingStyle}
                   selectedState={forcedState || activeActionIconState}
                   activeColorToken={activeColorToken}
                   sizeKeys={sizeKeys}
@@ -1483,6 +1489,8 @@ export default function App() {
                   setShowLeftIcon={setActiveButtonLeftIcon}
                   showRightIcon={activeButtonRightIcon}
                   setShowRightIcon={setActiveButtonRightIcon}
+                  buildVariants={buildButtonVariants}
+                  setBuildVariants={setBuildButtonVariants}
                 />
               )}
               {activeComponent === "actionicon" && (
@@ -1495,10 +1503,14 @@ export default function App() {
                   setActiveActionIconRadius={setActiveActionIconRadius}
                   activeActionIconIcon={activeActionIconIcon}
                   setActiveActionIconIcon={setActiveActionIconIcon}
+                  focusRingStyle={activeActionIconFocusRingStyle}
+                  setFocusRingStyle={setActiveActionIconFocusRingStyle}
                   sizeKeys={sizeKeys}
                   selectedState={forcedState || activeActionIconState}
                   setSelectedState={setActiveActionIconState}
                   forcedState={forcedState}
+                  buildVariants={buildActionIconVariants}
+                  setBuildVariants={setBuildActionIconVariants}
                 />
               )}
               {activeComponent === "tabs" && (
@@ -1518,6 +1530,8 @@ export default function App() {
                   selectedState={forcedState || activeTabsState}
                   setSelectedState={setActiveTabsState}
                   forcedState={forcedState}
+                  buildVariants={buildTabsVariants}
+                  setBuildVariants={setBuildTabsVariants}
                 />
               )}
               {activeComponent === "switch" && (
@@ -1925,7 +1939,13 @@ export default function App() {
               </p>
               <FigmaSyncButton
                 brands={brands}
-                syncBuildOptions={{ buttonFocusRingStyle: activeButtonFocusRingStyle }}
+                syncBuildOptions={{
+                  buttonFocusRingStyle: activeButtonFocusRingStyle,
+                  actionIconFocusRingStyle: activeActionIconFocusRingStyle,
+                  buttonVariants: buildButtonVariants,
+                  actionIconVariants: buildActionIconVariants,
+                  tabsVariants: buildTabsVariants,
+                }}
               />
 
               <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>

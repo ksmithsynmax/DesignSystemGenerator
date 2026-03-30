@@ -8,6 +8,7 @@ export const ACTIONICON_VARIANTS = ["default", "filled", "light", "outlined", "t
 export const ACTIONICON_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
 export const ACTIONICON_STATES = ["default", "hover", "focus", "pressed", "disabled"];
 const ACTIONICON_ICONS = ["check", "minus"];
+const FOCUS_RING_STYLE_OPTIONS = ["offset", "attached"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -46,6 +47,40 @@ function PropertyRow({ label, value, onChange, options, disabled = false }) {
   );
 }
 
+function VariantBuildRow({ options, selectedOptions, onToggle }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <SectionLabel mb={0}>Build Variants</SectionLabel>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {options.map((opt) => {
+          const active = selectedOptions.includes(opt);
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onToggle(opt)}
+              style={{
+                border: "1px solid #373A40",
+                borderRadius: 6,
+                padding: "4px 10px",
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: "monospace",
+                textTransform: "capitalize",
+                cursor: "pointer",
+                color: active ? "#E9ECEF" : "#909296",
+                background: active ? "#2C2E33" : "#25262B",
+              }}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function ActionIconPreviewContent({
   brands,
   activeBrand,
@@ -53,6 +88,7 @@ export function ActionIconPreviewContent({
   activeActionIconSize,
   activeActionIconRadius,
   activeActionIconIcon,
+  focusRingStyle,
   selectedState,
   activeColorToken,
   sizeKeys,
@@ -68,6 +104,7 @@ export function ActionIconPreviewContent({
           size={activeActionIconSize}
           radius={activeActionIconRadius}
           state={selectedState === "default" ? undefined : selectedState}
+          focusRingStyle={focusRingStyle}
           iconName={activeActionIconIcon}
         />
       </PreviewStage>
@@ -84,6 +121,7 @@ export function ActionIconPreviewContent({
             variant={row.variant}
             size={s}
             radius={activeActionIconRadius}
+            focusRingStyle={focusRingStyle}
             iconName={activeActionIconIcon}
           />
         )}
@@ -101,11 +139,27 @@ export function ActionIconPropertiesPanel({
   setActiveActionIconRadius,
   activeActionIconIcon,
   setActiveActionIconIcon,
+  focusRingStyle,
+  setFocusRingStyle,
   sizeKeys,
   selectedState,
   setSelectedState,
   forcedState,
+  buildVariants = ACTIONICON_VARIANTS,
+  setBuildVariants = () => {},
 }) {
+  const actionIconSizeOptions = sizeKeys.includes("default") ? sizeKeys : ["default", ...sizeKeys];
+  const actionIconRadiusOptions = ACTIONICON_RADIUS_KEYS.includes("default")
+    ? ACTIONICON_RADIUS_KEYS
+    : ["default", ...ACTIONICON_RADIUS_KEYS];
+  const toggleBuildVariant = (variant) => {
+    if (buildVariants.includes(variant)) {
+      if (buildVariants.length <= 1) return;
+      setBuildVariants(buildVariants.filter((v) => v !== variant));
+      return;
+    }
+    setBuildVariants([...buildVariants, variant]);
+  };
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow
@@ -114,17 +168,22 @@ export function ActionIconPropertiesPanel({
         onChange={setActiveVariant}
         options={ACTIONICON_VARIANTS}
       />
+      <VariantBuildRow
+        options={ACTIONICON_VARIANTS}
+        selectedOptions={buildVariants}
+        onToggle={toggleBuildVariant}
+      />
       <PropertyRow
         label="Size"
         value={activeActionIconSize}
         onChange={setActiveActionIconSize}
-        options={sizeKeys}
+        options={actionIconSizeOptions}
       />
       <PropertyRow
         label="Radius"
         value={activeActionIconRadius}
         onChange={setActiveActionIconRadius}
-        options={ACTIONICON_RADIUS_KEYS}
+        options={actionIconRadiusOptions}
       />
       <PropertyRow
         label="Icon"
@@ -132,6 +191,14 @@ export function ActionIconPropertiesPanel({
         onChange={setActiveActionIconIcon}
         options={ACTIONICON_ICONS}
       />
+      {selectedState === "focus" && (
+        <PropertyRow
+          label="Focus Ring Style"
+          value={focusRingStyle}
+          onChange={setFocusRingStyle}
+          options={FOCUS_RING_STYLE_OPTIONS}
+        />
+      )}
       <PropertyRow
         label="State"
         value={selectedState}
@@ -154,6 +221,8 @@ export default function ActionIconPreviewPanel({
   setActiveActionIconRadius,
   activeActionIconIcon,
   setActiveActionIconIcon,
+  focusRingStyle,
+  setFocusRingStyle,
   sizeKeys,
   forcedState,
   activeColorToken,
@@ -174,6 +243,8 @@ export default function ActionIconPreviewPanel({
           setActiveActionIconRadius={setActiveActionIconRadius}
           activeActionIconIcon={activeActionIconIcon}
           setActiveActionIconIcon={setActiveActionIconIcon}
+          focusRingStyle={focusRingStyle}
+          setFocusRingStyle={setFocusRingStyle}
           sizeKeys={sizeKeys}
           selectedState={selectedState}
           setSelectedState={setActiveState}
@@ -189,6 +260,7 @@ export default function ActionIconPreviewPanel({
           size={activeActionIconSize}
           radius={activeActionIconRadius}
           state={selectedState === "default" ? undefined : selectedState}
+          focusRingStyle={focusRingStyle}
           iconName={activeActionIconIcon}
         />
       </PreviewStage>
@@ -205,6 +277,7 @@ export default function ActionIconPreviewPanel({
             variant={row.variant}
             size={s}
             radius={activeActionIconRadius}
+            focusRingStyle={focusRingStyle}
             iconName={activeActionIconIcon}
           />
         )}

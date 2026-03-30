@@ -36,6 +36,7 @@ export default function ButtonPreview({
   const prefix = `button-${variant}`;
   const suffix = state ? `-${state}` : "";
   const isFocus = state === "focus";
+  const isDisabled = state === "disabled";
 
   const bgKey = suffix && tokens[`${prefix}-background${suffix}`] ? `${prefix}-background${suffix}` : `${prefix}-background`;
   const textKey = suffix && tokens[`${prefix}-text${suffix}`] ? `${prefix}-text${suffix}` : `${prefix}-text`;
@@ -93,6 +94,14 @@ export default function ButtonPreview({
           borderRadius: `${focusRingRadius || 11}px`,
         }
     : null;
+  const disabledStyles = isDisabled
+    ? {
+        opacity: 1,
+        background: bg,
+        color: text,
+        border: bdValue,
+      }
+    : null;
 
   return (
     <Button
@@ -136,6 +145,10 @@ export default function ButtonPreview({
           fontWeight: WEIGHT_TO_CSS[fontWeight] ?? 600,
           fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
           lineHeight: lineHeight ? `${lineHeight}px` : undefined,
+          ...(disabledStyles || {}),
+          "&:disabled, &[data-disabled], &:disabled:hover, &[data-disabled]:hover": {
+            ...(disabledStyles || {}),
+          },
           ...(focusStyles || {}),
           "&:active, &[data-active], &:active:hover": {
             transform: "none !important",

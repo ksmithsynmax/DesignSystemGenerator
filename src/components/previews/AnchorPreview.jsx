@@ -1,5 +1,5 @@
 import { Anchor } from "@mantine/core";
-import { resolveColor, resolveDimension } from "../../utils/resolveToken";
+import { getDefaultSizeKey, resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
 const WEIGHT_TOKEN_BY_MODE = {
@@ -28,8 +28,11 @@ export default function AnchorPreview({
           : "anchor-color";
 
   const color = resolveColor(brands, brandId, tokens[colorToken]?.semantic, "light", colorToken);
-  const fontSize = resolveDimension(brands, brandId, "anchor-font-size", size);
-  const lineHeight = resolveDimension(brands, brandId, "anchor-line-height", size);
+  const resolvedSize = size === "default"
+    ? (getDefaultSizeKey(brands, brandId, "anchor-font-size") || "md")
+    : size;
+  const fontSize = resolveDimension(brands, brandId, "anchor-font-size", resolvedSize);
+  const lineHeight = resolveDimension(brands, brandId, "anchor-line-height", resolvedSize);
   const fontWeight = resolveDimension(brands, brandId, WEIGHT_TOKEN_BY_MODE[weightMode]);
   const fontFamily = resolveDimension(brands, brandId, "anchor-font-family");
 

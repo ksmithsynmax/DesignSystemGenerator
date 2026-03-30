@@ -693,6 +693,25 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
 
   var compSetGap = 300;
   var buttonFocusRingStyle = (buildOptions && buildOptions.buttonFocusRingStyle === "attached") ? "attached" : "offset";
+  var actionIconFocusRingStyle = (buildOptions && buildOptions.actionIconFocusRingStyle === "attached") ? "attached" : "offset";
+  function resolveVariantList(selected, allowed) {
+    if (!Array.isArray(selected) || selected.length === 0) return allowed.slice();
+    var allowedSet = {};
+    for (var ai = 0; ai < allowed.length; ai++) {
+      allowedSet[allowed[ai]] = true;
+    }
+    var next = [];
+    for (var si = 0; si < selected.length; si++) {
+      var key = String(selected[si] || "").toLowerCase();
+      if (allowedSet[key] && next.indexOf(key) < 0) {
+        next.push(key);
+      }
+    }
+    return next.length > 0 ? next : allowed.slice();
+  }
+  var buttonVariants = resolveVariantList(buildOptions && buildOptions.buttonVariants, ["filled", "outlined", "ghost"]);
+  var actionIconVariants = resolveVariantList(buildOptions && buildOptions.actionIconVariants, ["default", "filled", "light", "outlined", "transparent"]);
+  var tabsVariants = resolveVariantList(buildOptions && buildOptions.tabsVariants, ["default", "outlined", "pills"]);
   async function buildSet(name, builder) {
     var setKey = normalizeComponentKey(name);
     if (requestedSet && !requestedSet[setKey]) {
@@ -718,7 +737,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
   }
 
   var buttonSet = await buildSet("Button", function () {
-    return buildButtonComponentSet(varMap, page, font, buttonFocusRingStyle);
+    return buildButtonComponentSet(varMap, page, font, buttonFocusRingStyle, buttonVariants);
   });
   var switchSet = await buildSet("Switch", function () {
     return buildSwitchComponentSet(varMap, page, font);
@@ -766,10 +785,10 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
     return buildCardComponentSet(varMap, page, font);
   });
   var actionIconSet = await buildSet("ActionIcon", function () {
-    return buildActionIconComponentSet(varMap, page);
+    return buildActionIconComponentSet(varMap, page, actionIconFocusRingStyle, actionIconVariants);
   });
   var tabsSet = await buildSet("Tabs", function () {
-    return buildTabsComponentSet(varMap, page, font);
+    return buildTabsComponentSet(varMap, page, font, tabsVariants);
   });
   var anchorSet = await buildSet("Anchor", function () {
     return buildAnchorComponentSet(varMap, page, font);
@@ -938,8 +957,10 @@ function bindPaintVar(node, paintType, paintIndex, variable) {
 // Button
 // ---------------------------------------------------------------------------
 
-async function buildButtonComponentSet(varMap, page, font, focusRingStyle) {
-  var variants = ["filled", "outlined", "ghost"];
+async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selectedVariants) {
+  var variants = (selectedVariants && selectedVariants.length > 0)
+    ? selectedVariants.slice()
+    : ["filled", "outlined", "ghost"];
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
   var leftIconModes = ["off", "on"];
@@ -1142,26 +1163,20 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle) {
               // Attached focus: single halo ring.
               var attachedHalo = figma.createRectangle();
               attachedHalo.name = "FocusHalo";
-              attachedHalo.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0.001 }];
-              attachedHalo.strokes = [];
+              attachedHalo.fills = [];
+              attachedHalo.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.9 }, opacity: 0.4 }];
+              attachedHalo.strokeAlign = "OUTSIDE";
+              attachedHalo.strokeWeight = 3;
               attachedHalo.cornerRadius = 8;
               try {
                 attachedHalo.resize(buttonNode.width, buttonNode.height);
               } catch (resizeErr) {}
+              bindPaintVar(attachedHalo, "strokes", 0, varMap["button/focus-ring"]);
+              bindVar(attachedHalo, "strokeWeight", varMap["button/focus-ring-width"]);
               bindVar(attachedHalo, "topLeftRadius", varMap["button/border-radius"]);
               bindVar(attachedHalo, "topRightRadius", varMap["button/border-radius"]);
               bindVar(attachedHalo, "bottomLeftRadius", varMap["button/border-radius"]);
               bindVar(attachedHalo, "bottomRightRadius", varMap["button/border-radius"]);
-
-              attachedHalo.effects = [{
-                type: "DROP_SHADOW",
-                color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
-                offset: { x: 0, y: 0 },
-                radius: 0,
-                spread: 3,
-                visible: true,
-                blendMode: "NORMAL"
-              }];
 
               comp.appendChild(attachedHalo);
               attachedHalo.layoutPositioning = "ABSOLUTE";
@@ -4977,12 +4992,14 @@ function buildCardComponentSet(varMap, page, font) {
 // ActionIcon
 // ---------------------------------------------------------------------------
 
-async function buildActionIconComponentSet(varMap, page) {
-  var variants = ["default", "filled", "light", "outlined", "transparent"];
+async function buildActionIconComponentSet(varMap, page, focusRingStyle, selectedVariants) {
+  var variants = (selectedVariants && selectedVariants.length > 0)
+    ? selectedVariants.slice()
+    : ["default", "filled", "light", "outlined", "transparent"];
   var sizes = ["xs", "sm", "md", "lg", "xl"];
   var radii = ["xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
-  var icons = ["check", "minus"];
+  var icons = ["check"];
   var components = [];
 
   var checkIconComp = null;
@@ -5054,35 +5071,83 @@ async function buildActionIconComponentSet(varMap, page) {
             var comp = figma.createComponent();
             comp.name = "Variant=" + capVariant + ", Size=" + capSize +
                         ", Radius=" + capRadius + ", State=" + capState +
-                        ", Icon=" + capIcon;
+                        (icons.length > 1 ? ", Icon=" + capIcon : "");
+            var isOffsetFocus = state === "focus" && focusRingStyle !== "attached";
+            var surfaceNode = comp;
+            var focusRingNode = null;
 
             comp.layoutMode = "HORIZONTAL";
-            comp.primaryAxisSizingMode = "FIXED";
-            comp.counterAxisSizingMode = "FIXED";
             comp.primaryAxisAlignItems = "CENTER";
             comp.counterAxisAlignItems = "CENTER";
-            comp.resize(sizePx[size], sizePx[size]);
-            comp.cornerRadius = 8;
-            comp.clipsContent = true;
+            comp.itemSpacing = 0;
+
+            if (isOffsetFocus) {
+              comp.primaryAxisSizingMode = "AUTO";
+              comp.counterAxisSizingMode = "AUTO";
+              comp.paddingTop = 3;
+              comp.paddingRight = 3;
+              comp.paddingBottom = 3;
+              comp.paddingLeft = 3;
+              comp.fills = [];
+              comp.strokes = [];
+              comp.cornerRadius = 11;
+              comp.clipsContent = false;
+              bindVar(comp, "paddingTop", varMap["actionicon/focus-ring-spacing"]);
+              bindVar(comp, "paddingRight", varMap["actionicon/focus-ring-spacing"]);
+              bindVar(comp, "paddingBottom", varMap["actionicon/focus-ring-spacing"]);
+              bindVar(comp, "paddingLeft", varMap["actionicon/focus-ring-spacing"]);
+              focusRingNode = figma.createRectangle();
+              focusRingNode.name = "FocusRing";
+              focusRingNode.fills = [];
+              focusRingNode.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.9 } }];
+              focusRingNode.strokeAlign = "INSIDE";
+              focusRingNode.strokeWeight = 2;
+              focusRingNode.cornerRadius = 11;
+              bindPaintVar(focusRingNode, "strokes", 0, varMap["actionicon/focus-ring"]);
+              bindVar(focusRingNode, "strokeWeight", varMap["actionicon/focus-ring-width"]);
+              bindVar(focusRingNode, "topLeftRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+              bindVar(focusRingNode, "topRightRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+              bindVar(focusRingNode, "bottomLeftRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+              bindVar(focusRingNode, "bottomRightRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+
+              surfaceNode = figma.createFrame();
+              surfaceNode.name = "Surface";
+              surfaceNode.layoutMode = "HORIZONTAL";
+              surfaceNode.primaryAxisSizingMode = "FIXED";
+              surfaceNode.counterAxisSizingMode = "FIXED";
+              surfaceNode.primaryAxisAlignItems = "CENTER";
+              surfaceNode.counterAxisAlignItems = "CENTER";
+              surfaceNode.itemSpacing = 0;
+              surfaceNode.resize(sizePx[size], sizePx[size]);
+              surfaceNode.cornerRadius = 8;
+              surfaceNode.clipsContent = true;
+              comp.appendChild(surfaceNode);
+            } else {
+              comp.primaryAxisSizingMode = "FIXED";
+              comp.counterAxisSizingMode = "FIXED";
+              comp.resize(sizePx[size], sizePx[size]);
+              comp.cornerRadius = 8;
+              comp.clipsContent = true;
+            }
 
             var bgPath = actionIconColorPath(variant, "background", state);
             var iconPath = actionIconColorPath(variant, "icon", state);
             var borderPath = actionIconColorPath(variant, "border", state);
 
-            comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-            bindPaintVar(comp, "fills", 0, varMap[bgPath]);
+            surfaceNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            bindPaintVar(surfaceNode, "fills", 0, varMap[bgPath]);
 
-            comp.strokes = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 0 }];
-            comp.strokeAlign = "INSIDE";
-            bindPaintVar(comp, "strokes", 0, varMap[borderPath]);
+            surfaceNode.strokes = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 }, opacity: 0 }];
+            surfaceNode.strokeAlign = "INSIDE";
+            bindPaintVar(surfaceNode, "strokes", 0, varMap[borderPath]);
 
-            bindVar(comp, "width", varMap["actionicon/size-" + size]);
-            bindVar(comp, "height", varMap["actionicon/size-" + size]);
-            bindVar(comp, "topLeftRadius", varMap["actionicon/radius-" + rad]);
-            bindVar(comp, "topRightRadius", varMap["actionicon/radius-" + rad]);
-            bindVar(comp, "bottomLeftRadius", varMap["actionicon/radius-" + rad]);
-            bindVar(comp, "bottomRightRadius", varMap["actionicon/radius-" + rad]);
-            bindVar(comp, "strokeWeight", varMap["actionicon/border-width"]);
+            bindVar(surfaceNode, "width", varMap["actionicon/size-" + size]);
+            bindVar(surfaceNode, "height", varMap["actionicon/size-" + size]);
+            bindVar(surfaceNode, "topLeftRadius", varMap["actionicon/radius-" + rad]);
+            bindVar(surfaceNode, "topRightRadius", varMap["actionicon/radius-" + rad]);
+            bindVar(surfaceNode, "bottomLeftRadius", varMap["actionicon/radius-" + rad]);
+            bindVar(surfaceNode, "bottomRightRadius", varMap["actionicon/radius-" + rad]);
+            bindVar(surfaceNode, "strokeWeight", varMap["actionicon/border-width"]);
 
             var iconInst = null;
             if (iconName === "check" && checkIconComp) {
@@ -5109,19 +5174,31 @@ async function buildActionIconComponentSet(varMap, page) {
                   bindPaintVar(vectors[vci], "fills", 0, varMap[iconPath]);
                 }
               }
-              comp.appendChild(iconInst);
+              surfaceNode.appendChild(iconInst);
+            }
+
+            if (focusRingNode) {
+              comp.appendChild(focusRingNode);
+              focusRingNode.layoutPositioning = "ABSOLUTE";
+              focusRingNode.x = 0;
+              focusRingNode.y = 0;
+              focusRingNode.resize(comp.width, comp.height);
+              focusRingNode.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+              comp.insertChild(0, focusRingNode);
             }
 
             if (state === "focus") {
-              comp.effects = [{
-                type: "DROP_SHADOW",
-                color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
-                offset: { x: 0, y: 0 },
-                radius: 0,
-                spread: 3,
-                visible: true,
-                blendMode: "NORMAL"
-              }];
+              if (focusRingStyle === "attached") {
+                surfaceNode.effects = [{
+                  type: "DROP_SHADOW",
+                  color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+                  offset: { x: 0, y: 0 },
+                  radius: 0,
+                  spread: 3,
+                  visible: true,
+                  blendMode: "NORMAL"
+                }];
+              }
             }
 
             if (state === "disabled") {
@@ -5156,10 +5233,12 @@ function actionIconColorPath(variant, property, state) {
 // Tabs
 // ---------------------------------------------------------------------------
 
-async function buildTabsComponentSet(varMap, page, font) {
+async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
   validateTabsVariables(varMap);
 
-  var variants = ["default", "outlined", "pills"];
+  var variants = (selectedVariants && selectedVariants.length > 0)
+    ? selectedVariants.slice()
+    : ["default", "outlined", "pills"];
   var orientations = ["horizontal", "vertical"];
   var leftIconModes = ["off", "on"];
   var rightIconModes = ["off", "on"];

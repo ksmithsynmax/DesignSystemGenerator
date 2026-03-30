@@ -46,6 +46,40 @@ function PropertyRow({ label, value, onChange, options, disabled = false }) {
   );
 }
 
+function VariantBuildRow({ options, selectedOptions, onToggle }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <SectionLabel mb={0}>Build Variants</SectionLabel>
+      <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+        {options.map((opt) => {
+          const active = selectedOptions.includes(opt);
+          return (
+            <button
+              key={opt}
+              type="button"
+              onClick={() => onToggle(opt)}
+              style={{
+                border: "1px solid #373A40",
+                borderRadius: 6,
+                padding: "4px 10px",
+                fontSize: 12,
+                fontWeight: 600,
+                fontFamily: "monospace",
+                textTransform: "capitalize",
+                cursor: "pointer",
+                color: active ? "#E9ECEF" : "#909296",
+                background: active ? "#2C2E33" : "#25262B",
+              }}
+            >
+              {opt}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 export function TabsPreviewContent({
   brands,
   activeBrand,
@@ -119,10 +153,25 @@ export function TabsPropertiesPanel({
   selectedState,
   setSelectedState,
   forcedState,
+  buildVariants = TABS_VARIANTS,
+  setBuildVariants = () => {},
 }) {
+  const toggleBuildVariant = (variant) => {
+    if (buildVariants.includes(variant)) {
+      if (buildVariants.length <= 1) return;
+      setBuildVariants(buildVariants.filter((v) => v !== variant));
+      return;
+    }
+    setBuildVariants([...buildVariants, variant]);
+  };
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={TABS_VARIANTS} />
+      <VariantBuildRow
+        options={TABS_VARIANTS}
+        selectedOptions={buildVariants}
+        onToggle={toggleBuildVariant}
+      />
       <PropertyRow label="Radius" value={activeTabsRadius} onChange={setActiveTabsRadius} options={TABS_RADIUS_KEYS} />
       <PropertyRow
         label="Orientation"

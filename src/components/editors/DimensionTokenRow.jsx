@@ -26,10 +26,14 @@ export default function DimensionTokenRow({
   }
 
   const isSingleValue = tokenDef.value !== undefined && !tokenDef.sizes;
-  const visibleSizes =
-    !isSingleValue && selectedSize && sizeKeys.includes(selectedSize)
-      ? [selectedSize]
-      : sizeKeys;
+  const defaultResolvedSize = defaultSize || sizeKeys[0];
+  const visibleSizes = isSingleValue
+    ? []
+    : selectedSize === "default"
+      ? [defaultResolvedSize]
+      : selectedSize && sizeKeys.includes(selectedSize)
+        ? [selectedSize]
+        : sizeKeys;
 
   // Resolve a display value for the collapsed card
   const displayValue = isSingleValue

@@ -2,7 +2,7 @@ import { ActionIcon } from "@mantine/core";
 import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
 import CheckIcon from "@untitledui-icons/react/line/CheckIcon";
 import MinusIcon from "@untitledui-icons/react/line/MinusIcon";
-import { resolveColor, resolveDimension } from "../../utils/resolveToken";
+import { getDefaultSizeKey, resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
 const VARIANT_MAP = {
@@ -30,6 +30,7 @@ export default function ActionIconPreview({
   size = "sm",
   radius = "sm",
   state,
+  focusRingStyle = "offset",
   iconName = "check",
 }) {
   const tokens = COMPONENT_TOKENS.actionicon;
@@ -58,17 +59,56 @@ export default function ActionIconPreview({
     );
   const iconColor = resolveColor(brands, brandId, tokens[iconKey]?.semantic, "light", iconKey);
   const border = resolveColor(brands, brandId, tokens[borderKey]?.semantic, "light", borderKey);
+  const focusRing = resolveColor(brands, brandId, tokens["actionicon-focus-ring"]?.semantic, "light", "actionicon-focus-ring");
 
-  const actionIconSize = resolveDimension(brands, brandId, "actionicon-size", size);
-  const actionIconRadius = resolveDimension(brands, brandId, "actionicon-radius", radius || size);
-  const iconSize = resolveDimension(brands, brandId, "actionicon-icon-size", size);
+  const resolveSizeKey = (tokenName, requestedKey, fallbackKey = "sm") => {
+    if (requestedKey !== "default") return requestedKey;
+    return getDefaultSizeKey(brands, brandId, tokenName) || fallbackKey;
+  };
+
+  const resolvedActionIconSize = resolveSizeKey("actionicon-size", size, "sm");
+  const resolvedRadiusSize = resolveSizeKey("actionicon-radius", radius || size, resolvedActionIconSize);
+
+  const actionIconSize = resolveDimension(brands, brandId, "actionicon-size", resolvedActionIconSize);
+  const actionIconRadius = resolveDimension(brands, brandId, "actionicon-radius", resolvedRadiusSize);
+  const iconSize = resolveDimension(
+    brands,
+    brandId,
+    "actionicon-icon-size",
+    resolveSizeKey("actionicon-icon-size", size, resolvedActionIconSize)
+  );
   const borderWidth = resolveDimension(brands, brandId, "actionicon-border-width");
+  const focusRingWidth = resolveDimension(brands, brandId, "actionicon-focus-ring-width");
+  const focusRingSpacing = resolveDimension(brands, brandId, "actionicon-focus-ring-spacing");
+  const focusRingRadius = resolveDimension(brands, brandId, "actionicon-focus-ring-radius", resolvedRadiusSize);
 
   const mantineVariant = VARIANT_MAP[variant] || "default";
   const borderValue =
     border !== "transparent"
       ? `${borderWidth}px solid ${border}`
       : `${borderWidth}px solid transparent`;
+  const isFocus = state === "focus";
+  const isDisabled = state === "disabled";
+  const focusStyles = isFocus
+    ? focusRingStyle === "attached"
+      ? {
+          boxShadow: `0 0 0 ${focusRingWidth || 2}px ${focusRing}40`,
+          borderRadius: `${actionIconRadius}px`,
+        }
+      : {
+          outline: `${focusRingWidth || 2}px solid ${focusRing}`,
+          outlineOffset: `${focusRingSpacing || 3}px`,
+          borderRadius: `${focusRingRadius || actionIconRadius}px`,
+        }
+    : null;
+  const disabledStyles = isDisabled
+    ? {
+        opacity: 1,
+        background: bg,
+        color: iconColor,
+        border: borderValue,
+      }
+    : null;
 
   return (
     <ActionIcon
@@ -85,6 +125,15 @@ export default function ActionIconPreview({
           "--ai-radius": `${actionIconRadius}px`,
         },
       })}
+      styles={{
+        root: {
+          ...(disabledStyles || {}),
+          "&:disabled, &[data-disabled], &:disabled:hover, &[data-disabled]:hover": {
+            ...(disabledStyles || {}),
+          },
+          ...(focusStyles || {}),
+        },
+      }}
     >
       {getIcon(iconName, iconSize, iconColor)}
     </ActionIcon>

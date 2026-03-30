@@ -116,9 +116,12 @@ export function AnchorPropertiesPanel({
   text,
   setText,
 }) {
+  const anchorSizeOptions = ANCHOR_SIZE_OPTIONS.includes("default")
+    ? ANCHOR_SIZE_OPTIONS
+    : ["default", ...ANCHOR_SIZE_OPTIONS];
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      <PropertyRow label="Size" value={size} onChange={setSize} options={ANCHOR_SIZE_OPTIONS} />
+      <PropertyRow label="Size" value={size} onChange={setSize} options={anchorSizeOptions} />
       <PropertyRow label="Underline" value={underline} onChange={setUnderline} options={ANCHOR_UNDERLINE_OPTIONS} />
       <PropertyRow label="Weight" value={weightMode} onChange={setWeightMode} options={ANCHOR_WEIGHT_OPTIONS} />
       <PropertyRow label="State" value={state} onChange={setState} options={ANCHOR_STATE_OPTIONS} />

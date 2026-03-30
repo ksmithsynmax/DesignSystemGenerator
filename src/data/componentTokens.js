@@ -177,6 +177,14 @@ export const COMPONENT_TOKENS = {
 
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "actionicon-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "actionicon/border-width" },
+    "actionicon-focus-ring-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "actionicon/focus-ring-width" },
+    "actionicon-focus-ring-spacing": { type: "FLOAT", unit: "px", value: 3, figmaPath: "actionicon/focus-ring-spacing" },
+    "actionicon-focus-ring-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { xs: 5, sm: 7, md: 11, lg: 19, xl: 35 },
+      figmaPath: "actionicon/focus-ring-radius"
+    },
   },
 
   tabs: {

@@ -113,7 +113,11 @@ export function buildExportPayload(brands, options) {
         } else if (def.type === TOKEN_TYPES.FLOAT) {
           const resolveFloatAlias = (val) => {
             const norm = String(val).replace(".", "_");
-            if (def.figmaPath.includes("border-width") || def.figmaPath.includes("stroke-width")) {
+            if (
+              def.figmaPath.includes("border-width") ||
+              def.figmaPath.includes("stroke-width") ||
+              def.figmaPath.includes("focus-ring-width")
+            ) {
               return GLOBAL_BORDER_WIDTHS.includes(Number(val)) ? `border-width/${norm}` : null;
             }
             if (def.figmaPath.includes("font-size")) {
