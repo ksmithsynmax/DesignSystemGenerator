@@ -45,8 +45,14 @@ export default function SwitchPreview({
   const trackBorder = getTokenColor("switch-track-border");
   const thumbBg = getTokenColor("switch-thumb-background");
   const focusRing = resolveColor(brands, brandId, tokens["switch-focus-ring"]?.semantic, "light", "switch-focus-ring");
-  const labelColor = resolveColor(brands, brandId, tokens[isDisabled ? "switch-label-text-disabled" : "switch-label-text"]?.semantic, "light", isDisabled ? "switch-label-text-disabled" : "switch-label-text");
   const isDisabled = state === "disabled";
+  const labelColor = resolveColor(
+    brands,
+    brandId,
+    tokens[isDisabled ? "switch-label-text-disabled" : "switch-label-text"]?.semantic,
+    "light",
+    isDisabled ? "switch-label-text-disabled" : "switch-label-text"
+  );
 
   const width = resolveDimension(brands, brandId, "switch-width", size);
   const height = resolveDimension(brands, brandId, "switch-height", size);

@@ -206,7 +206,8 @@ export default function App() {
   const [activeTabsRadius, setActiveTabsRadius] = useState(tabsDefault);
   const [activeTabsOrientation, setActiveTabsOrientation] = useState("horizontal");
   const [activeTabsShowPanel, setActiveTabsShowPanel] = useState(false);
-  const [activeTabsShowIcons, setActiveTabsShowIcons] = useState(false);
+  const [activeTabsShowLeftIcon, setActiveTabsShowLeftIcon] = useState(false);
+  const [activeTabsShowRightIcon, setActiveTabsShowRightIcon] = useState(false);
   const [activeTabsState, setActiveTabsState] = useState("default");
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
   const [activeSwitchChecked, setActiveSwitchChecked] = useState(false);
@@ -1173,7 +1174,8 @@ export default function App() {
                   selectedState={forcedState || activeTabsState}
                   activeColorToken={activeColorToken}
                   showPanel={activeTabsShowPanel}
-                  showIcons={activeTabsShowIcons}
+                  showLeftIcon={activeTabsShowLeftIcon}
+                  showRightIcon={activeTabsShowRightIcon}
                 />
               )}
 
@@ -1509,8 +1511,10 @@ export default function App() {
                   setActiveTabsOrientation={setActiveTabsOrientation}
                   showPanel={activeTabsShowPanel}
                   setShowPanel={setActiveTabsShowPanel}
-                  showIcons={activeTabsShowIcons}
-                  setShowIcons={setActiveTabsShowIcons}
+                  showLeftIcon={activeTabsShowLeftIcon}
+                  setShowLeftIcon={setActiveTabsShowLeftIcon}
+                  showRightIcon={activeTabsShowRightIcon}
+                  setShowRightIcon={setActiveTabsShowRightIcon}
                   selectedState={forcedState || activeTabsState}
                   setSelectedState={setActiveTabsState}
                   forcedState={forcedState}

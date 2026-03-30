@@ -650,6 +650,23 @@ function normalizeComponentKey(name) {
   return String(name || "").toLowerCase().replace(/[^a-z]/g, "");
 }
 
+function resolveManagedComponentKeyFromName(name) {
+  var normalized = normalizeComponentKey(name);
+  var managedKeys = [
+    "button", "switch", "slider", "rangeslider", "checkbox", "radio",
+    "chip", "notification", "alert", "modal", "tooltip", "loader",
+    "pill", "badge", "textinput", "select", "card", "actionicon",
+    "tabs", "anchor", "title", "text"
+  ];
+  for (var i = 0; i < managedKeys.length; i++) {
+    var key = managedKeys[i];
+    if (normalized === key || normalized.indexOf(key) === 0) {
+      return key;
+    }
+  }
+  return null;
+}
+
 async function buildComponents(varMap, componentsToBuild, buildOptions) {
   var page = figma.currentPage;
   var buildFailures = [];
@@ -669,7 +686,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
   }
 
   // Remove previously generated sets for selected components only.
-  cleanupExistingComponents(page, requestedSet);
+  await cleanupExistingComponents(page, requestedSet);
 
   // Load font for button text and switch labels
   var font = await loadFont();
@@ -810,23 +827,34 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
   return { failures: buildFailures };
 }
 
-function cleanupExistingComponents(page, requestedSet) {
-  var children = page.children;
-  for (var i = children.length - 1; i >= 0; i--) {
-    var child = children[i];
-    if (child.type === "COMPONENT_SET" && (child.name === "Button" || child.name === "Switch" || child.name === "Slider" || child.name === "RangeSlider" || child.name === "Checkbox" || child.name === "Radio" || child.name === "Chip" || child.name === "Notification" || child.name === "Alert" || child.name === "Modal" || child.name === "Tooltip" || child.name === "Loader" || child.name === "Pill" || child.name === "Badge" || child.name === "TextInput" || child.name === "Select" || child.name === "Card" || child.name === "ActionIcon" || child.name === "Tabs" || child.name === "Anchor" || child.name === "Title" || child.name === "Text")) {
-      var componentKey = normalizeComponentKey(child.name);
-      if (!requestedSet || requestedSet[componentKey]) {
+async function cleanupExistingComponents(page, requestedSet) {
+  var pageNodes = figma.root.children;
+  for (var pi = 0; pi < pageNodes.length; pi++) {
+    var p = pageNodes[pi];
+    if (p.type !== "PAGE") continue;
+    try {
+      await p.loadAsync();
+    } catch (loadErr) {
+      progress("Skipping cleanup for page '" + p.name + "': " + String(loadErr));
+      continue;
+    }
+    var children = p.children;
+    for (var i = children.length - 1; i >= 0; i--) {
+      var child = children[i];
+      if (child.type === "COMPONENT_SET") {
+        var componentKey = resolveManagedComponentKeyFromName(child.name);
+        if (componentKey && (!requestedSet || requestedSet[componentKey])) {
+          child.remove();
+        }
+      }
+      // Also clean up standalone components from failed previous runs
+      if (child.type === "COMPONENT" && (
+        child.name.indexOf("Variant=") === 0 || child.name.indexOf("State=") === 0 ||
+        child.name.indexOf("Size=") === 0 || child.name.indexOf("Checked=") === 0 ||
+        child.name.indexOf("Label=") === 0 || child.name.indexOf("Direction=") === 0
+      )) {
         child.remove();
       }
-    }
-    // Also clean up standalone components from failed previous runs
-    if (child.type === "COMPONENT" && (
-      child.name.indexOf("Variant=") === 0 || child.name.indexOf("State=") === 0 ||
-      child.name.indexOf("Size=") === 0 || child.name.indexOf("Checked=") === 0 ||
-      child.name.indexOf("Label=") === 0 || child.name.indexOf("Direction=") === 0
-    )) {
-      child.remove();
     }
   }
 }
@@ -1021,13 +1049,15 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle) {
             buttonNode.minHeight = 36;
 
             // --- Color variable paths for this state ---
-            var bgPath = btnColorPath(variant, "background", state);
-            var textPath = btnColorPath(variant, "text", state);
-            var borderPath = btnColorPath(variant, "border", state);
+            // Attached focus keeps the base button visual and only adds ring treatment.
+            var colorState = (state === "focus" && focusRingStyle === "attached") ? "default" : state;
+            var bgPath = btnColorPath(variant, "background", colorState);
+            var textPath = btnColorPath(variant, "text", colorState);
+            var borderPath = btnColorPath(variant, "border", colorState);
 
             // Background fill
             var bgVar = varMap[bgPath];
-            if (variant === "ghost" && (state === "default" || state === "focus" || state === "disabled")) {
+            if (variant === "ghost" && (colorState === "default" || colorState === "focus" || colorState === "disabled")) {
               buttonNode.fills = [];
             } else {
               buttonNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
@@ -1109,13 +1139,36 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle) {
             }
 
             if (state === "focus" && focusRingStyle === "attached") {
-              buttonNode.strokeAlign = "OUTSIDE";
-              buttonNode.strokeWeight = 2;
-              if (!buttonNode.strokes || buttonNode.strokes.length === 0) {
-                buttonNode.strokes = [{ type: "SOLID", color: { r: 0.17, g: 0.63, b: 0.98 } }];
-              }
-              bindPaintVar(buttonNode, "strokes", 0, varMap["button/focus-ring"]);
-              bindVar(buttonNode, "strokeWeight", varMap["button/focus-ring-width"]);
+              // Attached focus: single halo ring.
+              var attachedHalo = figma.createRectangle();
+              attachedHalo.name = "FocusHalo";
+              attachedHalo.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0.001 }];
+              attachedHalo.strokes = [];
+              attachedHalo.cornerRadius = 8;
+              try {
+                attachedHalo.resize(buttonNode.width, buttonNode.height);
+              } catch (resizeErr) {}
+              bindVar(attachedHalo, "topLeftRadius", varMap["button/border-radius"]);
+              bindVar(attachedHalo, "topRightRadius", varMap["button/border-radius"]);
+              bindVar(attachedHalo, "bottomLeftRadius", varMap["button/border-radius"]);
+              bindVar(attachedHalo, "bottomRightRadius", varMap["button/border-radius"]);
+
+              attachedHalo.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+
+              comp.appendChild(attachedHalo);
+              attachedHalo.layoutPositioning = "ABSOLUTE";
+              attachedHalo.x = 0;
+              attachedHalo.y = 0;
+              attachedHalo.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+              comp.insertChild(0, attachedHalo);
             }
 
             // Disabled opacity
@@ -5109,8 +5162,9 @@ async function buildTabsComponentSet(varMap, page, font) {
   var variants = ["default", "outlined", "pills"];
   var orientations = ["horizontal", "vertical"];
   var leftIconModes = ["off", "on"];
+  var rightIconModes = ["off", "on"];
   var radii = ["xs", "sm", "md", "lg", "xl"];
-  var states = ["default", "hover", "focus", "pressed", "disabled"];
+  var states = ["default", "hover", "focus", "disabled"];
   var components = [];
 
   var colWidth = 340;
@@ -5135,162 +5189,192 @@ async function buildTabsComponentSet(varMap, page, font) {
         var showLeftIcon = leftIconMode === "on";
         var capLeftIcon = showLeftIcon ? "On" : "Off";
 
-        for (var ri = 0; ri < radii.length; ri++) {
-          var rad = radii[ri];
-          var capRadius = rad.toUpperCase();
+        for (var rmi = 0; rmi < rightIconModes.length; rmi++) {
+          var rightIconMode = rightIconModes[rmi];
+          var showRightIcon = rightIconMode === "on";
+          var capRightIcon = showRightIcon ? "On" : "Off";
 
-          for (var si = 0; si < states.length; si++) {
-            var state = states[si];
-            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+          for (var ri = 0; ri < radii.length; ri++) {
+            var rad = radii[ri];
+            var capRadius = rad.toUpperCase();
+            for (var si = 0; si < states.length; si++) {
+              var state = states[si];
+              var capState = state.charAt(0).toUpperCase() + state.slice(1);
 
-            var comp = figma.createComponent();
-            comp.name = "Variant=" + capVariant + ", Orientation=" + capOrientation +
-                        ", LeftIcon=" + capLeftIcon + ", Radius=" + capRadius + ", State=" + capState;
-            comp.layoutMode = "VERTICAL";
-            comp.primaryAxisSizingMode = "AUTO";
-            comp.counterAxisSizingMode = "AUTO";
-            comp.itemSpacing = 0;
-            comp.fills = [];
+              var comp = figma.createComponent();
+              comp.name = "Variant=" + capVariant + ", Orientation=" + capOrientation +
+                          ", LeftIcon=" + capLeftIcon + ", RightIcon=" + capRightIcon +
+                          ", Radius=" + capRadius + ", State=" + capState;
+              comp.layoutMode = "VERTICAL";
+              comp.primaryAxisSizingMode = "AUTO";
+              comp.counterAxisSizingMode = "AUTO";
+              comp.itemSpacing = 0;
+              comp.fills = [];
 
-            var list = figma.createFrame();
-            list.name = "List";
-            list.layoutMode = orientation === "horizontal" ? "HORIZONTAL" : "VERTICAL";
-            list.primaryAxisSizingMode = "AUTO";
-            list.counterAxisSizingMode = "AUTO";
-            list.primaryAxisAlignItems = "MIN";
-            list.counterAxisAlignItems = "MIN";
-            list.itemSpacing = 8;
-            list.paddingLeft = 4;
-            list.paddingRight = 4;
-            list.paddingTop = 4;
-            list.paddingBottom = 4;
-            list.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-            list.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
-            list.strokeAlign = "INSIDE";
+              var list = figma.createFrame();
+              list.name = "List";
+              list.layoutMode = orientation === "horizontal" ? "HORIZONTAL" : "VERTICAL";
+              list.primaryAxisSizingMode = "AUTO";
+              list.counterAxisSizingMode = "AUTO";
+              list.primaryAxisAlignItems = "MIN";
+              list.counterAxisAlignItems = "MIN";
+              list.itemSpacing = 8;
+              list.paddingLeft = 4;
+              list.paddingRight = 4;
+              list.paddingTop = 4;
+              list.paddingBottom = 4;
+              list.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              list.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+              list.strokeAlign = "INSIDE";
 
-            bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
-            bindPaintVar(list, "strokes", 0, varMap["tabs/" + variant + "-list-border"]);
-            bindVar(list, "strokeWeight", varMap["tabs/list-border-width"]);
-            bindVar(list, "itemSpacing", varMap["tabs/list-gap"]);
-            bindVar(list, "topLeftRadius", varMap["tabs/radius-" + rad]);
-            bindVar(list, "topRightRadius", varMap["tabs/radius-" + rad]);
-            bindVar(list, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
-            bindVar(list, "bottomRightRadius", varMap["tabs/radius-" + rad]);
+              bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
+              bindPaintVar(list, "strokes", 0, varMap["tabs/" + variant + "-list-border"]);
+              bindVar(list, "strokeWeight", varMap["tabs/list-border-width"]);
+              bindVar(list, "itemSpacing", varMap["tabs/list-gap"]);
+              bindVar(list, "topLeftRadius", varMap["tabs/radius-" + rad]);
+              bindVar(list, "topRightRadius", varMap["tabs/radius-" + rad]);
+              bindVar(list, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
+              bindVar(list, "bottomRightRadius", varMap["tabs/radius-" + rad]);
 
-            var tabDefs = [
-              { label: "Overview", active: true, disabled: false, icon: "image" },
-              { label: "Details", active: false, disabled: false, icon: "message" },
-              { label: "Settings", active: false, disabled: true, icon: "settings" },
-            ];
+              var tabDefs = [
+                { label: "Tab", active: false, icon: "image" },
+                { label: "Tab", active: true, icon: "message" },
+                { label: "Tab", active: false, icon: "settings" },
+                { label: "Tab", active: false, icon: "image" },
+              ];
 
-            for (var ti = 0; ti < tabDefs.length; ti++) {
-              var tabDef = tabDefs[ti];
-              var tab = figma.createFrame();
-              tab.name = "Tab/" + tabDef.label;
-              tab.layoutMode = "HORIZONTAL";
-              tab.primaryAxisSizingMode = "AUTO";
-              tab.counterAxisSizingMode = "AUTO";
-              tab.primaryAxisAlignItems = "CENTER";
-              tab.counterAxisAlignItems = "CENTER";
-              tab.paddingLeft = 12;
-              tab.paddingRight = 12;
-              tab.paddingTop = 8;
-              tab.paddingBottom = 8;
-              tab.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-              tab.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
-              tab.strokeAlign = "INSIDE";
+              for (var ti = 0; ti < tabDefs.length; ti++) {
+                var tabDef = tabDefs[ti];
+                var tab = figma.createFrame();
+                tab.name = "Tab/" + tabDef.label;
+                tab.layoutMode = "HORIZONTAL";
+                tab.primaryAxisSizingMode = "AUTO";
+                tab.counterAxisSizingMode = "AUTO";
+                tab.primaryAxisAlignItems = "CENTER";
+                tab.counterAxisAlignItems = "CENTER";
+                tab.paddingLeft = 12;
+                tab.paddingRight = 12;
+                tab.paddingTop = 8;
+                tab.paddingBottom = 8;
+                tab.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                tab.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+                tab.strokeAlign = "INSIDE";
 
-              bindVar(tab, "paddingLeft", varMap["tabs/tab-padding-x"]);
-              bindVar(tab, "paddingRight", varMap["tabs/tab-padding-x"]);
-              bindVar(tab, "paddingTop", varMap["tabs/tab-padding-y"]);
-              bindVar(tab, "paddingBottom", varMap["tabs/tab-padding-y"]);
-              bindVar(tab, "strokeWeight", varMap["tabs/tab-border-width"]);
-              bindVar(tab, "topLeftRadius", varMap["tabs/radius-" + rad]);
-              bindVar(tab, "topRightRadius", varMap["tabs/radius-" + rad]);
-              bindVar(tab, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
-              bindVar(tab, "bottomRightRadius", varMap["tabs/radius-" + rad]);
+                bindVar(tab, "paddingLeft", varMap["tabs/tab-padding-x"]);
+                bindVar(tab, "paddingRight", varMap["tabs/tab-padding-x"]);
+                bindVar(tab, "paddingTop", varMap["tabs/tab-padding-y"]);
+                bindVar(tab, "paddingBottom", varMap["tabs/tab-padding-y"]);
+                bindVar(tab, "strokeWeight", varMap["tabs/tab-border-width"]);
+                bindVar(tab, "topLeftRadius", varMap["tabs/radius-" + rad]);
+                bindVar(tab, "topRightRadius", varMap["tabs/radius-" + rad]);
+                bindVar(tab, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
+                bindVar(tab, "bottomRightRadius", varMap["tabs/radius-" + rad]);
 
-              var visualState = "default";
-              if (state === "disabled" || tabDef.disabled) visualState = "disabled";
-              else if (tabDef.active) visualState = "active";
-              else if (state === "hover") visualState = "hover";
-              else if (state === "pressed") visualState = "pressed";
-
-              var tabBgPath = tabsTabColorPath(variant, "background", visualState);
-              var tabTextPath = tabsTabColorPath(variant, "text", visualState);
-              var tabBorderPath = tabsTabColorPath(variant, "border", visualState);
-
-              bindPaintVar(tab, "fills", 0, varMap[tabBgPath]);
-              bindPaintVar(tab, "strokes", 0, varMap[tabBorderPath]);
-
-              if (showLeftIcon) {
-                var iconComp = iconComponents[tabDef.icon] || null;
-                if (iconComp) {
-                  var iconInst = iconComp.createInstance();
-                  iconInst.name = "LeftIcon";
-                  iconInst.resize(16, 16);
-                  bindVar(iconInst, "width", varMap["tabs/icon-size"]);
-                  bindVar(iconInst, "height", varMap["tabs/icon-size"]);
-
-                  var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
-                  for (var vci = 0; vci < vectors.length; vci++) {
-                    bindVar(vectors[vci], "strokeWeight", varMap["tabs/icon-stroke-width"]);
-                    if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
-                      vectors[vci].strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-                      bindPaintVar(vectors[vci], "strokes", 0, varMap[tabTextPath]);
-                    }
-                    if (vectors[vci].fills && vectors[vci].fills.length > 0) {
-                      vectors[vci].fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-                      bindPaintVar(vectors[vci], "fills", 0, varMap[tabTextPath]);
-                    }
-                  }
-                  tab.appendChild(iconInst);
+                var visualState = "default";
+                if (state === "disabled") visualState = "disabled";
+                else if (state === "hover") visualState = tabDef.active ? "hover" : "default";
+                else if (state === "active" || state === "default" || state === "focus") {
+                  visualState = tabDef.active ? "active" : "default";
                 }
-                bindVar(tab, "itemSpacing", varMap["tabs/icon-gap"]);
+
+                var tabBgPath = tabsTabColorPath(variant, "background", visualState);
+                var tabTextPath = tabsTabColorPath(variant, "text", visualState);
+                var tabBorderPath = tabsTabColorPath(variant, "border", visualState);
+
+                bindPaintVar(tab, "fills", 0, varMap[tabBgPath]);
+                bindPaintVar(tab, "strokes", 0, varMap[tabBorderPath]);
+
+                if (showLeftIcon) {
+                  var iconComp = iconComponents[tabDef.icon] || null;
+                  if (iconComp) {
+                    var iconInst = iconComp.createInstance();
+                    iconInst.name = "LeftIcon";
+                    iconInst.resize(16, 16);
+                    bindVar(iconInst, "width", varMap["tabs/icon-size"]);
+                    bindVar(iconInst, "height", varMap["tabs/icon-size"]);
+
+                    var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
+                    for (var vci = 0; vci < vectors.length; vci++) {
+                      bindVar(vectors[vci], "strokeWeight", varMap["tabs/icon-stroke-width"]);
+                      if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
+                        vectors[vci].strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                        bindPaintVar(vectors[vci], "strokes", 0, varMap[tabTextPath]);
+                      }
+                      if (vectors[vci].fills && vectors[vci].fills.length > 0) {
+                        vectors[vci].fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                        bindPaintVar(vectors[vci], "fills", 0, varMap[tabTextPath]);
+                      }
+                    }
+                    tab.appendChild(iconInst);
+                  }
+                }
+
+                var labelNode = figma.createText();
+                labelNode.name = "Label";
+                labelNode.fontName = font;
+                labelNode.characters = tabDef.label;
+                labelNode.fontSize = 14;
+                labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                bindVar(labelNode, "fontSize", varMap["tabs/font-size"]);
+                bindVar(labelNode, "fontFamily", varMap["tabs/font-family"]);
+                bindVar(labelNode, "fontStyle", varMap["tabs/font-weight"]);
+                bindVar(labelNode, "lineHeight", varMap["tabs/line-height"]);
+                bindPaintVar(labelNode, "fills", 0, varMap[tabTextPath]);
+                tab.appendChild(labelNode);
+
+                if (showRightIcon) {
+                  var closeComp = iconComponents.close || iconComponents.settings || iconComponents.message || null;
+                  if (closeComp) {
+                    var closeInst = closeComp.createInstance();
+                    closeInst.name = "RightIcon";
+                    closeInst.resize(16, 16);
+                    bindVar(closeInst, "width", varMap["tabs/icon-size"]);
+                    bindVar(closeInst, "height", varMap["tabs/icon-size"]);
+                    var closeVectors = closeInst.findAll(function(n) { return n.type === "VECTOR"; });
+                    for (var cvi = 0; cvi < closeVectors.length; cvi++) {
+                      bindVar(closeVectors[cvi], "strokeWeight", varMap["tabs/icon-stroke-width"]);
+                      if (closeVectors[cvi].strokes && closeVectors[cvi].strokes.length > 0) {
+                        closeVectors[cvi].strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                        bindPaintVar(closeVectors[cvi], "strokes", 0, varMap[tabTextPath]);
+                      }
+                      if (closeVectors[cvi].fills && closeVectors[cvi].fills.length > 0) {
+                        closeVectors[cvi].fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                        bindPaintVar(closeVectors[cvi], "fills", 0, varMap[tabTextPath]);
+                      }
+                    }
+                    tab.appendChild(closeInst);
+                  }
+                }
+
+                if (showLeftIcon || showRightIcon) {
+                  bindVar(tab, "itemSpacing", varMap["tabs/icon-gap"]);
+                }
+
+                if (state === "focus" && tabDef.active) {
+                  tab.effects = [{
+                    type: "DROP_SHADOW",
+                    color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+                    offset: { x: 0, y: 0 },
+                    radius: 0,
+                    spread: 3,
+                    visible: true,
+                    blendMode: "NORMAL"
+                  }];
+                  bindPaintVar(tab, "strokes", 0, varMap["tabs/focus-ring"]);
+                }
+
+                list.appendChild(tab);
               }
 
-              var labelNode = figma.createText();
-              labelNode.name = "Label";
-              labelNode.fontName = font;
-              labelNode.characters = tabDef.label;
-              labelNode.fontSize = 14;
-              labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-              bindVar(labelNode, "fontSize", varMap["tabs/font-size"]);
-              bindVar(labelNode, "fontFamily", varMap["tabs/font-family"]);
-              bindVar(labelNode, "fontStyle", varMap["tabs/font-weight"]);
-              bindVar(labelNode, "lineHeight", varMap["tabs/line-height"]);
-              bindPaintVar(labelNode, "fills", 0, varMap[tabTextPath]);
+              comp.appendChild(list);
 
-              tab.appendChild(labelNode);
-
-              if (state === "focus" && ti === 1 && visualState !== "disabled") {
-                tab.effects = [{
-                  type: "DROP_SHADOW",
-                  color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
-                  offset: { x: 0, y: 0 },
-                  radius: 0,
-                  spread: 3,
-                  visible: true,
-                  blendMode: "NORMAL"
-                }];
-                bindPaintVar(tab, "strokes", 0, varMap["tabs/focus-ring"]);
-              }
-
-              list.appendChild(tab);
+              var colIndex = (((vi * orientations.length + oi) * leftIconModes.length + li) * rightIconModes.length) + rmi;
+              var rowIndex = ri * states.length + si;
+              comp.x = colIndex * (colWidth + gap);
+              comp.y = rowIndex * (rowHeight + gap);
+              page.appendChild(comp);
+              components.push(comp);
             }
-
-            comp.appendChild(list);
-
-            if (state === "disabled") {
-              comp.opacity = 0.6;
-            }
-
-            var colIndex = (vi * orientations.length + oi) * leftIconModes.length + li;
-            var rowIndex = ri * states.length + si;
-            comp.x = colIndex * (colWidth + gap);
-            comp.y = rowIndex * (rowHeight + gap);
-            page.appendChild(comp);
-            components.push(comp);
           }
         }
       }
@@ -5310,7 +5394,7 @@ function tabsTabColorPath(variant, property, state) {
 }
 
 async function findTabsIconComponents() {
-  var result = { image: null, message: null, settings: null };
+  var result = { image: null, message: null, settings: null, close: null };
   var iconCandidates = [];
   var iconsPage = null;
 
@@ -5353,21 +5437,26 @@ async function findTabsIconComponents() {
     if (!result.settings && (name.indexOf("settings") >= 0 || name.indexOf("cog") >= 0 || name.indexOf("gear") >= 0)) {
       result.settings = iconCandidates[j];
     }
+    if (!result.close && (name.indexOf("close") >= 0 || name.indexOf("x") >= 0 || name.indexOf("cancel") >= 0)) {
+      result.close = iconCandidates[j];
+    }
   }
 
   // Fallback: if naming does not match expected keywords, use first 3 components so LeftIcon=On always renders.
-  if ((!result.image || !result.message || !result.settings) && iconCandidates.length >= 3) {
+  if ((!result.image || !result.message || !result.settings || !result.close) && iconCandidates.length >= 3) {
     var sorted = iconCandidates.slice().sort(function(a, b) {
       return a.name.localeCompare(b.name);
     });
     if (!result.image) result.image = sorted[0];
     if (!result.message) result.message = sorted[1];
     if (!result.settings) result.settings = sorted[2];
+    if (!result.close) result.close = sorted[3] || sorted[2];
   }
 
   if (result.image) progress("[Tabs] LeftIcon image source: " + result.image.name);
   if (result.message) progress("[Tabs] LeftIcon message source: " + result.message.name);
   if (result.settings) progress("[Tabs] LeftIcon settings source: " + result.settings.name);
+  if (result.close) progress("[Tabs] RightIcon close source: " + result.close.name);
 
   return result;
 }
@@ -5375,7 +5464,7 @@ async function findTabsIconComponents() {
 function validateTabsVariables(varMap) {
   var variants = ["default", "outlined", "pills"];
   var radii = ["xs", "sm", "md", "lg", "xl"];
-  var states = ["default", "hover", "active", "pressed", "disabled"];
+  var states = ["default", "hover", "active", "disabled"];
   var required = [
     "tabs/font-size",
     "tabs/tab-padding-x",

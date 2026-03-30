@@ -7,7 +7,7 @@ import { useState } from "react";
 export const TABS_VARIANTS = ["default", "outlined", "pills"];
 export const TABS_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
 export const TABS_ORIENTATION_KEYS = ["horizontal", "vertical"];
-export const TABS_STATES = ["default", "active", "hover", "focus", "pressed", "disabled"];
+export const TABS_STATES = ["default", "active", "hover", "focus", "disabled"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -55,7 +55,8 @@ export function TabsPreviewContent({
   selectedState,
   activeColorToken,
   showPanel,
-  showIcons,
+  showLeftIcon,
+  showRightIcon,
 }) {
   const matrixRows = TABS_VARIANTS.map((v) => ({ label: v, variant: v }));
   return (
@@ -73,7 +74,8 @@ export function TabsPreviewContent({
           orientation={activeTabsOrientation}
           state={selectedState === "default" ? undefined : selectedState}
           showPanel={showPanel}
-          showIcons={showIcons}
+          showLeftIcon={showLeftIcon}
+          showRightIcon={showRightIcon}
           interactive={false}
         />
       </PreviewStage>
@@ -91,7 +93,8 @@ export function TabsPreviewContent({
             radius={activeTabsRadius}
             orientation={orientation}
             showPanel={showPanel}
-            showIcons={showIcons}
+            showLeftIcon={showLeftIcon}
+            showRightIcon={showRightIcon}
             interactive={false}
           />
         )}
@@ -109,8 +112,10 @@ export function TabsPropertiesPanel({
   setActiveTabsOrientation,
   showPanel,
   setShowPanel,
-  showIcons,
-  setShowIcons,
+  showLeftIcon,
+  setShowLeftIcon,
+  showRightIcon,
+  setShowRightIcon,
   selectedState,
   setSelectedState,
   forcedState,
@@ -133,8 +138,14 @@ export function TabsPropertiesPanel({
       />
       <PropertyRow
         label="Left Icon"
-        value={showIcons ? "on" : "off"}
-        onChange={(v) => setShowIcons(v === "on")}
+        value={showLeftIcon ? "on" : "off"}
+        onChange={(v) => setShowLeftIcon(v === "on")}
+        options={["off", "on"]}
+      />
+      <PropertyRow
+        label="Right Icon"
+        value={showRightIcon ? "on" : "off"}
+        onChange={(v) => setShowRightIcon(v === "on")}
         options={["off", "on"]}
       />
       <PropertyRow
@@ -161,16 +172,21 @@ export default function TabsPreviewPanel({
   activeColorToken,
   showPanel,
   setShowPanel,
-  showIcons,
-  setShowIcons,
+  showLeftIcon,
+  setShowLeftIcon,
+  showRightIcon,
+  setShowRightIcon,
 }) {
   const [internalShowPanel, setInternalShowPanel] = useState(false);
-  const [internalShowIcons, setInternalShowIcons] = useState(false);
+  const [internalShowLeftIcon, setInternalShowLeftIcon] = useState(false);
+  const [internalShowRightIcon, setInternalShowRightIcon] = useState(false);
   const [internalState, setInternalState] = useState("default");
   const resolvedShowPanel = typeof showPanel === "boolean" ? showPanel : internalShowPanel;
   const resolvedSetShowPanel = setShowPanel || setInternalShowPanel;
-  const resolvedShowIcons = typeof showIcons === "boolean" ? showIcons : internalShowIcons;
-  const resolvedSetShowIcons = setShowIcons || setInternalShowIcons;
+  const resolvedShowLeftIcon = typeof showLeftIcon === "boolean" ? showLeftIcon : internalShowLeftIcon;
+  const resolvedSetShowLeftIcon = setShowLeftIcon || setInternalShowLeftIcon;
+  const resolvedShowRightIcon = typeof showRightIcon === "boolean" ? showRightIcon : internalShowRightIcon;
+  const resolvedSetShowRightIcon = setShowRightIcon || setInternalShowRightIcon;
   const resolvedState = forcedState || internalState;
 
   return (
@@ -184,8 +200,10 @@ export default function TabsPreviewPanel({
         setActiveTabsOrientation={setActiveTabsOrientation}
         showPanel={resolvedShowPanel}
         setShowPanel={resolvedSetShowPanel}
-        showIcons={resolvedShowIcons}
-        setShowIcons={resolvedSetShowIcons}
+        showLeftIcon={resolvedShowLeftIcon}
+        setShowLeftIcon={resolvedSetShowLeftIcon}
+        showRightIcon={resolvedShowRightIcon}
+        setShowRightIcon={resolvedSetShowRightIcon}
         selectedState={resolvedState}
         setSelectedState={setInternalState}
         forcedState={forcedState}
@@ -200,7 +218,8 @@ export default function TabsPreviewPanel({
           selectedState={resolvedState}
           activeColorToken={activeColorToken}
           showPanel={resolvedShowPanel}
-          showIcons={resolvedShowIcons}
+          showLeftIcon={resolvedShowLeftIcon}
+          showRightIcon={resolvedShowRightIcon}
         />
       </div>
     </div>

@@ -1,19 +1,26 @@
 import { useState } from "react";
-import { Tabs } from "@mantine/core";
 import Image01Icon from "@untitledui-icons/react/line/Image01Icon";
 import MessageCircle01Icon from "@untitledui-icons/react/line/MessageCircle01Icon";
 import Settings01Icon from "@untitledui-icons/react/line/Settings01Icon";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
-const VARIANT_MAP = {
-  default: "default",
-  outlined: "outline",
-  pills: "pills",
-};
+const TAB_ITEMS = [
+  { key: "overview", label: "Overview", Icon: Image01Icon },
+  { key: "details", label: "Details", Icon: MessageCircle01Icon },
+  { key: "settings", label: "Settings", Icon: Settings01Icon },
+  { key: "analytics", label: "Analytics", Icon: Image01Icon },
+];
 
 function getColor(brands, brandId, key, tokens) {
   return resolveColor(brands, brandId, tokens[key]?.semantic, "light", key);
+}
+
+function weightToCss(weight, isActive) {
+  if (!isActive) return 400;
+  if (weight === "Bold") return 700;
+  if (weight === "Semi Bold") return 600;
+  return 500;
 }
 
 export default function TabsPreview({
@@ -24,11 +31,12 @@ export default function TabsPreview({
   orientation = "horizontal",
   state,
   showPanel = false,
-  showIcons = false,
+  showLeftIcon = false,
+  showRightIcon = false,
   interactive = false,
 }) {
-  const [activeTab, setActiveTab] = useState("overview");
-  const currentTab = interactive ? activeTab : "overview";
+  const [activeTab, setActiveTab] = useState("details");
+  const currentTab = interactive ? activeTab : "details";
   const tokens = COMPONENT_TOKENS.tabs;
   const prefix = `tabs-${variant}`;
 
@@ -37,17 +45,14 @@ export default function TabsPreview({
   const tabBg = getColor(brands, brandId, `${prefix}-tab-background`, tokens);
   const tabBgHover = getColor(brands, brandId, `${prefix}-tab-background-hover`, tokens);
   const tabBgActive = getColor(brands, brandId, `${prefix}-tab-background-active`, tokens);
-  const tabBgPressed = getColor(brands, brandId, `${prefix}-tab-background-pressed`, tokens);
   const tabBgDisabled = getColor(brands, brandId, `${prefix}-tab-background-disabled`, tokens);
   const tabText = getColor(brands, brandId, `${prefix}-tab-text`, tokens);
   const tabTextHover = getColor(brands, brandId, `${prefix}-tab-text-hover`, tokens);
   const tabTextActive = getColor(brands, brandId, `${prefix}-tab-text-active`, tokens);
-  const tabTextPressed = getColor(brands, brandId, `${prefix}-tab-text-pressed`, tokens);
   const tabTextDisabled = getColor(brands, brandId, `${prefix}-tab-text-disabled`, tokens);
   const tabBorder = getColor(brands, brandId, `${prefix}-tab-border`, tokens);
   const tabBorderHover = getColor(brands, brandId, `${prefix}-tab-border-hover`, tokens);
   const tabBorderActive = getColor(brands, brandId, `${prefix}-tab-border-active`, tokens);
-  const tabBorderPressed = getColor(brands, brandId, `${prefix}-tab-border-pressed`, tokens);
   const tabBorderDisabled = getColor(brands, brandId, `${prefix}-tab-border-disabled`, tokens);
   const focusRing = getColor(brands, brandId, "tabs-focus-ring", tokens);
 
@@ -63,145 +68,178 @@ export default function TabsPreview({
   const tabBorderWidth = resolveDimension(brands, brandId, "tabs-tab-border-width");
   const panelPadding = resolveDimension(brands, brandId, "tabs-panel-padding");
   const iconSize = resolveDimension(brands, brandId, "tabs-icon-size");
+  const iconStroke = resolveDimension(brands, brandId, "tabs-icon-stroke-width");
   const iconGap = resolveDimension(brands, brandId, "tabs-icon-gap");
 
-  const forcedHover = state === "hover";
-  const forcedPressed = state === "pressed";
-  const forcedFocus = state === "focus";
-  const forcedDisabled = state === "disabled";
-  const isPills = variant === "pills";
+  const currentState = state || "default";
+  const forcedFocus = currentState === "focus";
+  const forcedDisabled = currentState === "disabled";
+  const isDefaultVariant = variant === "default";
+  const activeDemoKey = currentTab;
 
-  const tabBaseBg = tabBg;
-  const tabBaseText = tabText;
-  const tabBaseBorder = tabBorder;
-  const baseTabBg = tabBaseBg;
-  const hoverTabBg = tabBgHover;
-  const pressedTabBg = tabBgPressed;
-  const activeTabBg = tabBgActive;
+  const getVisualState = (tabKey) => {
+    if (currentState === "disabled") return "disabled";
+    if (currentState === "hover") return tabKey === activeDemoKey ? "hover" : "default";
+    if (currentState === "focus") return tabKey === activeDemoKey ? "active" : "default";
+    if (currentState === "active" || currentState === "default") {
+      return tabKey === activeDemoKey ? "active" : "default";
+    }
+    return tabKey === activeDemoKey ? "active" : "default";
+  };
 
   const getTabVisual = (tabKey) => {
-    const isActiveTab = tabKey === currentTab;
-
-    if (isActiveTab && forcedDisabled) {
-      return {
-        backgroundColor: tabBgDisabled,
-        color: tabTextDisabled,
-        borderColor: tabBorderDisabled,
-        cursor: "not-allowed",
-        boxShadow: "none",
-      };
-    }
-
-    if (isActiveTab && forcedPressed) {
-      return {
-        backgroundColor: pressedTabBg,
-        color: tabTextPressed,
-        borderColor: tabBorderPressed,
-        cursor: "pointer",
-        boxShadow: "none",
-      };
-    }
-
-    if (isActiveTab && forcedHover) {
-      return {
-        backgroundColor: hoverTabBg,
-        color: tabTextHover,
-        borderColor: tabBorderHover,
-        cursor: "pointer",
-        boxShadow: "none",
-      };
-    }
-
-    if (isActiveTab) {
-      return {
-        backgroundColor: activeTabBg,
-        color: tabTextActive,
-        borderColor: tabBorderActive,
-        cursor: "pointer",
-        boxShadow: forcedFocus ? `0 0 0 2px ${focusRing}40` : "none",
-      };
-    }
-
+    const visualState = getVisualState(tabKey);
+    const bgMap = {
+      default: tabBg,
+      hover: tabBgHover,
+      active: tabBgActive,
+      disabled: tabBgDisabled,
+    };
+    const textMap = {
+      default: tabText,
+      hover: tabTextHover,
+      active: tabTextActive,
+      disabled: tabTextDisabled,
+    };
+    const borderMap = {
+      default: tabBorder,
+      hover: tabBorderHover,
+      active: tabBorderActive,
+      disabled: tabBorderDisabled,
+    };
     return {
-      backgroundColor: baseTabBg,
-      color: tabBaseText,
-      borderColor: tabBaseBorder,
-      cursor: "pointer",
-      boxShadow: "none",
+      bg: bgMap[visualState],
+      text: textMap[visualState],
+      border: borderMap[visualState],
+      visualState,
     };
   };
 
+  const listStyle = {
+    display: "flex",
+    flexDirection: orientation === "horizontal" ? "row" : "column",
+    alignItems: "stretch",
+    gap: `${listGap}px`,
+    backgroundColor: isDefaultVariant ? "transparent" : listBg,
+    borderBottom: orientation === "horizontal" ? `${listBorderWidth}px solid ${listBorder}` : "none",
+    borderRight: orientation === "vertical" ? `${listBorderWidth}px solid ${listBorder}` : "none",
+    width: "fit-content",
+  };
+
   return (
-    <div style={{ width: orientation === "vertical" ? 560 : 520 }}>
-      <Tabs
-        value={currentTab}
-        onChange={interactive ? setActiveTab : undefined}
-        orientation={orientation}
-        variant={VARIANT_MAP[variant] || "default"}
-        styles={{
-          list: {
-            backgroundColor: listBg,
-            gap: `${listGap}px`,
-            borderBottom: orientation === "horizontal" ? `${listBorderWidth}px solid ${listBorder}` : "none",
-            borderInlineEnd: orientation === "vertical" ? `${listBorderWidth}px solid ${listBorder}` : "none",
-            paddingBottom: orientation === "horizontal" ? 2 : 0,
-            paddingInlineEnd: orientation === "vertical" ? 2 : 0,
-          },
-          tab: {
-            backgroundColor: baseTabBg,
-            color: tabBaseText,
-            border: `${tabBorderWidth}px solid ${tabBaseBorder}`,
-            borderRadius: `${tabsRadius}px`,
-            padding: `${tabPaddingY}px ${tabPaddingX}px`,
-            fontSize: `${tabsFontSize}px`,
-            fontFamily: tabsFontFamily ? `"${tabsFontFamily}", sans-serif` : undefined,
-            fontWeight: tabsFontWeight === "Semi Bold" ? 600 : tabsFontWeight === "Bold" ? 700 : 400,
-            lineHeight: `${tabsLineHeight}px`,
-            cursor: "pointer",
-          },
-          panel: {
+    <div style={{ width: orientation === "vertical" ? 620 : 580 }}>
+      <div style={listStyle}>
+        {TAB_ITEMS.map(({ key, label, Icon }) => {
+          const tabVisual = getTabVisual(key);
+          const interactiveDisabled = forcedDisabled;
+          const isFocusedPreviewTab = forcedFocus && key === activeDemoKey;
+          const tabStyle = isDefaultVariant
+            ? {
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: `${iconGap}px`,
+                background: "transparent",
+                border: "none",
+                borderBottom:
+                  orientation === "horizontal"
+                    ? `${tabBorderWidth}px solid ${tabVisual.border}`
+                    : "none",
+                borderRight:
+                  orientation === "vertical"
+                    ? `${tabBorderWidth}px solid ${tabVisual.border}`
+                    : "none",
+                borderRadius: 0,
+                padding: `${tabPaddingY}px ${tabPaddingX}px`,
+                color: tabVisual.text,
+                cursor: interactiveDisabled ? "not-allowed" : "pointer",
+                outline:
+                  isFocusedPreviewTab
+                    ? `2px solid ${focusRing}`
+                    : "none",
+                outlineOffset: isFocusedPreviewTab ? "2px" : "0px",
+                whiteSpace: "nowrap",
+              }
+            : {
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: `${iconGap}px`,
+                backgroundColor: tabVisual.bg,
+                border: `${tabBorderWidth}px solid ${tabVisual.border}`,
+                borderRadius: `${tabsRadius}px`,
+                padding: `${tabPaddingY}px ${tabPaddingX}px`,
+                color: tabVisual.text,
+                cursor: interactiveDisabled ? "not-allowed" : "pointer",
+                outline:
+                  isFocusedPreviewTab
+                    ? `2px solid ${focusRing}`
+                    : "none",
+                outlineOffset: isFocusedPreviewTab ? "2px" : "0px",
+                whiteSpace: "nowrap",
+              };
+
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={() => {
+                if (interactive && !interactiveDisabled) setActiveTab(key);
+              }}
+              disabled={interactiveDisabled}
+              style={tabStyle}
+            >
+              {showLeftIcon && (
+                <Icon
+                  width={iconSize}
+                  height={iconSize}
+                  strokeWidth={iconStroke || 2}
+                  style={{ color: tabVisual.text, flexShrink: 0 }}
+                />
+              )}
+              <span
+                style={{
+                  fontSize: `${tabsFontSize}px`,
+                  fontFamily: tabsFontFamily ? `"${tabsFontFamily}", sans-serif` : undefined,
+                  fontWeight: weightToCss(tabsFontWeight, tabVisual.visualState === "active"),
+                  lineHeight: `${tabsLineHeight}px`,
+                  color: tabVisual.text,
+                }}
+              >
+                {label}
+              </span>
+              {showRightIcon && (
+                <span
+                  style={{
+                    fontSize: `${Math.max(12, tabsFontSize - 1)}px`,
+                    lineHeight: 1,
+                    color: tabVisual.text,
+                    marginLeft: `${Math.max(0, iconGap - 2)}px`,
+                    flexShrink: 0,
+                  }}
+                >
+                  ×
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+      {showPanel && (
+        <div
+          style={{
+            marginTop: `${panelPadding}px`,
             padding: `${panelPadding}px`,
             color: tabText,
-          },
-          tabSection: {
-            width: `${iconSize}px`,
-            minWidth: `${iconSize}px`,
-            height: `${iconSize}px`,
-            marginInlineEnd: `${iconGap}px`,
-          },
-        }}
-      >
-        <Tabs.List>
-          <Tabs.Tab
-            value="overview"
-            disabled={false}
-            leftSection={showIcons ? <Image01Icon width={iconSize} height={iconSize} /> : null}
-            style={getTabVisual("overview")}
-          >
-            Overview
-          </Tabs.Tab>
-          <Tabs.Tab
-            value="details"
-            disabled={false}
-            leftSection={showIcons ? <MessageCircle01Icon width={iconSize} height={iconSize} /> : null}
-            style={getTabVisual("details")}
-          >
-            Details
-          </Tabs.Tab>
-          <Tabs.Tab
-            value="settings"
-            disabled={false}
-            leftSection={showIcons ? <Settings01Icon width={iconSize} height={iconSize} /> : null}
-            style={getTabVisual("settings")}
-          >
-            Settings
-          </Tabs.Tab>
-        </Tabs.List>
-
-        {showPanel && <Tabs.Panel value="overview">Overview content</Tabs.Panel>}
-        {showPanel && <Tabs.Panel value="details">Details content</Tabs.Panel>}
-        {showPanel && <Tabs.Panel value="settings">Settings content</Tabs.Panel>}
-      </Tabs>
+            border: `${listBorderWidth}px solid ${listBorder}`,
+            borderRadius: `${tabsRadius}px`,
+            width: "fit-content",
+            minWidth: 260,
+          }}
+        >
+          {currentTab.charAt(0).toUpperCase() + currentTab.slice(1)} content
+        </div>
+      )}
     </div>
   );
 }

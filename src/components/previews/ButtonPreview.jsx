@@ -84,8 +84,7 @@ export default function ButtonPreview({
   const focusStyles = isFocus
     ? focusRingStyle === "attached"
       ? {
-          outline: `${focusRingWidth || 2}px solid ${focusRing || "#228BE6"}`,
-          outlineOffset: "0px",
+          boxShadow: `0 0 0 1px rgba(255,255,255,0.65), 0 0 0 4px ${focusRing || "#228BE6"}`,
           borderRadius: `${borderRadius || 8}px`,
         }
       : {
