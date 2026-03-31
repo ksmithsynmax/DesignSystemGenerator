@@ -104,6 +104,7 @@ import {
 } from "./components/panels/AnchorPreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
+import { buildComponentDocsExport } from "./utils/buildComponentDocsExport";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
 
 const VARIANTS_BY_COMPONENT = {
@@ -1030,6 +1031,17 @@ export default function App() {
     const a = document.createElement("a");
     a.href = url;
     a.download = "design-system-tokens.md";
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleComponentDocsExport = () => {
+    const md = buildComponentDocsExport(brands);
+    const blob = new Blob([md], { type: "text/markdown" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "component-export-docs.md";
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -2076,6 +2088,21 @@ export default function App() {
                   style={{ background: "#25262B", border: "1px solid #373A40", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#C1C2C5", cursor: "pointer", fontFamily: "monospace" }}
                 >
                   Download Markdown
+                </button>
+              </div>
+
+              <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
+                <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+                  Component Docs Export
+                </div>
+                <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
+                  Download a component usage guide with Figma properties, variant/state values, and brand light/dark references.
+                </p>
+                <button
+                  onClick={handleComponentDocsExport}
+                  style={{ background: "#25262B", border: "1px solid #373A40", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#C1C2C5", cursor: "pointer", fontFamily: "monospace" }}
+                >
+                  Download Usage Guide
                 </button>
               </div>
 

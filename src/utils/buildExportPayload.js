@@ -55,6 +55,22 @@ function resolveMappingToColor(brand, mapping) {
   return { value, primitiveAlias };
 }
 
+function resolveMappingToSemanticToken(brand, mapping) {
+  if (!mapping) {
+    return { type: "COLOR", value: "#FF00FF", alias: null };
+  }
+  if (mapping.color === "transparent") {
+    return { type: "COLOR", value: "transparent", alias: "transparent" };
+  }
+  const baseHex = brand.primitives[mapping.color]?.[mapping.index]
+    ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
+    ?? null;
+  const opacity = normalizeOpacity(mapping.opacity);
+  const value = baseHex ? applyOpacity(baseHex, opacity) : "#FF00FF";
+  const alias = `${mapping.color}/${mapping.index}${opacity !== 100 ? ` @ ${opacity}%` : ""}`;
+  return { type: "COLOR", value, alias };
+}
+
 /**
  * Builds the fully-resolved token payload for all brands.
  * Returns a plain object (not serialized).
@@ -129,8 +145,28 @@ export function buildExportPayload(brands, options) {
 
           const lightHasSemantic = Boolean(def.semantic && lightSemanticMapping);
           const darkHasSemantic = Boolean(def.semantic && darkSemanticMapping);
-          const lightAlias = !lightOverride && lightHasSemantic ? def.semantic : null;
-          const darkAlias = !darkOverride && darkHasSemantic ? def.semantic : null;
+          const lightOpacity = lightOverride ? normalizeOpacity(lightOverride.opacity) : 100;
+          const darkOpacity = darkOverride ? normalizeOpacity(darkOverride.opacity) : 100;
+          const needsBridge = (lightOverride && lightOpacity !== 100) || (darkOverride && darkOpacity !== 100);
+          const bridgeSemanticKey = needsBridge ? `component/${tokenName}` : null;
+
+          if (bridgeSemanticKey) {
+            out[brandId].semantic.light[bridgeSemanticKey] = resolveMappingToSemanticToken(
+              brand,
+              lightOverride || lightSemanticMapping
+            );
+            out[brandId].semantic.dark[bridgeSemanticKey] = resolveMappingToSemanticToken(
+              brand,
+              darkOverride || darkSemanticMapping
+            );
+          }
+
+          const lightAlias = bridgeSemanticKey
+            ? bridgeSemanticKey
+            : (!lightOverride && lightHasSemantic ? def.semantic : null);
+          const darkAlias = bridgeSemanticKey
+            ? bridgeSemanticKey
+            : (!darkOverride && darkHasSemantic ? def.semantic : null);
 
           out[brandId].components[def.figmaPath] = {
             type: "COLOR",

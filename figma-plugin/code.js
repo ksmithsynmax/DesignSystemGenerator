@@ -387,9 +387,24 @@ async function syncTokens(payload) {
   // PHASE 2: Semantic — alias to Primitive variables (brand × theme modes)
   // ══════════════════════════════════════════════════════════════
   progress("Phase 2: Syncing Semantic tokens...");
-  // Get semantic keys from first mode's light theme
-  var firstBrandSemantic = firstBrand.semantic.light || firstBrand.semantic;
-  var semanticKeys = Object.keys(firstBrandSemantic);
+  // Get semantic keys from union of all brand/theme semantic maps
+  var semanticKeySet = {};
+  for (var skb = 0; skb < syncBrands.length; skb++) {
+    var skBrandId = syncBrands[skb];
+    var skBrandPayload = payload[skBrandId];
+    if (!skBrandPayload || !skBrandPayload.semantic) continue;
+    var skLight = skBrandPayload.semantic.light || {};
+    var skDark = skBrandPayload.semantic.dark || {};
+    var skLightKeys = Object.keys(skLight);
+    for (var slk = 0; slk < skLightKeys.length; slk++) {
+      semanticKeySet[skLightKeys[slk]] = true;
+    }
+    var skDarkKeys = Object.keys(skDark);
+    for (var sdk = 0; sdk < skDarkKeys.length; sdk++) {
+      semanticKeySet[skDarkKeys[sdk]] = true;
+    }
+  }
+  var semanticKeys = Object.keys(semanticKeySet);
   for (var si = 0; si < semanticKeys.length; si++) {
     var semKey = semanticKeys[si];
     var semVar = semanticVarMap[semKey];
@@ -410,10 +425,6 @@ async function syncTokens(payload) {
       if (!semToken) continue;
       // semToken.alias is e.g. "blue/5" — look up in brand primitives first, then global
       var primTarget = brandPrimVarMaps[mode.brandId][semToken.alias] || globalPrimVarMap[semToken.alias];
-      if (!primTarget && semToken.alias && semToken.alias.indexOf(" @ ") > -1) {
-        var basePrimAlias = semToken.alias.split(" @ ")[0];
-        primTarget = brandPrimVarMaps[mode.brandId][basePrimAlias] || globalPrimVarMap[basePrimAlias];
-      }
       if (primTarget) {
         var semAlias = figma.variables.createVariableAlias(primTarget);
         semVar.setValueForMode(semModes.modeMap[mode.key], semAlias);
@@ -691,6 +702,20 @@ function resolveManagedComponentKeyFromName(name) {
 
 async function buildComponents(varMap, componentsToBuild, buildOptions) {
   var page = figma.currentPage;
+  if (page && page.name === "Component Documentation") {
+    page = null;
+    for (var pgi = 0; pgi < figma.root.children.length; pgi++) {
+      var rootNode = figma.root.children[pgi];
+      if (rootNode.type === "PAGE" && rootNode.name === "Components") {
+        page = rootNode;
+        break;
+      }
+    }
+    if (!page) {
+      page = figma.createPage();
+      page.name = "Components";
+    }
+  }
   var buildFailures = [];
   var requestedSet = null;
 
@@ -857,6 +882,13 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
   var validSets = generatedSets.filter(function (set) { return Boolean(set); });
   positionComponentSets(validSets, compSetGap);
 
+  try {
+    await buildUsageDocsPage(validSets, font);
+  } catch (docsErr) {
+    buildFailures.push("Usage docs: " + String(docsErr));
+    progress("Failed to build usage docs: " + String(docsErr));
+  }
+
   // Scroll viewport to show all component sets
   figma.viewport.scrollAndZoomIntoView(validSets);
 
@@ -866,6 +898,470 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
 
   progress("Components created.");
   return { failures: buildFailures };
+}
+
+async function buildUsageDocsPage(componentSets, titleFont) {
+  if (!componentSets || componentSets.length === 0) return;
+
+  function normalizeName(value) {
+    return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
+  }
+
+  function appendText(node, font, text, size, color, name) {
+    var t = figma.createText();
+    t.name = name || "Text";
+    t.fontName = font;
+    t.fontSize = size;
+    t.characters = text;
+    t.fills = [{ type: "SOLID", color: color }];
+    node.appendChild(t);
+    return t;
+  }
+
+  function createPanel(name, itemSpacing) {
+    var panel = figma.createFrame();
+    panel.name = name;
+    panel.layoutMode = "VERTICAL";
+    panel.primaryAxisSizingMode = "AUTO";
+    panel.counterAxisSizingMode = "AUTO";
+    panel.counterAxisAlignItems = "MIN";
+    panel.itemSpacing = itemSpacing;
+    panel.paddingLeft = 16;
+    panel.paddingRight = 16;
+    panel.paddingTop = 16;
+    panel.paddingBottom = 16;
+    panel.cornerRadius = 8;
+    panel.clipsContent = false;
+    panel.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.16, b: 0.28 } }];
+    return panel;
+  }
+
+  function getPropValues(variantProps, name) {
+    var keys = Object.keys(variantProps || {});
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i].toLowerCase() === String(name).toLowerCase()) {
+        return (variantProps[keys[i]] && variantProps[keys[i]].values) ? variantProps[keys[i]].values.slice() : [];
+      }
+    }
+    return [];
+  }
+
+  function getPropKey(variantProps, name) {
+    var keys = Object.keys(variantProps || {});
+    for (var i = 0; i < keys.length; i++) {
+      if (keys[i].toLowerCase() === String(name).toLowerCase()) return keys[i];
+    }
+    return null;
+  }
+
+  function pickOrdered(values, preferred) {
+    var out = [];
+    for (var pi = 0; pi < preferred.length; pi++) {
+      for (var vi = 0; vi < values.length; vi++) {
+        if (String(values[vi]).toLowerCase() === String(preferred[pi]).toLowerCase()) {
+          out.push(values[vi]);
+          break;
+        }
+      }
+    }
+    for (var rv = 0; rv < values.length; rv++) {
+      if (out.indexOf(values[rv]) < 0) out.push(values[rv]);
+    }
+    return out;
+  }
+
+  function clearChildren(node) {
+    for (var i = node.children.length - 1; i >= 0; i--) {
+      node.children[i].remove();
+    }
+  }
+
+  function resolveBaseComponent(set) {
+    if (!set) return null;
+    if (set.type === "COMPONENT") return set;
+    if (set.type !== "COMPONENT_SET") return null;
+    for (var i = 0; i < set.children.length; i++) {
+      if (set.children[i].type === "COMPONENT") return set.children[i];
+    }
+    return null;
+  }
+
+  function addInstancesRow(target, title, labels, createInstanceForLabel) {
+    var rowWrap = figma.createFrame();
+    rowWrap.layoutMode = "VERTICAL";
+    rowWrap.primaryAxisSizingMode = "AUTO";
+    rowWrap.counterAxisSizingMode = "AUTO";
+    rowWrap.counterAxisAlignItems = "MIN";
+    rowWrap.itemSpacing = 8;
+    rowWrap.clipsContent = false;
+    rowWrap.fills = [];
+
+    appendText(rowWrap, titleFont, title, 16, { r: 0.93, g: 0.94, b: 0.95 }, "Row Title");
+
+    var row = figma.createFrame();
+    row.layoutMode = "HORIZONTAL";
+    row.primaryAxisSizingMode = "AUTO";
+    row.counterAxisSizingMode = "AUTO";
+    row.counterAxisAlignItems = "MIN";
+    row.itemSpacing = 12;
+    row.clipsContent = false;
+    row.fills = [];
+
+    for (var i = 0; i < labels.length; i++) {
+      var label = labels[i];
+      var cell = figma.createFrame();
+      cell.layoutMode = "VERTICAL";
+      cell.primaryAxisSizingMode = "AUTO";
+      cell.counterAxisSizingMode = "AUTO";
+      cell.counterAxisAlignItems = "CENTER";
+      cell.itemSpacing = 6;
+      cell.clipsContent = false;
+      cell.fills = [];
+      appendText(cell, bodyFont, String(label), 10, { r: 0.65, g: 0.69, b: 0.75 }, "Cell Label");
+      var inst = null;
+      try {
+        inst = createInstanceForLabel(label);
+      } catch (instErr) {
+        progress("Docs instance creation failed (" + String(label) + "): " + String(instErr));
+      }
+      if (inst) cell.appendChild(inst);
+      row.appendChild(cell);
+    }
+
+    rowWrap.appendChild(row);
+    target.appendChild(rowWrap);
+  }
+
+  function getVariantDescription(componentName, variantName) {
+    var comp = String(componentName || "").toLowerCase();
+    var variant = String(variantName || "").toLowerCase();
+    if (comp === "button") {
+      if (variant === "filled") return "Serves as the primary button and CTA, representing the most important action to move forward in the flow.";
+      if (variant === "outlined") return "Provides a medium level of emphasis, guiding user to take action on functions and features.";
+      if (variant === "ghost") return "Low-emphasis action used for tertiary interactions and secondary moments.";
+    }
+    return "Use this variant when that level of visual emphasis is needed.";
+  }
+
+  var docsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    if (figma.root.children[pi].type === "PAGE" && figma.root.children[pi].name === "Component Documentation") {
+      docsPage = figma.root.children[pi];
+      break;
+    }
+  }
+  if (!docsPage) {
+    docsPage = figma.createPage();
+    docsPage.name = "Component Documentation";
+  }
+
+  try { await docsPage.loadAsync(); } catch (e) {}
+
+  try {
+    for (var ci = docsPage.children.length - 1; ci >= 0; ci--) {
+      var childName = String(docsPage.children[ci].name || "");
+      if (childName.indexOf("__AUTO_DOCS__") === 0) docsPage.children[ci].remove();
+    }
+  } catch (clearErr) {
+    progress("Docs cleanup warning: " + String(clearErr));
+  }
+
+  var bodyFont = { family: titleFont.family, style: "Regular" };
+  try {
+    await figma.loadFontAsync(bodyFont);
+  } catch (e) {
+    bodyFont = titleFont;
+  }
+
+  var docsX = 0;
+  var docsY = 0;
+  var docsGap = 80;
+  var docsCreated = 0;
+  var docsSkipped = 0;
+
+  for (var si = 0; si < componentSets.length; si++) {
+    var set = componentSets[si];
+    if (!set) continue;
+    try {
+
+    var setName = set.name || ("Component " + (si + 1));
+    var slug = normalizeName(setName);
+    var variantProps = set.variantGroupProperties || {};
+    var variants = getPropValues(variantProps, "Variant");
+    var states = getPropValues(variantProps, "State");
+    var sizes = getPropValues(variantProps, "Size");
+    var hasVariants = variants.length > 0;
+    var hasSizes = sizes.length > 0;
+    var hasStates = states.length > 0;
+    var hasIcons = getPropValues(variantProps, "LeftIcon").length > 0 || getPropValues(variantProps, "RightIcon").length > 0;
+
+    var doc = figma.createFrame();
+    doc.name = "__AUTO_DOCS__ - " + setName;
+    doc.layoutMode = "VERTICAL";
+    doc.primaryAxisSizingMode = "AUTO";
+    doc.counterAxisSizingMode = "AUTO";
+    doc.counterAxisAlignItems = "MIN";
+    doc.itemSpacing = 16;
+    doc.paddingLeft = 24;
+    doc.paddingRight = 24;
+    doc.paddingTop = 24;
+    doc.paddingBottom = 24;
+    doc.fills = [{ type: "SOLID", color: { r: 0.09, g: 0.1, b: 0.14 } }];
+    doc.cornerRadius = 8;
+    doc.clipsContent = false;
+    doc.resize(1240, doc.height);
+
+    appendText(doc, titleFont, setName, 30, { r: 0.91, g: 0.92, b: 0.94 }, "Component Title");
+    appendText(
+      doc,
+      bodyFont,
+      "Guidelines for implementing " + setName.toLowerCase() + " consistently across the platform.",
+      12,
+      { r: 0.64, g: 0.67, b: 0.73 },
+      "Component Subtitle"
+    );
+
+    var variantsSlot = null;
+    if (hasVariants) {
+      appendText(doc, titleFont, "Variants", 30, { r: 0.13, g: 0.55, b: 0.9 }, "Variants Heading");
+      appendText(doc, bodyFont, "Visual variants available for this component.", 12, { r: 0.64, g: 0.67, b: 0.73 }, "Variants Subtitle");
+      variantsSlot = createPanel("slot:" + slug + ":variants", 10);
+      variantsSlot.resize(1192, variantsSlot.height);
+      appendText(
+        variantsSlot,
+        bodyFont,
+        "Expected variants: " + variants.join(", "),
+        12,
+        { r: 0.65, g: 0.69, b: 0.75 },
+        "Variants Hint"
+      );
+      doc.appendChild(variantsSlot);
+    }
+
+    var sizeSlot = null;
+    if (hasSizes) {
+      appendText(doc, titleFont, "Size", 30, { r: 0.13, g: 0.55, b: 0.9 }, "Size Heading");
+      appendText(doc, bodyFont, "Size options for this component.", 12, { r: 0.64, g: 0.67, b: 0.73 }, "Size Subtitle");
+      sizeSlot = createPanel("slot:" + slug + ":size", 10);
+      sizeSlot.resize(1192, sizeSlot.height);
+      appendText(
+        sizeSlot,
+        bodyFont,
+        "Expected sizes: " + sizes.join(", "),
+        12,
+        { r: 0.65, g: 0.69, b: 0.75 },
+        "Size Hint"
+      );
+      doc.appendChild(sizeSlot);
+    }
+
+    var statesSlot = null;
+    if (hasStates) {
+      appendText(doc, titleFont, "States", 30, { r: 0.13, g: 0.55, b: 0.9 }, "States Heading");
+      appendText(doc, bodyFont, "Interactive states used in documentation examples.", 12, { r: 0.64, g: 0.67, b: 0.73 }, "States Subtitle");
+      statesSlot = createPanel("slot:" + slug + ":states", 10);
+      statesSlot.resize(1192, statesSlot.height);
+      appendText(statesSlot, bodyFont, "Expected states: " + states.join(", "), 12, { r: 0.65, g: 0.69, b: 0.75 }, "States Hint");
+      doc.appendChild(statesSlot);
+    }
+
+    var leftSlot = null;
+    var rightSlot = null;
+    if (hasIcons) {
+      appendText(doc, titleFont, "With Icons", 30, { r: 0.13, g: 0.55, b: 0.9 }, "Icons Heading");
+      appendText(doc, bodyFont, "Examples with optional icon placements.", 12, { r: 0.64, g: 0.67, b: 0.73 }, "Icons Subtitle");
+      leftSlot = createPanel("slot:" + slug + ":icons-left", 10);
+      leftSlot.resize(1192, leftSlot.height);
+      appendText(leftSlot, bodyFont, "Left icon examples go here.", 12, { r: 0.65, g: 0.69, b: 0.75 }, "Left Icon Hint");
+      doc.appendChild(leftSlot);
+      rightSlot = createPanel("slot:" + slug + ":icons-right", 10);
+      rightSlot.resize(1192, rightSlot.height);
+      appendText(rightSlot, bodyFont, "Right icon examples go here.", 12, { r: 0.65, g: 0.69, b: 0.75 }, "Right Icon Hint");
+      doc.appendChild(rightSlot);
+    }
+
+    if (set.type === "COMPONENT_SET" || set.type === "COMPONENT") {
+      var baseComponent = resolveBaseComponent(set);
+      if (!baseComponent) {
+        docsPage.appendChild(doc);
+        doc.x = docsX;
+        doc.y = docsY;
+        docsY += nodeRenderedHeight(doc) + docsGap;
+        continue;
+      }
+
+      var variantKey = getPropKey(variantProps, "Variant");
+      var stateKey = getPropKey(variantProps, "State");
+      var sizeKey = getPropKey(variantProps, "Size");
+      var leftIconKey = getPropKey(variantProps, "LeftIcon");
+      var rightIconKey = getPropKey(variantProps, "RightIcon");
+
+      var orderedVariants = pickOrdered(variants, ["Filled", "Outlined", "Ghost", "Default", "Light", "Transparent", "Pills"]).slice(0, 3);
+      var orderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
+      var orderedSizes = pickOrdered(sizes, ["XXS", "XS", "SM", "MD", "LG", "XL", "Default"]).slice(0, 5);
+
+      var defaultVariant = orderedVariants.length > 0 ? orderedVariants[0] : null;
+      var defaultState = orderedStates.length > 0 ? orderedStates[0] : null;
+      var defaultSize = orderedSizes.length > 0 ? orderedSizes[0] : null;
+
+      var leftValues = leftIconKey ? getPropValues(variantProps, leftIconKey) : [];
+      var rightValues = rightIconKey ? getPropValues(variantProps, rightIconKey) : [];
+      var leftOn = leftValues.indexOf("On") >= 0 ? "On" : (leftValues.indexOf("True") >= 0 ? "True" : (leftValues[0] || null));
+      var leftOff = leftValues.indexOf("Off") >= 0 ? "Off" : (leftValues.indexOf("False") >= 0 ? "False" : (leftValues[0] || null));
+      var rightOn = rightValues.indexOf("On") >= 0 ? "On" : (rightValues.indexOf("True") >= 0 ? "True" : (rightValues[0] || null));
+      var rightOff = rightValues.indexOf("Off") >= 0 ? "Off" : (rightValues.indexOf("False") >= 0 ? "False" : (rightValues[0] || null));
+
+      function makeInstance(propPatch) {
+        var inst = baseComponent.createInstance();
+        var props = {};
+        if (variantKey && defaultVariant != null) props[variantKey] = defaultVariant;
+        if (stateKey && defaultState != null) props[stateKey] = defaultState;
+        if (sizeKey && defaultSize != null) props[sizeKey] = defaultSize;
+        if (leftIconKey && leftOff != null) props[leftIconKey] = leftOff;
+        if (rightIconKey && rightOff != null) props[rightIconKey] = rightOff;
+        var patchKeys = Object.keys(propPatch || {});
+        for (var p = 0; p < patchKeys.length; p++) {
+          var userKey = patchKeys[p];
+          var resolvedKey = getPropKey(variantProps, userKey);
+          if (resolvedKey) props[resolvedKey] = propPatch[userKey];
+        }
+        try { inst.setProperties(props); } catch (e) {}
+        return inst;
+      }
+
+      if (variantsSlot && orderedVariants.length > 0 && orderedStates.length > 0) {
+        clearChildren(variantsSlot);
+        for (var v = 0; v < orderedVariants.length; v++) {
+          var variantName = orderedVariants[v];
+          var variantSection = figma.createFrame();
+          variantSection.name = "variant-section-" + normalizeName(variantName);
+          variantSection.layoutMode = "VERTICAL";
+          variantSection.primaryAxisSizingMode = "AUTO";
+          variantSection.counterAxisSizingMode = "AUTO";
+          variantSection.counterAxisAlignItems = "MIN";
+          variantSection.itemSpacing = 8;
+          variantSection.fills = [];
+
+          appendText(
+            variantSection,
+            titleFont,
+            String(variantName),
+            18,
+            { r: 0.93, g: 0.94, b: 0.95 },
+            "Variant Heading"
+          );
+          appendText(
+            variantSection,
+            bodyFont,
+            getVariantDescription(setName, variantName),
+            12,
+            { r: 0.64, g: 0.67, b: 0.73 },
+            "Variant Description"
+          );
+
+          var variantStatesPanel = createPanel("variant-states-" + normalizeName(variantName), 8);
+          variantStatesPanel.paddingLeft = 12;
+          variantStatesPanel.paddingRight = 12;
+          variantStatesPanel.paddingTop = 12;
+          variantStatesPanel.paddingBottom = 12;
+          addInstancesRow(
+            variantStatesPanel,
+            "",
+            orderedStates,
+            (function (vName) {
+              return function (stateName) {
+                return makeInstance({ Variant: vName, State: stateName });
+              };
+            })(variantName)
+          );
+          if (variantStatesPanel.children.length > 0 && variantStatesPanel.children[0].type === "FRAME") {
+            var firstRowWrap = variantStatesPanel.children[0];
+            if (firstRowWrap.children.length > 0 && firstRowWrap.children[0].type === "TEXT") {
+              firstRowWrap.children[0].remove();
+            }
+          }
+          variantSection.appendChild(variantStatesPanel);
+          variantsSlot.appendChild(variantSection);
+        }
+      }
+
+      if (sizeSlot && orderedSizes.length > 0) {
+        clearChildren(sizeSlot);
+        addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
+          return makeInstance({ Size: sizeName });
+        });
+      }
+
+      if (leftSlot && leftIconKey && orderedSizes.length > 0) {
+        clearChildren(leftSlot);
+        addInstancesRow(leftSlot, "Left Icon", orderedSizes, function (sizeName) {
+          var patch = { Size: sizeName };
+          patch[leftIconKey] = leftOn;
+          if (rightIconKey && rightOff != null) patch[rightIconKey] = rightOff;
+          return makeInstance(patch);
+        });
+      }
+
+      if (rightSlot && rightIconKey && orderedSizes.length > 0) {
+        clearChildren(rightSlot);
+        addInstancesRow(rightSlot, "Right Icon", orderedSizes, function (sizeName) {
+          var patch = { Size: sizeName };
+          patch[rightIconKey] = rightOn;
+          if (leftIconKey && leftOff != null) patch[leftIconKey] = leftOff;
+          return makeInstance(patch);
+        });
+      }
+
+      if (statesSlot && states.length > 0) {
+        clearChildren(statesSlot);
+        addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
+            return makeInstance({ State: stateName });
+        });
+      }
+    }
+
+    docsPage.appendChild(doc);
+    doc.x = docsX;
+    doc.y = docsY;
+    docsY += nodeRenderedHeight(doc) + docsGap;
+    docsCreated++;
+    } catch (docErr) {
+      var safeSetName = (set && set.name) ? set.name : ("Component " + (si + 1));
+      progress("Docs component skipped (" + safeSetName + "): " + String(docErr));
+      docsSkipped++;
+      try {
+        var fallback = figma.createFrame();
+        fallback.name = "__AUTO_DOCS__ - " + safeSetName + " (fallback)";
+        fallback.layoutMode = "VERTICAL";
+        fallback.primaryAxisSizingMode = "AUTO";
+        fallback.counterAxisSizingMode = "AUTO";
+        fallback.counterAxisAlignItems = "MIN";
+        fallback.itemSpacing = 8;
+        fallback.paddingLeft = 24;
+        fallback.paddingRight = 24;
+        fallback.paddingTop = 24;
+        fallback.paddingBottom = 24;
+        fallback.cornerRadius = 8;
+        fallback.fills = [{ type: "SOLID", color: { r: 0.09, g: 0.1, b: 0.14 } }];
+        appendText(fallback, titleFont, safeSetName, 26, { r: 0.91, g: 0.92, b: 0.94 }, "Fallback Title");
+        appendText(
+          fallback,
+          bodyFont,
+          "Docs auto-generation skipped for this component. See sync progress logs for details.",
+          12,
+          { r: 0.85, g: 0.45, b: 0.45 },
+          "Fallback Message"
+        );
+        docsPage.appendChild(fallback);
+        fallback.x = docsX;
+        fallback.y = docsY;
+        docsY += nodeRenderedHeight(fallback) + docsGap;
+      } catch (fallbackErr) {
+        progress("Docs fallback failed (" + safeSetName + "): " + String(fallbackErr));
+      }
+    }
+  }
+  progress("Usage docs generated on page: Component Documentation (created: " + docsCreated + ", skipped: " + docsSkipped + ")");
 }
 
 async function cleanupExistingComponents(page, requestedSet) {
@@ -992,8 +1488,9 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
 
   // Known button heights per size for accurate spacing
   var sizeHeights = { default: 36, xxs: 24, xs: 28, sm: 36, md: 42, lg: 50, xl: 60 };
-  var gap = 16;
-  var colGap = 16;
+  var gap = 30;
+  var sizeGroupGap = 22;
+  var colGap = 44;
 
   // Pre-calculate y offset for each (size, state) row
   var rowYOffsets = [];
@@ -1003,10 +1500,12 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
       rowYOffsets.push(runningY);
       runningY += sizeHeights[sizes[rsi]] + gap;
     }
+    // Add extra breathing room between size groups.
+    runningY += sizeGroupGap;
   }
 
   // Allocate extra width when icon combinations are enabled.
-  var colWidth = 230 + colGap;
+  var colWidth = 280 + colGap;
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
