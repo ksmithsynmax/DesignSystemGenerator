@@ -54,7 +54,7 @@ export default function ButtonPreview({
     return getDefaultSizeKey(brands, brandId, tokenName) || "sm";
   };
 
-  const height = resolveDimension(brands, brandId, "button-height", resolvedSizeFor("button-height"));
+  const paddingY = resolveDimension(brands, brandId, "button-padding-y", resolvedSizeFor("button-padding-y"));
   const paddingX = resolveDimension(brands, brandId, "button-padding-x", resolvedSizeFor("button-padding-x"));
   const fontSize = resolveDimension(brands, brandId, "button-font-size", resolvedSizeFor("button-font-size"));
   const lineHeight = resolveDimension(brands, brandId, "button-line-height", resolvedSizeFor("button-line-height"));
@@ -76,6 +76,7 @@ export default function ButtonPreview({
 
   const mantineVariant = VARIANT_MAP[variant] || "filled";
   const iconSize = tokenIconSize || Math.max(14, Math.round((fontSize || 14) * 1.1));
+  const computedHeight = Math.round((lineHeight || fontSize || 14) + 2 * (paddingY || 0));
 
   const bdValue =
     border !== "transparent"
@@ -134,7 +135,8 @@ export default function ButtonPreview({
           "--button-hover": bgHover || bg,
           "--button-color": text,
           "--button-bd": bdValue,
-          "--button-height": `${height}px`,
+          "--button-height": `${computedHeight}px`,
+          "--button-padding-y": `${paddingY}px`,
           "--button-padding-x": `${paddingX}px`,
           "--button-fz": `${fontSize}px`,
           "--button-radius": `${borderRadius}px`,

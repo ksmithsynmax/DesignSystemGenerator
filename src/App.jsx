@@ -1,4 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
+import { Switch as MantineSwitch } from "@mantine/core";
 import { INITIAL_BRANDS } from "./data/brands";
 import {
   COMPONENT_NAMES,
@@ -118,6 +119,22 @@ const VARIANTS_BY_COMPONENT = {
   select: ["default", "filled"],
 };
 
+const APP_STORAGE_KEY = "design-system-generator:v1";
+const DEFAULT_TITLE_TEXT = "Why guess when you can know";
+
+function loadPersistedAppState() {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = window.localStorage.getItem(APP_STORAGE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== "object") return null;
+    return parsed;
+  } catch (_err) {
+    return null;
+  }
+}
+
 export default function App() {
   const COMPONENT_LABELS = {
     actionicon: "ActionIcon",
@@ -128,11 +145,24 @@ export default function App() {
   const getComponentLabel = (name) =>
     COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
 
-  const [brands, setBrands] = useState(INITIAL_BRANDS);
-  const [activeBrand, setActiveBrand] = useState("theia");
+  const [brands, setBrands] = useState(() => {
+    const persisted = loadPersistedAppState();
+    return persisted?.brands || INITIAL_BRANDS;
+  });
+  const [activeBrand, setActiveBrand] = useState(() => {
+    const persisted = loadPersistedAppState();
+    return persisted?.activeBrand || "theia";
+  });
   const [activeComponent, setActiveComponent] = useState("button");
   const [activeVariant, setActiveVariant] = useState("filled");
   const [activeTab, setActiveTab] = useState("preview");
+  const [previewTheme, setPreviewTheme] = useState(() => {
+    const persisted = loadPersistedAppState();
+    return persisted?.previewTheme === "light" ? "light" : "dark";
+  });
+  if (typeof window !== "undefined") {
+    window.__DSG_PREVIEW_THEME = previewTheme;
+  }
   const [storybookLoading, setStorybookLoading] = useState(false);
   const [storybookError, setStorybookError] = useState(null);
   const [leftPanelWidth, setLeftPanelWidth] = useState(420);
@@ -233,7 +263,7 @@ export default function App() {
   const [activeTitleTextWrap, setActiveTitleTextWrap] = useState("wrap");
   const [activeTitleLineClamp, setActiveTitleLineClamp] = useState(0);
   const [activeTitleText, setActiveTitleText] = useState(
-    "Build fully functional accessible web applications faster than ever"
+    DEFAULT_TITLE_TEXT
   );
   const [activeTextSizeToken, setActiveTextSizeToken] = useState("md");
   const [activeTextWeightMode, setActiveTextWeightMode] = useState("regular");
@@ -245,7 +275,7 @@ export default function App() {
   const [activeTextLineClamp, setActiveTextLineClamp] = useState(0);
   const [activeTextTruncate, setActiveTextTruncate] = useState("off");
   const [activeTextText, setActiveTextText] = useState(
-    "Build fully functional accessible web applications faster than ever."
+    DEFAULT_TITLE_TEXT
   );
   const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
   const [activeCheckboxRadius, setActiveCheckboxRadius] = useState(checkboxDefault);
@@ -433,7 +463,7 @@ export default function App() {
       setActiveTitleSize("auto");
       setActiveTitleTextWrap("wrap");
       setActiveTitleLineClamp(0);
-      setActiveTitleText("Build fully functional accessible web applications faster than ever");
+      setActiveTitleText(DEFAULT_TITLE_TEXT);
     } else if (newComp === "text") {
       setActiveTextSizeToken("md");
       setActiveTextWeightMode("regular");
@@ -444,7 +474,7 @@ export default function App() {
       setActiveTextColorMode("default");
       setActiveTextLineClamp(0);
       setActiveTextTruncate("off");
-      setActiveTextText("Build fully functional accessible web applications faster than ever.");
+      setActiveTextText(DEFAULT_TITLE_TEXT);
     } else if (newComp === "anchor") {
       setActiveAnchorSize(anchorDefault);
       setActiveAnchorUnderline("always");
@@ -580,12 +610,19 @@ export default function App() {
     (componentToken, mapping) => {
       setBrands((prev) => {
         const next = JSON.parse(JSON.stringify(prev));
-        if (!next[activeBrand].componentOverrides) next[activeBrand].componentOverrides = {};
-        next[activeBrand].componentOverrides[componentToken] = mapping;
+        const brand = next[activeBrand];
+        if (previewTheme === "dark") {
+          if (!brand.componentOverridesDark) brand.componentOverridesDark = {};
+          brand.componentOverridesDark[componentToken] = mapping;
+          return next;
+        }
+
+        if (!brand.componentOverrides) brand.componentOverrides = {};
+        brand.componentOverrides[componentToken] = mapping;
         return next;
       });
     },
-    [activeBrand]
+    [activeBrand, previewTheme]
   );
 
   const updateDimensionOverride = useCallback(
@@ -623,6 +660,30 @@ export default function App() {
   const brandNames = Object.keys(brands);
   const colorTokens = getColorTokens(activeComponent);
   const dimensionTokens = getDimensionTokens(activeComponent);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.setItem(
+        APP_STORAGE_KEY,
+        JSON.stringify({
+          brands,
+          activeBrand,
+          previewTheme,
+        })
+      );
+    } catch (_err) {
+      // Ignore storage write errors (quota/private mode).
+    }
+  }, [brands, activeBrand, previewTheme]);
+
+  useEffect(() => {
+    if (brands[activeBrand]) return;
+    const firstBrandId = Object.keys(brands)[0];
+    if (firstBrandId) {
+      setActiveBrand(firstBrandId);
+    }
+  }, [brands, activeBrand]);
 
   // Parse forced state/checked/variant from the active token card
   const INTERACTIVE_STATES = ["active", "hover", "focus", "pressed", "disabled", "error", "visited"];
@@ -973,6 +1034,23 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
+  const handleResetLocalData = () => {
+    if (typeof window !== "undefined") {
+      try {
+        window.localStorage.removeItem(APP_STORAGE_KEY);
+      } catch (_err) {
+        // Ignore storage errors and still reset in-memory state.
+      }
+    }
+    setBrands(INITIAL_BRANDS);
+    setActiveBrand("theia");
+    setActiveComponent("button");
+    setActiveVariant("filled");
+    setPreviewTheme("dark");
+    setActiveColorToken(null);
+    setActiveDimensionToken(null);
+  };
+
   const handleStorybookExport = async () => {
     setStorybookLoading(true);
     setStorybookError(null);
@@ -1027,13 +1105,28 @@ export default function App() {
         <span style={{ fontSize: 18, fontWeight: 700, color: "#E9ECEF" }}>
           Design System Generator
         </span>
-        <div style={{ display: "flex", gap: 4 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+          {activeTab === "preview" && (
+            <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 4px" }}>
+              <span style={{ fontSize: 12, color: "#5C5F66", fontWeight: 500 }}>Light</span>
+              <MantineSwitch
+                size="md"
+                color="dark"
+                checked={previewTheme === "dark"}
+                onChange={(event) => setPreviewTheme(event.currentTarget.checked ? "dark" : "light")}
+                aria-label="Toggle preview theme"
+              />
+              <span style={{ fontSize: 12, color: "#C1C2C5", fontWeight: 500 }}>Dark</span>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 4 }}>
           <button onClick={() => setActiveTab("preview")} style={tabStyle("preview")}>
             Preview
           </button>
           <button onClick={() => setActiveTab("export")} style={tabStyle("export")}>
             Export
           </button>
+          </div>
         </div>
       </div>
 
@@ -1082,16 +1175,23 @@ export default function App() {
             <Section title={`Color Tokens — ${getComponentLabel(activeComponent)}`}>
               {visibleColorTokenEntries.map(([token, def]) => {
                 const semantic = def.semantic;
-                const mapping = brand.semanticMap[semantic];
-                if (!mapping) return null;
+                const lightMapping = brand.semanticMap[semantic];
+                const darkMapping =
+                  (brand.darkSemanticOverrides && brand.darkSemanticOverrides[semantic]) || lightMapping;
+                const semanticMapping = previewTheme === "dark" ? darkMapping : lightMapping;
+                if (!semanticMapping) return null;
+                const componentOverride =
+                  previewTheme === "dark"
+                    ? (brand.componentOverridesDark && brand.componentOverridesDark[token]) || null
+                    : (brand.componentOverrides && brand.componentOverrides[token]) || null;
                 const isActive = activeColorToken === token;
                 return (
                   <TokenChainCard
                     key={token}
                     componentToken={token}
                     semanticToken={semantic}
-                    mapping={brand.componentOverrides?.[token] ?? mapping}
-                    resolvedColor={resolveColor(brands, activeBrand, semantic, "light", token)}
+                    mapping={componentOverride || semanticMapping}
+                    resolvedColor={resolveColor(brands, activeBrand, semantic, previewTheme, token)}
                     isActive={isActive}
                     onClick={() => setActiveColorToken(isActive ? null : token)}
                     onUpdate={updateComponentOverride}
@@ -1947,6 +2047,22 @@ export default function App() {
                   tabsVariants: buildTabsVariants,
                 }}
               />
+
+              <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
+                <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
+                  Local Data
+                </div>
+                <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
+                  Clear locally cached token edits and restore defaults.
+                </p>
+                <button
+                disabled
+                  onClick={handleResetLocalData}
+                  style={{  borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600,  cursor: "pointer", }}
+                >
+                  Reset Local Data
+                </button>
+              </div>
 
               <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
                 <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>

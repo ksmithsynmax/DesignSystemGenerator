@@ -410,6 +410,10 @@ async function syncTokens(payload) {
       if (!semToken) continue;
       // semToken.alias is e.g. "blue/5" — look up in brand primitives first, then global
       var primTarget = brandPrimVarMaps[mode.brandId][semToken.alias] || globalPrimVarMap[semToken.alias];
+      if (!primTarget && semToken.alias && semToken.alias.indexOf(" @ ") > -1) {
+        var basePrimAlias = semToken.alias.split(" @ ")[0];
+        primTarget = brandPrimVarMaps[mode.brandId][basePrimAlias] || globalPrimVarMap[basePrimAlias];
+      }
       if (primTarget) {
         var semAlias = figma.variables.createVariableAlias(primTarget);
         semVar.setValueForMode(semModes.modeMap[mode.key], semAlias);
@@ -466,14 +470,32 @@ async function syncTokens(payload) {
       var cModeId = compModes.modeMap[cMode.key];
 
       if (brandToken.type === "COLOR") {
-        // Try to alias to semantic variable
-        if (brandToken.alias && semanticVarMap[brandToken.alias]) {
-          var compAlias = figma.variables.createVariableAlias(semanticVarMap[brandToken.alias]);
-          compVar.setValueForMode(cModeId, compAlias);
+        var themedColorToken = brandToken;
+        if (brandToken[cMode.theme] && brandToken[cMode.theme].value !== undefined) {
+          themedColorToken = brandToken[cMode.theme];
+        }
+        var semanticAliasTarget = null;
+        if (themedColorToken.alias && semanticVarMap[themedColorToken.alias]) {
+          semanticAliasTarget = semanticVarMap[themedColorToken.alias];
+        }
+        if (semanticAliasTarget) {
+          compVar.setValueForMode(cModeId, figma.variables.createVariableAlias(semanticAliasTarget));
           compAliases++;
         } else {
-          // No semantic (transparent/null) — set raw value
-          compVar.setValueForMode(cModeId, hexToFigmaRgb(brandToken.value));
+          var primitiveAliasTarget = null;
+          if (themedColorToken.primitiveAlias) {
+            if (brandPrimVarMaps[cMode.brandId] && brandPrimVarMaps[cMode.brandId][themedColorToken.primitiveAlias]) {
+              primitiveAliasTarget = brandPrimVarMaps[cMode.brandId][themedColorToken.primitiveAlias];
+            } else {
+              primitiveAliasTarget = globalPrimVarMap[themedColorToken.primitiveAlias];
+            }
+          }
+          if (primitiveAliasTarget) {
+            compVar.setValueForMode(cModeId, figma.variables.createVariableAlias(primitiveAliasTarget));
+            compAliases++;
+          } else {
+            compVar.setValueForMode(cModeId, hexToFigmaRgb(themedColorToken.value));
+          }
         }
         } else if (brandToken.type === "FLOAT") {
           var floatAliasTarget = null;
@@ -961,7 +983,7 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
   var variants = (selectedVariants && selectedVariants.length > 0)
     ? selectedVariants.slice()
     : ["filled", "outlined", "ghost"];
-  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xxs", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
   var leftIconModes = ["off", "on"];
   var rightIconModes = ["off", "on"];
@@ -969,7 +991,7 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
   var iconComponents = await findButtonIconComponents();
 
   // Known button heights per size for accurate spacing
-  var sizeHeights = { default: 36, xs: 28, sm: 36, md: 42, lg: 50, xl: 60 };
+  var sizeHeights = { default: 36, xxs: 24, xs: 28, sm: 36, md: 42, lg: 50, xl: 60 };
   var gap = 16;
   var colGap = 16;
 
@@ -1104,7 +1126,6 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
             bindVar(buttonNode, "topRightRadius", varMap["button/border-radius"]);
             bindVar(buttonNode, "bottomLeftRadius", varMap["button/border-radius"]);
             bindVar(buttonNode, "bottomRightRadius", varMap["button/border-radius"]);
-            bindVar(buttonNode, "minHeight", varMap["button/height-" + size]);
             bindVar(buttonNode, "strokeWeight", varMap["button/border-width"]);
 
             function appendIcon(iconComp, iconName) {

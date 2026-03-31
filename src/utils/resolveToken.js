@@ -38,9 +38,18 @@ function applyOpacity(hex, opacity) {
 export function resolveColor(brands, brandId, semanticKey, theme = "light", componentToken = null) {
   if (!semanticKey) return "transparent";
   const brand = brands[brandId];
+  const runtimeTheme =
+    typeof window !== "undefined" && (window.__DSG_PREVIEW_THEME === "dark" || window.__DSG_PREVIEW_THEME === "light")
+      ? window.__DSG_PREVIEW_THEME
+      : null;
+  const activeTheme = runtimeTheme || theme;
   // Check component-level override first (avoids bleeding shared semantics)
-  if (componentToken && brand.componentOverrides?.[componentToken]) {
-    const mapping = brand.componentOverrides[componentToken];
+  const themedComponentOverride =
+    activeTheme === "dark"
+      ? brand.componentOverridesDark?.[componentToken]
+      : brand.componentOverrides?.[componentToken];
+  if (componentToken && themedComponentOverride) {
+    const mapping = themedComponentOverride;
     if (mapping.color === "transparent") return "transparent";
     const baseColor = brand.primitives[mapping.color]?.[mapping.index]
       ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
@@ -48,7 +57,7 @@ export function resolveColor(brands, brandId, semanticKey, theme = "light", comp
     return applyOpacity(baseColor, mapping.opacity);
   }
   // Merge dark overrides when theme is dark
-  const map = theme === "dark"
+  const map = activeTheme === "dark"
     ? { ...brand.semanticMap, ...(brand.darkSemanticOverrides || {}) }
     : brand.semanticMap;
   const mapping = map[semanticKey];

@@ -6,10 +6,15 @@ export default function PreviewStage({
   contentAlignItems = "center",
   contentJustifyContent = "center",
 }) {
+  const previewTheme =
+    typeof window !== "undefined" && window.__DSG_PREVIEW_THEME === "light" ? "light" : "dark";
+  const background = previewTheme === "light" ? "#F1F3F5" : "#1A1B1E";
+  const labelColor = previewTheme === "light" ? "#495057" : "#868E96";
+
   return (
     <div
       style={{
-        background: "#1A1B1E",
+        background,
         borderRadius: 8,
         padding,
         display: "flex",
@@ -20,7 +25,7 @@ export default function PreviewStage({
       }}
     >
       {label && (
-        <div style={{ fontSize: 13, fontFamily: "monospace", color: "#868E96", marginBottom: 16 }}>
+        <div style={{ fontSize: 13, fontFamily: "monospace", color: labelColor, marginBottom: 16 }}>
           {label}
         </div>
       )}

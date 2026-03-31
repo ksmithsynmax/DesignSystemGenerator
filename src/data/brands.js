@@ -77,7 +77,6 @@ export const INITIAL_BRANDS = {
     componentDefaults: {
       "button-padding-x-default": "sm",
       "button-padding-y-default": "sm",
-      "button-height-default": "sm",
       "button-font-size-default": "sm",
       "button-line-height-default": "sm",
       "button-icon-size-default": "sm",
@@ -171,7 +170,6 @@ export const INITIAL_BRANDS = {
     componentDefaults: {
       "button-padding-x-default": "md",
       "button-padding-y-default": "md",
-      "button-height-default": "md",
       "button-font-size-default": "md",
       "button-line-height-default": "md",
       "button-icon-size-default": "md",

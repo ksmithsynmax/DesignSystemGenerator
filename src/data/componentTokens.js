@@ -60,15 +60,14 @@ export const COMPONENT_TOKENS = {
     // ── SHARED COLOR TOKEN ──
     "button-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "button/focus-ring" },
 
-    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
-    "button-padding-x":     { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 14, md: 18, lg: 22, xl: 28 },   figmaPath: "button/padding-x" },
-    "button-padding-y":     { type: "FLOAT", unit: "px", sizes: { xs: 4,  sm: 6,  md: 8,  lg: 10, xl: 14 },   figmaPath: "button/padding-y" },
-    "button-height":        { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 36, md: 42, lg: 50, xl: 60 },   figmaPath: "button/height" },
-    "button-font-size":     { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },   figmaPath: "button/font-size" },
-    "button-line-height":   { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "button/line-height" },
+    // ── FLOAT TOKENS (size variants: xxs, xs, sm, md, lg, xl) ──
+    "button-padding-x":     { type: "FLOAT", unit: "px", sizes: { xxs: 8, xs: 10, sm: 14, md: 18, lg: 22, xl: 28 },   figmaPath: "button/padding-x" },
+    "button-padding-y":     { type: "FLOAT", unit: "px", sizes: { xxs: 2, xs: 4,  sm: 6,  md: 8,  lg: 10, xl: 14 },   figmaPath: "button/padding-y" },
+    "button-font-size":     { type: "FLOAT", unit: "px", sizes: { xxs: 11, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },   figmaPath: "button/font-size" },
+    "button-line-height":   { type: "FLOAT", unit: "px", sizes: { xxs: 14, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "button/line-height" },
     "button-font-family":   { type: "STRING", value: "Inter", figmaPath: "button/font-family" },
-    "button-icon-size":     { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },   figmaPath: "button/icon-size" },
-    "button-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 }, figmaPath: "button/icon-stroke-width" },
+    "button-icon-size":     { type: "FLOAT", unit: "px", sizes: { xxs: 10, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },   figmaPath: "button/icon-size" },
+    "button-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xxs: 1, xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 }, figmaPath: "button/icon-stroke-width" },
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "button-border-radius": { type: "FLOAT", unit: "px", value: 8,   figmaPath: "button/border-radius" },
     "button-border-width":  { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "button/border-width" },
@@ -1028,7 +1027,7 @@ const PLACEHOLDER_COMPONENTS = [
 export const COMPONENT_NAMES = [...new Set([...Object.keys(COMPONENT_TOKENS), ...PLACEHOLDER_COMPONENTS])];
 
 export const COMPONENT_SIZE_KEYS = {
-  button: ["xs", "sm", "md", "lg", "xl"],
+  button: ["xxs", "xs", "sm", "md", "lg", "xl"],
   actionicon: ["xs", "sm", "md", "lg", "xl"],
   tabs: ["xs", "sm", "md", "lg", "xl"],
   switch: ["xs", "sm", "md", "lg", "xl"],

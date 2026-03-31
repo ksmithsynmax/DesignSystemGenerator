@@ -1,5 +1,5 @@
 import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/componentTokens";
-import { resolveColor, resolveDimension, getDefaultSizeKey } from "./resolveToken";
+import { resolveDimension, getDefaultSizeKey } from "./resolveToken";
 import {
   GLOBAL_PRIMITIVES,
   GLOBAL_SPACING,
@@ -42,6 +42,17 @@ function applyOpacity(hex, opacity) {
     .padStart(2, "0")
     .toUpperCase();
   return `#${normalized}${alpha}`;
+}
+
+function resolveMappingToColor(brand, mapping) {
+  if (!mapping) return { value: "#FF00FF", primitiveAlias: null };
+  if (mapping.color === "transparent") return { value: "transparent", primitiveAlias: "transparent" };
+  const baseValue = brand.primitives[mapping.color]?.[mapping.index]
+    ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
+    ?? null;
+  const value = baseValue ? applyOpacity(baseValue, mapping.opacity) : "#FF00FF";
+  const primitiveAlias = `${mapping.color}/${mapping.index}`;
+  return { value, primitiveAlias };
 }
 
 /**
@@ -103,12 +114,39 @@ export function buildExportPayload(brands, options) {
 
       Object.entries(tokens).forEach(([tokenName, def]) => {
         if (def.type === TOKEN_TYPES.COLOR) {
-          const hex = resolveColor(brands, brandId, def.semantic, "light", tokenName);
-          const hasComponentOverride = !!brand.componentOverrides?.[tokenName];
+          const lightSemanticMapping = brand.semanticMap?.[def.semantic] || null;
+          const darkSemanticMap = { ...brand.semanticMap, ...(brand.darkSemanticOverrides || {}) };
+          const darkSemanticMapping = darkSemanticMap?.[def.semantic] || null;
+          const lightOverride = brand.componentOverrides?.[tokenName] || null;
+          const darkOverride = brand.componentOverridesDark?.[tokenName] || null;
+
+          const lightResolved = lightOverride
+            ? resolveMappingToColor(brand, lightOverride)
+            : resolveMappingToColor(brand, lightSemanticMapping);
+          const darkResolved = darkOverride
+            ? resolveMappingToColor(brand, darkOverride)
+            : resolveMappingToColor(brand, darkSemanticMapping);
+
+          const lightHasSemantic = Boolean(def.semantic && lightSemanticMapping);
+          const darkHasSemantic = Boolean(def.semantic && darkSemanticMapping);
+          const lightAlias = !lightOverride && lightHasSemantic ? def.semantic : null;
+          const darkAlias = !darkOverride && darkHasSemantic ? def.semantic : null;
+
           out[brandId].components[def.figmaPath] = {
             type: "COLOR",
-            value: hex,
-            alias: hasComponentOverride ? null : (def.semantic || null),
+            value: lightResolved.value,
+            alias: lightAlias,
+            primitiveAlias: lightResolved.primitiveAlias,
+            light: {
+              value: lightResolved.value,
+              alias: lightAlias,
+              primitiveAlias: lightResolved.primitiveAlias,
+            },
+            dark: {
+              value: darkResolved.value,
+              alias: darkAlias,
+              primitiveAlias: darkResolved.primitiveAlias,
+            },
           };
         } else if (def.type === TOKEN_TYPES.FLOAT) {
           const resolveFloatAlias = (val) => {
