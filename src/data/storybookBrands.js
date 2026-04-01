@@ -150,11 +150,31 @@ export const STORYBOOK_BRANDS = {
       },
       "text-default": {
         "color": "neutral",
-        "index": 9
+        "index": 0
       },
       "text-subtle": {
-        "color": "neutral",
-        "index": 6
+        "color": "slate-gray",
+        "index": 3
+      },
+      "surface-primary": {
+        "color": "steel",
+        "index": 9
+      },
+      "surface-secondary": {
+        "color": "steel",
+        "index": 8
+      },
+      "subtle-primary": {
+        "color": "steel",
+        "index": 9
+      },
+      "subtle-secondary": {
+        "color": "steel",
+        "index": 8
+      },
+      "border-primary": {
+        "color": "steel",
+        "index": 7
       },
       "surface-default": {
         "color": "neutral",
@@ -219,8 +239,28 @@ export const STORYBOOK_BRANDS = {
         "index": 0
       },
       "text-subtle": {
-        "color": "neutral",
-        "index": 4
+        "color": "slate-gray",
+        "index": 3
+      },
+      "surface-primary": {
+        "color": "steel",
+        "index": 9
+      },
+      "surface-secondary": {
+        "color": "steel",
+        "index": 8
+      },
+      "subtle-primary": {
+        "color": "steel",
+        "index": 9
+      },
+      "subtle-secondary": {
+        "color": "steel",
+        "index": 8
+      },
+      "border-primary": {
+        "color": "steel",
+        "index": 7
       },
       "surface-default": {
         "color": "neutral",
@@ -744,12 +784,36 @@ export const STORYBOOK_BRANDS = {
         "index": 0
       },
       "text-default": {
-        "color": "neutral",
+        "color": "slate-purple",
         "index": 9
       },
       "text-subtle": {
-        "color": "neutral",
+        "color": "slate-purple",
         "index": 6
+      },
+      "surface-primary": {
+        "color": "slate-purple",
+        "index": 0
+      },
+      "surface-secondary": {
+        "color": "neutral",
+        "index": 0
+      },
+      "subtle-primary": {
+        "color": "slate-purple",
+        "index": 0
+      },
+      "subtle-secondary": {
+        "color": "neutral",
+        "index": 0
+      },
+      "border-primary": {
+        "color": "slate-gray",
+        "index": 0
+      },
+      "primary-border": {
+        "color": "slate-gray",
+        "index": 0
       },
       "surface-default": {
         "color": "neutral",
@@ -810,12 +874,36 @@ export const STORYBOOK_BRANDS = {
         "index": 7
       },
       "text-default": {
+        "color": "slate-purple",
+        "index": 9
+      },
+      "text-subtle": {
+        "color": "slate-purple",
+        "index": 6
+      },
+      "surface-primary": {
+        "color": "slate-purple",
+        "index": 0
+      },
+      "surface-secondary": {
         "color": "neutral",
         "index": 0
       },
-      "text-subtle": {
+      "subtle-primary": {
+        "color": "slate-purple",
+        "index": 0
+      },
+      "subtle-secondary": {
         "color": "neutral",
-        "index": 4
+        "index": 0
+      },
+      "border-primary": {
+        "color": "slate-gray",
+        "index": 0
+      },
+      "primary-border": {
+        "color": "slate-gray",
+        "index": 0
       },
       "surface-default": {
         "color": "neutral",

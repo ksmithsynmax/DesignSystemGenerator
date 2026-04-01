@@ -28,6 +28,7 @@ export default function ButtonPreview({
   variant,
   size,
   state,
+  previewTheme = "light",
   focusRingStyle = "offset",
   showLeftIcon = false,
   showRightIcon = false,
@@ -42,12 +43,12 @@ export default function ButtonPreview({
   const textKey = suffix && tokens[`${prefix}-text${suffix}`] ? `${prefix}-text${suffix}` : `${prefix}-text`;
   const borderKey = suffix && tokens[`${prefix}-border${suffix}`] ? `${prefix}-border${suffix}` : `${prefix}-border`;
 
-  const bg = resolveColor(brands, brandId, tokens[bgKey]?.semantic, "light", bgKey);
+  const bg = resolveColor(brands, brandId, tokens[bgKey]?.semantic, previewTheme, bgKey);
   const bgHover = state
     ? bg
-    : resolveColor(brands, brandId, tokens[`${prefix}-background-hover`]?.semantic, "light", `${prefix}-background-hover`);
-  const text = resolveColor(brands, brandId, tokens[textKey]?.semantic, "light", textKey);
-  const border = resolveColor(brands, brandId, tokens[borderKey]?.semantic, "light", borderKey);
+    : resolveColor(brands, brandId, tokens[`${prefix}-background-hover`]?.semantic, previewTheme, `${prefix}-background-hover`);
+  const text = resolveColor(brands, brandId, tokens[textKey]?.semantic, previewTheme, textKey);
+  const border = resolveColor(brands, brandId, tokens[borderKey]?.semantic, previewTheme, borderKey);
 
   const resolvedSizeFor = (tokenName) => {
     if (size !== "default") return size;
@@ -67,7 +68,7 @@ export default function ButtonPreview({
   );
   const borderRadius = resolveDimension(brands, brandId, "button-border-radius");
   const borderWidth = resolveDimension(brands, brandId, "button-border-width");
-  const focusRing = resolveColor(brands, brandId, tokens["button-focus-ring"]?.semantic, "light", "button-focus-ring");
+  const focusRing = resolveColor(brands, brandId, tokens["button-focus-ring"]?.semantic, previewTheme, "button-focus-ring");
   const focusRingWidth = resolveDimension(brands, brandId, "button-focus-ring-width");
   const focusRingSpacing = resolveDimension(brands, brandId, "button-focus-ring-spacing");
   const focusRingRadius = resolveDimension(brands, brandId, "button-focus-ring-radius");

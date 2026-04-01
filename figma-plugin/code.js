@@ -903,17 +903,114 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
 async function buildUsageDocsPage(componentSets, titleFont) {
   if (!componentSets || componentSets.length === 0) return;
 
+  var DOC_COLORS = {
+    pageBg: { r: 0.094, g: 0.098, b: 0.149 },       // #181926
+    panelBg: { r: 0.141, g: 0.149, b: 0.235 },      // #24263C
+    panelStroke: { r: 0.224, g: 0.235, b: 0.337 },  // #393C56
+    title: { r: 1, g: 1, b: 1 },                    // #FFFFFF
+    sectionHeading: { r: 0, g: 0.424, b: 0.843 },   // #006CD7
+    subtitle: { r: 0.651, g: 0.671, b: 0.718 },     // #A6ABB7
+    variantSubtitle: { r: 0.725, g: 0.722, b: 0.769 }, // #B9B8C4
+    panelHeading: { r: 0.929, g: 0.941, b: 0.949 }, // #EDF0F2
+    panelBody: { r: 0.639, g: 0.671, b: 0.729 },    // #A3ABBA
+    cellLabel: { r: 0.651, g: 0.69, b: 0.749 },     // #A6B0BF
+  };
+
+  var DOC_COLOR_VAR_NAMES = {
+    pageBg: ["surface-primary", "surface/primary", "surface primary", "subtle-primary", "subtle/primary", "subtle primary"],
+    panelBg: ["surface-secondary", "surface/secondary", "surface secondary", "subtle-secondary", "subtle/secondary", "subtle secondary"],
+    panelStroke: ["border-primary", "border/primary", "border primary"],
+    sectionHeading: ["interactive-primary", "interactive/primary", "interactive primary"],
+    title: ["text-default", "text/default", "text default"],
+    textSubtle: ["text-subtle", "text/subtle", "text subtle"],
+  };
+
+  var docsColorVars = {};
+  var docsCollectionNamesById = {};
+  try {
+    var docsCollections = await figma.variables.getLocalVariableCollectionsAsync();
+    for (var dci = 0; dci < docsCollections.length; dci++) {
+      docsCollectionNamesById[docsCollections[dci].id] = String(docsCollections[dci].name || "");
+    }
+  } catch (_docsCollectionErr) {}
+  try {
+    var localColorVars = await figma.variables.getLocalVariablesAsync("COLOR");
+    for (var lvi = 0; lvi < localColorVars.length; lvi++) {
+      var lVar = localColorVars[lvi];
+      if (!lVar || !lVar.name) continue;
+      var existing = docsColorVars[lVar.name];
+      if (!existing) {
+        docsColorVars[lVar.name] = lVar;
+        continue;
+      }
+      var existingCollectionName = String(docsCollectionNamesById[existing.variableCollectionId] || "");
+      var nextCollectionName = String(docsCollectionNamesById[lVar.variableCollectionId] || "");
+      // Prefer Semantic collection when duplicate variable names exist.
+      if (existingCollectionName.toLowerCase() !== "semantic" && nextCollectionName.toLowerCase() === "semantic") {
+        docsColorVars[lVar.name] = lVar;
+      }
+    }
+  } catch (_docsVarErr) {}
+
+  function normalizeVarLookupName(value) {
+    return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  }
+
+  function resolveDocColorVar(role) {
+    var candidates = DOC_COLOR_VAR_NAMES[role] || [];
+    for (var ci = 0; ci < candidates.length; ci++) {
+      if (docsColorVars[candidates[ci]]) return docsColorVars[candidates[ci]];
+    }
+    var normalizedCandidates = [];
+    for (var nci = 0; nci < candidates.length; nci++) {
+      normalizedCandidates.push(normalizeVarLookupName(candidates[nci]));
+    }
+    var allNames = Object.keys(docsColorVars);
+    for (var ai = 0; ai < allNames.length; ai++) {
+      var varName = allNames[ai];
+      var varNorm = normalizeVarLookupName(varName);
+      for (var cni = 0; cni < normalizedCandidates.length; cni++) {
+        var candNorm = normalizedCandidates[cni];
+        if (!candNorm) continue;
+        if (varNorm === candNorm || varNorm.endsWith(candNorm)) {
+          return docsColorVars[varName];
+        }
+      }
+    }
+    return null;
+  }
+
+  var docsResolvedColorVars = {
+    pageBg: resolveDocColorVar("pageBg"),
+    panelBg: resolveDocColorVar("panelBg"),
+    panelStroke: resolveDocColorVar("panelStroke"),
+    sectionHeading: resolveDocColorVar("sectionHeading"),
+    title: resolveDocColorVar("title"),
+    textSubtle: resolveDocColorVar("textSubtle"),
+  };
+  progress(
+    "Docs variable mapping: pageBg=" + (docsResolvedColorVars.pageBg ? docsResolvedColorVars.pageBg.name : "none") +
+    ", panelBg=" + (docsResolvedColorVars.panelBg ? docsResolvedColorVars.panelBg.name : "none") +
+    ", panelStroke=" + (docsResolvedColorVars.panelStroke ? docsResolvedColorVars.panelStroke.name : "none") +
+    ", sectionHeading=" + (docsResolvedColorVars.sectionHeading ? docsResolvedColorVars.sectionHeading.name : "none") +
+    ", title=" + (docsResolvedColorVars.title ? docsResolvedColorVars.title.name : "none") +
+    ", textSubtle=" + (docsResolvedColorVars.textSubtle ? docsResolvedColorVars.textSubtle.name : "none")
+  );
+
   function normalizeName(value) {
     return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
   }
 
-  function appendText(node, font, text, size, color, name) {
+  function appendText(node, font, text, size, color, name, colorVarRole) {
     var t = figma.createText();
     t.name = name || "Text";
     t.fontName = font;
     t.fontSize = size;
     t.characters = text;
     t.fills = [{ type: "SOLID", color: color }];
+    if (colorVarRole && docsResolvedColorVars[colorVarRole]) {
+      bindPaintVar(t, "fills", 0, docsResolvedColorVars[colorVarRole]);
+    }
     node.appendChild(t);
     return t;
   }
@@ -924,16 +1021,170 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     panel.layoutMode = "VERTICAL";
     panel.primaryAxisSizingMode = "AUTO";
     panel.counterAxisSizingMode = "AUTO";
-    panel.counterAxisAlignItems = "MIN";
+    panel.counterAxisAlignItems = "CENTER";
     panel.itemSpacing = itemSpacing;
     panel.paddingLeft = 16;
     panel.paddingRight = 16;
-    panel.paddingTop = 16;
-    panel.paddingBottom = 16;
-    panel.cornerRadius = 8;
+    panel.paddingTop = 24;
+    panel.paddingBottom = 24;
+    panel.cornerRadius = 4;
     panel.clipsContent = false;
-    panel.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.16, b: 0.28 } }];
+    panel.fills = [{ type: "SOLID", color: DOC_COLORS.panelBg }];
+    panel.strokes = [{ type: "SOLID", color: DOC_COLORS.panelStroke }];
+    panel.strokeWeight = 1;
+    if (docsResolvedColorVars.panelBg) {
+      bindPaintVar(panel, "fills", 0, docsResolvedColorVars.panelBg);
+    }
+    if (docsResolvedColorVars.panelStroke) {
+      bindPaintVar(panel, "strokes", 0, docsResolvedColorVars.panelStroke);
+    }
     return panel;
+  }
+
+  function createStack(name, spacing) {
+    var frame = figma.createFrame();
+    frame.name = name || "Stack";
+    frame.layoutMode = "VERTICAL";
+    frame.primaryAxisSizingMode = "AUTO";
+    frame.counterAxisSizingMode = "AUTO";
+    frame.counterAxisAlignItems = "MIN";
+    frame.itemSpacing = spacing;
+    frame.clipsContent = false;
+    frame.fills = [];
+    return frame;
+  }
+
+  function createSectionHeader(title, subtitle, subtitleColor) {
+    var block = createStack("Section Header", 8);
+    appendText(block, titleFont, title, 20, DOC_COLORS.sectionHeading, "Section Heading", "sectionHeading");
+    appendText(block, bodyFont, subtitle, 14, subtitleColor || DOC_COLORS.subtitle, "Section Subtitle", "textSubtle");
+    return block;
+  }
+
+  function bindTextRole(textNode, role) {
+    if (!textNode || textNode.type !== "TEXT") return;
+    if (!docsResolvedColorVars[role]) return;
+    bindPaintVar(textNode, "fills", 0, docsResolvedColorVars[role]);
+  }
+
+  function bindPanelRole(frameNode) {
+    if (!frameNode || frameNode.type !== "FRAME") return;
+    if (docsResolvedColorVars.panelBg) bindPaintVar(frameNode, "fills", 0, docsResolvedColorVars.panelBg);
+    if (docsResolvedColorVars.panelStroke) bindPaintVar(frameNode, "strokes", 0, docsResolvedColorVars.panelStroke);
+  }
+
+  function applyDocVariableBindings(docNode) {
+    if (!docNode || typeof docNode.findAll !== "function") return;
+    if (docsResolvedColorVars.pageBg) bindPaintVar(docNode, "fills", 0, docsResolvedColorVars.pageBg);
+
+    function getSolidPaintColor(paint) {
+      if (!paint || paint.type !== "SOLID" || !paint.color) return null;
+      return paint.color;
+    }
+
+    function approxColor(a, b) {
+      if (!a || !b) return false;
+      return (
+        Math.abs((a.r || 0) - (b.r || 0)) <= 0.01 &&
+        Math.abs((a.g || 0) - (b.g || 0)) <= 0.01 &&
+        Math.abs((a.b || 0) - (b.b || 0)) <= 0.01
+      );
+    }
+
+    function isInsideInstance(node) {
+      var current = node;
+      while (current && current.parent) {
+        current = current.parent;
+        if (current && current.type === "INSTANCE") return true;
+      }
+      return false;
+    }
+
+    var textNodes = [];
+    var frameNodes = [];
+    try {
+      textNodes = docNode.findAll(function (n) { return n.type === "TEXT"; });
+      frameNodes = docNode.findAll(function (n) { return n.type === "FRAME"; });
+    } catch (_bindScanErr) {
+      return;
+    }
+
+    var titleBound = 0;
+    var headingBound = 0;
+    var subtleBound = 0;
+    var panelFillBound = 0;
+    var panelStrokeBound = 0;
+
+    for (var ti = 0; ti < textNodes.length; ti++) {
+      var t = textNodes[ti];
+      if (isInsideInstance(t)) continue;
+      var tName = String(t.name || "");
+      var tText = String(t.characters || "");
+      var tFill = (t.fills && t.fills.length > 0) ? getSolidPaintColor(t.fills[0]) : null;
+      var isSectionHeading =
+        tName === "Section Heading" ||
+        tText === "Variants" || tText === "Size" || tText === "States" || tText === "With Icons" ||
+        approxColor(tFill, DOC_COLORS.sectionHeading);
+      var isSubtleText =
+        tName === "Section Subtitle" ||
+        tName === "Component Subtitle" ||
+        tName === "Variant Description" ||
+        approxColor(tFill, DOC_COLORS.subtitle) ||
+        approxColor(tFill, DOC_COLORS.panelBody) ||
+        approxColor(tFill, DOC_COLORS.variantSubtitle);
+      var isComponentTitle =
+        tName === "Component Title" ||
+        (typeof t.fontSize === "number" && t.fontSize >= 26 && String(t.parent && t.parent.name || "") === "Intro Block");
+
+      if (isSectionHeading && docsResolvedColorVars.sectionHeading) {
+        bindTextRole(t, "sectionHeading");
+        headingBound++;
+        continue;
+      }
+      if (isComponentTitle && docsResolvedColorVars.title) {
+        bindTextRole(t, "title");
+        titleBound++;
+        continue;
+      }
+      if (isSubtleText && docsResolvedColorVars.textSubtle) {
+        bindTextRole(t, "textSubtle");
+        subtleBound++;
+      }
+    }
+
+    for (var fi = 0; fi < frameNodes.length; fi++) {
+      var f = frameNodes[fi];
+      if (!f || f.type !== "FRAME") continue;
+      if (isInsideInstance(f)) continue;
+      var fName = String(f.name || "");
+      var isPanelByName = fName.indexOf("slot:") === 0 || fName.indexOf("variant-section-") === 0;
+
+      var fillColor = (f.fills && f.fills.length > 0) ? getSolidPaintColor(f.fills[0]) : null;
+      var strokeColor = (f.strokes && f.strokes.length > 0) ? getSolidPaintColor(f.strokes[0]) : null;
+      var isPageBg = approxColor(fillColor, DOC_COLORS.pageBg);
+      var isPanelBg = approxColor(fillColor, DOC_COLORS.panelBg);
+      var isPanelStroke = approxColor(strokeColor, DOC_COLORS.panelStroke);
+
+      if ((isPanelByName || isPanelBg) && docsResolvedColorVars.panelBg) {
+        bindPaintVar(f, "fills", 0, docsResolvedColorVars.panelBg);
+        panelFillBound++;
+      }
+      if ((isPanelByName || isPanelStroke) && docsResolvedColorVars.panelStroke) {
+        bindPaintVar(f, "strokes", 0, docsResolvedColorVars.panelStroke);
+        panelStrokeBound++;
+      }
+      if (isPageBg && docsResolvedColorVars.pageBg) {
+        bindPaintVar(f, "fills", 0, docsResolvedColorVars.pageBg);
+      }
+    }
+
+    progress(
+      "Docs bound vars: titles=" + titleBound +
+      ", section-headings=" + headingBound +
+      ", subtle-text=" + subtleBound +
+      ", panel-fills=" + panelFillBound +
+      ", panel-strokes=" + panelStrokeBound
+    );
   }
 
   function getPropValues(variantProps, name) {
@@ -976,6 +1227,51 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     }
   }
 
+  function findFirstByNames(root, names) {
+    if (!root || !names || names.length === 0 || typeof root.findOne !== "function") return null;
+    for (var i = 0; i < names.length; i++) {
+      var name = names[i];
+      var hit = null;
+      try {
+        hit = root.findOne(function (n) { return String(n.name || "") === name; });
+      } catch (e) {}
+      if (hit) return hit;
+    }
+    return null;
+  }
+
+  async function setNamedText(root, textNodeName, value) {
+    var target = findFirstByNames(root, [textNodeName]);
+    if (!target || target.type !== "TEXT") return false;
+    try {
+      if (target.fontName !== figma.mixed) {
+        await figma.loadFontAsync(target.fontName);
+      }
+      target.characters = String(value);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function removeSectionOrSlot(root, slug, key) {
+    var section = findFirstByNames(root, ["section:" + key, "section:" + slug + ":" + key]);
+    if (section) {
+      section.remove();
+      return true;
+    }
+    var slot = findFirstByNames(root, ["slot:" + key, "slot:" + slug + ":" + key]);
+    if (slot) {
+      slot.remove();
+      return true;
+    }
+    return false;
+  }
+
+  function getTemplateSlot(root, slug, key) {
+    return findFirstByNames(root, ["slot:" + slug + ":" + key, "slot:" + key]);
+  }
+
   function resolveBaseComponent(set) {
     if (!set) return null;
     if (set.type === "COMPONENT") return set;
@@ -986,17 +1282,20 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     return null;
   }
 
-  function addInstancesRow(target, title, labels, createInstanceForLabel) {
+  function addInstancesRow(target, title, labels, createInstanceForLabel, showTitle) {
+    var shouldShowTitle = showTitle !== false;
     var rowWrap = figma.createFrame();
     rowWrap.layoutMode = "VERTICAL";
     rowWrap.primaryAxisSizingMode = "AUTO";
     rowWrap.counterAxisSizingMode = "AUTO";
-    rowWrap.counterAxisAlignItems = "MIN";
+    rowWrap.counterAxisAlignItems = "CENTER";
     rowWrap.itemSpacing = 8;
     rowWrap.clipsContent = false;
     rowWrap.fills = [];
 
-    appendText(rowWrap, titleFont, title, 16, { r: 0.93, g: 0.94, b: 0.95 }, "Row Title");
+    if (shouldShowTitle) {
+      appendText(rowWrap, titleFont, title, 18, DOC_COLORS.panelHeading, "Row Title");
+    }
 
     var row = figma.createFrame();
     row.layoutMode = "HORIZONTAL";
@@ -1017,7 +1316,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       cell.itemSpacing = 6;
       cell.clipsContent = false;
       cell.fills = [];
-      appendText(cell, bodyFont, String(label), 10, { r: 0.65, g: 0.69, b: 0.75 }, "Cell Label");
+      appendText(cell, bodyFont, String(label), 10, DOC_COLORS.cellLabel, "Cell Label");
       var inst = null;
       try {
         inst = createInstanceForLabel(label);
@@ -1079,6 +1378,28 @@ async function buildUsageDocsPage(componentSets, titleFont) {
   var docsCreated = 0;
   var docsSkipped = 0;
 
+  var docsTemplate = null;
+  try {
+    for (var tp = 0; tp < figma.root.children.length; tp++) {
+      var rootPage = figma.root.children[tp];
+      if (!rootPage || rootPage.type !== "PAGE") continue;
+      try { await rootPage.loadAsync(); } catch (e) {}
+      if (typeof rootPage.findOne !== "function") continue;
+      docsTemplate = rootPage.findOne(function (n) {
+        return (
+          String(n.name || "") === "__AUTO_DOCS_TEMPLATE__" &&
+          n.type === "FRAME"
+        );
+      });
+      if (docsTemplate) break;
+    }
+  } catch (templateErr) {
+    progress("Docs template lookup warning: " + String(templateErr));
+  }
+  if (docsTemplate) {
+    progress("Using docs template: __AUTO_DOCS_TEMPLATE__");
+  }
+
   for (var si = 0; si < componentSets.length; si++) {
     var set = componentSets[si];
     if (!set) continue;
@@ -1095,6 +1416,163 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var hasStates = states.length > 0;
     var hasIcons = getPropValues(variantProps, "LeftIcon").length > 0 || getPropValues(variantProps, "RightIcon").length > 0;
 
+    if (docsTemplate) {
+      var templatedDoc = docsTemplate.clone();
+      templatedDoc.name = "__AUTO_DOCS__ - " + setName;
+      templatedDoc.clipsContent = false;
+
+      await setNamedText(templatedDoc, "Component Title", setName);
+      await setNamedText(
+        templatedDoc,
+        "Component Subtitle",
+        "Guidelines for implementing " + setName.toLowerCase() + " consistently across the platform."
+      );
+
+      var templateVariantsSlot = getTemplateSlot(templatedDoc, slug, "variants");
+      var templateSizeSlot = getTemplateSlot(templatedDoc, slug, "size");
+      var templateStatesSlot = getTemplateSlot(templatedDoc, slug, "states");
+      var templateLeftSlot = getTemplateSlot(templatedDoc, slug, "icons-left");
+      var templateRightSlot = getTemplateSlot(templatedDoc, slug, "icons-right");
+
+      var templateVariantKey = getPropKey(variantProps, "Variant");
+      var templateStateKey = getPropKey(variantProps, "State");
+      var templateSizeKey = getPropKey(variantProps, "Size");
+      var templateLeftIconKey = getPropKey(variantProps, "LeftIcon");
+      var templateRightIconKey = getPropKey(variantProps, "RightIcon");
+
+      var templateOrderedVariants = pickOrdered(variants, ["Filled", "Outlined", "Ghost", "Default", "Light", "Transparent", "Pills"]).slice(0, 3);
+      var templateOrderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
+      var templateOrderedSizes = pickOrdered(sizes, ["XXS", "XS", "SM", "MD", "LG", "XL", "Default"]).slice(0, 5);
+      if (templateOrderedSizes.length > 1) {
+        templateOrderedSizes = templateOrderedSizes.filter(function (s) { return String(s).toLowerCase() !== "default"; });
+      }
+
+      var templateDefaultVariant = templateOrderedVariants.length > 0 ? templateOrderedVariants[0] : null;
+      var templateDefaultState = templateOrderedStates.length > 0 ? templateOrderedStates[0] : null;
+      var templateDefaultSize = templateOrderedSizes.length > 0 ? templateOrderedSizes[0] : null;
+
+      var templateLeftValues = templateLeftIconKey ? getPropValues(variantProps, templateLeftIconKey) : [];
+      var templateRightValues = templateRightIconKey ? getPropValues(variantProps, templateRightIconKey) : [];
+      var templateLeftOn = templateLeftValues.indexOf("On") >= 0 ? "On" : (templateLeftValues.indexOf("True") >= 0 ? "True" : (templateLeftValues[0] || null));
+      var templateLeftOff = templateLeftValues.indexOf("Off") >= 0 ? "Off" : (templateLeftValues.indexOf("False") >= 0 ? "False" : (templateLeftValues[0] || null));
+      var templateRightOn = templateRightValues.indexOf("On") >= 0 ? "On" : (templateRightValues.indexOf("True") >= 0 ? "True" : (templateRightValues[0] || null));
+      var templateRightOff = templateRightValues.indexOf("Off") >= 0 ? "Off" : (templateRightValues.indexOf("False") >= 0 ? "False" : (templateRightValues[0] || null));
+
+      var templateBaseComponent = resolveBaseComponent(set);
+      if (templateBaseComponent) {
+        function makeTemplateInstance(propPatch) {
+          var inst = templateBaseComponent.createInstance();
+          var props = {};
+          if (templateVariantKey && templateDefaultVariant != null) props[templateVariantKey] = templateDefaultVariant;
+          if (templateStateKey && templateDefaultState != null) props[templateStateKey] = templateDefaultState;
+          if (templateSizeKey && templateDefaultSize != null) props[templateSizeKey] = templateDefaultSize;
+          if (templateLeftIconKey && templateLeftOff != null) props[templateLeftIconKey] = templateLeftOff;
+          if (templateRightIconKey && templateRightOff != null) props[templateRightIconKey] = templateRightOff;
+          var patchKeys = Object.keys(propPatch || {});
+          for (var p = 0; p < patchKeys.length; p++) {
+            var userKey = patchKeys[p];
+            var resolvedKey = getPropKey(variantProps, userKey);
+            if (resolvedKey) props[resolvedKey] = propPatch[userKey];
+          }
+          try { inst.setProperties(props); } catch (e) {}
+          return inst;
+        }
+
+        if (hasVariants && templateVariantsSlot && templateOrderedVariants.length > 0 && templateOrderedStates.length > 0) {
+          clearChildren(templateVariantsSlot);
+          if (templateVariantsSlot.layoutMode === "VERTICAL") {
+            templateVariantsSlot.itemSpacing = 16;
+          }
+          for (var tv = 0; tv < templateOrderedVariants.length; tv++) {
+            var templateVariantName = templateOrderedVariants[tv];
+            var templateVariantBlock = createStack("variant-block-" + normalizeName(templateVariantName), 8);
+            var templateVariantHeader = createStack("variant-header-" + normalizeName(templateVariantName), 6);
+            appendText(templateVariantHeader, titleFont, String(templateVariantName), 18, DOC_COLORS.panelHeading, "Variant Heading", "title");
+            appendText(templateVariantHeader, bodyFont, getVariantDescription(setName, templateVariantName), 12, DOC_COLORS.panelBody, "Variant Description");
+            templateVariantBlock.appendChild(templateVariantHeader);
+
+            var templateVariantSection = createPanel("variant-section-" + normalizeName(templateVariantName), 10);
+            templateVariantSection.counterAxisSizingMode = "FIXED";
+            templateVariantSection.resize(1192, templateVariantSection.height);
+
+            var templateVariantStatesPanel = createStack("variant-states-" + normalizeName(templateVariantName), 10);
+            templateVariantStatesPanel.paddingLeft = 12;
+            templateVariantStatesPanel.paddingRight = 12;
+            templateVariantStatesPanel.paddingTop = 12;
+            templateVariantStatesPanel.paddingBottom = 12;
+            addInstancesRow(
+              templateVariantStatesPanel,
+              "States",
+              templateOrderedStates,
+              (function (vName) {
+                return function (stateName) {
+                  return makeTemplateInstance({ Variant: vName, State: stateName });
+                };
+              })(templateVariantName),
+              false
+            );
+
+            templateVariantSection.appendChild(templateVariantStatesPanel);
+            templateVariantBlock.appendChild(templateVariantSection);
+            templateVariantsSlot.appendChild(templateVariantBlock);
+          }
+        } else if (!hasVariants) {
+          removeSectionOrSlot(templatedDoc, slug, "variants");
+        }
+
+        if (hasSizes && templateSizeSlot && templateOrderedSizes.length > 0) {
+          clearChildren(templateSizeSlot);
+          addInstancesRow(templateSizeSlot, "Sizes", templateOrderedSizes, function (sizeName) {
+            return makeTemplateInstance({ Size: sizeName });
+          }, false);
+        } else if (!hasSizes) {
+          removeSectionOrSlot(templatedDoc, slug, "size");
+        }
+
+        if (hasStates && templateStatesSlot && templateOrderedStates.length > 0) {
+          clearChildren(templateStatesSlot);
+          addInstancesRow(templateStatesSlot, "States", templateOrderedStates, function (stateName) {
+            return makeTemplateInstance({ State: stateName });
+          }, false);
+        } else if (!hasStates) {
+          removeSectionOrSlot(templatedDoc, slug, "states");
+        }
+
+        if (hasIcons && templateLeftSlot && templateLeftIconKey && templateOrderedSizes.length > 0) {
+          clearChildren(templateLeftSlot);
+          addInstancesRow(templateLeftSlot, "Left Icon", templateOrderedSizes, function (sizeName) {
+            var patch = { Size: sizeName };
+            patch[templateLeftIconKey] = templateLeftOn;
+            if (templateRightIconKey && templateRightOff != null) patch[templateRightIconKey] = templateRightOff;
+            return makeTemplateInstance(patch);
+          }, false);
+        } else if (!hasIcons) {
+          removeSectionOrSlot(templatedDoc, slug, "icons-left");
+        }
+
+        if (hasIcons && templateRightSlot && templateRightIconKey && templateOrderedSizes.length > 0) {
+          clearChildren(templateRightSlot);
+          addInstancesRow(templateRightSlot, "Right Icon", templateOrderedSizes, function (sizeName) {
+            var patch = { Size: sizeName };
+            patch[templateRightIconKey] = templateRightOn;
+            if (templateLeftIconKey && templateLeftOff != null) patch[templateLeftIconKey] = templateLeftOff;
+            return makeTemplateInstance(patch);
+          }, false);
+        } else if (!hasIcons) {
+          removeSectionOrSlot(templatedDoc, slug, "icons-right");
+        }
+      }
+
+      applyDocVariableBindings(templatedDoc);
+
+      docsPage.appendChild(templatedDoc);
+      templatedDoc.x = docsX;
+      templatedDoc.y = docsY;
+      docsY += nodeRenderedHeight(templatedDoc) + docsGap;
+      docsCreated++;
+      continue;
+    }
+
     var doc = figma.createFrame();
     doc.name = "__AUTO_DOCS__ - " + setName;
     doc.layoutMode = "VERTICAL";
@@ -1102,82 +1580,74 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     doc.counterAxisSizingMode = "AUTO";
     doc.counterAxisAlignItems = "MIN";
     doc.itemSpacing = 16;
-    doc.paddingLeft = 24;
-    doc.paddingRight = 24;
-    doc.paddingTop = 24;
-    doc.paddingBottom = 24;
-    doc.fills = [{ type: "SOLID", color: { r: 0.09, g: 0.1, b: 0.14 } }];
-    doc.cornerRadius = 8;
+    doc.paddingLeft = 64;
+    doc.paddingRight = 64;
+    doc.paddingTop = 64;
+    doc.paddingBottom = 64;
+    doc.fills = [{ type: "SOLID", color: DOC_COLORS.pageBg }];
+    if (docsResolvedColorVars.pageBg) {
+      bindPaintVar(doc, "fills", 0, docsResolvedColorVars.pageBg);
+    }
+    doc.cornerRadius = 0;
     doc.clipsContent = false;
-    doc.resize(1240, doc.height);
+    doc.resize(1320, doc.height);
 
-    appendText(doc, titleFont, setName, 30, { r: 0.91, g: 0.92, b: 0.94 }, "Component Title");
+    var introBlock = createStack("Intro Block", 12);
+    appendText(introBlock, titleFont, setName, 28, DOC_COLORS.title, "Component Title", "title");
     appendText(
-      doc,
+      introBlock,
       bodyFont,
       "Guidelines for implementing " + setName.toLowerCase() + " consistently across the platform.",
-      12,
-      { r: 0.64, g: 0.67, b: 0.73 },
+      16,
+      DOC_COLORS.subtitle,
       "Component Subtitle"
     );
+    doc.appendChild(introBlock);
 
     var variantsSlot = null;
     if (hasVariants) {
-      appendText(doc, titleFont, "Variants", 30, { r: 0.13, g: 0.55, b: 0.9 }, "Variants Heading");
-      appendText(doc, bodyFont, "Visual variants available for this component.", 12, { r: 0.64, g: 0.67, b: 0.73 }, "Variants Subtitle");
-      variantsSlot = createPanel("slot:" + slug + ":variants", 10);
-      variantsSlot.resize(1192, variantsSlot.height);
-      appendText(
-        variantsSlot,
-        bodyFont,
-        "Expected variants: " + variants.join(", "),
-        12,
-        { r: 0.65, g: 0.69, b: 0.75 },
-        "Variants Hint"
-      );
+      var variantsSubtitle =
+        String(setName || "").toLowerCase() === "button"
+          ? "Buttons are available in two variants that establish visual hierarchy and guide user actions throughout the interface."
+          : "Visual variants available for this component.";
+      doc.appendChild(createSectionHeader("Variants", variantsSubtitle, DOC_COLORS.variantSubtitle));
+      variantsSlot = createStack("slot:" + slug + ":variants", 16);
       doc.appendChild(variantsSlot);
     }
 
     var sizeSlot = null;
     if (hasSizes) {
-      appendText(doc, titleFont, "Size", 30, { r: 0.13, g: 0.55, b: 0.9 }, "Size Heading");
-      appendText(doc, bodyFont, "Size options for this component.", 12, { r: 0.64, g: 0.67, b: 0.73 }, "Size Subtitle");
+      doc.appendChild(createSectionHeader("Size", "Size options for this component.", DOC_COLORS.subtitle));
       sizeSlot = createPanel("slot:" + slug + ":size", 10);
       sizeSlot.resize(1192, sizeSlot.height);
-      appendText(
-        sizeSlot,
-        bodyFont,
-        "Expected sizes: " + sizes.join(", "),
-        12,
-        { r: 0.65, g: 0.69, b: 0.75 },
-        "Size Hint"
-      );
       doc.appendChild(sizeSlot);
     }
 
     var statesSlot = null;
     if (hasStates) {
-      appendText(doc, titleFont, "States", 30, { r: 0.13, g: 0.55, b: 0.9 }, "States Heading");
-      appendText(doc, bodyFont, "Interactive states used in documentation examples.", 12, { r: 0.64, g: 0.67, b: 0.73 }, "States Subtitle");
+      doc.appendChild(createSectionHeader("States", "Interactive states used in documentation examples.", DOC_COLORS.subtitle));
       statesSlot = createPanel("slot:" + slug + ":states", 10);
       statesSlot.resize(1192, statesSlot.height);
-      appendText(statesSlot, bodyFont, "Expected states: " + states.join(", "), 12, { r: 0.65, g: 0.69, b: 0.75 }, "States Hint");
       doc.appendChild(statesSlot);
     }
 
     var leftSlot = null;
     var rightSlot = null;
     if (hasIcons) {
-      appendText(doc, titleFont, "With Icons", 30, { r: 0.13, g: 0.55, b: 0.9 }, "Icons Heading");
-      appendText(doc, bodyFont, "Examples with optional icon placements.", 12, { r: 0.64, g: 0.67, b: 0.73 }, "Icons Subtitle");
+      doc.appendChild(createSectionHeader("With Icons", "Examples with optional icon placements.", DOC_COLORS.panelBody));
+      var leftIconsBlock = createStack("icons-left-block", 8);
+      appendText(leftIconsBlock, titleFont, "Left Icon", 18, DOC_COLORS.panelHeading, "Left Icon Heading", "title");
       leftSlot = createPanel("slot:" + slug + ":icons-left", 10);
       leftSlot.resize(1192, leftSlot.height);
-      appendText(leftSlot, bodyFont, "Left icon examples go here.", 12, { r: 0.65, g: 0.69, b: 0.75 }, "Left Icon Hint");
-      doc.appendChild(leftSlot);
+      leftIconsBlock.appendChild(leftSlot);
+      doc.appendChild(leftIconsBlock);
+
+      var rightIconsBlock = createStack("icons-right-block", 8);
+      appendText(rightIconsBlock, titleFont, "Right Icon", 18, DOC_COLORS.panelHeading, "Right Icon Heading", "title");
       rightSlot = createPanel("slot:" + slug + ":icons-right", 10);
       rightSlot.resize(1192, rightSlot.height);
-      appendText(rightSlot, bodyFont, "Right icon examples go here.", 12, { r: 0.65, g: 0.69, b: 0.75 }, "Right Icon Hint");
-      doc.appendChild(rightSlot);
+      rightIconsBlock.appendChild(rightSlot);
+      doc.appendChild(rightIconsBlock);
     }
 
     if (set.type === "COMPONENT_SET" || set.type === "COMPONENT") {
@@ -1199,6 +1669,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var orderedVariants = pickOrdered(variants, ["Filled", "Outlined", "Ghost", "Default", "Light", "Transparent", "Pills"]).slice(0, 3);
       var orderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
       var orderedSizes = pickOrdered(sizes, ["XXS", "XS", "SM", "MD", "LG", "XL", "Default"]).slice(0, 5);
+      if (orderedSizes.length > 1) {
+        orderedSizes = orderedSizes.filter(function (s) { return String(s).toLowerCase() !== "default"; });
+      }
 
       var defaultVariant = orderedVariants.length > 0 ? orderedVariants[0] : null;
       var defaultState = orderedStates.length > 0 ? orderedStates[0] : null;
@@ -1233,55 +1706,34 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         clearChildren(variantsSlot);
         for (var v = 0; v < orderedVariants.length; v++) {
           var variantName = orderedVariants[v];
-          var variantSection = figma.createFrame();
-          variantSection.name = "variant-section-" + normalizeName(variantName);
-          variantSection.layoutMode = "VERTICAL";
-          variantSection.primaryAxisSizingMode = "AUTO";
-          variantSection.counterAxisSizingMode = "AUTO";
-          variantSection.counterAxisAlignItems = "MIN";
-          variantSection.itemSpacing = 8;
-          variantSection.fills = [];
+          var variantBlock = createStack("variant-block-" + normalizeName(variantName), 8);
+          var variantHeader = createStack("variant-header-" + normalizeName(variantName), 6);
+          appendText(variantHeader, titleFont, String(variantName), 18, DOC_COLORS.panelHeading, "Variant Heading", "title");
+          appendText(variantHeader, bodyFont, getVariantDescription(setName, variantName), 12, DOC_COLORS.panelBody, "Variant Description");
+          variantBlock.appendChild(variantHeader);
 
-          appendText(
-            variantSection,
-            titleFont,
-            String(variantName),
-            18,
-            { r: 0.93, g: 0.94, b: 0.95 },
-            "Variant Heading"
-          );
-          appendText(
-            variantSection,
-            bodyFont,
-            getVariantDescription(setName, variantName),
-            12,
-            { r: 0.64, g: 0.67, b: 0.73 },
-            "Variant Description"
-          );
-
-          var variantStatesPanel = createPanel("variant-states-" + normalizeName(variantName), 8);
+          var variantSection = createPanel("variant-section-" + normalizeName(variantName), 10);
+          variantSection.counterAxisSizingMode = "FIXED";
+          variantSection.resize(1192, variantSection.height);
+          var variantStatesPanel = createStack("variant-states-" + normalizeName(variantName), 10);
           variantStatesPanel.paddingLeft = 12;
           variantStatesPanel.paddingRight = 12;
           variantStatesPanel.paddingTop = 12;
           variantStatesPanel.paddingBottom = 12;
           addInstancesRow(
             variantStatesPanel,
-            "",
+            "States",
             orderedStates,
             (function (vName) {
               return function (stateName) {
                 return makeInstance({ Variant: vName, State: stateName });
               };
-            })(variantName)
+            })(variantName),
+            false
           );
-          if (variantStatesPanel.children.length > 0 && variantStatesPanel.children[0].type === "FRAME") {
-            var firstRowWrap = variantStatesPanel.children[0];
-            if (firstRowWrap.children.length > 0 && firstRowWrap.children[0].type === "TEXT") {
-              firstRowWrap.children[0].remove();
-            }
-          }
           variantSection.appendChild(variantStatesPanel);
-          variantsSlot.appendChild(variantSection);
+          variantBlock.appendChild(variantSection);
+          variantsSlot.appendChild(variantBlock);
         }
       }
 
@@ -1289,7 +1741,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         clearChildren(sizeSlot);
         addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
           return makeInstance({ Size: sizeName });
-        });
+        }, false);
       }
 
       if (leftSlot && leftIconKey && orderedSizes.length > 0) {
@@ -1299,7 +1751,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           patch[leftIconKey] = leftOn;
           if (rightIconKey && rightOff != null) patch[rightIconKey] = rightOff;
           return makeInstance(patch);
-        });
+        }, false);
       }
 
       if (rightSlot && rightIconKey && orderedSizes.length > 0) {
@@ -1309,16 +1761,18 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           patch[rightIconKey] = rightOn;
           if (leftIconKey && leftOff != null) patch[leftIconKey] = leftOff;
           return makeInstance(patch);
-        });
+        }, false);
       }
 
       if (statesSlot && states.length > 0) {
         clearChildren(statesSlot);
         addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
             return makeInstance({ State: stateName });
-        });
+        }, false);
       }
     }
+
+    applyDocVariableBindings(doc);
 
     docsPage.appendChild(doc);
     doc.x = docsX;

@@ -85,6 +85,7 @@ export function ButtonPreviewContent({
   activeBrand,
   activeVariant,
   activeSize,
+  previewTheme = "light",
   selectedState,
   activeColorToken,
   sizeKeys,
@@ -101,6 +102,7 @@ export function ButtonPreviewContent({
           brandId={activeBrand}
           variant={activeVariant}
           size={activeSize}
+          previewTheme={previewTheme}
           state={selectedState === "default" ? undefined : selectedState}
           focusRingStyle={focusRingStyle}
           showLeftIcon={showLeftIcon}
@@ -118,6 +120,7 @@ export function ButtonPreviewContent({
             brandId={activeBrand}
             variant={row.variant}
             size={s}
+            previewTheme={previewTheme}
             focusRingStyle={focusRingStyle}
             showLeftIcon={showLeftIcon}
             showRightIcon={showRightIcon}

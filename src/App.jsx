@@ -136,6 +136,43 @@ function loadPersistedAppState() {
   }
 }
 
+function enforceTextDefaultMappings(brandsInput) {
+  if (!brandsInput || typeof brandsInput !== "object") return brandsInput;
+  const next = JSON.parse(JSON.stringify(brandsInput));
+
+  const applyMappings = (brandId, mappings) => {
+    if (!next[brandId]) return;
+    if (!next[brandId].semanticMap) next[brandId].semanticMap = {};
+    if (!next[brandId].darkSemanticOverrides) next[brandId].darkSemanticOverrides = {};
+    Object.entries(mappings).forEach(([semantic, mapping]) => {
+      next[brandId].semanticMap[semantic] = { ...mapping };
+      next[brandId].darkSemanticOverrides[semantic] = { ...mapping };
+    });
+  };
+
+  applyMappings("theia", {
+    "text-default": { color: "neutral", index: 0 },
+    "text-subtle": { color: "slate-gray", index: 3 },
+    "surface-primary": { color: "steel", index: 9 },
+    "surface-secondary": { color: "steel", index: 8 },
+    "subtle-primary": { color: "steel", index: 9 },
+    "subtle-secondary": { color: "steel", index: 8 },
+    "border-primary": { color: "steel", index: 7 },
+  });
+  applyMappings("hyperion", {
+    "text-default": { color: "slate-purple", index: 9 },
+    "text-subtle": { color: "slate-purple", index: 6 },
+    "surface-primary": { color: "slate-purple", index: 0 },
+    "surface-secondary": { color: "neutral", index: 0 },
+    "subtle-primary": { color: "slate-purple", index: 0 },
+    "subtle-secondary": { color: "neutral", index: 0 },
+    "border-primary": { color: "slate-gray", index: 0 },
+    "primary-border": { color: "slate-gray", index: 0 },
+  });
+
+  return next;
+}
+
 export default function App() {
   const COMPONENT_LABELS = {
     actionicon: "ActionIcon",
@@ -148,8 +185,11 @@ export default function App() {
 
   const [brands, setBrands] = useState(() => {
     const persisted = loadPersistedAppState();
-    return persisted?.brands || INITIAL_BRANDS;
+    return enforceTextDefaultMappings(persisted?.brands || INITIAL_BRANDS);
   });
+  useEffect(() => {
+    setBrands((prev) => enforceTextDefaultMappings(prev));
+  }, []);
   const [activeBrand, setActiveBrand] = useState(() => {
     const persisted = loadPersistedAppState();
     return persisted?.activeBrand || "theia";
@@ -1258,6 +1298,7 @@ export default function App() {
                   activeBrand={activeBrand}
                   activeVariant={forcedVariant || activeVariant}
                   activeSize={activeSize}
+                  previewTheme={previewTheme}
                   selectedState={forcedState || activeButtonState}
                   activeColorToken={activeColorToken}
                   sizeKeys={sizeKeys}
