@@ -880,6 +880,29 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
     textSet,
   ];
   var validSets = generatedSets.filter(function (set) { return Boolean(set); });
+  try {
+    var clearModeCollections = await figma.variables.getLocalVariableCollectionsAsync();
+    var clearModeCollectionIds = clearModeCollections.map(function (c) { return c.id; });
+    function clearModesNode(node) {
+      if (!node || typeof node.clearExplicitVariableModeForCollection !== "function") return;
+      for (var cmi = 0; cmi < clearModeCollectionIds.length; cmi++) {
+        try {
+          node.clearExplicitVariableModeForCollection(clearModeCollectionIds[cmi]);
+        } catch (_e) {}
+      }
+    }
+    function clearModesTree(root) {
+      if (!root) return;
+      clearModesNode(root);
+      if (typeof root.findAll !== "function") return;
+      var nodes = [];
+      try { nodes = root.findAll(function () { return true; }); } catch (_scanErr) { nodes = []; }
+      for (var ni = 0; ni < nodes.length; ni++) clearModesNode(nodes[ni]);
+    }
+    for (var vsi = 0; vsi < validSets.length; vsi++) {
+      clearModesTree(validSets[vsi]);
+    }
+  } catch (_clearSetModesErr) {}
   positionComponentSets(validSets, compSetGap);
 
   try {
@@ -988,14 +1011,38 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     title: resolveDocColorVar("title"),
     textSubtle: resolveDocColorVar("textSubtle"),
   };
-  progress(
-    "Docs variable mapping: pageBg=" + (docsResolvedColorVars.pageBg ? docsResolvedColorVars.pageBg.name : "none") +
-    ", panelBg=" + (docsResolvedColorVars.panelBg ? docsResolvedColorVars.panelBg.name : "none") +
-    ", panelStroke=" + (docsResolvedColorVars.panelStroke ? docsResolvedColorVars.panelStroke.name : "none") +
-    ", sectionHeading=" + (docsResolvedColorVars.sectionHeading ? docsResolvedColorVars.sectionHeading.name : "none") +
-    ", title=" + (docsResolvedColorVars.title ? docsResolvedColorVars.title.name : "none") +
-    ", textSubtle=" + (docsResolvedColorVars.textSubtle ? docsResolvedColorVars.textSubtle.name : "none")
-  );
+
+  var docsVariableCollectionIds = [];
+  try {
+    var docsCollections = await figma.variables.getLocalVariableCollectionsAsync();
+    for (var dci = 0; dci < docsCollections.length; dci++) {
+      docsVariableCollectionIds.push(docsCollections[dci].id);
+    }
+  } catch (_docsCollectionErr) {}
+
+  function clearExplicitModesForNode(node) {
+    if (!node || typeof node.clearExplicitVariableModeForCollection !== "function") return;
+    for (var cmi = 0; cmi < docsVariableCollectionIds.length; cmi++) {
+      try {
+        node.clearExplicitVariableModeForCollection(docsVariableCollectionIds[cmi]);
+      } catch (_clearModeErr) {}
+    }
+  }
+
+  function clearExplicitModesInSubtree(root) {
+    if (!root) return;
+    clearExplicitModesForNode(root);
+    if (typeof root.findAll !== "function") return;
+    var descendants = [];
+    try {
+      descendants = root.findAll(function () { return true; });
+    } catch (_scanErr) {
+      descendants = [];
+    }
+    for (var di = 0; di < descendants.length; di++) {
+      clearExplicitModesForNode(descendants[di]);
+    }
+  }
 
   function normalizeName(value) {
     return String(value || "").toLowerCase().replace(/[^a-z0-9]+/g, "-");
@@ -1178,13 +1225,6 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       }
     }
 
-    progress(
-      "Docs bound vars: titles=" + titleBound +
-      ", section-headings=" + headingBound +
-      ", subtle-text=" + subtleBound +
-      ", panel-fills=" + panelFillBound +
-      ", panel-strokes=" + panelStrokeBound
-    );
   }
 
   function getPropValues(variantProps, name) {
@@ -1219,6 +1259,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       if (out.indexOf(values[rv]) < 0) out.push(values[rv]);
     }
     return out;
+  }
+
+  function pickDefaultSizeValue(values) {
+    if (!values || values.length === 0) return null;
+    for (var i = 0; i < values.length; i++) {
+      if (String(values[i]).toLowerCase() === "default") return values[i];
+    }
+    for (var j = 0; j < values.length; j++) {
+      if (String(values[j]).toLowerCase() === "sm") return values[j];
+    }
+    return values[0];
   }
 
   function clearChildren(node) {
@@ -1420,6 +1471,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templatedDoc = docsTemplate.clone();
       templatedDoc.name = "__AUTO_DOCS__ - " + setName;
       templatedDoc.clipsContent = false;
+      clearExplicitModesInSubtree(templatedDoc);
 
       await setNamedText(templatedDoc, "Component Title", setName);
       await setNamedText(
@@ -1437,19 +1489,24 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateVariantKey = getPropKey(variantProps, "Variant");
       var templateStateKey = getPropKey(variantProps, "State");
       var templateSizeKey = getPropKey(variantProps, "Size");
+      var templateRadiusKey = getPropKey(variantProps, "Radius");
       var templateLeftIconKey = getPropKey(variantProps, "LeftIcon");
       var templateRightIconKey = getPropKey(variantProps, "RightIcon");
 
       var templateOrderedVariants = pickOrdered(variants, ["Filled", "Outlined", "Ghost", "Default", "Light", "Transparent", "Pills"]).slice(0, 3);
       var templateOrderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
-      var templateOrderedSizes = pickOrdered(sizes, ["XXS", "XS", "SM", "MD", "LG", "XL", "Default"]).slice(0, 5);
+      var templateOrderedSizesAll = pickOrdered(sizes, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+      var templateRadii = getPropValues(variantProps, "Radius");
+      var templateOrderedRadiiAll = pickOrdered(templateRadii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+      var templateOrderedSizes = templateOrderedSizesAll.slice();
       if (templateOrderedSizes.length > 1) {
         templateOrderedSizes = templateOrderedSizes.filter(function (s) { return String(s).toLowerCase() !== "default"; });
       }
 
       var templateDefaultVariant = templateOrderedVariants.length > 0 ? templateOrderedVariants[0] : null;
       var templateDefaultState = templateOrderedStates.length > 0 ? templateOrderedStates[0] : null;
-      var templateDefaultSize = templateOrderedSizes.length > 0 ? templateOrderedSizes[0] : null;
+      var templateDefaultSize = pickDefaultSizeValue(templateOrderedSizesAll);
+      var templateDefaultRadius = pickDefaultSizeValue(templateOrderedRadiiAll);
 
       var templateLeftValues = templateLeftIconKey ? getPropValues(variantProps, templateLeftIconKey) : [];
       var templateRightValues = templateRightIconKey ? getPropValues(variantProps, templateRightIconKey) : [];
@@ -1466,6 +1523,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (templateVariantKey && templateDefaultVariant != null) props[templateVariantKey] = templateDefaultVariant;
           if (templateStateKey && templateDefaultState != null) props[templateStateKey] = templateDefaultState;
           if (templateSizeKey && templateDefaultSize != null) props[templateSizeKey] = templateDefaultSize;
+          if (templateRadiusKey && templateDefaultRadius != null) props[templateRadiusKey] = templateDefaultRadius;
           if (templateLeftIconKey && templateLeftOff != null) props[templateLeftIconKey] = templateLeftOff;
           if (templateRightIconKey && templateRightOff != null) props[templateRightIconKey] = templateRightOff;
           var patchKeys = Object.keys(propPatch || {});
@@ -1475,6 +1533,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             if (resolvedKey) props[resolvedKey] = propPatch[userKey];
           }
           try { inst.setProperties(props); } catch (e) {}
+          clearExplicitModesInSubtree(inst);
           return inst;
         }
 
@@ -1563,6 +1622,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         }
       }
 
+      clearExplicitModesInSubtree(templatedDoc);
       applyDocVariableBindings(templatedDoc);
 
       docsPage.appendChild(templatedDoc);
@@ -1663,19 +1723,24 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var variantKey = getPropKey(variantProps, "Variant");
       var stateKey = getPropKey(variantProps, "State");
       var sizeKey = getPropKey(variantProps, "Size");
+      var radiusKey = getPropKey(variantProps, "Radius");
       var leftIconKey = getPropKey(variantProps, "LeftIcon");
       var rightIconKey = getPropKey(variantProps, "RightIcon");
 
       var orderedVariants = pickOrdered(variants, ["Filled", "Outlined", "Ghost", "Default", "Light", "Transparent", "Pills"]).slice(0, 3);
       var orderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
-      var orderedSizes = pickOrdered(sizes, ["XXS", "XS", "SM", "MD", "LG", "XL", "Default"]).slice(0, 5);
+      var orderedSizesAll = pickOrdered(sizes, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+      var radii = getPropValues(variantProps, "Radius");
+      var orderedRadiiAll = pickOrdered(radii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+      var orderedSizes = orderedSizesAll.slice();
       if (orderedSizes.length > 1) {
         orderedSizes = orderedSizes.filter(function (s) { return String(s).toLowerCase() !== "default"; });
       }
 
       var defaultVariant = orderedVariants.length > 0 ? orderedVariants[0] : null;
       var defaultState = orderedStates.length > 0 ? orderedStates[0] : null;
-      var defaultSize = orderedSizes.length > 0 ? orderedSizes[0] : null;
+      var defaultSize = pickDefaultSizeValue(orderedSizesAll);
+      var defaultRadius = pickDefaultSizeValue(orderedRadiiAll);
 
       var leftValues = leftIconKey ? getPropValues(variantProps, leftIconKey) : [];
       var rightValues = rightIconKey ? getPropValues(variantProps, rightIconKey) : [];
@@ -1690,6 +1755,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         if (variantKey && defaultVariant != null) props[variantKey] = defaultVariant;
         if (stateKey && defaultState != null) props[stateKey] = defaultState;
         if (sizeKey && defaultSize != null) props[sizeKey] = defaultSize;
+        if (radiusKey && defaultRadius != null) props[radiusKey] = defaultRadius;
         if (leftIconKey && leftOff != null) props[leftIconKey] = leftOff;
         if (rightIconKey && rightOff != null) props[rightIconKey] = rightOff;
         var patchKeys = Object.keys(propPatch || {});
@@ -1699,6 +1765,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (resolvedKey) props[resolvedKey] = propPatch[userKey];
         }
         try { inst.setProperties(props); } catch (e) {}
+        clearExplicitModesInSubtree(inst);
         return inst;
       }
 
@@ -1772,6 +1839,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       }
     }
 
+    clearExplicitModesInSubtree(doc);
     applyDocVariableBindings(doc);
 
     docsPage.appendChild(doc);
@@ -2042,7 +2110,6 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
             buttonNode.paddingTop = 6;
             buttonNode.paddingBottom = 6;
             buttonNode.cornerRadius = 8;
-            buttonNode.minHeight = 36;
 
             // --- Color variable paths for this state ---
             // Attached focus keeps the base button visual and only adds ring treatment.
@@ -2160,10 +2227,7 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
               comp.insertChild(0, attachedHalo);
             }
 
-            // Disabled opacity
-            if (state === "disabled") {
-              comp.opacity = 0.6;
-            }
+            // Disabled visuals come from disabled tokens; avoid extra opacity wash.
 
             // Grid layout: columns = variants × icon modes, rows = size groups × states
             var colIndex = ((vi * leftIconModes.length + li) * rightIconModes.length) + ri;
@@ -2478,7 +2542,7 @@ function switchLabelTextPath(state) {
 
 function buildSliderComponentSet(varMap, page, font) {
   var sizes = ["xs", "sm", "md", "lg", "xl"];
-  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "focus", "disabled"];
   var markModes = ["off", "on"];
   var components = [];
@@ -2672,7 +2736,7 @@ function sliderMarkLabelColorPath(state) {
 
 function buildRangeSliderComponentSet(varMap, page, font) {
   var sizes = ["xs", "sm", "md", "lg", "xl"];
-  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "focus", "disabled"];
   var markModes = ["off", "on"];
   var components = [];
@@ -5970,7 +6034,7 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
   var variants = (selectedVariants && selectedVariants.length > 0)
     ? selectedVariants.slice()
     : ["default", "filled", "light", "outlined", "transparent"];
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = ["xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
   var icons = ["check"];
@@ -6005,7 +6069,7 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
   if (minusIconComp) console.log("[ActionIcon] Found minus icon: " + minusIconComp.name);
   else console.log("[ActionIcon] WARNING: minus icon not found on icons page");
 
-  var sizePx = { xs: 28, sm: 32, md: 36, lg: 42, xl: 48 };
+  var sizePx = { default: 36, xs: 28, sm: 32, md: 36, lg: 42, xl: 48 };
   var gap = 18;
   var colGap = 24;
 
@@ -6032,11 +6096,11 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
 
       for (var si = 0; si < sizes.length; si++) {
         var size = sizes[si];
-        var capSize = size.toUpperCase();
+          var capSize = size === "default" ? "Default" : size.toUpperCase();
 
         for (var ri = 0; ri < radii.length; ri++) {
           var rad = radii[ri];
-          var capRadius = rad.toUpperCase();
+          var capRadius = rad === "default" ? "Default" : rad.toUpperCase();
 
           for (var sti = 0; sti < states.length; sti++) {
             var state = states[sti];
@@ -6047,8 +6111,12 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
                         ", Radius=" + capRadius + ", State=" + capState +
                         (icons.length > 1 ? ", Icon=" + capIcon : "");
             var isOffsetFocus = state === "focus" && focusRingStyle !== "attached";
+            var isAttachedFocus = state === "focus" && focusRingStyle === "attached";
             var surfaceNode = comp;
             var focusRingNode = null;
+            var attachedHaloNode = null;
+            var focusRingWidthVar = varMap["actionicon/focus-ring-width-" + rad] || varMap["actionicon/focus-ring-width"];
+            var focusRingSpacingVar = varMap["actionicon/focus-ring-spacing-" + rad] || varMap["actionicon/focus-ring-spacing"];
 
             comp.layoutMode = "HORIZONTAL";
             comp.primaryAxisAlignItems = "CENTER";
@@ -6063,27 +6131,21 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
               comp.paddingBottom = 3;
               comp.paddingLeft = 3;
               comp.fills = [];
-              comp.strokes = [];
+              comp.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.9 } }];
+              comp.strokeAlign = "OUTSIDE";
+              comp.strokeWeight = 2;
               comp.cornerRadius = 11;
               comp.clipsContent = false;
-              bindVar(comp, "paddingTop", varMap["actionicon/focus-ring-spacing"]);
-              bindVar(comp, "paddingRight", varMap["actionicon/focus-ring-spacing"]);
-              bindVar(comp, "paddingBottom", varMap["actionicon/focus-ring-spacing"]);
-              bindVar(comp, "paddingLeft", varMap["actionicon/focus-ring-spacing"]);
-              focusRingNode = figma.createRectangle();
-              focusRingNode.name = "FocusRing";
-              focusRingNode.fills = [];
-              focusRingNode.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.9 } }];
-              focusRingNode.strokeAlign = "INSIDE";
-              focusRingNode.strokeWeight = 2;
-              focusRingNode.cornerRadius = 11;
-              bindPaintVar(focusRingNode, "strokes", 0, varMap["actionicon/focus-ring"]);
-              bindVar(focusRingNode, "strokeWeight", varMap["actionicon/focus-ring-width"]);
-              bindVar(focusRingNode, "topLeftRadius", varMap["actionicon/focus-ring-radius-" + rad]);
-              bindVar(focusRingNode, "topRightRadius", varMap["actionicon/focus-ring-radius-" + rad]);
-              bindVar(focusRingNode, "bottomLeftRadius", varMap["actionicon/focus-ring-radius-" + rad]);
-              bindVar(focusRingNode, "bottomRightRadius", varMap["actionicon/focus-ring-radius-" + rad]);
-
+              bindPaintVar(comp, "strokes", 0, varMap["actionicon/focus-ring"]);
+              bindVar(comp, "strokeWeight", focusRingWidthVar);
+              bindVar(comp, "paddingTop", focusRingSpacingVar);
+              bindVar(comp, "paddingRight", focusRingSpacingVar);
+              bindVar(comp, "paddingBottom", focusRingSpacingVar);
+              bindVar(comp, "paddingLeft", focusRingSpacingVar);
+              bindVar(comp, "topLeftRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+              bindVar(comp, "topRightRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+              bindVar(comp, "bottomLeftRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+              bindVar(comp, "bottomRightRadius", varMap["actionicon/focus-ring-radius-" + rad]);
               surfaceNode = figma.createFrame();
               surfaceNode.name = "Surface";
               surfaceNode.layoutMode = "HORIZONTAL";
@@ -6101,12 +6163,13 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
               comp.counterAxisSizingMode = "FIXED";
               comp.resize(sizePx[size], sizePx[size]);
               comp.cornerRadius = 8;
-              comp.clipsContent = true;
+              comp.clipsContent = !isAttachedFocus;
             }
 
-            var bgPath = actionIconColorPath(variant, "background", state);
-            var iconPath = actionIconColorPath(variant, "icon", state);
-            var borderPath = actionIconColorPath(variant, "border", state);
+            var colorState = (state === "focus" && focusRingStyle === "attached") ? "default" : state;
+            var bgPath = actionIconColorPath(variant, "background", colorState);
+            var iconPath = actionIconColorPath(variant, "icon", colorState);
+            var borderPath = actionIconColorPath(variant, "border", colorState);
 
             surfaceNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
             bindPaintVar(surfaceNode, "fills", 0, varMap[bgPath]);
@@ -6151,28 +6214,28 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
               surfaceNode.appendChild(iconInst);
             }
 
-            if (focusRingNode) {
-              comp.appendChild(focusRingNode);
-              focusRingNode.layoutPositioning = "ABSOLUTE";
-              focusRingNode.x = 0;
-              focusRingNode.y = 0;
-              focusRingNode.resize(comp.width, comp.height);
-              focusRingNode.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
-              comp.insertChild(0, focusRingNode);
-            }
-
-            if (state === "focus") {
-              if (focusRingStyle === "attached") {
-                surfaceNode.effects = [{
-                  type: "DROP_SHADOW",
-                  color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
-                  offset: { x: 0, y: 0 },
-                  radius: 0,
-                  spread: 3,
-                  visible: true,
-                  blendMode: "NORMAL"
-                }];
-              }
+            if (isAttachedFocus) {
+              // Attached focus: token-bound halo ring, no hardcoded shadow color.
+              attachedHaloNode = figma.createRectangle();
+              attachedHaloNode.name = "FocusHalo";
+              attachedHaloNode.fills = [];
+              attachedHaloNode.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.9 } }];
+              attachedHaloNode.strokeAlign = "OUTSIDE";
+              attachedHaloNode.strokeWeight = 2;
+              attachedHaloNode.cornerRadius = 8;
+              bindPaintVar(attachedHaloNode, "strokes", 0, varMap["actionicon/focus-ring"]);
+              bindVar(attachedHaloNode, "strokeWeight", focusRingWidthVar);
+              bindVar(attachedHaloNode, "topLeftRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+              bindVar(attachedHaloNode, "topRightRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+              bindVar(attachedHaloNode, "bottomLeftRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+              bindVar(attachedHaloNode, "bottomRightRadius", varMap["actionicon/focus-ring-radius-" + rad]);
+              comp.appendChild(attachedHaloNode);
+              attachedHaloNode.layoutPositioning = "ABSOLUTE";
+              attachedHaloNode.x = 0;
+              attachedHaloNode.y = 0;
+              attachedHaloNode.resize(comp.width, comp.height);
+              attachedHaloNode.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+              comp.insertChild(0, attachedHaloNode);
             }
 
             if (state === "disabled") {

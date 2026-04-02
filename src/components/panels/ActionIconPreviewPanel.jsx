@@ -94,6 +94,7 @@ export function ActionIconPreviewContent({
   sizeKeys,
 }) {
   const matrixRows = ACTIONICON_VARIANTS.map((variant) => ({ label: variant, variant }));
+  const matrixSizeKeys = sizeKeys.includes("default") ? sizeKeys : ["default", ...sizeKeys];
   return (
     <div>
       <PreviewStage label={activeColorToken}>
@@ -112,7 +113,7 @@ export function ActionIconPreviewContent({
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
       <SectionLabel mt={20}>All Variants x Sizes</SectionLabel>
       <PreviewMatrix
-        sizeKeys={sizeKeys}
+        sizeKeys={matrixSizeKeys}
         rows={matrixRows}
         renderCell={(row, s) => (
           <ActionIconPreview
@@ -229,6 +230,7 @@ export default function ActionIconPreviewPanel({
 }) {
   const [activeState, setActiveState] = useState("default");
   const matrixRows = ACTIONICON_VARIANTS.map((variant) => ({ label: variant, variant }));
+  const matrixSizeKeys = sizeKeys.includes("default") ? sizeKeys : ["default", ...sizeKeys];
   const selectedState = forcedState || activeState;
 
   return (
@@ -268,7 +270,7 @@ export default function ActionIconPreviewPanel({
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
       <SectionLabel mt={20}>All Variants x Sizes</SectionLabel>
       <PreviewMatrix
-        sizeKeys={sizeKeys}
+        sizeKeys={matrixSizeKeys}
         rows={matrixRows}
         renderCell={(row, s) => (
           <ActionIconPreview

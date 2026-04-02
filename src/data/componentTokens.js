@@ -174,10 +174,20 @@ export const COMPONENT_TOKENS = {
     "actionicon-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 }, figmaPath: "actionicon/icon-stroke-width" },
     "actionicon-radius":    { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },    figmaPath: "actionicon/radius" },
 
-    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    // ── FLOAT TOKENS (shared + focus ring by radius size) ──
     "actionicon-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "actionicon/border-width" },
-    "actionicon-focus-ring-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "actionicon/focus-ring-width" },
-    "actionicon-focus-ring-spacing": { type: "FLOAT", unit: "px", value: 3, figmaPath: "actionicon/focus-ring-spacing" },
+    "actionicon-focus-ring-width": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { xs: 1.5, sm: 2, md: 2, lg: 2.5, xl: 3 },
+      figmaPath: "actionicon/focus-ring-width"
+    },
+    "actionicon-focus-ring-spacing": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { xs: 2, sm: 3, md: 3, lg: 4, xl: 5 },
+      figmaPath: "actionicon/focus-ring-spacing"
+    },
     "actionicon-focus-ring-radius": {
       type: "FLOAT",
       unit: "px",

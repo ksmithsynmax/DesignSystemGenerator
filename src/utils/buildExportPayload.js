@@ -134,7 +134,10 @@ export function buildExportPayload(brands, options) {
           const darkSemanticMap = { ...brand.semanticMap, ...(brand.darkSemanticOverrides || {}) };
           const darkSemanticMapping = darkSemanticMap?.[def.semantic] || null;
           const lightOverride = brand.componentOverrides?.[tokenName] || null;
-          const darkOverride = brand.componentOverridesDark?.[tokenName] || null;
+          const darkOverrideRaw = brand.componentOverridesDark?.[tokenName] || null;
+          // Keep Figma in sync with preview edits when only one theme override exists.
+          // Explicit dark overrides still win when provided.
+          const darkOverride = darkOverrideRaw || lightOverride || null;
 
           const lightResolved = lightOverride
             ? resolveMappingToColor(brand, lightOverride)
@@ -147,7 +150,11 @@ export function buildExportPayload(brands, options) {
           const darkHasSemantic = Boolean(def.semantic && darkSemanticMapping);
           const lightOpacity = lightOverride ? normalizeOpacity(lightOverride.opacity) : 100;
           const darkOpacity = darkOverride ? normalizeOpacity(darkOverride.opacity) : 100;
-          const needsBridge = (lightOverride && lightOpacity !== 100) || (darkOverride && darkOpacity !== 100);
+          // Always bridge component overrides through semantic variables so
+          // Components collection mode never drifts from Semantic mode.
+          const needsBridge =
+            Boolean(lightOverride || darkOverride) ||
+            ((lightOverride && lightOpacity !== 100) || (darkOverride && darkOpacity !== 100));
           const bridgeSemanticKey = needsBridge ? `component/${tokenName}` : null;
 
           if (bridgeSemanticKey) {

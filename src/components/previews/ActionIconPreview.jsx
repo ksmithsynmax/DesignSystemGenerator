@@ -78,8 +78,18 @@ export default function ActionIconPreview({
     resolveSizeKey("actionicon-icon-size", size, resolvedActionIconSize)
   );
   const borderWidth = resolveDimension(brands, brandId, "actionicon-border-width");
-  const focusRingWidth = resolveDimension(brands, brandId, "actionicon-focus-ring-width");
-  const focusRingSpacing = resolveDimension(brands, brandId, "actionicon-focus-ring-spacing");
+  const focusRingWidth = resolveDimension(
+    brands,
+    brandId,
+    "actionicon-focus-ring-width",
+    resolveSizeKey("actionicon-focus-ring-width", radius || size, resolvedRadiusSize)
+  );
+  const focusRingSpacing = resolveDimension(
+    brands,
+    brandId,
+    "actionicon-focus-ring-spacing",
+    resolveSizeKey("actionicon-focus-ring-spacing", radius || size, resolvedRadiusSize)
+  );
   const focusRingRadius = resolveDimension(brands, brandId, "actionicon-focus-ring-radius", resolvedRadiusSize);
 
   const mantineVariant = VARIANT_MAP[variant] || "default";

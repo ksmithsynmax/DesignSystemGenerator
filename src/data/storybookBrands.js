@@ -156,26 +156,6 @@ export const STORYBOOK_BRANDS = {
         "color": "slate-gray",
         "index": 3
       },
-      "surface-primary": {
-        "color": "steel",
-        "index": 9
-      },
-      "surface-secondary": {
-        "color": "steel",
-        "index": 8
-      },
-      "subtle-primary": {
-        "color": "steel",
-        "index": 9
-      },
-      "subtle-secondary": {
-        "color": "steel",
-        "index": 8
-      },
-      "border-primary": {
-        "color": "steel",
-        "index": 7
-      },
       "surface-default": {
         "color": "neutral",
         "index": 0
@@ -223,24 +203,6 @@ export const STORYBOOK_BRANDS = {
       "text-placeholder": {
         "color": "neutral",
         "index": 5
-      }
-    },
-    "darkSemanticOverrides": {
-      "interactive-secondary": {
-        "color": "neutral",
-        "index": 8
-      },
-      "interactive-secondary-hover": {
-        "color": "neutral",
-        "index": 7
-      },
-      "text-default": {
-        "color": "neutral",
-        "index": 0
-      },
-      "text-subtle": {
-        "color": "slate-gray",
-        "index": 3
       },
       "surface-primary": {
         "color": "steel",
@@ -261,6 +223,24 @@ export const STORYBOOK_BRANDS = {
       "border-primary": {
         "color": "steel",
         "index": 7
+      }
+    },
+    "darkSemanticOverrides": {
+      "interactive-secondary": {
+        "color": "neutral",
+        "index": 8
+      },
+      "interactive-secondary-hover": {
+        "color": "neutral",
+        "index": 7
+      },
+      "text-default": {
+        "color": "neutral",
+        "index": 0
+      },
+      "text-subtle": {
+        "color": "slate-gray",
+        "index": 3
       },
       "surface-default": {
         "color": "neutral",
@@ -297,6 +277,26 @@ export const STORYBOOK_BRANDS = {
       "text-placeholder": {
         "color": "neutral",
         "index": 5
+      },
+      "surface-primary": {
+        "color": "steel",
+        "index": 9
+      },
+      "surface-secondary": {
+        "color": "steel",
+        "index": 8
+      },
+      "subtle-primary": {
+        "color": "steel",
+        "index": 9
+      },
+      "subtle-secondary": {
+        "color": "steel",
+        "index": 8
+      },
+      "border-primary": {
+        "color": "steel",
+        "index": 7
       }
     },
     "componentDefaults": {
@@ -350,29 +350,71 @@ export const STORYBOOK_BRANDS = {
         "_value": 4
       },
       "button-padding-x": {
-        "xxs": 8,
+        "xxs": 6,
         "sm": 12,
         "md": 20,
         "lg": 24,
-        "xl": 32
+        "xl": 28
       },
       "button-padding-y": {
-        "xxs": 4,
+        "xxs": 2,
         "xs": 6,
-        "sm": 8,
+        "sm": 10,
         "md": 12,
         "lg": 16,
-        "xl": 16
+        "xl": 18
       },
       "button-line-height": {
-        "xxs": 14
+        "xxs": 16,
+        "xl": 20,
+        "sm": 18,
+        "md": 18,
+        "lg": 20
       },
       "actionicon-focus-ring-radius": {
-        "xs": 2,
-        "sm": 4,
+        "xs": 1,
+        "sm": 6,
         "md": 6,
         "lg": 8,
         "xl": 40
+      },
+      "actionicon-focus-ring-spacing": {
+        "_value": 2,
+        "xs": 1,
+        "sm": 2,
+        "md": 2,
+        "lg": 2,
+        "xl": 3
+      },
+      "button-focus-ring-spacing": {
+        "_value": 2
+      },
+      "actionicon-size": {
+        "sm": 32,
+        "md": 40,
+        "lg": 48,
+        "xl": 52
+      },
+      "actionicon-icon-size": {
+        "sm": 16,
+        "md": 20,
+        "lg": 20,
+        "xl": 22
+      },
+      "actionicon-icon-stroke-width": {
+        "xs": 1.5,
+        "sm": 1,
+        "md": 2
+      },
+      "actionicon-focus-ring-width": {
+        "xs": 1,
+        "sm": 1,
+        "md": 1,
+        "lg": 1,
+        "xl": 2
+      },
+      "actionicon-border-width": {
+        "_value": 1
       }
     },
     "componentOverridesDark": {
@@ -456,12 +498,14 @@ export const STORYBOOK_BRANDS = {
         "opacity": 0
       },
       "button-outlined-text-disabled": {
-        "color": "neutral",
-        "index": 7
+        "color": "slate-gray",
+        "index": 4,
+        "opacity": 100
       },
       "button-outlined-border-disabled": {
-        "color": "neutral",
-        "index": 7
+        "color": "slate-gray",
+        "index": 4,
+        "opacity": 100
       },
       "actionicon-default-background": {
         "color": "steel",
@@ -544,6 +588,92 @@ export const STORYBOOK_BRANDS = {
       "actionicon-filled-background-pressed": {
         "color": "blue",
         "index": 4
+      },
+      "button-ghost-background-hover": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-ghost-text-hover": {
+        "color": "blue",
+        "index": 6
+      },
+      "button-ghost-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-ghost-text-pressed": {
+        "color": "blue",
+        "index": 4
+      },
+      "actionicon-light-background-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "actionicon-light-icon-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "button-ghost-text-disabled": {
+        "color": "slate-gray",
+        "index": 4,
+        "opacity": 100
+      },
+      "button-filled-border-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "button-filled-border": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "button-filled-border-hover": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "button-filled-border-focus": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "button-filled-border-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "actionicon-filled-border-focus": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "anchor-color": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "anchor-color-hover": {
+        "color": "blue",
+        "index": 5
+      },
+      "anchor-color-visited": {
+        "color": "blue",
+        "index": 4
+      },
+      "anchor-color-disabled": {
+        "color": "slate-gray",
+        "index": 4,
+        "opacity": 100
+      },
+      "button-filled-background": {
+        "color": "red",
+        "index": 5,
+        "opacity": 100
       }
     },
     "componentOverrides": {
@@ -662,6 +792,228 @@ export const STORYBOOK_BRANDS = {
       "actionicon-filled-border-disabled": {
         "color": "slate-gray",
         "index": 3,
+        "opacity": 100
+      },
+      "actionicon-light-background": {
+        "color": "blue",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-light-icon": {
+        "color": "blue",
+        "index": 5
+      },
+      "actionicon-light-background-hover": {
+        "color": "blue",
+        "index": 2,
+        "opacity": 100
+      },
+      "actionicon-light-icon-hover": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "actionicon-light-background-focus": {
+        "color": "blue",
+        "index": 2,
+        "opacity": 100
+      },
+      "actionicon-light-background-pressed": {
+        "color": "blue",
+        "index": 0,
+        "opacity": 100
+      },
+      "actionicon-light-icon-pressed": {
+        "color": "blue",
+        "index": 3
+      },
+      "actionicon-light-background-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "actionicon-light-icon-disabled": {
+        "color": "slate-gray",
+        "index": 8,
+        "opacity": 100
+      },
+      "actionicon-outlined-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-outlined-background-hover": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 10
+      },
+      "actionicon-outlined-background-focus": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-outlined-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-outlined-icon-pressed": {
+        "color": "blue",
+        "index": 4
+      },
+      "actionicon-outlined-border-pressed": {
+        "color": "blue",
+        "index": 4
+      },
+      "actionicon-outlined-icon-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "actionicon-outlined-border-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "actionicon-outlined-background-disabled": {
+        "color": "slate-gray",
+        "index": 2,
+        "opacity": 100
+      },
+      "button-outlined-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-outlined-background-hover": {
+        "color": "neutral",
+        "index": 5,
+        "opacity": 10
+      },
+      "button-outlined-border-hover": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "button-outlined-background-focus": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "text-color": {
+        "color": "neutral",
+        "index": 0
+      },
+      "title-color": {
+        "color": "neutral",
+        "index": 0
+      },
+      "button-outlined-text": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "button-outlined-border": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "button-outlined-text-hover": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "button-outlined-text-focus": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "button-outlined-border-focus": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "button-outlined-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-outlined-text-pressed": {
+        "color": "neutral",
+        "index": 2,
+        "opacity": 100
+      },
+      "button-outlined-border-pressed": {
+        "color": "neutral",
+        "index": 2,
+        "opacity": 100
+      },
+      "button-outlined-background-disabled": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-outlined-text-disabled": {
+        "color": "slate-gray",
+        "index": 4,
+        "opacity": 100
+      },
+      "button-outlined-border-disabled": {
+        "color": "slate-gray",
+        "index": 4,
+        "opacity": 100
+      },
+      "button-ghost-text-disabled": {
+        "color": "slate-gray",
+        "index": 4,
+        "opacity": 100
+      },
+      "button-ghost-background-hover": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-ghost-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-filled-border": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "button-filled-border-hover": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "button-filled-border-focus": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "button-filled-border-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "anchor-color": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "anchor-color-hover": {
+        "color": "blue",
+        "index": 5
+      },
+      "anchor-color-visited": {
+        "color": "blue",
+        "index": 4
+      },
+      "anchor-color-disabled": {
+        "color": "slate-gray",
+        "index": 4,
         "opacity": 100
       }
     }
@@ -791,30 +1143,6 @@ export const STORYBOOK_BRANDS = {
         "color": "slate-purple",
         "index": 6
       },
-      "surface-primary": {
-        "color": "slate-purple",
-        "index": 0
-      },
-      "surface-secondary": {
-        "color": "neutral",
-        "index": 0
-      },
-      "subtle-primary": {
-        "color": "slate-purple",
-        "index": 0
-      },
-      "subtle-secondary": {
-        "color": "neutral",
-        "index": 0
-      },
-      "border-primary": {
-        "color": "slate-gray",
-        "index": 0
-      },
-      "primary-border": {
-        "color": "slate-gray",
-        "index": 0
-      },
       "surface-default": {
         "color": "neutral",
         "index": 0
@@ -862,24 +1190,6 @@ export const STORYBOOK_BRANDS = {
       "text-placeholder": {
         "color": "neutral",
         "index": 5
-      }
-    },
-    "darkSemanticOverrides": {
-      "interactive-secondary": {
-        "color": "neutral",
-        "index": 8
-      },
-      "interactive-secondary-hover": {
-        "color": "neutral",
-        "index": 7
-      },
-      "text-default": {
-        "color": "slate-purple",
-        "index": 9
-      },
-      "text-subtle": {
-        "color": "slate-purple",
-        "index": 6
       },
       "surface-primary": {
         "color": "slate-purple",
@@ -904,6 +1214,24 @@ export const STORYBOOK_BRANDS = {
       "primary-border": {
         "color": "slate-gray",
         "index": 0
+      }
+    },
+    "darkSemanticOverrides": {
+      "interactive-secondary": {
+        "color": "neutral",
+        "index": 8
+      },
+      "interactive-secondary-hover": {
+        "color": "neutral",
+        "index": 7
+      },
+      "text-default": {
+        "color": "slate-purple",
+        "index": 9
+      },
+      "text-subtle": {
+        "color": "slate-purple",
+        "index": 6
       },
       "surface-default": {
         "color": "neutral",
@@ -940,6 +1268,30 @@ export const STORYBOOK_BRANDS = {
       "text-placeholder": {
         "color": "neutral",
         "index": 5
+      },
+      "surface-primary": {
+        "color": "slate-purple",
+        "index": 0
+      },
+      "surface-secondary": {
+        "color": "neutral",
+        "index": 0
+      },
+      "subtle-primary": {
+        "color": "slate-purple",
+        "index": 0
+      },
+      "subtle-secondary": {
+        "color": "neutral",
+        "index": 0
+      },
+      "border-primary": {
+        "color": "slate-gray",
+        "index": 0
+      },
+      "primary-border": {
+        "color": "slate-gray",
+        "index": 0
       }
     },
     "componentDefaults": {
@@ -1007,6 +1359,9 @@ export const STORYBOOK_BRANDS = {
         "lg": 16,
         "xxs": 4,
         "xl": 16
+      },
+      "button-focus-ring-width": {
+        "_value": 2
       }
     },
     "componentOverridesDark": {
@@ -1043,6 +1398,192 @@ export const STORYBOOK_BRANDS = {
       "button-filled-text-disabled": {
         "color": "neutral",
         "index": 0
+      },
+      "button-outlined-background-focus": {
+        "color": "neutral",
+        "index": 0
+      },
+      "button-outlined-text-focus": {
+        "color": "green",
+        "index": 7
+      },
+      "button-outlined-text-hover": {
+        "color": "green",
+        "index": 7
+      },
+      "button-outlined-border-hover": {
+        "color": "green",
+        "index": 5
+      },
+      "button-outlined-background-hover": {
+        "color": "neutral",
+        "index": 0
+      },
+      "button-outlined-border-pressed": {
+        "color": "green",
+        "index": 3
+      },
+      "button-outlined-background-disabled": {
+        "color": "neutral",
+        "index": 0
+      },
+      "button-filled-border-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "button-filled-border": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "button-filled-border-hover": {
+        "color": "green",
+        "index": 7,
+        "opacity": 100
+      },
+      "button-filled-border-focus": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "button-filled-border-pressed": {
+        "color": "green",
+        "index": 5,
+        "opacity": 100
+      },
+      "actionicon-outlined-background-disabled": {
+        "color": "neutral",
+        "index": 0
+      },
+      "actionicon-outlined-icon-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-outlined-border-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-focus-ring": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-outlined-background-pressed": {
+        "color": "neutral",
+        "index": 0
+      },
+      "actionicon-outlined-border-pressed": {
+        "color": "green",
+        "index": 3
+      },
+      "actionicon-outlined-icon-focus": {
+        "color": "green",
+        "index": 7
+      },
+      "actionicon-outlined-border-focus": {
+        "color": "green",
+        "index": 3
+      },
+      "actionicon-outlined-background-focus": {
+        "color": "neutral",
+        "index": 0
+      },
+      "actionicon-outlined-icon-hover": {
+        "color": "green",
+        "index": 7
+      },
+      "actionicon-outlined-border-hover": {
+        "color": "green",
+        "index": 5
+      },
+      "actionicon-outlined-background-hover": {
+        "color": "neutral",
+        "index": 0
+      },
+      "actionicon-outlined-background": {
+        "color": "neutral",
+        "index": 0
+      },
+      "actionicon-outlined-border": {
+        "color": "green",
+        "index": 3
+      },
+      "actionicon-outlined-icon": {
+        "color": "green",
+        "index": 7
+      },
+      "actionicon-default-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-default-icon": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-default-border": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-default-background-hover": {
+        "color": "green",
+        "index": 6,
+        "opacity": 10
+      },
+      "actionicon-default-icon-hover": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "actionicon-default-border-hover": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-default-background-focus": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-default-icon-focus": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "actionicon-default-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-default-border-pressed": {
+        "color": "green",
+        "index": 5,
+        "opacity": 100
+      },
+      "actionicon-default-icon-pressed": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "actionicon-default-background-disabled": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-default-icon-disabled": {
+        "color": "navy",
+        "index": 0,
+        "opacity": 100
+      },
+      "actionicon-default-border-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
       }
     },
     "componentOverrides": {
@@ -1141,6 +1682,174 @@ export const STORYBOOK_BRANDS = {
       "button-filled-text-disabled": {
         "color": "neutral",
         "index": 0
+      },
+      "button-filled-border": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "button-filled-border-hover": {
+        "color": "green",
+        "index": 7,
+        "opacity": 100
+      },
+      "button-filled-border-focus": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "button-filled-border-pressed": {
+        "color": "green",
+        "index": 5,
+        "opacity": 100
+      },
+      "button-filled-border-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-outlined-icon": {
+        "color": "green",
+        "index": 7
+      },
+      "actionicon-outlined-border": {
+        "color": "green",
+        "index": 3
+      },
+      "actionicon-outlined-border-hover": {
+        "color": "green",
+        "index": 5
+      },
+      "actionicon-outlined-background-hover": {
+        "color": "neutral",
+        "index": 0
+      },
+      "actionicon-focus-ring": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-outlined-background-pressed": {
+        "color": "neutral",
+        "index": 0
+      },
+      "actionicon-outlined-border-pressed": {
+        "color": "green",
+        "index": 3
+      },
+      "actionicon-outlined-icon-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-outlined-border-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-default-background-disabled": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-default-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-default-icon": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-default-border": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-default-background-hover": {
+        "color": "green",
+        "index": 6,
+        "opacity": 10
+      },
+      "actionicon-default-icon-hover": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-default-border-hover": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-default-background-focus": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-default-icon-focus": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-default-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "actionicon-default-icon-pressed": {
+        "color": "green",
+        "index": 5,
+        "opacity": 100
+      },
+      "actionicon-default-border-pressed": {
+        "color": "green",
+        "index": 5,
+        "opacity": 100
+      },
+      "actionicon-default-icon-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-default-border-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-light-background-hover": {
+        "color": "green",
+        "index": 2,
+        "opacity": 100
+      },
+      "actionicon-light-background-pressed": {
+        "color": "green",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-light-icon-pressed": {
+        "color": "green",
+        "index": 4
+      },
+      "actionicon-light-background-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-light-icon-disabled": {
+        "color": "navy",
+        "index": 6,
+        "opacity": 100
+      },
+      "actionicon-light-background-focus": {
+        "color": "green",
+        "index": 1,
+        "opacity": 100
+      },
+      "actionicon-light-background": {
+        "color": "green",
+        "index": 1,
+        "opacity": 100
       }
     }
   }
