@@ -741,6 +741,12 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
   var compSetGap = 300;
   var buttonFocusRingStyle = (buildOptions && buildOptions.buttonFocusRingStyle === "attached") ? "attached" : "offset";
   var actionIconFocusRingStyle = (buildOptions && buildOptions.actionIconFocusRingStyle === "attached") ? "attached" : "offset";
+  var titleSampleText = (buildOptions && typeof buildOptions.titleText === "string" && buildOptions.titleText.trim().length > 0)
+    ? buildOptions.titleText
+    : "Why guess when you can know.";
+  var textSampleText = (buildOptions && typeof buildOptions.textText === "string" && buildOptions.textText.trim().length > 0)
+    ? buildOptions.textText
+    : "Why guess when you can know.";
   function resolveVariantList(selected, allowed) {
     if (!Array.isArray(selected) || selected.length === 0) return allowed.slice();
     var allowedSet = {};
@@ -841,10 +847,10 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
     return buildAnchorComponentSet(varMap, page, font);
   });
   var titleSet = await buildSet("Title", function () {
-    return buildTitleComponentSet(varMap, page, font);
+    return buildTitleComponentSet(varMap, page, font, titleSampleText);
   });
   var textSet = await buildSet("Text", function () {
-    return buildTextComponentSet(varMap, page, font);
+    return buildTextComponentSet(varMap, page, font, textSampleText);
   });
   var modalSet = await buildSet("Modal", function () {
     return buildModalComponentSet(varMap, page, font, {
@@ -1388,7 +1394,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     if (comp === "button") {
       if (variant === "filled") return "Serves as the primary button and CTA, representing the most important action to move forward in the flow.";
       if (variant === "outlined") return "Provides a medium level of emphasis, guiding user to take action on functions and features.";
-      if (variant === "ghost") return "Low-emphasis action used for tertiary interactions and secondary moments.";
+      if (variant === "ghost" || variant === "transparent") return "Low-emphasis action used for tertiary interactions and secondary moments.";
     }
     return "Use this variant when that level of visual emphasis is needed.";
   }
@@ -1458,10 +1464,16 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
     var setName = set.name || ("Component " + (si + 1));
     var slug = normalizeName(setName);
+    var lowerSetName = String(setName || "").toLowerCase();
+    var stackSizeRows = lowerSetName === "title" || lowerSetName === "text";
     var variantProps = set.variantGroupProperties || {};
     var variants = getPropValues(variantProps, "Variant");
     var states = getPropValues(variantProps, "State");
     var sizes = getPropValues(variantProps, "Size");
+    var textWeights = getPropValues(variantProps, "Weight");
+    var textColors = getPropValues(variantProps, "Color");
+    var hasTextWeights = textWeights.length > 0;
+    var hasTextColors = textColors.length > 0;
     var hasVariants = variants.length > 0;
     var hasSizes = sizes.length > 0;
     var hasStates = states.length > 0;
@@ -1496,6 +1508,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateOrderedVariants = pickOrdered(variants, ["Filled", "Outlined", "Ghost", "Default", "Light", "Transparent", "Pills"]).slice(0, 3);
       var templateOrderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
       var templateOrderedSizesAll = pickOrdered(sizes, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+      var templateOrderedTextWeights = pickOrdered(textWeights, ["Regular", "Medium", "Semibold", "Bold"]).slice(0, 6);
+      var templateOrderedTextColors = pickOrdered(textColors, ["Default", "Dimmed", "Brand"]).slice(0, 6);
       var templateRadii = getPropValues(variantProps, "Radius");
       var templateOrderedRadiiAll = pickOrdered(templateRadii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
       var templateOrderedSizes = templateOrderedSizesAll.slice();
@@ -1581,9 +1595,19 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
         if (hasSizes && templateSizeSlot && templateOrderedSizes.length > 0) {
           clearChildren(templateSizeSlot);
-          addInstancesRow(templateSizeSlot, "Sizes", templateOrderedSizes, function (sizeName) {
-            return makeTemplateInstance({ Size: sizeName });
-          }, false);
+          if (stackSizeRows) {
+            for (var tsi = 0; tsi < templateOrderedSizes.length; tsi++) {
+              (function (sizeName) {
+                addInstancesRow(templateSizeSlot, "Sizes", [sizeName], function (innerSizeName) {
+                  return makeTemplateInstance({ Size: innerSizeName });
+                }, false);
+              })(templateOrderedSizes[tsi]);
+            }
+          } else {
+            addInstancesRow(templateSizeSlot, "Sizes", templateOrderedSizes, function (sizeName) {
+              return makeTemplateInstance({ Size: sizeName });
+            }, false);
+          }
         } else if (!hasSizes) {
           removeSectionOrSlot(templatedDoc, slug, "size");
         }
@@ -1595,6 +1619,50 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           }, false);
         } else if (!hasStates) {
           removeSectionOrSlot(templatedDoc, slug, "states");
+        }
+
+        if (lowerSetName === "text") {
+          if (hasTextWeights && templateOrderedTextWeights.length > 0) {
+            var templateWeightSlot = getTemplateSlot(templatedDoc, slug, "weight");
+            if (!templateWeightSlot) {
+              templatedDoc.appendChild(createSectionHeader("Weight", "Weight options for this component.", DOC_COLORS.subtitle));
+              templateWeightSlot = createPanel("slot:" + slug + ":weight", 10);
+              templateWeightSlot.resize(1192, templateWeightSlot.height);
+              templatedDoc.appendChild(templateWeightSlot);
+            } else {
+              clearChildren(templateWeightSlot);
+            }
+            for (var twi = 0; twi < templateOrderedTextWeights.length; twi++) {
+              (function (weightName) {
+                addInstancesRow(templateWeightSlot, "Weight", [weightName], function (innerWeightName) {
+                  return makeTemplateInstance({ Weight: innerWeightName });
+                }, false);
+              })(templateOrderedTextWeights[twi]);
+            }
+          } else {
+            removeSectionOrSlot(templatedDoc, slug, "weight");
+          }
+
+          if (hasTextColors && templateOrderedTextColors.length > 0) {
+            var templateColorSlot = getTemplateSlot(templatedDoc, slug, "color");
+            if (!templateColorSlot) {
+              templatedDoc.appendChild(createSectionHeader("Color", "Color options for this component.", DOC_COLORS.subtitle));
+              templateColorSlot = createPanel("slot:" + slug + ":color", 10);
+              templateColorSlot.resize(1192, templateColorSlot.height);
+              templatedDoc.appendChild(templateColorSlot);
+            } else {
+              clearChildren(templateColorSlot);
+            }
+            for (var tci = 0; tci < templateOrderedTextColors.length; tci++) {
+              (function (colorName) {
+                addInstancesRow(templateColorSlot, "Color", [colorName], function (innerColorName) {
+                  return makeTemplateInstance({ Color: innerColorName });
+                }, false);
+              })(templateOrderedTextColors[tci]);
+            }
+          } else {
+            removeSectionOrSlot(templatedDoc, slug, "color");
+          }
         }
 
         if (hasIcons && templateLeftSlot && templateLeftIconKey && templateOrderedSizes.length > 0) {
@@ -1691,6 +1759,21 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       doc.appendChild(statesSlot);
     }
 
+    var weightSlot = null;
+    var colorSlot = null;
+    if (lowerSetName === "text" && hasTextWeights) {
+      doc.appendChild(createSectionHeader("Weight", "Weight options for this component.", DOC_COLORS.subtitle));
+      weightSlot = createPanel("slot:" + slug + ":weight", 10);
+      weightSlot.resize(1192, weightSlot.height);
+      doc.appendChild(weightSlot);
+    }
+    if (lowerSetName === "text" && hasTextColors) {
+      doc.appendChild(createSectionHeader("Color", "Color options for this component.", DOC_COLORS.subtitle));
+      colorSlot = createPanel("slot:" + slug + ":color", 10);
+      colorSlot.resize(1192, colorSlot.height);
+      doc.appendChild(colorSlot);
+    }
+
     var leftSlot = null;
     var rightSlot = null;
     if (hasIcons) {
@@ -1730,6 +1813,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var orderedVariants = pickOrdered(variants, ["Filled", "Outlined", "Ghost", "Default", "Light", "Transparent", "Pills"]).slice(0, 3);
       var orderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
       var orderedSizesAll = pickOrdered(sizes, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+      var orderedTextWeights = pickOrdered(textWeights, ["Regular", "Medium", "Semibold", "Bold"]).slice(0, 6);
+      var orderedTextColors = pickOrdered(textColors, ["Default", "Dimmed", "Brand"]).slice(0, 6);
       var radii = getPropValues(variantProps, "Radius");
       var orderedRadiiAll = pickOrdered(radii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
       var orderedSizes = orderedSizesAll.slice();
@@ -1806,9 +1891,19 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       if (sizeSlot && orderedSizes.length > 0) {
         clearChildren(sizeSlot);
-        addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
-          return makeInstance({ Size: sizeName });
-        }, false);
+        if (stackSizeRows) {
+          for (var osi = 0; osi < orderedSizes.length; osi++) {
+            (function (sizeName) {
+              addInstancesRow(sizeSlot, "Sizes", [sizeName], function (innerSizeName) {
+                return makeInstance({ Size: innerSizeName });
+              }, false);
+            })(orderedSizes[osi]);
+          }
+        } else {
+          addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
+            return makeInstance({ Size: sizeName });
+          }, false);
+        }
       }
 
       if (leftSlot && leftIconKey && orderedSizes.length > 0) {
@@ -1836,6 +1931,28 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
             return makeInstance({ State: stateName });
         }, false);
+      }
+
+      if (weightSlot && orderedTextWeights.length > 0) {
+        clearChildren(weightSlot);
+        for (var wsi = 0; wsi < orderedTextWeights.length; wsi++) {
+          (function (weightName) {
+            addInstancesRow(weightSlot, "Weight", [weightName], function (innerWeightName) {
+              return makeInstance({ Weight: innerWeightName });
+            }, false);
+          })(orderedTextWeights[wsi]);
+        }
+      }
+
+      if (colorSlot && orderedTextColors.length > 0) {
+        clearChildren(colorSlot);
+        for (var csi = 0; csi < orderedTextColors.length; csi++) {
+          (function (colorName) {
+            addInstancesRow(colorSlot, "Color", [colorName], function (innerColorName) {
+              return makeInstance({ Color: innerColorName });
+            }, false);
+          })(orderedTextColors[csi]);
+        }
       }
     }
 
@@ -2031,7 +2148,7 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
-    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+    var capVariant = variant === "ghost" ? "Transparent" : (variant.charAt(0).toUpperCase() + variant.slice(1));
 
     for (var si = 0; si < sizes.length; si++) {
       var size = sizes[si];
@@ -3101,7 +3218,7 @@ async function buildAnchorComponentSet(varMap, page, font) {
   }
 }
 
-function buildTitleComponentSet(varMap, page, font) {
+function buildTitleComponentSet(varMap, page, font, sampleText) {
   var orders = [1, 2, 3, 4, 5, 6];
   var sizeModes = ["auto", "h1", "h2", "h3", "h4", "h5", "h6"];
   var wrapModes = ["wrap", "balance", "nowrap"];
@@ -3145,7 +3262,7 @@ function buildTitleComponentSet(varMap, page, font) {
           var textNode = figma.createText();
           textNode.name = "title";
           textNode.fontName = font;
-          textNode.characters = "Build fully functional accessible web applications faster than ever";
+          textNode.characters = sampleText || "Why guess when you can know.";
           textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
           textNode.fontSize = defaultFontSizeByOrder[order] || 20;
           textNode.textAutoResize = "WIDTH_AND_HEIGHT";
@@ -3186,9 +3303,9 @@ function buildTitleComponentSet(varMap, page, font) {
   return componentSet;
 }
 
-async function buildTextComponentSet(varMap, page, fallbackFont) {
+async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
   var sizes = ["xs", "sm", "md", "lg", "xl"];
-  var weights = ["regular", "semibold", "bold"];
+  var weights = ["regular", "medium", "semibold", "bold"];
   var colors = ["default", "dimmed", "brand"];
   var components = [];
 
@@ -3199,6 +3316,7 @@ async function buildTextComponentSet(varMap, page, fallbackFont) {
 
   var fontByWeight = {
     regular: fallbackFont,
+    medium: fallbackFont,
     semibold: fallbackFont,
     bold: fallbackFont,
   };
@@ -3212,11 +3330,34 @@ async function buildTextComponentSet(varMap, page, fallbackFont) {
     { family: "Inter", style: "Semi Bold" },
     { family: "Inter", style: "SemiBold" },
   ];
+  var mediumCandidates = [
+    { family: "Inter", style: "Medium" },
+    { family: "Inter", style: "Regular" },
+  ];
+  var semiboldCandidates = [
+    { family: "Inter", style: "Semi Bold" },
+    { family: "Inter", style: "SemiBold" },
+    { family: "Inter", style: "Medium" },
+  ];
 
   for (var rci = 0; rci < regularCandidates.length; rci++) {
     try {
       await figma.loadFontAsync(regularCandidates[rci]);
       fontByWeight.regular = regularCandidates[rci];
+      break;
+    } catch (e) {}
+  }
+  for (var mci = 0; mci < mediumCandidates.length; mci++) {
+    try {
+      await figma.loadFontAsync(mediumCandidates[mci]);
+      fontByWeight.medium = mediumCandidates[mci];
+      break;
+    } catch (e) {}
+  }
+  for (var sci = 0; sci < semiboldCandidates.length; sci++) {
+    try {
+      await figma.loadFontAsync(semiboldCandidates[sci]);
+      fontByWeight.semibold = semiboldCandidates[sci];
       break;
     } catch (e) {}
   }
@@ -3255,7 +3396,7 @@ async function buildTextComponentSet(varMap, page, fallbackFont) {
         var textNode = figma.createText();
         textNode.name = "text";
         textNode.fontName = fontByWeight[weight] || fallbackFont;
-        textNode.characters = "Build fully functional accessible web applications faster than ever.";
+        textNode.characters = sampleText || "Why guess when you can know.";
         textNode.fontSize = 16;
         textNode.textAutoResize = "WIDTH_AND_HEIGHT";
         textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];

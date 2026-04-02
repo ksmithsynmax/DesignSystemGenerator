@@ -4,6 +4,7 @@ import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
 const WEIGHT_TOKEN_BY_MODE = {
   regular: "text-font-weight-regular",
+  medium: "text-font-weight-medium",
   semibold: "text-font-weight-semibold",
   bold: "text-font-weight-bold",
 };
@@ -20,7 +21,7 @@ export default function TextPreview({
   colorMode = "default",
   lineClamp = 0,
   truncate = "off",
-  text = "Build fully functional accessible web applications faster than ever.",
+  text = "Why guess when you can know.",
 }) {
   const tokens = COMPONENT_TOKENS.text;
   const colorToken =
@@ -51,7 +52,14 @@ export default function TextPreview({
           fontSize: fontSize ? `${fontSize}px` : undefined,
           lineHeight: lineHeight ? `${lineHeight}px` : undefined,
           fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
-          fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
+          fontWeight:
+            fontWeight === "Bold"
+              ? 700
+              : fontWeight === "Semi Bold"
+                ? 600
+                : fontWeight === "Medium"
+                  ? 500
+                  : 400,
         }}
       >
         {text}

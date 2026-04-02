@@ -1010,6 +1010,7 @@ export const COMPONENT_TOKENS = {
 
     // ── STRING TOKENS (single value) ──
     "text-font-weight-regular": { type: "STRING", value: "Regular", figmaPath: "text/font-weight-regular" },
+    "text-font-weight-medium": { type: "STRING", value: "Medium", figmaPath: "text/font-weight-medium" },
     "text-font-weight-semibold": { type: "STRING", value: "Semi Bold", figmaPath: "text/font-weight-semibold" },
     "text-font-weight-bold": { type: "STRING", value: "Bold", figmaPath: "text/font-weight-bold" },
     "text-max-width": { type: "FLOAT", unit: "px", value: 520, figmaPath: "text/max-width" },

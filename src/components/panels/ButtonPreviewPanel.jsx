@@ -8,8 +8,17 @@ const BUTTON_VARIANTS = ["filled", "outlined", "ghost"];
 const BUTTON_STATES = ["default", "hover", "focus", "pressed", "disabled"];
 const ON_OFF_OPTIONS = ["off", "on"];
 const FOCUS_RING_STYLE_OPTIONS = ["offset", "attached"];
+const BUTTON_VARIANT_LABELS = {
+  filled: "filled",
+  outlined: "outlined",
+  ghost: "transparent",
+};
 
-function PropertyRow({ label, value, onChange, options, disabled = false }) {
+function buttonVariantLabel(value) {
+  return BUTTON_VARIANT_LABELS[value] || value;
+}
+
+function PropertyRow({ label, value, onChange, options, disabled = false, optionLabel = (opt) => opt }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <SectionLabel mb={0}>{label}</SectionLabel>
@@ -38,7 +47,7 @@ function PropertyRow({ label, value, onChange, options, disabled = false }) {
       >
         {options.map((opt) => (
           <option key={opt} value={opt}>
-            {opt}
+            {optionLabel(opt)}
           </option>
         ))}
       </select>
@@ -46,7 +55,7 @@ function PropertyRow({ label, value, onChange, options, disabled = false }) {
   );
 }
 
-function VariantBuildRow({ options, selectedOptions, onToggle }) {
+function VariantBuildRow({ options, selectedOptions, onToggle, optionLabel = (opt) => opt }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <SectionLabel mb={0}>Build Variants</SectionLabel>
@@ -71,7 +80,7 @@ function VariantBuildRow({ options, selectedOptions, onToggle }) {
                 background: active ? "#2C2E33" : "#25262B",
               }}
             >
-              {opt}
+              {optionLabel(opt)}
             </button>
           );
         })}
@@ -93,7 +102,7 @@ export function ButtonPreviewContent({
   showLeftIcon,
   showRightIcon,
 }) {
-  const matrixRows = BUTTON_VARIANTS.map((v) => ({ label: v, variant: v }));
+  const matrixRows = BUTTON_VARIANTS.map((v) => ({ label: buttonVariantLabel(v), variant: v }));
   return (
     <div>
       <PreviewStage label={activeColorToken}>
@@ -160,11 +169,18 @@ export function ButtonPropertiesPanel({
   };
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={BUTTON_VARIANTS} />
+      <PropertyRow
+        label="Variant"
+        value={activeVariant}
+        onChange={setActiveVariant}
+        options={BUTTON_VARIANTS}
+        optionLabel={buttonVariantLabel}
+      />
       <VariantBuildRow
         options={BUTTON_VARIANTS}
         selectedOptions={buildVariants}
         onToggle={toggleBuildVariant}
+        optionLabel={buttonVariantLabel}
       />
       <PropertyRow label="Size" value={activeSize} onChange={setActiveSize} options={buttonSizeOptions} />
       {selectedState === "focus" && (

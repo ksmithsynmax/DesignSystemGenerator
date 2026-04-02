@@ -121,7 +121,7 @@ const VARIANTS_BY_COMPONENT = {
 };
 
 const APP_STORAGE_KEY = "design-system-generator:v1";
-const DEFAULT_TITLE_TEXT = "Why guess when you can know";
+const DEFAULT_TITLE_TEXT = "Why guess when you can know.";
 
 function loadPersistedAppState() {
   if (typeof window === "undefined") return null;
@@ -2098,6 +2098,8 @@ export default function App() {
                   buttonVariants: buildButtonVariants,
                   actionIconVariants: buildActionIconVariants,
                   tabsVariants: buildTabsVariants,
+                  titleText: activeTitleText,
+                  textText: activeTextText,
                 }}
               />
 
