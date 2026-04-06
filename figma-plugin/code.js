@@ -64,7 +64,7 @@ async function syncTokens(payload) {
       var capTheme = themes[ti].charAt(0).toUpperCase() + themes[ti].slice(1);
       modeEntries.push({
         key: meBrandId + "-" + themes[ti],
-        name: meCapBrand + " " + capTheme,
+        name: meCapBrand + capTheme,
         brandId: meBrandId,
         theme: themes[ti],
       });
