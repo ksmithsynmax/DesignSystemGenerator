@@ -599,6 +599,24 @@ async function syncTokens(payload) {
     }
   }
 
+  // Remove stale component variables (covers renamed figmaPath entries,
+  // including legacy button/ghost-* paths).
+  var componentExpected = {};
+  for (var cei = 0; cei < componentKeys.length; cei++) {
+    componentExpected[componentKeys[cei]] = true;
+  }
+  var componentStale = 0;
+  var componentVarNames = Object.keys(componentVarMap);
+  for (var csi = 0; csi < componentVarNames.length; csi++) {
+    var existingCompName = componentVarNames[csi];
+    if (!componentExpected[existingCompName]) {
+      componentVarMap[existingCompName].remove();
+      delete componentVarMap[existingCompName];
+      componentStale++;
+    }
+  }
+  if (componentStale > 0) progress("  Removed " + componentStale + " stale Components variables");
+
   totalCreated += compCreated;
   totalAliases += compAliases;
   progress("Components: " + compCreated + " created, " + compAliases + " aliases");
@@ -2435,10 +2453,11 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
 
 // Build the figmaPath for a button color token given variant, property, and state
 function btnColorPath(variant, property, state) {
+  var resolvedVariant = variant === "ghost" ? "transparent" : variant;
   if (state === "default") {
-    return "button/" + variant + "-" + property;
+    return "button/" + resolvedVariant + "-" + property;
   }
-  return "button/" + variant + "-" + property + "-" + state;
+  return "button/" + resolvedVariant + "-" + property + "-" + state;
 }
 
 async function findButtonIconComponents() {
