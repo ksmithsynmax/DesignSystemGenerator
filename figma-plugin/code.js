@@ -436,6 +436,24 @@ async function syncTokens(payload) {
       }
     }
   }
+  // Remove stale semantic variables from previous syncs.
+  // Also explicitly purge any legacy component/* semantic bridge tokens.
+  var semanticExpected = {};
+  for (var sei = 0; sei < semanticKeys.length; sei++) {
+    semanticExpected[semanticKeys[sei]] = true;
+  }
+  var semanticStale = 0;
+  var semanticVarNames = Object.keys(semanticVarMap);
+  for (var ssi = 0; ssi < semanticVarNames.length; ssi++) {
+    var existingSemName = semanticVarNames[ssi];
+    var isLegacyComponentBridge = existingSemName.indexOf("component/") === 0;
+    if (!semanticExpected[existingSemName] || isLegacyComponentBridge) {
+      semanticVarMap[existingSemName].remove();
+      delete semanticVarMap[existingSemName];
+      semanticStale++;
+    }
+  }
+  if (semanticStale > 0) progress("  Removed " + semanticStale + " stale Semantic variables");
   progress("Semantic: " + Object.keys(semanticVarMap).length + " variables, " + totalAliases + " aliases");
 
   // ══════════════════════════════════════════════════════════════
@@ -719,17 +737,44 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
   var buildFailures = [];
   var requestedSet = null;
 
-  if (componentsToBuild && componentsToBuild.length > 0) {
-    requestedSet = {};
+  // Defensive normalization:
+  // - null/empty list => build all components
+  // - ["all"] / ["all components"] / ["*"] => build all components
+  // - otherwise build only selected normalized component keys
+  if (Array.isArray(componentsToBuild)) {
+    var normalizedRequested = {};
+    var hasSelection = false;
+    var buildAllSentinel = false;
     for (var rci = 0; rci < componentsToBuild.length; rci++) {
-      requestedSet[normalizeComponentKey(componentsToBuild[rci])] = true;
+      var normalizedKey = normalizeComponentKey(componentsToBuild[rci]);
+      if (!normalizedKey) continue;
+      if (
+        normalizedKey === "all" ||
+        normalizedKey === "allcomponents" ||
+        normalizedKey === "components" ||
+        normalizedKey === "everything"
+      ) {
+        buildAllSentinel = true;
+        break;
+      }
+      normalizedRequested[normalizedKey] = true;
+      hasSelection = true;
     }
+    if (!buildAllSentinel && hasSelection) {
+      requestedSet = normalizedRequested;
+    }
+  }
+
+  if (requestedSet) {
     // Modal previews depend on these sets during generation.
     if (requestedSet.modal) {
       requestedSet.button = true;
       requestedSet.title = true;
       requestedSet.text = true;
     }
+    progress("Building selected components: " + Object.keys(requestedSet).join(", "));
+  } else {
+    progress("Building all components.");
   }
 
   // Remove previously generated sets for selected components only.
@@ -911,8 +956,14 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
   } catch (_clearSetModesErr) {}
   positionComponentSets(validSets, compSetGap);
 
+  var docsSourceSets = validSets;
+  if (!docsSourceSets || docsSourceSets.length === 0) {
+    docsSourceSets = collectManagedComponentSetsFromPage(page, requestedSet);
+    progress("Docs fallback set scan found " + docsSourceSets.length + " component sets.");
+  }
+
   try {
-    await buildUsageDocsPage(validSets, font);
+    await buildUsageDocsPage(docsSourceSets, font);
   } catch (docsErr) {
     buildFailures.push("Usage docs: " + String(docsErr));
     progress("Failed to build usage docs: " + String(docsErr));
@@ -929,8 +980,25 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
   return { failures: buildFailures };
 }
 
+function collectManagedComponentSetsFromPage(page, requestedSet) {
+  if (!page || !page.children) return [];
+  var sets = [];
+  for (var i = 0; i < page.children.length; i++) {
+    var node = page.children[i];
+    if (!node || node.type !== "COMPONENT_SET") continue;
+    var key = resolveManagedComponentKeyFromName(node.name);
+    if (!key) continue;
+    if (requestedSet && !requestedSet[key]) continue;
+    sets.push(node);
+  }
+  return sets;
+}
+
 async function buildUsageDocsPage(componentSets, titleFont) {
-  if (!componentSets || componentSets.length === 0) return;
+  if (!componentSets || componentSets.length === 0) {
+    progress("Usage docs skipped: no component sets available.");
+    return;
+  }
 
   var DOC_COLORS = {
     pageBg: { r: 0.094, g: 0.098, b: 0.149 },       // #181926
