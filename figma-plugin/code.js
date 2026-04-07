@@ -6573,6 +6573,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               list.fills = variant === "default" ? [] : [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
               list.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
               list.strokeAlign = "INSIDE";
+              list.clipsContent = false;
 
               if (variant !== "default") {
                 bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
@@ -6620,6 +6621,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 tab.fills = variant === "default" ? [] : [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                 tab.strokes = variant === "default" ? [] : [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
                 tab.strokeAlign = "INSIDE";
+                tab.clipsContent = false;
                 var tabContent = tab;
 
                 if (variant === "default") {
@@ -6645,6 +6647,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   tabContent.paddingBottom = 8;
                   tabContent.fills = [];
                   tabContent.strokes = [];
+                  tabContent.clipsContent = false;
 
                   bindVar(tabContent, "paddingLeft", varMap["tabs/tab-padding-x"]);
                   bindVar(tabContent, "paddingRight", varMap["tabs/tab-padding-x"]);
@@ -6775,16 +6778,30 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 }
 
                 if (state === "focus" && tabDef.active) {
-                  tab.effects = [{
-                    type: "DROP_SHADOW",
-                    color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
-                    offset: { x: 0, y: 0 },
-                    radius: 0,
-                    spread: 3,
-                    visible: true,
-                    blendMode: "NORMAL"
-                  }];
-                  bindPaintVar(tab, "strokes", 0, varMap["tabs/focus-ring"]);
+                  var focusRing = figma.createRectangle();
+                  focusRing.name = "FocusRing";
+                  focusRing.fills = [];
+                  focusRing.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.9 } }];
+                  focusRing.strokeAlign = "INSIDE";
+                  focusRing.strokeWeight = 2;
+                  bindPaintVar(focusRing, "strokes", 0, varMap["tabs/focus-ring"]);
+                  bindVar(focusRing, "strokeWeight", varMap["tabs/tab-border-width-active"]);
+
+                  if (variant !== "default") {
+                    bindVar(focusRing, "topLeftRadius", varMap["tabs/radius-" + rad]);
+                    bindVar(focusRing, "topRightRadius", varMap["tabs/radius-" + rad]);
+                    bindVar(focusRing, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
+                    bindVar(focusRing, "bottomRightRadius", varMap["tabs/radius-" + rad]);
+                  }
+
+                  tab.appendChild(focusRing);
+                  focusRing.layoutPositioning = "ABSOLUTE";
+                  focusRing.x = 0;
+                  focusRing.y = 0;
+                  try {
+                    focusRing.resize(tab.width, tab.height);
+                  } catch (focusResizeErr) {}
+                  focusRing.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
                 }
 
                 list.appendChild(tab);
