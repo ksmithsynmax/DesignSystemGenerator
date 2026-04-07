@@ -3,6 +3,7 @@ import { Tabs } from "@mantine/core";
 import Image01Icon from "@untitledui-icons/react/line/Image01Icon";
 import MessageCircle01Icon from "@untitledui-icons/react/line/MessageCircle01Icon";
 import Settings01Icon from "@untitledui-icons/react/line/Settings01Icon";
+import XCloseIcon from "@untitledui-icons/react/line/XCloseIcon";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
@@ -58,14 +59,18 @@ export default function TabsPreview({
   const tabBorderDisabled = getColor(brands, brandId, `${prefix}-tab-border-disabled`, tokens);
   const focusRing = getColor(brands, brandId, "tabs-focus-ring", tokens);
 
-  const tabsRadius = resolveDimension(brands, brandId, "tabs-radius", radius);
+  const tabsRadius =
+    radius === "default"
+      ? resolveDimension(brands, brandId, `${prefix}-radius-default`)
+      : resolveDimension(brands, brandId, "tabs-radius", radius);
   const tabsFontSize = resolveDimension(brands, brandId, "tabs-font-size");
   const tabsFontFamily = resolveDimension(brands, brandId, "tabs-font-family");
   const tabsFontWeight = resolveDimension(brands, brandId, "tabs-font-weight");
   const tabsLineHeight = resolveDimension(brands, brandId, "tabs-line-height");
   const tabPaddingX = resolveDimension(brands, brandId, "tabs-tab-padding-x");
   const tabPaddingY = resolveDimension(brands, brandId, "tabs-tab-padding-y");
-  const listGap = resolveDimension(brands, brandId, "tabs-list-gap");
+  const listPadding = resolveDimension(brands, brandId, `${prefix}-list-padding`);
+  const listGap = resolveDimension(brands, brandId, `${prefix}-list-gap`);
   const listBorderWidth = resolveDimension(brands, brandId, "tabs-list-border-width");
   const tabBorderWidth = resolveDimension(brands, brandId, "tabs-tab-border-width");
   const tabBorderWidthActive = resolveDimension(brands, brandId, "tabs-tab-border-width-active");
@@ -131,7 +136,7 @@ export default function TabsPreview({
       orientation === "vertical"
         ? `${listBorderWidth}px solid ${listBorder}`
         : "none",
-    padding: isDefaultVariant ? 0 : undefined,
+    padding: `${listPadding}px`,
     width: "fit-content",
   };
 
@@ -162,7 +167,6 @@ export default function TabsPreview({
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: `${iconGap}px`,
                   backgroundColor: tabVisual.bg,
                   border: "none",
                   borderBottom:
@@ -185,7 +189,6 @@ export default function TabsPreview({
                   display: "inline-flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  gap: `${iconGap}px`,
                   backgroundColor: tabVisual.bg,
                   border: `${resolvedTabBorderWidth}px solid ${tabVisual.border}`,
                   borderRadius: `${tabsRadius}px`,
@@ -198,42 +201,75 @@ export default function TabsPreview({
                 };
 
             return (
-              <Tabs.Tab key={key} value={key} disabled={interactiveDisabled} style={tabStyle}>
-                {showLeftIcon && (
-                  <Icon
-                    width={iconSize}
-                    height={iconSize}
-                    strokeWidth={iconStroke || 2}
-                    style={{ color: tabVisual.text, flexShrink: 0 }}
-                  />
-                )}
-                <span
-                  style={{
-                    fontSize: `${tabsFontSize}px`,
-                    fontFamily: tabsFontFamily ? `"${tabsFontFamily}", sans-serif` : undefined,
-                    fontWeight: weightToCss(
-                      tabsFontWeight,
-                      tabVisual.visualState === "active" || tabVisual.visualState === "hover"
-                    ),
-                    lineHeight: `${tabsLineHeight}px`,
-                    color: tabVisual.text,
-                  }}
-                >
-                  {label}
-                </span>
-                {showRightIcon && (
+              <Tabs.Tab
+                key={key}
+                value={key}
+                disabled={interactiveDisabled}
+                style={tabStyle}
+                styles={{
+                  tabLabel: {
+                    display: "contents",
+                  },
+                }}
+              >
+                <span style={{ display: "inline-grid", gridAutoFlow: "column", alignItems: "center", columnGap: `${iconGap}px` }}>
+                  {showLeftIcon && (
+                    <span
+                      style={{
+                        width: `${iconSize}px`,
+                        height: `${iconSize}px`,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        lineHeight: 0,
+                      }}
+                    >
+                      <Icon
+                        width={iconSize}
+                        height={iconSize}
+                        strokeWidth={iconStroke || 2}
+                        style={{ color: tabVisual.text, display: "block" }}
+                      />
+                    </span>
+                  )}
                   <span
                     style={{
-                      fontSize: `${Math.max(12, tabsFontSize - 1)}px`,
-                      lineHeight: 1,
+                      fontSize: `${tabsFontSize}px`,
+                      fontFamily: tabsFontFamily ? `"${tabsFontFamily}", sans-serif` : undefined,
+                      fontWeight: weightToCss(
+                        tabsFontWeight,
+                        tabVisual.visualState === "active" || tabVisual.visualState === "hover"
+                      ),
+                      lineHeight: `${tabsLineHeight}px`,
                       color: tabVisual.text,
-                      marginLeft: `${Math.max(0, iconGap - 2)}px`,
-                      flexShrink: 0,
+                      display: "inline-flex",
+                      alignItems: "center",
                     }}
                   >
-                    ×
+                    {label}
                   </span>
-                )}
+                  {showRightIcon && (
+                    <span
+                      style={{
+                        width: `${iconSize}px`,
+                        height: `${iconSize}px`,
+                        display: "inline-flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flexShrink: 0,
+                        lineHeight: 0,
+                      }}
+                    >
+                      <XCloseIcon
+                        width={iconSize}
+                        height={iconSize}
+                        strokeWidth={iconStroke || 2}
+                        style={{ color: tabVisual.text, display: "block" }}
+                      />
+                    </span>
+                  )}
+                </span>
               </Tabs.Tab>
             );
           })}

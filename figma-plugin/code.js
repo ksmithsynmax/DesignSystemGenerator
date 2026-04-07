@@ -972,6 +972,43 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
       clearModesTree(validSets[vsi]);
     }
   } catch (_clearSetModesErr) {}
+
+  // Match generated component visuals to the app preview theme/brand when provided.
+  try {
+    var preferredTheme = (buildOptions && buildOptions.previewTheme === "dark") ? "dark" : "light";
+    var preferredBrand = buildOptions && typeof buildOptions.activeBrand === "string"
+      ? String(buildOptions.activeBrand).toLowerCase()
+      : syncBrands[0];
+    var preferredModeKey = preferredBrand + "-" + preferredTheme;
+    var preferredCompMode = compModes.modeMap[preferredModeKey];
+    var preferredSemMode = semModes.modeMap[preferredModeKey];
+
+    if (preferredCompMode || preferredSemMode) {
+      function applyModesNode(node) {
+        if (!node || typeof node.setExplicitVariableModeForCollection !== "function") return;
+        if (preferredCompMode) {
+          try { node.setExplicitVariableModeForCollection(componentsCol.id, preferredCompMode.modeId); } catch (_e1) {}
+        }
+        if (preferredSemMode) {
+          try { node.setExplicitVariableModeForCollection(semanticCol.id, preferredSemMode.modeId); } catch (_e2) {}
+        }
+      }
+      function applyModesTree(root) {
+        if (!root) return;
+        applyModesNode(root);
+        if (typeof root.findAll !== "function") return;
+        var nodes = [];
+        try { nodes = root.findAll(function () { return true; }); } catch (_scanErr) { nodes = []; }
+        for (var ni = 0; ni < nodes.length; ni++) applyModesNode(nodes[ni]);
+      }
+      applyModesNode(page);
+      for (var msi = 0; msi < validSets.length; msi++) {
+        applyModesTree(validSets[msi]);
+      }
+      progress("Applied component mode: " + preferredModeKey);
+    }
+  } catch (_applySetModesErr) {}
+
   positionComponentSets(validSets, compSetGap);
 
   var docsSourceSets = validSets;
@@ -1459,7 +1496,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       cell.itemSpacing = 6;
       cell.clipsContent = false;
       cell.fills = [];
-      appendText(cell, bodyFont, String(label), 10, DOC_COLORS.cellLabel, "Cell Label");
+      if (label != null && String(label).trim().length > 0) {
+        appendText(cell, bodyFont, String(label), 10, DOC_COLORS.cellLabel, "Cell Label");
+      }
       var inst = null;
       try {
         inst = createInstanceForLabel(label);
@@ -1751,10 +1790,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           }
         }
 
-        if (hasIcons && templateLeftSlot && templateLeftIconKey && templateOrderedSizes.length > 0) {
+        var templateIconLabels = templateOrderedSizes.length > 0 ? templateOrderedSizes : [""];
+        if (hasIcons && templateLeftSlot && templateLeftIconKey && templateIconLabels.length > 0) {
           clearChildren(templateLeftSlot);
-          addInstancesRow(templateLeftSlot, "Left Icon", templateOrderedSizes, function (sizeName) {
-            var patch = { Size: sizeName };
+          addInstancesRow(templateLeftSlot, "Left Icon", templateIconLabels, function (sizeName) {
+            var patch = {};
+            if (templateSizeKey) patch.Size = sizeName;
             patch[templateLeftIconKey] = templateLeftOn;
             if (templateRightIconKey && templateRightOff != null) patch[templateRightIconKey] = templateRightOff;
             return makeTemplateInstance(patch);
@@ -1763,10 +1804,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           removeSectionOrSlot(templatedDoc, slug, "icons-left");
         }
 
-        if (hasIcons && templateRightSlot && templateRightIconKey && templateOrderedSizes.length > 0) {
+        if (hasIcons && templateRightSlot && templateRightIconKey && templateIconLabels.length > 0) {
           clearChildren(templateRightSlot);
-          addInstancesRow(templateRightSlot, "Right Icon", templateOrderedSizes, function (sizeName) {
-            var patch = { Size: sizeName };
+          addInstancesRow(templateRightSlot, "Right Icon", templateIconLabels, function (sizeName) {
+            var patch = {};
+            if (templateSizeKey) patch.Size = sizeName;
             patch[templateRightIconKey] = templateRightOn;
             if (templateLeftIconKey && templateLeftOff != null) patch[templateLeftIconKey] = templateLeftOff;
             return makeTemplateInstance(patch);
@@ -1992,20 +2034,23 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         }
       }
 
-      if (leftSlot && leftIconKey && orderedSizes.length > 0) {
+      var iconLabels = orderedSizes.length > 0 ? orderedSizes : [""];
+      if (leftSlot && leftIconKey && iconLabels.length > 0) {
         clearChildren(leftSlot);
-        addInstancesRow(leftSlot, "Left Icon", orderedSizes, function (sizeName) {
-          var patch = { Size: sizeName };
+        addInstancesRow(leftSlot, "Left Icon", iconLabels, function (sizeName) {
+          var patch = {};
+          if (sizeKey) patch.Size = sizeName;
           patch[leftIconKey] = leftOn;
           if (rightIconKey && rightOff != null) patch[rightIconKey] = rightOff;
           return makeInstance(patch);
         }, false);
       }
 
-      if (rightSlot && rightIconKey && orderedSizes.length > 0) {
+      if (rightSlot && rightIconKey && iconLabels.length > 0) {
         clearChildren(rightSlot);
-        addInstancesRow(rightSlot, "Right Icon", orderedSizes, function (sizeName) {
-          var patch = { Size: sizeName };
+        addInstancesRow(rightSlot, "Right Icon", iconLabels, function (sizeName) {
+          var patch = {};
+          if (sizeKey) patch.Size = sizeName;
           patch[rightIconKey] = rightOn;
           if (leftIconKey && leftOff != null) patch[leftIconKey] = leftOff;
           return makeInstance(patch);
@@ -4258,7 +4303,7 @@ function chipIconColorPath(variant, state) {
 // ---------------------------------------------------------------------------
 
 function buildNotificationComponentSet(varMap, page, font) {
-  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var borderStates = ["off", "on"];
   var closeStates = ["off", "on"];
   var iconStates = ["off", "on"];
@@ -6507,7 +6552,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
   var orientations = ["horizontal", "vertical"];
   var leftIconModes = ["off", "on"];
   var rightIconModes = ["off", "on"];
-  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "disabled"];
   var components = [];
 
@@ -6540,10 +6585,10 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
           var capRightIcon = showRightIcon ? "On" : "Off";
 
           // Default tabs do not visually use corner radius, so avoid redundant radius variants.
-          var radiiForVariant = variant === "default" ? ["sm"] : radii;
+          var radiiForVariant = variant === "default" ? ["default"] : radii;
           for (var ri = 0; ri < radiiForVariant.length; ri++) {
             var rad = radiiForVariant[ri];
-            var capRadius = rad.toUpperCase();
+            var capRadius = rad === "default" ? "Default" : rad.toUpperCase();
             for (var si = 0; si < states.length; si++) {
               var state = states[si];
               var capState = state.charAt(0).toUpperCase() + state.slice(1);
@@ -6566,14 +6611,17 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               list.primaryAxisAlignItems = "MIN";
               list.counterAxisAlignItems = "MIN";
               list.itemSpacing = 8;
-              list.paddingLeft = variant === "default" ? 0 : 4;
-              list.paddingRight = variant === "default" ? 0 : 4;
-              list.paddingTop = variant === "default" ? 0 : 4;
-              list.paddingBottom = variant === "default" ? 0 : 4;
+              list.paddingLeft = 0;
+              list.paddingRight = 0;
+              list.paddingTop = 0;
+              list.paddingBottom = 0;
               list.fills = variant === "default" ? [] : [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
               list.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
               list.strokeAlign = "INSIDE";
               list.clipsContent = false;
+              var radiusVar = rad === "default"
+                ? varMap["tabs/" + variant + "-radius-default"]
+                : varMap["tabs/radius-" + rad];
 
               if (variant !== "default") {
                 bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
@@ -6592,11 +6640,15 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               } else {
                 bindVar(list, "strokeWeight", varMap["tabs/list-border-width"]);
               }
-              bindVar(list, "itemSpacing", varMap["tabs/list-gap"]);
-              bindVar(list, "topLeftRadius", varMap["tabs/radius-" + rad]);
-              bindVar(list, "topRightRadius", varMap["tabs/radius-" + rad]);
-              bindVar(list, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
-              bindVar(list, "bottomRightRadius", varMap["tabs/radius-" + rad]);
+              bindVar(list, "paddingLeft", varMap["tabs/" + variant + "-list-padding"]);
+              bindVar(list, "paddingRight", varMap["tabs/" + variant + "-list-padding"]);
+              bindVar(list, "paddingTop", varMap["tabs/" + variant + "-list-padding"]);
+              bindVar(list, "paddingBottom", varMap["tabs/" + variant + "-list-padding"]);
+              bindVar(list, "itemSpacing", varMap["tabs/" + variant + "-list-gap"]);
+              bindVar(list, "topLeftRadius", radiusVar);
+              bindVar(list, "topRightRadius", radiusVar);
+              bindVar(list, "bottomLeftRadius", radiusVar);
+              bindVar(list, "bottomRightRadius", radiusVar);
 
               var tabDefs = [
                 { label: "Tab", active: false, icon: "image" },
@@ -6663,10 +6715,10 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 }
 
                 if (variant !== "default") {
-                  bindVar(tab, "topLeftRadius", varMap["tabs/radius-" + rad]);
-                  bindVar(tab, "topRightRadius", varMap["tabs/radius-" + rad]);
-                  bindVar(tab, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
-                  bindVar(tab, "bottomRightRadius", varMap["tabs/radius-" + rad]);
+                  bindVar(tab, "topLeftRadius", radiusVar);
+                  bindVar(tab, "topRightRadius", radiusVar);
+                  bindVar(tab, "bottomLeftRadius", radiusVar);
+                  bindVar(tab, "bottomRightRadius", radiusVar);
                 }
 
                 var visualState = "default";
@@ -6788,10 +6840,10 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   bindVar(focusRing, "strokeWeight", varMap["tabs/tab-border-width-active"]);
 
                   if (variant !== "default") {
-                    bindVar(focusRing, "topLeftRadius", varMap["tabs/radius-" + rad]);
-                    bindVar(focusRing, "topRightRadius", varMap["tabs/radius-" + rad]);
-                    bindVar(focusRing, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
-                    bindVar(focusRing, "bottomRightRadius", varMap["tabs/radius-" + rad]);
+                    bindVar(focusRing, "topLeftRadius", radiusVar);
+                    bindVar(focusRing, "topRightRadius", radiusVar);
+                    bindVar(focusRing, "bottomLeftRadius", radiusVar);
+                    bindVar(focusRing, "bottomRightRadius", radiusVar);
                   }
 
                   tab.appendChild(focusRing);
@@ -6926,13 +6978,12 @@ async function findTabsIconComponents() {
 
 function validateTabsVariables(varMap) {
   var variants = ["default", "outlined", "pills"];
-  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var sharedRadii = ["xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "active", "disabled"];
   var required = [
     "tabs/font-size",
     "tabs/tab-padding-x",
     "tabs/tab-padding-y",
-    "tabs/list-gap",
     "tabs/list-border-width",
     "tabs/tab-border-width",
     "tabs/tab-border-width-active",
@@ -6942,15 +6993,18 @@ function validateTabsVariables(varMap) {
     "tabs/focus-ring"
   ];
 
-  for (var ri = 0; ri < radii.length; ri++) {
-    required.push("tabs/radius-" + radii[ri]);
+  for (var ri = 0; ri < sharedRadii.length; ri++) {
+    required.push("tabs/radius-" + sharedRadii[ri]);
   }
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
+    required.push("tabs/" + variant + "-radius-default");
     if (variant !== "default") {
       required.push("tabs/" + variant + "-list-background");
     }
+    required.push("tabs/" + variant + "-list-padding");
+    required.push("tabs/" + variant + "-list-gap");
     required.push("tabs/" + variant + "-list-border");
     for (var si = 0; si < states.length; si++) {
       var state = states[si];

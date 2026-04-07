@@ -960,6 +960,22 @@ export default function App() {
     return variantSegment === activeVariant;
   });
 
+  const visibleDimensionTokenEntries = Object.entries(dimensionTokens).filter(([token]) => {
+    if (activeComponent !== "tabs") return true;
+    if (activeVariant === "default") {
+      if (token === "tabs-radius") return false;
+      if (/^tabs-(default|outlined|pills)-radius-default$/.test(token)) return false;
+    }
+    if (token === "tabs-radius") return activeVariant !== "default" && activeTabsRadius !== "default";
+    const radiusMatch = token.match(/^tabs-(default|outlined|pills)-radius-default$/);
+    if (radiusMatch) return radiusMatch[1] === activeVariant;
+    const listPaddingMatch = token.match(/^tabs-(default|outlined|pills)-list-padding$/);
+    if (listPaddingMatch) return listPaddingMatch[1] === activeVariant;
+    const match = token.match(/^tabs-(default|outlined|pills)-list-gap$/);
+    if (!match) return true;
+    return match[1] === activeVariant;
+  });
+
   useEffect(() => {
     if (!activeColorToken) return;
     const parts = activeColorToken.split("-");
@@ -981,6 +997,28 @@ export default function App() {
       setActiveColorToken(null);
     }
   }, [activeComponent, activeColorToken, activeVariant]);
+
+  useEffect(() => {
+    if (!activeDimensionToken) return;
+    if (activeComponent !== "tabs") return;
+    if (activeTabsRadius === "default" && activeDimensionToken === "tabs-radius") {
+      setActiveDimensionToken(null);
+      return;
+    }
+    if (
+      activeVariant === "default" &&
+      (activeDimensionToken === "tabs-radius" ||
+        /^tabs-(default|outlined|pills)-radius-default$/.test(activeDimensionToken))
+    ) {
+      setActiveDimensionToken(null);
+      return;
+    }
+    const match = activeDimensionToken.match(/^tabs-(default|outlined|pills)-(list-gap|list-padding|radius-default)$/);
+    if (!match) return;
+    if (match[1] !== activeVariant) {
+      setActiveDimensionToken(null);
+    }
+  }, [activeComponent, activeDimensionToken, activeVariant, activeTabsRadius]);
 
   const tabStyle = (t) => ({
     background: activeTab === t ? "#25262B" : "transparent",
@@ -1035,7 +1073,7 @@ export default function App() {
       return activeCardRadius;
     }
     if (activeComponent === "tabs" && tokenName === "tabs-radius") {
-      return activeTabsRadius;
+      return activeTabsRadius === "default" ? undefined : activeTabsRadius;
     }
     if (activeComponent === "chip" && tokenName === "chip-radius") {
       return activeChipRadius;
@@ -1254,7 +1292,7 @@ export default function App() {
               })}
             </Section>
             <Section title={`Dimension Tokens — ${getComponentLabel(activeComponent)}`}>
-              {Object.entries(dimensionTokens).map(([token, def]) => {
+              {visibleDimensionTokenEntries.map(([token, def]) => {
                 const isActive = activeDimensionToken === token;
                 return (
                   <DimensionTokenRow
@@ -2093,6 +2131,8 @@ export default function App() {
               <FigmaSyncButton
                 brands={brands}
                 syncBuildOptions={{
+                  activeBrand,
+                  previewTheme,
                   buttonFocusRingStyle: activeButtonFocusRingStyle,
                   actionIconFocusRingStyle: activeActionIconFocusRingStyle,
                   buttonVariants: buildButtonVariants,

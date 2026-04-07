@@ -8,7 +8,7 @@ export default function PreviewStage({
 }) {
   const previewTheme =
     typeof window !== "undefined" && window.__DSG_PREVIEW_THEME === "light" ? "light" : "dark";
-  const background = previewTheme === "light" ? "#F1F3F5" : "#1A1B1E";
+  const background = previewTheme === "light" ? "#F1F3F5" : "#181926";
   const labelColor = previewTheme === "light" ? "#495057" : "#868E96";
 
   return (

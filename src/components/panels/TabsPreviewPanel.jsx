@@ -5,7 +5,7 @@ import PreviewMatrix from "../shared/PreviewMatrix";
 import { useState } from "react";
 
 export const TABS_VARIANTS = ["default", "outlined", "pills"];
-export const TABS_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const TABS_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const TABS_ORIENTATION_KEYS = ["horizontal", "vertical"];
 export const TABS_STATES = ["default", "active", "hover", "focus", "disabled"];
 
