@@ -172,7 +172,9 @@ export function TabsPropertiesPanel({
         selectedOptions={buildVariants}
         onToggle={toggleBuildVariant}
       />
-      <PropertyRow label="Radius" value={activeTabsRadius} onChange={setActiveTabsRadius} options={TABS_RADIUS_KEYS} />
+      {activeVariant !== "default" && (
+        <PropertyRow label="Radius" value={activeTabsRadius} onChange={setActiveTabsRadius} options={TABS_RADIUS_KEYS} />
+      )}
       <PropertyRow
         label="Orientation"
         value={activeTabsOrientation}

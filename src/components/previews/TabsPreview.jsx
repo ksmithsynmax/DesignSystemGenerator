@@ -119,6 +119,7 @@ export default function TabsPreview({
 
   const listStyle = {
     display: "flex",
+    flexDirection: orientation === "vertical" ? "column" : "row",
     alignItems: "stretch",
     gap: `${listGap}px`,
     backgroundColor: isDefaultVariant ? "transparent" : listBg,

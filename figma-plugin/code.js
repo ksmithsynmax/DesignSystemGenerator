@@ -6511,10 +6511,10 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
   var states = ["default", "hover", "focus", "disabled"];
   var components = [];
 
-  var colWidth = 340;
-  var horizontalRowHeight = 120;
-  var verticalRowHeight = 220;
   var gap = 24;
+  var placements = [];
+  var colWidths = [];
+  var rowHeights = [];
 
   var iconComponents = await findTabsIconComponents();
   if (!iconComponents.image) progress("[Tabs] Warning: Image icon component not found on icons page");
@@ -6539,8 +6539,10 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
           var showRightIcon = rightIconMode === "on";
           var capRightIcon = showRightIcon ? "On" : "Off";
 
-          for (var ri = 0; ri < radii.length; ri++) {
-            var rad = radii[ri];
+          // Default tabs do not visually use corner radius, so avoid redundant radius variants.
+          var radiiForVariant = variant === "default" ? ["sm"] : radii;
+          for (var ri = 0; ri < radiiForVariant.length; ri++) {
+            var rad = radiiForVariant[ri];
             var capRadius = rad.toUpperCase();
             for (var si = 0; si < states.length; si++) {
               var state = states[si];
@@ -6790,18 +6792,39 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
 
               comp.appendChild(list);
 
+              page.appendChild(comp);
               var colIndex = (((vi * orientations.length + oi) * leftIconModes.length + li) * rightIconModes.length) + rmi;
               var rowIndex = ri * states.length + si;
-              var rowHeight = orientation === "vertical" ? verticalRowHeight : horizontalRowHeight;
-              comp.x = colIndex * (colWidth + gap);
-              comp.y = rowIndex * (rowHeight + gap);
-              page.appendChild(comp);
+              var renderedWidth = Math.ceil(nodeRenderedWidth(comp));
+              var renderedHeight = Math.ceil(nodeRenderedHeight(comp));
+              colWidths[colIndex] = Math.max(colWidths[colIndex] || 0, renderedWidth);
+              rowHeights[rowIndex] = Math.max(rowHeights[rowIndex] || 0, renderedHeight);
+              placements.push({ comp: comp, colIndex: colIndex, rowIndex: rowIndex });
               components.push(comp);
             }
           }
         }
       }
     }
+  }
+
+  // Place variants using measured dimensions so larger token values do not overlap.
+  var colOffsets = [];
+  var rowOffsets = [];
+  var xCursor = 0;
+  for (var c = 0; c < colWidths.length; c++) {
+    colOffsets[c] = xCursor;
+    xCursor += (colWidths[c] || 0) + gap;
+  }
+  var yCursor = 0;
+  for (var r = 0; r < rowHeights.length; r++) {
+    rowOffsets[r] = yCursor;
+    yCursor += (rowHeights[r] || 0) + gap;
+  }
+  for (var pi = 0; pi < placements.length; pi++) {
+    var placement = placements[pi];
+    placement.comp.x = colOffsets[placement.colIndex] || 0;
+    placement.comp.y = rowOffsets[placement.rowIndex] || 0;
   }
 
   progress("Created " + components.length + " tabs variants");
