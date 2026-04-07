@@ -6512,7 +6512,8 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
   var components = [];
 
   var colWidth = 340;
-  var rowHeight = 120;
+  var horizontalRowHeight = 120;
+  var verticalRowHeight = 220;
   var gap = 24;
 
   var iconComponents = await findTabsIconComponents();
@@ -6563,17 +6564,31 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               list.primaryAxisAlignItems = "MIN";
               list.counterAxisAlignItems = "MIN";
               list.itemSpacing = 8;
-              list.paddingLeft = 4;
-              list.paddingRight = 4;
-              list.paddingTop = 4;
-              list.paddingBottom = 4;
-              list.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              list.paddingLeft = variant === "default" ? 0 : 4;
+              list.paddingRight = variant === "default" ? 0 : 4;
+              list.paddingTop = variant === "default" ? 0 : 4;
+              list.paddingBottom = variant === "default" ? 0 : 4;
+              list.fills = variant === "default" ? [] : [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
               list.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
               list.strokeAlign = "INSIDE";
 
-              bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
+              if (variant !== "default") {
+                bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
+              }
               bindPaintVar(list, "strokes", 0, varMap["tabs/" + variant + "-list-border"]);
-              bindVar(list, "strokeWeight", varMap["tabs/list-border-width"]);
+              if (variant === "default") {
+                list.strokeTopWeight = 0;
+                list.strokeLeftWeight = 0;
+                list.strokeBottomWeight = 0;
+                list.strokeRightWeight = 0;
+                if (orientation === "horizontal") {
+                  bindVar(list, "strokeBottomWeight", varMap["tabs/list-border-width"]);
+                } else {
+                  bindVar(list, "strokeRightWeight", varMap["tabs/list-border-width"]);
+                }
+              } else {
+                bindVar(list, "strokeWeight", varMap["tabs/list-border-width"]);
+              }
               bindVar(list, "itemSpacing", varMap["tabs/list-gap"]);
               bindVar(list, "topLeftRadius", varMap["tabs/radius-" + rad]);
               bindVar(list, "topRightRadius", varMap["tabs/radius-" + rad]);
@@ -6600,19 +6615,54 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 tab.paddingRight = 12;
                 tab.paddingTop = 8;
                 tab.paddingBottom = 8;
-                tab.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-                tab.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+                tab.fills = variant === "default" ? [] : [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                tab.strokes = variant === "default" ? [] : [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
                 tab.strokeAlign = "INSIDE";
+                var tabContent = tab;
 
-                bindVar(tab, "paddingLeft", varMap["tabs/tab-padding-x"]);
-                bindVar(tab, "paddingRight", varMap["tabs/tab-padding-x"]);
-                bindVar(tab, "paddingTop", varMap["tabs/tab-padding-y"]);
-                bindVar(tab, "paddingBottom", varMap["tabs/tab-padding-y"]);
-                bindVar(tab, "strokeWeight", varMap["tabs/tab-border-width"]);
-                bindVar(tab, "topLeftRadius", varMap["tabs/radius-" + rad]);
-                bindVar(tab, "topRightRadius", varMap["tabs/radius-" + rad]);
-                bindVar(tab, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
-                bindVar(tab, "bottomRightRadius", varMap["tabs/radius-" + rad]);
+                if (variant === "default") {
+                  tab.layoutMode = orientation === "horizontal" ? "VERTICAL" : "HORIZONTAL";
+                  tab.primaryAxisAlignItems = "MIN";
+                  tab.counterAxisAlignItems = "MIN";
+                  tab.itemSpacing = 0;
+                  tab.paddingLeft = 0;
+                  tab.paddingRight = 0;
+                  tab.paddingTop = 0;
+                  tab.paddingBottom = 0;
+
+                  tabContent = figma.createFrame();
+                  tabContent.name = "Content";
+                  tabContent.layoutMode = "HORIZONTAL";
+                  tabContent.primaryAxisSizingMode = "AUTO";
+                  tabContent.counterAxisSizingMode = "AUTO";
+                  tabContent.primaryAxisAlignItems = "CENTER";
+                  tabContent.counterAxisAlignItems = "CENTER";
+                  tabContent.paddingLeft = 12;
+                  tabContent.paddingRight = 12;
+                  tabContent.paddingTop = 8;
+                  tabContent.paddingBottom = 8;
+                  tabContent.fills = [];
+                  tabContent.strokes = [];
+
+                  bindVar(tabContent, "paddingLeft", varMap["tabs/tab-padding-x"]);
+                  bindVar(tabContent, "paddingRight", varMap["tabs/tab-padding-x"]);
+                  bindVar(tabContent, "paddingTop", varMap["tabs/tab-padding-y"]);
+                  bindVar(tabContent, "paddingBottom", varMap["tabs/tab-padding-y"]);
+
+                  tab.appendChild(tabContent);
+                } else {
+                  bindVar(tab, "paddingLeft", varMap["tabs/tab-padding-x"]);
+                  bindVar(tab, "paddingRight", varMap["tabs/tab-padding-x"]);
+                  bindVar(tab, "paddingTop", varMap["tabs/tab-padding-y"]);
+                  bindVar(tab, "paddingBottom", varMap["tabs/tab-padding-y"]);
+                }
+
+                if (variant !== "default") {
+                  bindVar(tab, "topLeftRadius", varMap["tabs/radius-" + rad]);
+                  bindVar(tab, "topRightRadius", varMap["tabs/radius-" + rad]);
+                  bindVar(tab, "bottomLeftRadius", varMap["tabs/radius-" + rad]);
+                  bindVar(tab, "bottomRightRadius", varMap["tabs/radius-" + rad]);
+                }
 
                 var visualState = "default";
                 if (state === "disabled") visualState = "disabled";
@@ -6625,8 +6675,20 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 var tabTextPath = tabsTabColorPath(variant, "text", visualState);
                 var tabBorderPath = tabsTabColorPath(variant, "border", visualState);
 
-                bindPaintVar(tab, "fills", 0, varMap[tabBgPath]);
-                bindPaintVar(tab, "strokes", 0, varMap[tabBorderPath]);
+                if (variant !== "default") {
+                  bindPaintVar(tab, "fills", 0, varMap[tabBgPath]);
+                }
+                if (variant === "default" && visualState === "active") {
+                  tabContent.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                  bindPaintVar(tabContent, "fills", 0, varMap[tabBgPath]);
+                }
+                if (variant !== "default") {
+                  var tabBorderWidthVar = visualState === "active"
+                    ? varMap["tabs/tab-border-width-active"]
+                    : varMap["tabs/tab-border-width"];
+                  bindVar(tab, "strokeWeight", tabBorderWidthVar);
+                  bindPaintVar(tab, "strokes", 0, varMap[tabBorderPath]);
+                }
 
                 if (showLeftIcon) {
                   var iconComp = iconComponents[tabDef.icon] || null;
@@ -6649,7 +6711,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                         bindPaintVar(vectors[vci], "fills", 0, varMap[tabTextPath]);
                       }
                     }
-                    tab.appendChild(iconInst);
+                    tabContent.appendChild(iconInst);
                   }
                 }
 
@@ -6664,7 +6726,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 bindVar(labelNode, "fontStyle", varMap["tabs/font-weight"]);
                 bindVar(labelNode, "lineHeight", varMap["tabs/line-height"]);
                 bindPaintVar(labelNode, "fills", 0, varMap[tabTextPath]);
-                tab.appendChild(labelNode);
+                tabContent.appendChild(labelNode);
 
                 if (showRightIcon) {
                   var closeComp = iconComponents.close || iconComponents.settings || iconComponents.message || null;
@@ -6686,12 +6748,28 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                         bindPaintVar(closeVectors[cvi], "fills", 0, varMap[tabTextPath]);
                       }
                     }
-                    tab.appendChild(closeInst);
+                    tabContent.appendChild(closeInst);
                   }
                 }
 
                 if (showLeftIcon || showRightIcon) {
-                  bindVar(tab, "itemSpacing", varMap["tabs/icon-gap"]);
+                  bindVar(tabContent, "itemSpacing", varMap["tabs/icon-gap"]);
+                }
+
+                if (variant === "default" && tabDef.active && (visualState === "active" || visualState === "hover" || visualState === "disabled")) {
+                  var indicator = figma.createRectangle();
+                  indicator.name = "ActiveIndicator";
+                  indicator.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                  indicator.strokes = [];
+                  bindPaintVar(indicator, "fills", 0, varMap[tabBorderPath]);
+                  indicator.resize(1, 1);
+                  indicator.layoutAlign = "STRETCH";
+                  if (orientation === "horizontal") {
+                    bindVar(indicator, "height", varMap["tabs/tab-border-width-active"]);
+                  } else {
+                    bindVar(indicator, "width", varMap["tabs/tab-border-width-active"]);
+                  }
+                  tab.appendChild(indicator);
                 }
 
                 if (state === "focus" && tabDef.active) {
@@ -6714,6 +6792,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
 
               var colIndex = (((vi * orientations.length + oi) * leftIconModes.length + li) * rightIconModes.length) + rmi;
               var rowIndex = ri * states.length + si;
+              var rowHeight = orientation === "vertical" ? verticalRowHeight : horizontalRowHeight;
               comp.x = colIndex * (colWidth + gap);
               comp.y = rowIndex * (rowHeight + gap);
               page.appendChild(comp);
@@ -6816,6 +6895,7 @@ function validateTabsVariables(varMap) {
     "tabs/list-gap",
     "tabs/list-border-width",
     "tabs/tab-border-width",
+    "tabs/tab-border-width-active",
     "tabs/icon-size",
     "tabs/icon-stroke-width",
     "tabs/icon-gap",
@@ -6828,14 +6908,27 @@ function validateTabsVariables(varMap) {
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
-    required.push("tabs/" + variant + "-list-background");
+    if (variant !== "default") {
+      required.push("tabs/" + variant + "-list-background");
+    }
     required.push("tabs/" + variant + "-list-border");
     for (var si = 0; si < states.length; si++) {
       var state = states[si];
       var suffix = state === "default" ? "" : "-" + state;
-      required.push("tabs/" + variant + "-tab-background" + suffix);
+      if (variant !== "default") {
+        required.push("tabs/" + variant + "-tab-background" + suffix);
+      }
+      if (variant === "default" && state === "active") {
+        required.push("tabs/default-tab-background-active");
+        required.push("tabs/default-tab-border-active");
+      }
+      if (variant === "default" && state === "hover") {
+        required.push("tabs/default-tab-border-hover");
+      }
       required.push("tabs/" + variant + "-tab-text" + suffix);
-      required.push("tabs/" + variant + "-tab-border" + suffix);
+      if (variant !== "default") {
+        required.push("tabs/" + variant + "-tab-border" + suffix);
+      }
     }
   }
 

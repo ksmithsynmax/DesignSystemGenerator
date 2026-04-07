@@ -198,19 +198,13 @@ export const COMPONENT_TOKENS = {
 
   tabs: {
     // ── DEFAULT VARIANT ──
-    "tabs-default-list-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/default-list-background" },
     "tabs-default-list-border": { type: "COLOR", semantic: "border-default", figmaPath: "tabs/default-list-border" },
-    "tabs-default-tab-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/default-tab-background" },
-    "tabs-default-tab-background-hover": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "tabs/default-tab-background-hover" },
     "tabs-default-tab-background-active": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/default-tab-background-active" },
-    "tabs-default-tab-background-pressed": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "tabs/default-tab-background-pressed" },
-    "tabs-default-tab-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "tabs/default-tab-background-disabled" },
     "tabs-default-tab-text": { type: "COLOR", semantic: "text-default", figmaPath: "tabs/default-tab-text" },
     "tabs-default-tab-text-hover": { type: "COLOR", semantic: "text-default", figmaPath: "tabs/default-tab-text-hover" },
     "tabs-default-tab-text-active": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-text-active" },
     "tabs-default-tab-text-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-text-pressed" },
     "tabs-default-tab-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "tabs/default-tab-text-disabled" },
-    "tabs-default-tab-border": { type: "COLOR", semantic: "border-subtle", figmaPath: "tabs/default-tab-border" },
     "tabs-default-tab-border-hover": { type: "COLOR", semantic: "border-default", figmaPath: "tabs/default-tab-border-hover" },
     "tabs-default-tab-border-active": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-border-active" },
     "tabs-default-tab-border-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-border-pressed" },
@@ -268,6 +262,7 @@ export const COMPONENT_TOKENS = {
     "tabs-list-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/list-gap" },
     "tabs-list-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "tabs/list-border-width" },
     "tabs-tab-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "tabs/tab-border-width" },
+    "tabs-tab-border-width-active": { type: "FLOAT", unit: "px", value: 2, figmaPath: "tabs/tab-border-width-active" },
     "tabs-panel-padding": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/panel-padding" },
     "tabs-icon-size": { type: "FLOAT", unit: "px", value: 16, figmaPath: "tabs/icon-size" },
     "tabs-icon-stroke-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "tabs/icon-stroke-width" },
