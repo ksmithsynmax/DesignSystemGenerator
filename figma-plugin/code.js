@@ -16,12 +16,14 @@ async function syncTokens(payload) {
   // Extract globalPrimitives and brand IDs from payload
   var globalPrimitives = payload.globalPrimitives || {};
   var globalSpacing = payload.globalSpacing || [];
+  var globalRadii = payload.globalRadii || [];
   var allKeys = Object.keys(payload);
   var brandIds = [];
   for (var ki = 0; ki < allKeys.length; ki++) {
     if (
       allKeys[ki] !== "globalPrimitives" && 
       allKeys[ki] !== "globalSpacing" && 
+      allKeys[ki] !== "globalRadii" && 
       allKeys[ki] !== "globalFonts" && 
       allKeys[ki] !== "globalWeights" && 
       allKeys[ki] !== "globalBorderWidths" && 
@@ -206,6 +208,27 @@ async function syncTokens(payload) {
     spacingVar.setValueForMode(globalModeId, spacingValue);
   }
 
+  // Global radius scale (FLOAT)
+  for (var gri = 0; gri < globalRadii.length; gri++) {
+    var radiusEntry = globalRadii[gri];
+    if (!radiusEntry || typeof radiusEntry !== "object") continue;
+    var radiusName = String(radiusEntry.name || "");
+    var radiusValue = Number(radiusEntry.value);
+    if (!radiusName || !isFinite(radiusValue)) continue;
+    var radiusVarName = "radius/" + radiusName;
+    var radiusVar = globalPrimVarMap[radiusVarName];
+    if (!radiusVar) {
+      try {
+        radiusVar = figma.variables.createVariable(radiusVarName, globalPrimCol, "FLOAT");
+      } catch (e) {
+        throw new Error("Failed to create radius var: '" + radiusVarName + "' - " + String(e));
+      }
+      globalPrimVarMap[radiusVarName] = radiusVar;
+      totalCreated++;
+    }
+    radiusVar.setValueForMode(globalModeId, radiusValue);
+  }
+
   // Global fonts (STRING)
   var globalFonts = payload.globalFonts || {};
   var fontKeys = Object.keys(globalFonts);
@@ -270,7 +293,7 @@ async function syncTokens(payload) {
   for (var fsi = 0; fsi < globalFontSizes.length; fsi++) {
     var fsVal = Number(globalFontSizes[fsi]);
     if (!isFinite(fsVal)) continue;
-    var fsVarName = "typography/font-size/" + String(fsVal).replace('.', '_');
+    var fsVarName = "font-size-" + String(fsVal).replace('.', '_');
     var fsVar = globalPrimVarMap[fsVarName];
     if (!fsVar) {
       try {
@@ -316,10 +339,16 @@ async function syncTokens(payload) {
     var expectedSpacing = Number(globalSpacing[gex]);
     if (isFinite(expectedSpacing)) globalExpected["spacing/" + expectedSpacing] = true;
   }
+  for (var gre = 0; gre < globalRadii.length; gre++) {
+    var expectedRadiusEntry = globalRadii[gre];
+    if (!expectedRadiusEntry || typeof expectedRadiusEntry !== "object") continue;
+    var expectedRadiusName = String(expectedRadiusEntry.name || "");
+    if (expectedRadiusName) globalExpected["radius/" + expectedRadiusName] = true;
+  }
   for (var fi = 0; fi < fontKeys.length; fi++) globalExpected["typography/font-family/" + fontKeys[fi]] = true;
   for (var wi = 0; wi < weightKeys.length; wi++) globalExpected["typography/font-weight/" + weightKeys[wi]] = true;
   for (var bi = 0; bi < globalBorderWidths.length; bi++) globalExpected["border-width/" + String(globalBorderWidths[bi]).replace('.', '_')] = true;
-  for (var fsi = 0; fsi < globalFontSizes.length; fsi++) globalExpected["typography/font-size/" + String(globalFontSizes[fsi]).replace('.', '_')] = true;
+  for (var fsi = 0; fsi < globalFontSizes.length; fsi++) globalExpected["font-size-" + String(globalFontSizes[fsi]).replace('.', '_')] = true;
   for (var lhi = 0; lhi < globalLineHeights.length; lhi++) globalExpected["typography/line-height/" + String(globalLineHeights[lhi]).replace('.', '_')] = true;
   var globalStale = 0;
   var globalVarNames = Object.keys(globalPrimVarMap);
@@ -436,12 +465,85 @@ async function syncTokens(payload) {
       }
     }
   }
+
+  function syncSemanticScalars(fieldName, fallbackType) {
+    var keySet = {};
+    for (var bi2 = 0; bi2 < syncBrands.length; bi2++) {
+      var bId2 = syncBrands[bi2];
+      var brandPayload = payload[bId2];
+      if (!brandPayload || !brandPayload[fieldName]) continue;
+      var light = brandPayload[fieldName].light || {};
+      var dark = brandPayload[fieldName].dark || {};
+      var lightKeys = Object.keys(light);
+      for (var lk = 0; lk < lightKeys.length; lk++) keySet[lightKeys[lk]] = true;
+      var darkKeys = Object.keys(dark);
+      for (var dk = 0; dk < darkKeys.length; dk++) keySet[darkKeys[dk]] = true;
+    }
+    var keys = Object.keys(keySet);
+    for (var ki3 = 0; ki3 < keys.length; ki3++) {
+      var key = keys[ki3];
+      var type = fallbackType;
+      for (var tm = 0; tm < syncModes.length; tm++) {
+        var tMode = syncModes[tm];
+        var tokenMap = payload[tMode.brandId][fieldName] && payload[tMode.brandId][fieldName][tMode.theme];
+        var token = tokenMap && tokenMap[key];
+        if (token && token.type) {
+          type = token.type;
+          break;
+        }
+      }
+
+      var semScalarVar = semanticVarMap[key];
+      if (semScalarVar && semScalarVar.resolvedType !== type) {
+        try { semScalarVar.remove(); } catch (_removeErr) {}
+        semScalarVar = null;
+        delete semanticVarMap[key];
+      }
+      if (!semScalarVar) {
+        semScalarVar = figma.variables.createVariable(key, semanticCol, type);
+        semanticVarMap[key] = semScalarVar;
+        totalCreated++;
+      }
+
+      for (var sm = 0; sm < syncModes.length; sm++) {
+        var mode2 = syncModes[sm];
+        var modeTokenMap = payload[mode2.brandId][fieldName] && payload[mode2.brandId][fieldName][mode2.theme];
+        if (!modeTokenMap) continue;
+        var modeToken = modeTokenMap[key];
+        if (!modeToken) continue;
+        var modeId = semModes.modeMap[mode2.key];
+        if (!modeId) continue;
+
+        var aliasTarget = null;
+        if (modeToken.alias) {
+          aliasTarget = globalPrimVarMap[modeToken.alias] || (brandPrimVarMaps[mode2.brandId] && brandPrimVarMaps[mode2.brandId][modeToken.alias]) || null;
+        }
+
+        if (aliasTarget) {
+          semScalarVar.setValueForMode(modeId, figma.variables.createVariableAlias(aliasTarget));
+          totalAliases++;
+        } else if (type === "FLOAT") {
+          semScalarVar.setValueForMode(modeId, (modeToken.value != null) ? Number(modeToken.value) : 0);
+        } else if (type === "STRING") {
+          semScalarVar.setValueForMode(modeId, (modeToken.value != null) ? String(modeToken.value) : "");
+        }
+      }
+    }
+    return keys;
+  }
+
+  var semanticRadiusKeys = syncSemanticScalars("semanticRadius", "FLOAT");
+  var semanticSpacingKeys = syncSemanticScalars("semanticSpacing", "FLOAT");
+  var semanticTypographyKeys = syncSemanticScalars("semanticTypography", "STRING");
   // Remove stale semantic variables from previous syncs.
   // Also explicitly purge any legacy component/* semantic bridge tokens.
   var semanticExpected = {};
   for (var sei = 0; sei < semanticKeys.length; sei++) {
     semanticExpected[semanticKeys[sei]] = true;
   }
+  for (var srei = 0; srei < semanticRadiusKeys.length; srei++) semanticExpected[semanticRadiusKeys[srei]] = true;
+  for (var ssei = 0; ssei < semanticSpacingKeys.length; ssei++) semanticExpected[semanticSpacingKeys[ssei]] = true;
+  for (var stei = 0; stei < semanticTypographyKeys.length; stei++) semanticExpected[semanticTypographyKeys[stei]] = true;
   var semanticStale = 0;
   var semanticVarNames = Object.keys(semanticVarMap);
   for (var ssi = 0; ssi < semanticVarNames.length; ssi++) {

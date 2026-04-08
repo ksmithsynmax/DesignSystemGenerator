@@ -139,6 +139,7 @@ function loadPersistedAppState() {
 function enforceTextDefaultMappings(brandsInput) {
   if (!brandsInput || typeof brandsInput !== "object") return brandsInput;
   const next = JSON.parse(JSON.stringify(brandsInput));
+  const semanticScaleKeys = ["semanticRadiusMap", "semanticTypographyMap", "semanticSpacingMap"];
 
   const applyMappings = (brandId, mappings) => {
     if (!next[brandId]) return;
@@ -168,6 +169,33 @@ function enforceTextDefaultMappings(brandsInput) {
     "subtle-secondary": { color: "neutral", index: 0 },
     "border-primary": { color: "slate-gray", index: 0 },
     "primary-border": { color: "slate-gray", index: 0 },
+  });
+
+  // Backfill newly introduced semantic scalar maps for users with persisted local state.
+  Object.keys(INITIAL_BRANDS).forEach((brandId) => {
+    if (!next[brandId]) return;
+    semanticScaleKeys.forEach((mapKey) => {
+      if (next[brandId][mapKey] && Object.keys(next[brandId][mapKey]).length > 0) return;
+      const fallbackMap = INITIAL_BRANDS[brandId]?.[mapKey];
+      if (fallbackMap && typeof fallbackMap === "object") {
+        next[brandId][mapKey] = JSON.parse(JSON.stringify(fallbackMap));
+      }
+    });
+
+    // Migrate legacy semantic typography keys from "typography/h1/font-size"
+    // to "typography/h1" so Figma shows h1/h2/etc directly.
+    const legacyTypography = next[brandId].semanticTypographyMap;
+    if (legacyTypography && typeof legacyTypography === "object") {
+      const migratedTypography = {};
+      Object.entries(legacyTypography).forEach(([key, value]) => {
+        if (typeof key === "string" && key.endsWith("/font-size")) {
+          migratedTypography[key.slice(0, -"/font-size".length)] = value;
+        } else {
+          migratedTypography[key] = value;
+        }
+      });
+      next[brandId].semanticTypographyMap = migratedTypography;
+    }
   });
 
   return next;

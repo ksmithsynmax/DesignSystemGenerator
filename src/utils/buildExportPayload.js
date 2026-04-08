@@ -62,9 +62,21 @@ function resolveMappingToColor(brand, mapping) {
  * Returns a plain object (not serialized).
  */
 export function buildExportPayload(brands, options) {
+  const GLOBAL_RADII = [
+    { name: "none", value: 0 },
+    { name: "2", value: 2 },
+    { name: "4", value: 4 },
+    { name: "6", value: 6 },
+    { name: "8", value: 8 },
+    { name: "12", value: 12 },
+    { name: "16", value: 16 },
+    { name: "24", value: 24 },
+  ];
+
   const out = { 
     globalPrimitives: GLOBAL_PRIMITIVES, 
     globalSpacing: GLOBAL_SPACING,
+    globalRadii: GLOBAL_RADII,
     globalFonts: GLOBAL_FONTS,
     globalWeights: GLOBAL_WEIGHTS,
     globalBorderWidths: GLOBAL_BORDER_WIDTHS,
@@ -96,6 +108,61 @@ export function buildExportPayload(brands, options) {
     return resolved;
   };
 
+  const resolveSemanticRadiusMap = (map) => {
+    const resolved = {};
+    Object.entries(map || {}).forEach(([key, def]) => {
+      const value = Number(def?.value);
+      if (!Number.isFinite(value)) return;
+      const radiusAlias = value === 0 ? "radius/none" : `radius/${value}`;
+      const hasAlias = GLOBAL_RADII.some((entry) => entry.name === (value === 0 ? "none" : String(value)));
+      resolved[key] = {
+        type: "FLOAT",
+        value,
+        alias: hasAlias ? radiusAlias : null,
+      };
+    });
+    return resolved;
+  };
+
+  const resolveSemanticSpacingMap = (map) => {
+    const resolved = {};
+    Object.entries(map || {}).forEach(([key, def]) => {
+      const value = Number(def?.value);
+      if (!Number.isFinite(value)) return;
+      resolved[key] = {
+        type: "FLOAT",
+        value,
+        alias: GLOBAL_SPACING.includes(value) ? `spacing/${value}` : null,
+      };
+    });
+    return resolved;
+  };
+
+  const resolveSemanticTypographyMap = (map) => {
+    const resolved = {};
+    Object.entries(map || {}).forEach(([key, def]) => {
+      const value = def?.value;
+      if (typeof value === "number" && Number.isFinite(value)) {
+        const norm = String(value).replace(".", "_");
+        resolved[key] = {
+          type: "FLOAT",
+          value,
+          alias: GLOBAL_FONT_SIZES.includes(value) ? `font-size-${norm}` : null,
+        };
+        return;
+      }
+      if (typeof value === "string") {
+        const fontKey = Object.keys(GLOBAL_FONTS).find((k) => GLOBAL_FONTS[k] === value);
+        resolved[key] = {
+          type: "STRING",
+          value,
+          alias: fontKey ? `typography/font-family/${fontKey}` : null,
+        };
+      }
+    });
+    return resolved;
+  };
+
   Object.entries(brands).forEach(([brandId, brand]) => {
     // Build light semantic (base semanticMap)
     const lightSemantic = resolveSemanticMap(brand, brand.semanticMap);
@@ -107,6 +174,18 @@ export function buildExportPayload(brands, options) {
     out[brandId] = {
       primitives: brand.primitives,
       semantic: { light: lightSemantic, dark: darkSemantic },
+      semanticRadius: {
+        light: resolveSemanticRadiusMap(brand.semanticRadiusMap),
+        dark: resolveSemanticRadiusMap(brand.semanticRadiusMap),
+      },
+      semanticSpacing: {
+        light: resolveSemanticSpacingMap(brand.semanticSpacingMap),
+        dark: resolveSemanticSpacingMap(brand.semanticSpacingMap),
+      },
+      semanticTypography: {
+        light: resolveSemanticTypographyMap(brand.semanticTypographyMap),
+        dark: resolveSemanticTypographyMap(brand.semanticTypographyMap),
+      },
       components: {},
     };
 
@@ -167,7 +246,7 @@ export function buildExportPayload(brands, options) {
               return GLOBAL_BORDER_WIDTHS.includes(Number(val)) ? `border-width/${norm}` : null;
             }
             if (def.figmaPath.includes("font-size")) {
-              return GLOBAL_FONT_SIZES.includes(Number(val)) ? `typography/font-size/${norm}` : null;
+              return GLOBAL_FONT_SIZES.includes(Number(val)) ? `font-size-${norm}` : null;
             }
             if (def.figmaPath.includes("line-height")) {
               return GLOBAL_LINE_HEIGHTS.includes(Number(val)) ? `typography/line-height/${norm}` : null;
