@@ -45,6 +45,7 @@ function PropertyRow({ label, value, onChange, options, disabled = false }) {
 export function SwitchPreviewContent({
   brands,
   activeBrand,
+  previewTheme,
   activeSwitchSize,
   sizeKeys,
   activeColorToken,
@@ -62,6 +63,7 @@ export function SwitchPreviewContent({
         <SwitchPreview
           brands={brands}
           brandId={activeBrand}
+          previewTheme={previewTheme}
           size={activeSwitchSize}
           label="Switch label"
           checked={selectedChecked}
@@ -79,6 +81,7 @@ export function SwitchPreviewContent({
           <SwitchPreview
             brands={brands}
             brandId={activeBrand}
+            previewTheme={previewTheme}
             size={s}
             label="Switch label"
             checked={row.checked}
@@ -146,6 +149,7 @@ export default function SwitchPreviewPanel(props) {
         <SwitchPreviewContent
           brands={props.brands}
           activeBrand={props.activeBrand}
+          previewTheme={props.previewTheme}
           activeSwitchSize={props.activeSwitchSize}
           sizeKeys={props.sizeKeys}
           activeColorToken={props.activeColorToken}

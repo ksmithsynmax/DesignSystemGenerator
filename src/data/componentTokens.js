@@ -1044,7 +1044,7 @@ export const COMPONENT_SIZE_KEYS = {
   button: ["xxs", "xs", "sm", "md", "lg", "xl"],
   actionicon: ["xs", "sm", "md", "lg", "xl"],
   tabs: ["xs", "sm", "md", "lg", "xl"],
-  switch: ["xs", "sm", "md", "lg", "xl"],
+  switch: ["default", "xs", "sm", "md", "lg", "xl"],
   checkbox: ["xs", "sm", "md", "lg", "xl"],
   radio: ["xs", "sm", "md", "lg", "xl"],
   chip: ["xs", "sm", "md", "lg", "xl"],

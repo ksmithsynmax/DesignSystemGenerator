@@ -11,46 +11,48 @@ export default function SwitchPreview({
   readOnly,
   state,
   label,
+  previewTheme = "light",
 }) {
   const [internalChecked, setInternalChecked] = useState(false);
   const isControlled = controlledChecked !== undefined;
   const checked = isControlled ? controlledChecked : internalChecked;
 
   const tokens = COMPONENT_TOKENS.switch;
-  const stateSuffix = state && state !== "default" ? `-${state}` : "";
-
-  const getTokenColor = (baseName) => {
-    const checkedKey = `${baseName}-checked${stateSuffix}`;
+  const getTokenColor = (baseName, checkedOverride = checked, stateOverride = state) => {
+    const suffix = stateOverride && stateOverride !== "default" ? `-${stateOverride}` : "";
+    const checkedKey = `${baseName}-checked${suffix}`;
     const checkedBaseKey = `${baseName}-checked`;
-    const stateKey = `${baseName}${stateSuffix}`;
+    const stateKey = `${baseName}${suffix}`;
     const baseKey = baseName;
 
-    if (checked) {
+    if (checkedOverride) {
       if (tokens[checkedKey]) {
-        return resolveColor(brands, brandId, tokens[checkedKey]?.semantic, "light", checkedKey);
+        return resolveColor(brands, brandId, tokens[checkedKey]?.semantic, previewTheme, checkedKey);
       }
       if (tokens[checkedBaseKey]) {
-        return resolveColor(brands, brandId, tokens[checkedBaseKey]?.semantic, "light", checkedBaseKey);
+        return resolveColor(brands, brandId, tokens[checkedBaseKey]?.semantic, previewTheme, checkedBaseKey);
       }
     }
 
     if (tokens[stateKey]) {
-      return resolveColor(brands, brandId, tokens[stateKey]?.semantic, "light", stateKey);
+      return resolveColor(brands, brandId, tokens[stateKey]?.semantic, previewTheme, stateKey);
     }
-    return resolveColor(brands, brandId, tokens[baseKey]?.semantic, "light", baseKey);
+    return resolveColor(brands, brandId, tokens[baseKey]?.semantic, previewTheme, baseKey);
   };
 
-  const checkedBg = getTokenColor("switch-track-background");
-  const uncheckedBg = getTokenColor("switch-track-background");
+  const checkedBg = getTokenColor("switch-track-background", true, state);
+  const uncheckedBg = getTokenColor("switch-track-background", false, state);
+  const checkedDisabledBg = getTokenColor("switch-track-background", true, "disabled");
+  const uncheckedDisabledBg = getTokenColor("switch-track-background", false, "disabled");
   const trackBorder = getTokenColor("switch-track-border");
   const thumbBg = getTokenColor("switch-thumb-background");
-  const focusRing = resolveColor(brands, brandId, tokens["switch-focus-ring"]?.semantic, "light", "switch-focus-ring");
+  const focusRing = resolveColor(brands, brandId, tokens["switch-focus-ring"]?.semantic, previewTheme, "switch-focus-ring");
   const isDisabled = state === "disabled";
   const labelColor = resolveColor(
     brands,
     brandId,
     tokens[isDisabled ? "switch-label-text-disabled" : "switch-label-text"]?.semantic,
-    "light",
+    previewTheme,
     isDisabled ? "switch-label-text-disabled" : "switch-label-text"
   );
 
@@ -66,6 +68,8 @@ export default function SwitchPreview({
     <Switch
       checked={checked}
       label={label}
+      thumbIcon={null}
+      withThumbIndicator={false}
       onChange={readOnly ? undefined : () => setInternalChecked((v) => !v)}
       readOnly={readOnly || isDisabled}
       disabled={isDisabled}
@@ -77,6 +81,9 @@ export default function SwitchPreview({
           "--switch-thumb-size": `${thumbSize}px`,
           "--switch-radius": `${borderRadius}px`,
           "--switch-thumb-bg": thumbBg,
+          "--switch-disabled-color": checked ? checkedDisabledBg : uncheckedDisabledBg,
+          "--switch-thumb-icon": "none",
+          "--switch-thumb-icon-size": "0px",
         },
       })}
       styles={{
@@ -86,6 +93,17 @@ export default function SwitchPreview({
         },
         thumb: {
           backgroundColor: thumbBg,
+          backgroundImage: "none",
+          "&::before": {
+            content: "none",
+            display: "none",
+            backgroundImage: "none",
+          },
+          "&::after": {
+            content: "none",
+            display: "none",
+            backgroundImage: "none",
+          },
         },
         input: state === "focus"
           ? {

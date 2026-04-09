@@ -1564,8 +1564,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     return null;
   }
 
-  function addInstancesRow(target, title, labels, createInstanceForLabel, showTitle) {
+  function addInstancesRow(target, title, labels, createInstanceForLabel, showTitle, titleConfig) {
     var shouldShowTitle = showTitle !== false;
+    var rowTitleFont = (titleConfig && titleConfig.font) ? titleConfig.font : titleFont;
+    var rowTitleSize = (titleConfig && titleConfig.size) ? titleConfig.size : 18;
     var rowWrap = figma.createFrame();
     rowWrap.layoutMode = "VERTICAL";
     rowWrap.primaryAxisSizingMode = "AUTO";
@@ -1576,7 +1578,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     rowWrap.fills = [];
 
     if (shouldShowTitle) {
-      appendText(rowWrap, titleFont, title, 18, DOC_COLORS.panelHeading, "Row Title");
+      appendText(rowWrap, rowTitleFont, title, rowTitleSize, DOC_COLORS.panelHeading, "Row Title");
     }
 
     var row = figma.createFrame();
@@ -1655,6 +1657,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
   } catch (e) {
     bodyFont = titleFont;
   }
+  var mediumFont = { family: titleFont.family, style: "Medium" };
+  try {
+    await figma.loadFontAsync(mediumFont);
+  } catch (e) {
+    mediumFont = titleFont;
+  }
 
   var docsX = 0;
   var docsY = 0;
@@ -1729,6 +1737,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateStateKey = getPropKey(variantProps, "State");
       var templateSizeKey = getPropKey(variantProps, "Size");
       var templateRadiusKey = getPropKey(variantProps, "Radius");
+      var templateCheckedKey = getPropKey(variantProps, "Checked");
       var templateLeftIconKey = getPropKey(variantProps, "LeftIcon");
       var templateRightIconKey = getPropKey(variantProps, "RightIcon");
 
@@ -1751,10 +1760,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       var templateLeftValues = templateLeftIconKey ? getPropValues(variantProps, templateLeftIconKey) : [];
       var templateRightValues = templateRightIconKey ? getPropValues(variantProps, templateRightIconKey) : [];
+      var templateCheckedValues = templateCheckedKey ? getPropValues(variantProps, templateCheckedKey) : [];
       var templateLeftOn = templateLeftValues.indexOf("On") >= 0 ? "On" : (templateLeftValues.indexOf("True") >= 0 ? "True" : (templateLeftValues[0] || null));
       var templateLeftOff = templateLeftValues.indexOf("Off") >= 0 ? "Off" : (templateLeftValues.indexOf("False") >= 0 ? "False" : (templateLeftValues[0] || null));
       var templateRightOn = templateRightValues.indexOf("On") >= 0 ? "On" : (templateRightValues.indexOf("True") >= 0 ? "True" : (templateRightValues[0] || null));
       var templateRightOff = templateRightValues.indexOf("Off") >= 0 ? "Off" : (templateRightValues.indexOf("False") >= 0 ? "False" : (templateRightValues[0] || null));
+      var templateCheckedOn = templateCheckedValues.indexOf("On") >= 0
+        ? "On"
+        : (templateCheckedValues.indexOf("True") >= 0 ? "True" : (templateCheckedValues[0] || null));
+      var templateCheckedOff = templateCheckedValues.indexOf("Off") >= 0
+        ? "Off"
+        : (templateCheckedValues.indexOf("False") >= 0 ? "False" : (templateCheckedValues[0] || null));
 
       var templateBaseComponent = resolveBaseComponent(set);
       if (templateBaseComponent) {
@@ -1765,6 +1781,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (templateStateKey && templateDefaultState != null) props[templateStateKey] = templateDefaultState;
           if (templateSizeKey && templateDefaultSize != null) props[templateSizeKey] = templateDefaultSize;
           if (templateRadiusKey && templateDefaultRadius != null) props[templateRadiusKey] = templateDefaultRadius;
+          if (templateCheckedKey && templateCheckedOff != null) props[templateCheckedKey] = templateCheckedOff;
           if (templateLeftIconKey && templateLeftOff != null) props[templateLeftIconKey] = templateLeftOff;
           if (templateRightIconKey && templateRightOff != null) props[templateRightIconKey] = templateRightOff;
           var patchKeys = Object.keys(propPatch || {});
@@ -1822,6 +1839,18 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
         if (hasSizes && templateSizeSlot && templateOrderedSizes.length > 0) {
           clearChildren(templateSizeSlot);
+          if (lowerSetName === "switch") {
+            templateSizeSlot.fills = [];
+            templateSizeSlot.strokes = [];
+            templateSizeSlot.strokeWeight = 0;
+            templateSizeSlot.paddingLeft = 0;
+            templateSizeSlot.paddingRight = 0;
+            templateSizeSlot.paddingTop = 0;
+            templateSizeSlot.paddingBottom = 0;
+            templateSizeSlot.cornerRadius = 0;
+            templateSizeSlot.itemSpacing = 12;
+            templateSizeSlot.counterAxisAlignItems = "MIN";
+          }
           if (stackSizeRows) {
             for (var tsi = 0; tsi < templateOrderedSizes.length; tsi++) {
               (function (sizeName) {
@@ -1841,6 +1870,19 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 return makeTemplateInstance({ Size: sizeName });
               }, false);
             }
+          } else if (lowerSetName === "switch" && templateCheckedKey && templateCheckedOn != null) {
+            var templateSwitchSizeOffPanel = createPanel("switch-size-checked-off-panel", 10);
+            templateSwitchSizeOffPanel.resize(1192, templateSwitchSizeOffPanel.height);
+            templateSizeSlot.appendChild(templateSwitchSizeOffPanel);
+            addInstancesRow(templateSwitchSizeOffPanel, "Checked Off", templateOrderedSizes, function (sizeName) {
+              return makeTemplateInstance({ Size: sizeName, Checked: templateCheckedOff });
+            }, true, { font: mediumFont, size: 14 });
+            var templateSwitchSizeOnPanel = createPanel("switch-size-checked-on-panel", 10);
+            templateSwitchSizeOnPanel.resize(1192, templateSwitchSizeOnPanel.height);
+            templateSizeSlot.appendChild(templateSwitchSizeOnPanel);
+            addInstancesRow(templateSwitchSizeOnPanel, "Checked On", templateOrderedSizes, function (sizeName) {
+              return makeTemplateInstance({ Size: sizeName, Checked: templateCheckedOn });
+            }, true, { font: mediumFont, size: 14 });
           } else {
             addInstancesRow(templateSizeSlot, "Sizes", templateOrderedSizes, function (sizeName) {
               return makeTemplateInstance({ Size: sizeName });
@@ -1852,9 +1894,36 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
         if (hasStates && templateStatesSlot && templateOrderedStates.length > 0) {
           clearChildren(templateStatesSlot);
-          addInstancesRow(templateStatesSlot, "States", templateOrderedStates, function (stateName) {
-            return makeTemplateInstance({ State: stateName });
-          }, false);
+          if (lowerSetName === "switch") {
+            templateStatesSlot.fills = [];
+            templateStatesSlot.strokes = [];
+            templateStatesSlot.strokeWeight = 0;
+            templateStatesSlot.paddingLeft = 0;
+            templateStatesSlot.paddingRight = 0;
+            templateStatesSlot.paddingTop = 0;
+            templateStatesSlot.paddingBottom = 0;
+            templateStatesSlot.cornerRadius = 0;
+            templateStatesSlot.itemSpacing = 12;
+            templateStatesSlot.counterAxisAlignItems = "MIN";
+          }
+          if (lowerSetName === "switch" && templateCheckedKey && templateCheckedOn != null) {
+            var templateSwitchStatesOffPanel = createPanel("switch-states-checked-off-panel", 10);
+            templateSwitchStatesOffPanel.resize(1192, templateSwitchStatesOffPanel.height);
+            templateStatesSlot.appendChild(templateSwitchStatesOffPanel);
+            addInstancesRow(templateSwitchStatesOffPanel, "Checked Off", templateOrderedStates, function (stateName) {
+              return makeTemplateInstance({ State: stateName, Checked: templateCheckedOff });
+            }, true, { font: mediumFont, size: 14 });
+            var templateSwitchStatesOnPanel = createPanel("switch-states-checked-on-panel", 10);
+            templateSwitchStatesOnPanel.resize(1192, templateSwitchStatesOnPanel.height);
+            templateStatesSlot.appendChild(templateSwitchStatesOnPanel);
+            addInstancesRow(templateSwitchStatesOnPanel, "Checked On", templateOrderedStates, function (stateName) {
+              return makeTemplateInstance({ State: stateName, Checked: templateCheckedOn });
+            }, true, { font: mediumFont, size: 14 });
+          } else {
+            addInstancesRow(templateStatesSlot, "States", templateOrderedStates, function (stateName) {
+              return makeTemplateInstance({ State: stateName });
+            }, false);
+          }
         } else if (!hasStates) {
           removeSectionOrSlot(templatedDoc, slug, "states");
         }
@@ -2048,6 +2117,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var stateKey = getPropKey(variantProps, "State");
       var sizeKey = getPropKey(variantProps, "Size");
       var radiusKey = getPropKey(variantProps, "Radius");
+      var checkedKey = getPropKey(variantProps, "Checked");
       var leftIconKey = getPropKey(variantProps, "LeftIcon");
       var rightIconKey = getPropKey(variantProps, "RightIcon");
 
@@ -2070,10 +2140,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       var leftValues = leftIconKey ? getPropValues(variantProps, leftIconKey) : [];
       var rightValues = rightIconKey ? getPropValues(variantProps, rightIconKey) : [];
+      var checkedValues = checkedKey ? getPropValues(variantProps, checkedKey) : [];
       var leftOn = leftValues.indexOf("On") >= 0 ? "On" : (leftValues.indexOf("True") >= 0 ? "True" : (leftValues[0] || null));
       var leftOff = leftValues.indexOf("Off") >= 0 ? "Off" : (leftValues.indexOf("False") >= 0 ? "False" : (leftValues[0] || null));
       var rightOn = rightValues.indexOf("On") >= 0 ? "On" : (rightValues.indexOf("True") >= 0 ? "True" : (rightValues[0] || null));
       var rightOff = rightValues.indexOf("Off") >= 0 ? "Off" : (rightValues.indexOf("False") >= 0 ? "False" : (rightValues[0] || null));
+      var checkedOn = checkedValues.indexOf("On") >= 0
+        ? "On"
+        : (checkedValues.indexOf("True") >= 0 ? "True" : (checkedValues[0] || null));
+      var checkedOff = checkedValues.indexOf("Off") >= 0
+        ? "Off"
+        : (checkedValues.indexOf("False") >= 0 ? "False" : (checkedValues[0] || null));
 
       function makeInstance(propPatch) {
         var inst = baseComponent.createInstance();
@@ -2082,6 +2159,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         if (stateKey && defaultState != null) props[stateKey] = defaultState;
         if (sizeKey && defaultSize != null) props[sizeKey] = defaultSize;
         if (radiusKey && defaultRadius != null) props[radiusKey] = defaultRadius;
+        if (checkedKey && checkedOff != null) props[checkedKey] = checkedOff;
         if (leftIconKey && leftOff != null) props[leftIconKey] = leftOff;
         if (rightIconKey && rightOff != null) props[rightIconKey] = rightOff;
         var patchKeys = Object.keys(propPatch || {});
@@ -2132,6 +2210,18 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       if (sizeSlot && orderedSizes.length > 0) {
         clearChildren(sizeSlot);
+        if (lowerSetName === "switch") {
+          sizeSlot.fills = [];
+          sizeSlot.strokes = [];
+          sizeSlot.strokeWeight = 0;
+          sizeSlot.paddingLeft = 0;
+          sizeSlot.paddingRight = 0;
+          sizeSlot.paddingTop = 0;
+          sizeSlot.paddingBottom = 0;
+          sizeSlot.cornerRadius = 0;
+          sizeSlot.itemSpacing = 12;
+          sizeSlot.counterAxisAlignItems = "MIN";
+        }
         if (stackSizeRows) {
           for (var osi = 0; osi < orderedSizes.length; osi++) {
             (function (sizeName) {
@@ -2151,6 +2241,19 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               return makeInstance({ Size: sizeName });
             }, false);
           }
+        } else if (lowerSetName === "switch" && checkedKey && checkedOn != null) {
+          var switchSizeOffPanel = createPanel("switch-size-checked-off-panel", 10);
+          switchSizeOffPanel.resize(1192, switchSizeOffPanel.height);
+          sizeSlot.appendChild(switchSizeOffPanel);
+          addInstancesRow(switchSizeOffPanel, "Checked Off", orderedSizes, function (sizeName) {
+            return makeInstance({ Size: sizeName, Checked: checkedOff });
+          }, true, { font: mediumFont, size: 14 });
+          var switchSizeOnPanel = createPanel("switch-size-checked-on-panel", 10);
+          switchSizeOnPanel.resize(1192, switchSizeOnPanel.height);
+          sizeSlot.appendChild(switchSizeOnPanel);
+          addInstancesRow(switchSizeOnPanel, "Checked On", orderedSizes, function (sizeName) {
+            return makeInstance({ Size: sizeName, Checked: checkedOn });
+          }, true, { font: mediumFont, size: 14 });
         } else {
           addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName });
@@ -2183,9 +2286,36 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       if (statesSlot && states.length > 0) {
         clearChildren(statesSlot);
-        addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
-            return makeInstance({ State: stateName });
-        }, false);
+        if (lowerSetName === "switch") {
+          statesSlot.fills = [];
+          statesSlot.strokes = [];
+          statesSlot.strokeWeight = 0;
+          statesSlot.paddingLeft = 0;
+          statesSlot.paddingRight = 0;
+          statesSlot.paddingTop = 0;
+          statesSlot.paddingBottom = 0;
+          statesSlot.cornerRadius = 0;
+          statesSlot.itemSpacing = 12;
+          statesSlot.counterAxisAlignItems = "MIN";
+        }
+        if (lowerSetName === "switch" && checkedKey && checkedOn != null) {
+          var switchStatesOffPanel = createPanel("switch-states-checked-off-panel", 10);
+          switchStatesOffPanel.resize(1192, switchStatesOffPanel.height);
+          statesSlot.appendChild(switchStatesOffPanel);
+          addInstancesRow(switchStatesOffPanel, "Checked Off", orderedStates, function (stateName) {
+            return makeInstance({ State: stateName, Checked: checkedOff });
+          }, true, { font: mediumFont, size: 14 });
+          var switchStatesOnPanel = createPanel("switch-states-checked-on-panel", 10);
+          switchStatesOnPanel.resize(1192, switchStatesOnPanel.height);
+          statesSlot.appendChild(switchStatesOnPanel);
+          addInstancesRow(switchStatesOnPanel, "Checked On", orderedStates, function (stateName) {
+            return makeInstance({ State: stateName, Checked: checkedOn });
+          }, true, { font: mediumFont, size: 14 });
+        } else {
+          addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
+              return makeInstance({ State: stateName });
+          }, false);
+        }
       }
 
       if (weightSlot && orderedTextWeights.length > 0) {

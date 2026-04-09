@@ -1408,6 +1408,7 @@ export default function App() {
                 <SwitchPreviewContent
                   brands={brands}
                   activeBrand={activeBrand}
+                  previewTheme={previewTheme}
                   activeSwitchSize={activeSwitchSize}
                   sizeKeys={sizeKeys}
                   activeColorToken={activeColorToken}

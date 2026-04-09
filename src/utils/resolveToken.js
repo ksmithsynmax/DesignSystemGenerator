@@ -74,15 +74,19 @@ export function resolveDimension(brands, brandId, tokenName, size) {
   const brand = brands[brandId];
   const tokenDef = findTokenDef(tokenName);
   if (!tokenDef || (tokenDef.type !== TOKEN_TYPES.FLOAT && tokenDef.type !== TOKEN_TYPES.STRING)) return null;
+  const effectiveSize =
+    tokenDef.sizes && size === "default"
+      ? (getDefaultSizeKey(brands, brandId, tokenName) || null)
+      : size;
 
   // Check brand overrides first
-  if (size && brand.dimensionOverrides?.[tokenName]?.[size] !== undefined) {
-    return brand.dimensionOverrides[tokenName][size];
+  if (effectiveSize && brand.dimensionOverrides?.[tokenName]?.[effectiveSize] !== undefined) {
+    return brand.dimensionOverrides[tokenName][effectiveSize];
   }
 
   // Size-variant token
-  if (tokenDef.sizes && size) {
-    return tokenDef.sizes[size] ?? null;
+  if (tokenDef.sizes && effectiveSize) {
+    return tokenDef.sizes[effectiveSize] ?? null;
   }
 
   // Single-value token — check override first
