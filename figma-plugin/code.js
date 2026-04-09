@@ -1714,7 +1714,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var hasStates = states.length > 0;
     var hasIcons = getPropValues(variantProps, "LeftIcon").length > 0 || getPropValues(variantProps, "RightIcon").length > 0;
 
-    if (docsTemplate) {
+    var useTemplateForSet = Boolean(docsTemplate) && lowerSetName !== "text";
+    if (useTemplateForSet) {
       var templatedDoc = docsTemplate.clone();
       templatedDoc.name = "__AUTO_DOCS__ - " + setName;
       templatedDoc.clipsContent = false;
