@@ -1830,6 +1830,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 }, false);
               })(templateOrderedSizes[tsi]);
             }
+          } else if ((lowerSetName === "slider" || lowerSetName === "rangeslider") && templateOrderedSizes.length > 3) {
+            var templateSliderFirstRow = templateOrderedSizes.slice(0, 3);
+            var templateSliderSecondRow = templateOrderedSizes.slice(3);
+            addInstancesRow(templateSizeSlot, "Sizes", templateSliderFirstRow, function (sizeName) {
+              return makeTemplateInstance({ Size: sizeName });
+            }, false);
+            if (templateSliderSecondRow.length > 0) {
+              addInstancesRow(templateSizeSlot, "Sizes", templateSliderSecondRow, function (sizeName) {
+                return makeTemplateInstance({ Size: sizeName });
+              }, false);
+            }
           } else {
             addInstancesRow(templateSizeSlot, "Sizes", templateOrderedSizes, function (sizeName) {
               return makeTemplateInstance({ Size: sizeName });
@@ -2128,6 +2139,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 return makeInstance({ Size: innerSizeName });
               }, false);
             })(orderedSizes[osi]);
+          }
+        } else if ((lowerSetName === "slider" || lowerSetName === "rangeslider") && orderedSizes.length > 3) {
+          var sliderFirstRow = orderedSizes.slice(0, 3);
+          var sliderSecondRow = orderedSizes.slice(3);
+          addInstancesRow(sizeSlot, "Sizes", sliderFirstRow, function (sizeName) {
+            return makeInstance({ Size: sizeName });
+          }, false);
+          if (sliderSecondRow.length > 0) {
+            addInstancesRow(sizeSlot, "Sizes", sliderSecondRow, function (sizeName) {
+              return makeInstance({ Size: sizeName });
+            }, false);
           }
         } else {
           addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
