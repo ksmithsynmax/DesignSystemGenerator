@@ -32,29 +32,33 @@ export default function CheckboxPreview({
   };
 
   const uncheckedBg = resolveFirst([
+    `${prefix}-background${stateSuffix}`,
     `checkbox-background${stateSuffix}`,
     `${prefix}-background`,
   ]);
   const checkedBg = resolveFirst([
+    `${prefix}-background-checked${stateSuffix}`,
     `checkbox-background-checked${stateSuffix}`,
     `${prefix}-background-checked`,
   ]);
   const disabledBg = resolveFirst([
-    "checkbox-background-disabled",
     `${prefix}-background-disabled`,
+    "checkbox-background-disabled",
   ]);
 
   const borderColor = resolveFirst([
+    `${prefix}-border${stateSuffix}`,
     `checkbox-border${stateSuffix}`,
     `${prefix}-border`,
   ]);
   const checkedBorderColor = resolveFirst([
+    `${prefix}-border-checked${stateSuffix}`,
     `${prefix}-border-checked`,
     "checkbox-border",
   ]);
   const disabledBorderColor = resolveFirst([
-    "checkbox-border-disabled",
     `${prefix}-border-disabled`,
+    "checkbox-border-disabled",
   ]);
 
   const iconColor = resolveFirst([
@@ -95,13 +99,21 @@ export default function CheckboxPreview({
         },
       })}
       styles={{
+        root: {
+          opacity: 1,
+        },
         input: {
           backgroundColor: bg,
           borderColor: bd,
           boxShadow: state === "focus" ? `0 0 0 2px ${focusRing}40` : "none",
         },
+        icon: {
+          color: ic,
+          opacity: 1,
+        },
         label: {
           color: labelColor,
+          opacity: 1,
           fontSize: labelFontSize ? `${labelFontSize}px` : undefined,
           fontFamily: labelFontFamily ? `"${labelFontFamily}", sans-serif` : undefined,
           fontWeight: labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400,

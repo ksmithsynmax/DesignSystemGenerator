@@ -199,10 +199,7 @@ export function buildExportPayload(brands, options) {
           const darkSemanticMap = { ...brand.semanticMap, ...(brand.darkSemanticOverrides || {}) };
           const darkSemanticMapping = darkSemanticMap?.[def.semantic] || null;
           const lightOverride = brand.componentOverrides?.[tokenName] || null;
-          const darkOverrideRaw = brand.componentOverridesDark?.[tokenName] || null;
-          // Keep Figma in sync with preview edits when only one theme override exists.
-          // Explicit dark overrides still win when provided.
-          const darkOverride = darkOverrideRaw || lightOverride || null;
+          const darkOverride = brand.componentOverridesDark?.[tokenName] || null;
 
           const lightResolved = lightOverride
             ? resolveMappingToColor(brand, lightOverride)

@@ -4,7 +4,7 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
 export const CHECKBOX_VARIANTS = ["filled", "outlined"];
-export const CHECKBOX_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const CHECKBOX_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const CHECKBOX_STATES = ["default", "hover", "focus", "pressed", "disabled"];
 export const CHECKBOX_SELECTIONS = ["unchecked", "checked", "indeterminate"];
 
@@ -58,6 +58,7 @@ export function CheckboxPreviewContent({
 }) {
   const selectedChecked = selectedSelection === "checked";
   const selectedIndeterminate = selectedSelection === "indeterminate";
+  const checkboxSizeOptions = sizeKeys.includes("default") ? sizeKeys : ["default", ...sizeKeys];
 
   const matrixRows = [
     { label: "Unchecked", checked: false, indeterminate: false },
@@ -85,7 +86,7 @@ export function CheckboxPreviewContent({
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
       <SectionLabel mt={20}>All Sizes &amp; States</SectionLabel>
       <PreviewMatrix
-        sizeKeys={sizeKeys}
+        sizeKeys={checkboxSizeOptions}
         rows={matrixRows}
         renderCell={(row, s) => (
           <CheckboxPreview
@@ -123,11 +124,16 @@ export function CheckboxPropertiesPanel({
   forcedIndeterminate,
   forcedState,
 }) {
+  const checkboxSizeOptions = sizeKeys.includes("default") ? sizeKeys : ["default", ...sizeKeys];
+  const checkboxRadiusOptions = CHECKBOX_RADIUS_KEYS.includes("default")
+    ? CHECKBOX_RADIUS_KEYS
+    : ["default", ...CHECKBOX_RADIUS_KEYS];
+
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={CHECKBOX_VARIANTS} />
-      <PropertyRow label="Size" value={activeCheckboxSize} onChange={setActiveCheckboxSize} options={sizeKeys} />
-      <PropertyRow label="Radius" value={activeCheckboxRadius} onChange={setActiveCheckboxRadius} options={CHECKBOX_RADIUS_KEYS} />
+      <PropertyRow label="Size" value={activeCheckboxSize} onChange={setActiveCheckboxSize} options={checkboxSizeOptions} />
+      <PropertyRow label="Radius" value={activeCheckboxRadius} onChange={setActiveCheckboxRadius} options={checkboxRadiusOptions} />
       <PropertyRow
         label="Selection"
         value={selectedSelection}

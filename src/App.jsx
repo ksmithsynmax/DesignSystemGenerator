@@ -934,7 +934,7 @@ export default function App() {
     const variants = variantsByComponent[activeComponent];
     if (!variants) return true;
     if (activeComponent === "checkbox") {
-      const checkboxSharedSegments = ["background", "border", "icon", "label", "focus"];
+      const checkboxSharedSegments = ["background", "icon", "label", "focus"];
       const targetState = effectiveComponentState || "default";
       const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
         ? parts[parts.length - 1]
@@ -960,7 +960,13 @@ export default function App() {
       }
 
       if (!checkboxSharedSegments.includes(variantSegment)) return false;
-      if (tokenState !== targetState) return false;
+      if (tokenState !== targetState) {
+        const canUseDefaultFallback =
+          tokenState === "default" &&
+          targetState !== "default" &&
+          !Boolean(colorTokens[`${token}-${targetState}`]);
+        if (!canUseDefaultFallback) return false;
+      }
       if (variantSegment === "background") {
         return isCheckedToken === isCheckedLike;
       }
