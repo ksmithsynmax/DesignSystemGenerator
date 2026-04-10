@@ -1772,6 +1772,15 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateCheckedOff = templateCheckedValues.indexOf("Off") >= 0
         ? "Off"
         : (templateCheckedValues.indexOf("False") >= 0 ? "False" : (templateCheckedValues[0] || null));
+      var templateCheckedUnchecked = templateCheckedValues.indexOf("Unchecked") >= 0
+        ? "Unchecked"
+        : templateCheckedOff;
+      var templateCheckedOnValue = templateCheckedValues.indexOf("Checked") >= 0
+        ? "Checked"
+        : templateCheckedOn;
+      var templateCheckedIndeterminate = templateCheckedValues.indexOf("Indeterminate") >= 0
+        ? "Indeterminate"
+        : null;
 
       var templateBaseComponent = resolveBaseComponent(set);
       if (templateBaseComponent) {
@@ -1824,7 +1833,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               templateOrderedStates,
               (function (vName) {
                 return function (stateName) {
-                  return makeTemplateInstance({ Variant: vName, State: stateName });
+                  var patch = { Variant: vName, State: stateName };
+                  if (lowerSetName === "checkbox" && templateCheckedOnValue != null) patch.Checked = templateCheckedOnValue;
+                  return makeTemplateInstance(patch);
                 };
               })(templateVariantName),
               false
@@ -1871,6 +1882,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 return makeTemplateInstance({ Size: sizeName });
               }, false);
             }
+          } else if (lowerSetName === "checkbox" && templateCheckedKey && templateCheckedOnValue != null) {
+            addInstancesRow(templateSizeSlot, "Sizes", templateOrderedSizes, function (sizeName) {
+              return makeTemplateInstance({ Size: sizeName, Checked: templateCheckedOnValue });
+            }, false);
           } else if (lowerSetName === "switch" && templateCheckedKey && templateCheckedOn != null) {
             var templateSwitchSizeOffPanel = createPanel("switch-size-checked-off-panel", 10);
             templateSwitchSizeOffPanel.resize(1192, templateSwitchSizeOffPanel.height);
@@ -1895,7 +1910,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
         if (hasStates && templateStatesSlot && templateOrderedStates.length > 0) {
           clearChildren(templateStatesSlot);
-          if (lowerSetName === "switch") {
+          if (lowerSetName === "switch" || lowerSetName === "checkbox") {
             templateStatesSlot.fills = [];
             templateStatesSlot.strokes = [];
             templateStatesSlot.strokeWeight = 0;
@@ -1920,6 +1935,51 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             addInstancesRow(templateSwitchStatesOnPanel, "Checked On", templateOrderedStates, function (stateName) {
               return makeTemplateInstance({ State: stateName, Checked: templateCheckedOn });
             }, true, { font: mediumFont, size: 14 });
+          } else if (lowerSetName === "checkbox" && templateCheckedKey && templateCheckedUnchecked != null) {
+            var templateCheckboxVariants = (templateVariantKey && templateOrderedVariants.length > 0)
+              ? templateOrderedVariants.slice(0, 2)
+              : [null];
+            for (var tcvi = 0; tcvi < templateCheckboxVariants.length; tcvi++) {
+              (function (templateCheckboxVariantName) {
+                var templateVariantPrefix = templateCheckboxVariantName ? (String(templateCheckboxVariantName) + " - ") : "";
+                var templateVariantPatch = {};
+                if (templateCheckboxVariantName) templateVariantPatch.Variant = templateCheckboxVariantName;
+
+                var templateCheckboxStatesUncheckedPanel = createPanel("checkbox-states-" + normalizeName(templateVariantPrefix + "unchecked") + "-panel", 10);
+                templateCheckboxStatesUncheckedPanel.resize(1192, templateCheckboxStatesUncheckedPanel.height);
+                templateStatesSlot.appendChild(templateCheckboxStatesUncheckedPanel);
+                addInstancesRow(templateCheckboxStatesUncheckedPanel, templateVariantPrefix + "Unchecked", templateOrderedStates, function (stateName) {
+                  var patch = { State: stateName, Checked: templateCheckedUnchecked };
+                  var patchKeys = Object.keys(templateVariantPatch);
+                  for (var pui = 0; pui < patchKeys.length; pui++) patch[patchKeys[pui]] = templateVariantPatch[patchKeys[pui]];
+                  return makeTemplateInstance(patch);
+                }, true, { font: mediumFont, size: 14 });
+
+                if (templateCheckedOnValue != null) {
+                  var templateCheckboxStatesCheckedPanel = createPanel("checkbox-states-" + normalizeName(templateVariantPrefix + "checked") + "-panel", 10);
+                  templateCheckboxStatesCheckedPanel.resize(1192, templateCheckboxStatesCheckedPanel.height);
+                  templateStatesSlot.appendChild(templateCheckboxStatesCheckedPanel);
+                  addInstancesRow(templateCheckboxStatesCheckedPanel, templateVariantPrefix + "Checked", templateOrderedStates, function (stateName) {
+                    var patch = { State: stateName, Checked: templateCheckedOnValue };
+                    var patchKeys = Object.keys(templateVariantPatch);
+                    for (var pui = 0; pui < patchKeys.length; pui++) patch[patchKeys[pui]] = templateVariantPatch[patchKeys[pui]];
+                    return makeTemplateInstance(patch);
+                  }, true, { font: mediumFont, size: 14 });
+                }
+
+                if (templateCheckedIndeterminate != null) {
+                  var templateCheckboxStatesIndeterminatePanel = createPanel("checkbox-states-" + normalizeName(templateVariantPrefix + "indeterminate") + "-panel", 10);
+                  templateCheckboxStatesIndeterminatePanel.resize(1192, templateCheckboxStatesIndeterminatePanel.height);
+                  templateStatesSlot.appendChild(templateCheckboxStatesIndeterminatePanel);
+                  addInstancesRow(templateCheckboxStatesIndeterminatePanel, templateVariantPrefix + "Indeterminate", templateOrderedStates, function (stateName) {
+                    var patch = { State: stateName, Checked: templateCheckedIndeterminate };
+                    var patchKeys = Object.keys(templateVariantPatch);
+                    for (var pui = 0; pui < patchKeys.length; pui++) patch[patchKeys[pui]] = templateVariantPatch[patchKeys[pui]];
+                    return makeTemplateInstance(patch);
+                  }, true, { font: mediumFont, size: 14 });
+                }
+              })(templateCheckboxVariants[tcvi]);
+            }
           } else {
             addInstancesRow(templateStatesSlot, "States", templateOrderedStates, function (stateName) {
               return makeTemplateInstance({ State: stateName });
@@ -2152,6 +2212,15 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var checkedOff = checkedValues.indexOf("Off") >= 0
         ? "Off"
         : (checkedValues.indexOf("False") >= 0 ? "False" : (checkedValues[0] || null));
+      var checkedUnchecked = checkedValues.indexOf("Unchecked") >= 0
+        ? "Unchecked"
+        : checkedOff;
+      var checkedOnValue = checkedValues.indexOf("Checked") >= 0
+        ? "Checked"
+        : checkedOn;
+      var checkedIndeterminate = checkedValues.indexOf("Indeterminate") >= 0
+        ? "Indeterminate"
+        : null;
 
       function makeInstance(propPatch) {
         var inst = baseComponent.createInstance();
@@ -2198,7 +2267,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             orderedStates,
             (function (vName) {
               return function (stateName) {
-                return makeInstance({ Variant: vName, State: stateName });
+                var patch = { Variant: vName, State: stateName };
+                if (lowerSetName === "checkbox" && checkedOnValue != null) patch.Checked = checkedOnValue;
+                return makeInstance(patch);
               };
             })(variantName),
             false
@@ -2242,6 +2313,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               return makeInstance({ Size: sizeName });
             }, false);
           }
+        } else if (lowerSetName === "checkbox" && checkedKey && checkedOnValue != null) {
+          addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
+            return makeInstance({ Size: sizeName, Checked: checkedOnValue });
+          }, false);
         } else if (lowerSetName === "switch" && checkedKey && checkedOn != null) {
           var switchSizeOffPanel = createPanel("switch-size-checked-off-panel", 10);
           switchSizeOffPanel.resize(1192, switchSizeOffPanel.height);
@@ -2287,7 +2362,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       if (statesSlot && states.length > 0) {
         clearChildren(statesSlot);
-        if (lowerSetName === "switch") {
+        if (lowerSetName === "switch" || lowerSetName === "checkbox") {
           statesSlot.fills = [];
           statesSlot.strokes = [];
           statesSlot.strokeWeight = 0;
@@ -2312,6 +2387,51 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           addInstancesRow(switchStatesOnPanel, "Checked On", orderedStates, function (stateName) {
             return makeInstance({ State: stateName, Checked: checkedOn });
           }, true, { font: mediumFont, size: 14 });
+        } else if (lowerSetName === "checkbox" && checkedKey && checkedUnchecked != null) {
+          var checkboxVariants = (variantKey && orderedVariants.length > 0)
+            ? orderedVariants.slice(0, 2)
+            : [null];
+          for (var cvi = 0; cvi < checkboxVariants.length; cvi++) {
+            (function (checkboxVariantName) {
+              var variantPrefix = checkboxVariantName ? (String(checkboxVariantName) + " - ") : "";
+              var variantPatch = {};
+              if (checkboxVariantName) variantPatch.Variant = checkboxVariantName;
+
+              var checkboxStatesUncheckedPanel = createPanel("checkbox-states-" + normalizeName(variantPrefix + "unchecked") + "-panel", 10);
+              checkboxStatesUncheckedPanel.resize(1192, checkboxStatesUncheckedPanel.height);
+              statesSlot.appendChild(checkboxStatesUncheckedPanel);
+              addInstancesRow(checkboxStatesUncheckedPanel, variantPrefix + "Unchecked", orderedStates, function (stateName) {
+                var patch = { State: stateName, Checked: checkedUnchecked };
+                var patchKeys = Object.keys(variantPatch);
+                for (var pui = 0; pui < patchKeys.length; pui++) patch[patchKeys[pui]] = variantPatch[patchKeys[pui]];
+                return makeInstance(patch);
+              }, true, { font: mediumFont, size: 14 });
+
+              if (checkedOnValue != null) {
+                var checkboxStatesCheckedPanel = createPanel("checkbox-states-" + normalizeName(variantPrefix + "checked") + "-panel", 10);
+                checkboxStatesCheckedPanel.resize(1192, checkboxStatesCheckedPanel.height);
+                statesSlot.appendChild(checkboxStatesCheckedPanel);
+                addInstancesRow(checkboxStatesCheckedPanel, variantPrefix + "Checked", orderedStates, function (stateName) {
+                  var patch = { State: stateName, Checked: checkedOnValue };
+                  var patchKeys = Object.keys(variantPatch);
+                  for (var pui = 0; pui < patchKeys.length; pui++) patch[patchKeys[pui]] = variantPatch[patchKeys[pui]];
+                  return makeInstance(patch);
+                }, true, { font: mediumFont, size: 14 });
+              }
+
+              if (checkedIndeterminate != null) {
+                var checkboxStatesIndeterminatePanel = createPanel("checkbox-states-" + normalizeName(variantPrefix + "indeterminate") + "-panel", 10);
+                checkboxStatesIndeterminatePanel.resize(1192, checkboxStatesIndeterminatePanel.height);
+                statesSlot.appendChild(checkboxStatesIndeterminatePanel);
+                addInstancesRow(checkboxStatesIndeterminatePanel, variantPrefix + "Indeterminate", orderedStates, function (stateName) {
+                  var patch = { State: stateName, Checked: checkedIndeterminate };
+                  var patchKeys = Object.keys(variantPatch);
+                  for (var pui = 0; pui < patchKeys.length; pui++) patch[patchKeys[pui]] = variantPatch[patchKeys[pui]];
+                  return makeInstance(patch);
+                }, true, { font: mediumFont, size: 14 });
+              }
+            })(checkboxVariants[cvi]);
+          }
         } else {
           addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
               return makeInstance({ State: stateName });

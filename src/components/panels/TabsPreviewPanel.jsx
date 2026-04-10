@@ -167,11 +167,11 @@ export function TabsPropertiesPanel({
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={TABS_VARIANTS} />
-      <VariantBuildRow
+      {/* <VariantBuildRow
         options={TABS_VARIANTS}
         selectedOptions={buildVariants}
         onToggle={toggleBuildVariant}
-      />
+      /> */}
       {activeVariant !== "default" && (
         <PropertyRow label="Radius" value={activeTabsRadius} onChange={setActiveTabsRadius} options={TABS_RADIUS_KEYS} />
       )}

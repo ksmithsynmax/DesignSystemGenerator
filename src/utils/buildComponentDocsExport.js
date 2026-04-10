@@ -33,8 +33,7 @@ const EXTRA_FIGMA_PROPERTIES = {
     { name: "RightIcon", values: ["Off", "On"], notes: "Right icon visibility." },
   ],
   checkbox: [
-    { name: "Checked", values: ["Off", "On"], notes: "Selection state toggle." },
-    { name: "Indeterminate", values: ["Off", "On"], notes: "Mixed selection visual." },
+    { name: "Checked", values: ["Unchecked", "Checked", "Indeterminate"], notes: "Selection state visual." },
   ],
   radio: [{ name: "Checked", values: ["Off", "On"], notes: "Selection state toggle." }],
   chip: [{ name: "Checked", values: ["Off", "On"], notes: "Selection state toggle." }],

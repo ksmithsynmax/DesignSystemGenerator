@@ -954,6 +954,7 @@ export default function App() {
           if (!(targetState === "default" && tokenState === "default")) return false;
         }
         if (parts.includes("disabled")) return targetState === "disabled";
+        if (parts[2] === "icon") return isCheckedLike;
         if (isCheckedToken) return isCheckedLike;
         if (parts[2] === "background" || parts[2] === "border") return !isCheckedLike;
         return true;
@@ -969,6 +970,9 @@ export default function App() {
       }
       if (variantSegment === "background") {
         return isCheckedToken === isCheckedLike;
+      }
+      if (variantSegment === "icon") {
+        return isCheckedLike;
       }
       return true;
     }

@@ -169,11 +169,11 @@ export function ActionIconPropertiesPanel({
         onChange={setActiveVariant}
         options={ACTIONICON_VARIANTS}
       />
-      <VariantBuildRow
+      {/* <VariantBuildRow
         options={ACTIONICON_VARIANTS}
         selectedOptions={buildVariants}
         onToggle={toggleBuildVariant}
-      />
+      /> */}
       <PropertyRow
         label="Size"
         value={activeActionIconSize}

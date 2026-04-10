@@ -176,12 +176,12 @@ export function ButtonPropertiesPanel({
         options={BUTTON_VARIANTS}
         optionLabel={buttonVariantLabel}
       />
-      <VariantBuildRow
+      {/* <VariantBuildRow
         options={BUTTON_VARIANTS}
         selectedOptions={buildVariants}
         onToggle={toggleBuildVariant}
         optionLabel={buttonVariantLabel}
-      />
+      /> */}
       <PropertyRow label="Size" value={activeSize} onChange={setActiveSize} options={buttonSizeOptions} />
       {selectedState === "focus" && (
         <PropertyRow

@@ -109,11 +109,10 @@ export default function CheckboxPreview({
         },
         icon: {
           color: ic,
-          opacity: 1,
+          opacity: isActive ? 1 : 0,
         },
         label: {
           color: labelColor,
-          opacity: 1,
           fontSize: labelFontSize ? `${labelFontSize}px` : undefined,
           fontFamily: labelFontFamily ? `"${labelFontFamily}", sans-serif` : undefined,
           fontWeight: labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400,
