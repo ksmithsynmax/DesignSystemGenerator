@@ -33,14 +33,19 @@ export default function RadioPreview({
     `radio-${variant}-background-checked`,
   ]);
   const uncheckedBg = resolveFirst([
+    `radio-${variant}-background${stateSuffix}`,
     `radio-background${stateSuffix}`,
+    `radio-${variant}-background`,
     "radio-background",
   ]);
   const borderColor = resolveFirst([
-    `radio-border${stateSuffix}`,
-    "radio-border",
+    `radio-${variant}-border${checked ? "-checked" : ""}${stateSuffix}`,
+    `radio-${variant}-border${stateSuffix}`,
+    checked ? `radio-${variant}-border-checked` : `radio-${variant}-border`,
   ]);
   const iconColor = resolveFirst([
+    `radio-${variant}-icon-color-checked${stateSuffix}`,
+    `radio-${variant}-icon-color-checked`,
     isDisabled ? "radio-icon-color-disabled" : "radio-icon-color",
   ]);
   const focusRing = resolveFirst(["radio-focus-ring"]);
@@ -55,8 +60,8 @@ export default function RadioPreview({
   // --radio-color: accent color used for filled bg (when checked) and outline ring (when checked)
   // Both variants use the primary brand color for the accent
   const radioColor = filledBg;
-  // For outline, the dot should match the ring color (primary); for filled, use icon-color (white)
-  const radioIconColor = variant === "outline" ? filledBg : iconColor;
+  // Dot color is variant-specific so filled/outline can be tuned independently.
+  const radioIconColor = iconColor;
 
   const handleClick = readOnly || isDisabled ? undefined : () => setInternalChecked((v) => !v);
 
@@ -68,7 +73,8 @@ export default function RadioPreview({
       onChange={() => {}}
       onClick={handleClick}
       readOnly={readOnly || isDisabled}
-      disabled={isDisabled}
+      // Keep preview visuals token-driven; avoid Mantine disabled washout.
+      disabled={false}
       vars={() => ({
         root: {
           "--radio-size": `${radioSize}px`,
@@ -78,13 +84,21 @@ export default function RadioPreview({
         },
       })}
       styles={{
+        root: {
+          opacity: 1,
+        },
         radio: {
           backgroundColor: checked && variant !== "outline" ? undefined : uncheckedBg,
           borderColor: checked && variant !== "outline" ? "transparent" : borderColor,
           boxShadow: state === "focus" ? `0 0 0 2px ${focusRing}40` : "none",
+          opacity: 1,
+        },
+        icon: {
+          opacity: checked ? 1 : 0,
         },
         label: {
           color: labelColor,
+          opacity: 1,
           fontSize: labelFontSize ? `${labelFontSize}px` : undefined,
           fontFamily: labelFontFamily ? `"${labelFontFamily}", sans-serif` : undefined,
           fontWeight: labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400,

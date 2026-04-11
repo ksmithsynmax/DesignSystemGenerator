@@ -882,8 +882,8 @@ export default function App() {
         return isCheckedToken === Boolean(targetChecked);
       }
 
-      if (variantSegment === "background") {
-        return isCheckedToken === Boolean(targetChecked);
+  if (variantSegment === "background" || variantSegment === "border") {
+        return false;
       }
 
       if (variantSegment === "icon") {

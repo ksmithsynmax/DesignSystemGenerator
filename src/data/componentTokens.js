@@ -420,6 +420,16 @@ export const COMPONENT_TOKENS = {
 
   radio: {
     // ── RADIO BACKGROUND — UNCHECKED (per state) ──
+    "radio-filled-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "radio/filled-background" },
+    "radio-filled-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "radio/filled-background-hover" },
+    "radio-filled-background-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "radio/filled-background-focus" },
+    "radio-filled-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "radio/filled-background-pressed" },
+    "radio-filled-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "radio/filled-background-disabled" },
+    "radio-outline-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "radio/outline-background" },
+    "radio-outline-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "radio/outline-background-hover" },
+    "radio-outline-background-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "radio/outline-background-focus" },
+    "radio-outline-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "radio/outline-background-pressed" },
+    "radio-outline-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "radio/outline-background-disabled" },
     "radio-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "radio/background" },
     "radio-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "radio/background-hover" },
     "radio-background-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "radio/background-focus" },
@@ -440,14 +450,40 @@ export const COMPONENT_TOKENS = {
     "radio-outline-background-checked-pressed":  { type: "COLOR", semantic: "surface-default", figmaPath: "radio/outline-background-checked-pressed" },
     "radio-outline-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "radio/outline-background-checked-disabled" },
 
-    // ── RADIO BORDER (per state) ──
-    "radio-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "radio/border" },
-    "radio-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "radio/border-hover" },
-    "radio-border-focus":    { type: "COLOR", semantic: "border-default",  figmaPath: "radio/border-focus" },
-    "radio-border-pressed":  { type: "COLOR", semantic: "border-default",  figmaPath: "radio/border-pressed" },
-    "radio-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "radio/border-disabled" },
+    // ── RADIO BORDER — FILLED (per state) ──
+    "radio-filled-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "radio/filled-border" },
+    "radio-filled-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "radio/filled-border-hover" },
+    "radio-filled-border-focus":    { type: "COLOR", semantic: "border-default",  figmaPath: "radio/filled-border-focus" },
+    "radio-filled-border-pressed":  { type: "COLOR", semantic: "border-default",  figmaPath: "radio/filled-border-pressed" },
+    "radio-filled-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "radio/filled-border-disabled" },
 
-    // ── RADIO ICON (dot) COLOR ──
+    // ── RADIO BORDER — OUTLINE (per state) ──
+    "radio-outline-border":                  { type: "COLOR", semantic: "border-default",              figmaPath: "radio/outline-border" },
+    "radio-outline-border-hover":            { type: "COLOR", semantic: "border-default",              figmaPath: "radio/outline-border-hover" },
+    "radio-outline-border-focus":            { type: "COLOR", semantic: "border-default",              figmaPath: "radio/outline-border-focus" },
+    "radio-outline-border-pressed":          { type: "COLOR", semantic: "border-default",              figmaPath: "radio/outline-border-pressed" },
+    "radio-outline-border-disabled":         { type: "COLOR", semantic: "border-disabled",             figmaPath: "radio/outline-border-disabled" },
+    "radio-outline-border-checked":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "radio/outline-border-checked" },
+    "radio-outline-border-checked-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "radio/outline-border-checked-hover" },
+    "radio-outline-border-checked-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "radio/outline-border-checked-focus" },
+    "radio-outline-border-checked-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "radio/outline-border-checked-pressed" },
+    "radio-outline-border-checked-disabled": { type: "COLOR", semantic: "border-disabled",             figmaPath: "radio/outline-border-checked-disabled" },
+
+    // ── RADIO ICON (dot) COLOR — FILLED CHECKED (per state) ──
+    "radio-filled-icon-color-checked":          { type: "COLOR", semantic: "text-on-interactive", figmaPath: "radio/filled-icon-color-checked" },
+    "radio-filled-icon-color-checked-hover":    { type: "COLOR", semantic: "text-on-interactive", figmaPath: "radio/filled-icon-color-checked-hover" },
+    "radio-filled-icon-color-checked-focus":    { type: "COLOR", semantic: "text-on-interactive", figmaPath: "radio/filled-icon-color-checked-focus" },
+    "radio-filled-icon-color-checked-pressed":  { type: "COLOR", semantic: "text-on-interactive", figmaPath: "radio/filled-icon-color-checked-pressed" },
+    "radio-filled-icon-color-checked-disabled": { type: "COLOR", semantic: "text-disabled",       figmaPath: "radio/filled-icon-color-checked-disabled" },
+
+    // ── RADIO ICON (dot) COLOR — OUTLINE CHECKED (per state) ──
+    "radio-outline-icon-color-checked":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "radio/outline-icon-color-checked" },
+    "radio-outline-icon-color-checked-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "radio/outline-icon-color-checked-hover" },
+    "radio-outline-icon-color-checked-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "radio/outline-icon-color-checked-focus" },
+    "radio-outline-icon-color-checked-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "radio/outline-icon-color-checked-pressed" },
+    "radio-outline-icon-color-checked-disabled": { type: "COLOR", semantic: "text-disabled",               figmaPath: "radio/outline-icon-color-checked-disabled" },
+
+    // ── RADIO ICON (dot) COLOR (legacy shared fallback) ──
     "radio-icon-color":          { type: "COLOR", semantic: "text-on-interactive", figmaPath: "radio/icon-color" },
     "radio-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",       figmaPath: "radio/icon-color-disabled" },
 

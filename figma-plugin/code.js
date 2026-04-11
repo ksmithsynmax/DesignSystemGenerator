@@ -1768,10 +1768,14 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateRightOff = templateRightValues.indexOf("Off") >= 0 ? "Off" : (templateRightValues.indexOf("False") >= 0 ? "False" : (templateRightValues[0] || null));
       var templateCheckedOn = templateCheckedValues.indexOf("On") >= 0
         ? "On"
-        : (templateCheckedValues.indexOf("True") >= 0 ? "True" : (templateCheckedValues[0] || null));
+        : (templateCheckedValues.indexOf("True") >= 0
+            ? "True"
+            : (templateCheckedValues.indexOf("Checked") >= 0 ? "Checked" : (templateCheckedValues[0] || null)));
       var templateCheckedOff = templateCheckedValues.indexOf("Off") >= 0
         ? "Off"
-        : (templateCheckedValues.indexOf("False") >= 0 ? "False" : (templateCheckedValues[0] || null));
+        : (templateCheckedValues.indexOf("False") >= 0
+            ? "False"
+            : (templateCheckedValues.indexOf("Unchecked") >= 0 ? "Unchecked" : (templateCheckedValues[0] || null)));
       var templateCheckedUnchecked = templateCheckedValues.indexOf("Unchecked") >= 0
         ? "Unchecked"
         : templateCheckedOff;
@@ -1910,7 +1914,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
         if (hasStates && templateStatesSlot && templateOrderedStates.length > 0) {
           clearChildren(templateStatesSlot);
-          if (lowerSetName === "switch" || lowerSetName === "checkbox") {
+          if (lowerSetName === "switch" || lowerSetName === "checkbox" || lowerSetName === "radio") {
             templateStatesSlot.fills = [];
             templateStatesSlot.strokes = [];
             templateStatesSlot.strokeWeight = 0;
@@ -1985,6 +1989,44 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 }
                 templateStatesSlot.appendChild(templateVariantStatesBlock);
               })(templateCheckboxVariants[tcvi]);
+            }
+          } else if (lowerSetName === "radio" && templateCheckedKey && templateCheckedOn != null) {
+            var templateRadioVariants = (templateVariantKey && templateOrderedVariants.length > 0)
+              ? templateOrderedVariants.slice(0, 2)
+              : [null];
+            for (var trvi = 0; trvi < templateRadioVariants.length; trvi++) {
+              (function (templateRadioVariantName) {
+                var templateVariantPatch = {};
+                if (templateRadioVariantName) templateVariantPatch.Variant = templateRadioVariantName;
+                var templateVariantStatesBlock = createStack("radio-states-block-" + normalizeName(templateRadioVariantName || "default"), 8);
+                if (templateRadioVariantName) {
+                  var templateVariantStatesHeader = createStack("radio-states-header-" + normalizeName(templateRadioVariantName), 6);
+                  appendText(templateVariantStatesHeader, titleFont, String(templateRadioVariantName), 18, DOC_COLORS.panelHeading, "Radio States Variant Heading", "title");
+                  templateVariantStatesBlock.appendChild(templateVariantStatesHeader);
+                }
+
+                var templateRadioStatesOffPanel = createPanel("radio-states-" + normalizeName((templateRadioVariantName || "default") + "-checked-off") + "-panel", 10);
+                templateRadioStatesOffPanel.resize(1192, templateRadioStatesOffPanel.height);
+                templateVariantStatesBlock.appendChild(templateRadioStatesOffPanel);
+                addInstancesRow(templateRadioStatesOffPanel, "Checked Off", templateOrderedStates, function (stateName) {
+                  var patch = { State: stateName, Checked: templateCheckedOff };
+                  var patchKeys = Object.keys(templateVariantPatch);
+                  for (var pui = 0; pui < patchKeys.length; pui++) patch[patchKeys[pui]] = templateVariantPatch[patchKeys[pui]];
+                  return makeTemplateInstance(patch);
+                }, true, { font: mediumFont, size: 14 });
+
+                var templateRadioStatesOnPanel = createPanel("radio-states-" + normalizeName((templateRadioVariantName || "default") + "-checked-on") + "-panel", 10);
+                templateRadioStatesOnPanel.resize(1192, templateRadioStatesOnPanel.height);
+                templateVariantStatesBlock.appendChild(templateRadioStatesOnPanel);
+                addInstancesRow(templateRadioStatesOnPanel, "Checked On", templateOrderedStates, function (stateName) {
+                  var patch = { State: stateName, Checked: templateCheckedOn };
+                  var patchKeys = Object.keys(templateVariantPatch);
+                  for (var pui = 0; pui < patchKeys.length; pui++) patch[patchKeys[pui]] = templateVariantPatch[patchKeys[pui]];
+                  return makeTemplateInstance(patch);
+                }, true, { font: mediumFont, size: 14 });
+
+                templateStatesSlot.appendChild(templateVariantStatesBlock);
+              })(templateRadioVariants[trvi]);
             }
           } else {
             addInstancesRow(templateStatesSlot, "States", templateOrderedStates, function (stateName) {
@@ -2214,10 +2256,14 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var rightOff = rightValues.indexOf("Off") >= 0 ? "Off" : (rightValues.indexOf("False") >= 0 ? "False" : (rightValues[0] || null));
       var checkedOn = checkedValues.indexOf("On") >= 0
         ? "On"
-        : (checkedValues.indexOf("True") >= 0 ? "True" : (checkedValues[0] || null));
+        : (checkedValues.indexOf("True") >= 0
+            ? "True"
+            : (checkedValues.indexOf("Checked") >= 0 ? "Checked" : (checkedValues[0] || null)));
       var checkedOff = checkedValues.indexOf("Off") >= 0
         ? "Off"
-        : (checkedValues.indexOf("False") >= 0 ? "False" : (checkedValues[0] || null));
+        : (checkedValues.indexOf("False") >= 0
+            ? "False"
+            : (checkedValues.indexOf("Unchecked") >= 0 ? "Unchecked" : (checkedValues[0] || null)));
       var checkedUnchecked = checkedValues.indexOf("Unchecked") >= 0
         ? "Unchecked"
         : checkedOff;
@@ -2368,7 +2414,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       if (statesSlot && states.length > 0) {
         clearChildren(statesSlot);
-        if (lowerSetName === "switch" || lowerSetName === "checkbox") {
+        if (lowerSetName === "switch" || lowerSetName === "checkbox" || lowerSetName === "radio") {
           statesSlot.fills = [];
           statesSlot.strokes = [];
           statesSlot.strokeWeight = 0;
@@ -2443,6 +2489,44 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               }
               statesSlot.appendChild(variantStatesBlock);
             })(checkboxVariants[cvi]);
+          }
+        } else if (lowerSetName === "radio" && checkedKey && checkedOn != null) {
+          var radioVariants = (variantKey && orderedVariants.length > 0)
+            ? orderedVariants.slice(0, 2)
+            : [null];
+          for (var rvi = 0; rvi < radioVariants.length; rvi++) {
+            (function (radioVariantName) {
+              var variantPatch = {};
+              if (radioVariantName) variantPatch.Variant = radioVariantName;
+              var variantStatesBlock = createStack("radio-states-block-" + normalizeName(radioVariantName || "default"), 8);
+              if (radioVariantName) {
+                var variantStatesHeader = createStack("radio-states-header-" + normalizeName(radioVariantName), 6);
+                appendText(variantStatesHeader, titleFont, String(radioVariantName), 18, DOC_COLORS.panelHeading, "Radio States Variant Heading", "title");
+                variantStatesBlock.appendChild(variantStatesHeader);
+              }
+
+              var radioStatesOffPanel = createPanel("radio-states-" + normalizeName((radioVariantName || "default") + "-checked-off") + "-panel", 10);
+              radioStatesOffPanel.resize(1192, radioStatesOffPanel.height);
+              variantStatesBlock.appendChild(radioStatesOffPanel);
+              addInstancesRow(radioStatesOffPanel, "Checked Off", orderedStates, function (stateName) {
+                var patch = { State: stateName, Checked: checkedOff };
+                var patchKeys = Object.keys(variantPatch);
+                for (var pui = 0; pui < patchKeys.length; pui++) patch[patchKeys[pui]] = variantPatch[patchKeys[pui]];
+                return makeInstance(patch);
+              }, true, { font: mediumFont, size: 14 });
+
+              var radioStatesOnPanel = createPanel("radio-states-" + normalizeName((radioVariantName || "default") + "-checked-on") + "-panel", 10);
+              radioStatesOnPanel.resize(1192, radioStatesOnPanel.height);
+              variantStatesBlock.appendChild(radioStatesOnPanel);
+              addInstancesRow(radioStatesOnPanel, "Checked On", orderedStates, function (stateName) {
+                var patch = { State: stateName, Checked: checkedOn };
+                var patchKeys = Object.keys(variantPatch);
+                for (var pui = 0; pui < patchKeys.length; pui++) patch[patchKeys[pui]] = variantPatch[patchKeys[pui]];
+                return makeInstance(patch);
+              }, true, { font: mediumFont, size: 14 });
+
+              statesSlot.appendChild(variantStatesBlock);
+            })(radioVariants[rvi]);
           }
         } else {
           addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
@@ -4363,8 +4447,12 @@ function buildRadioComponentSet(varMap, page, font) {
             bindVar(circle, "width", varMap["radio/size-" + size]);
             bindVar(circle, "height", varMap["radio/size-" + size]);
 
-            // Radio fill
-            var bgPath = radioBgPath(variant, checkedState, state);
+            // Radio fill: mirror preview behavior exactly.
+            // - Filled + checked uses checked background token.
+            // - Outline always uses unchecked background token for circle fill.
+            var uncheckedBgPath = radioBgPath(varMap, variant, "unchecked", state);
+            var checkedBgPath = radioBgPath(varMap, variant, "checked", state);
+            var bgPath = (isChecked && variant === "filled") ? checkedBgPath : uncheckedBgPath;
             if (isChecked && variant === "filled") {
               circle.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
             } else {
@@ -4373,7 +4461,7 @@ function buildRadioComponentSet(varMap, page, font) {
             bindPaintVar(circle, "fills", 0, varMap[bgPath]);
 
             // Radio border
-            var borderPath = radioBorderPath(state);
+            var borderPath = radioBorderPath(varMap, variant, checkedState, state);
             if (!isChecked || variant === "outline") {
               // Unchecked: always show border. Outline checked: also show border
               circle.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
@@ -4381,12 +4469,6 @@ function buildRadioComponentSet(varMap, page, font) {
               circle.strokeAlign = "INSIDE";
               bindPaintVar(circle, "strokes", 0, varMap[borderPath]);
               bindVar(circle, "strokeWeight", varMap["radio/border-width"]);
-
-              // For outline checked, the border should use the primary color
-              if (isChecked && variant === "outline") {
-                var outlineBorderPath = radioBgPath("filled", "checked", state);
-                bindPaintVar(circle, "strokes", 0, varMap[outlineBorderPath]);
-              }
             } else {
               // Filled checked: no border
               circle.strokes = [];
@@ -4399,7 +4481,7 @@ function buildRadioComponentSet(varMap, page, font) {
               dot.resize(iconSize, iconSize);
               dot.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
 
-              var iconColorPath = radioIconColorPath(variant, state);
+              var iconColorPath = radioIconColorPath(varMap, variant, state);
               bindPaintVar(dot, "fills", 0, varMap[iconColorPath]);
               bindVar(dot, "width", varMap["radio/icon-size-" + size]);
               bindVar(dot, "height", varMap["radio/icon-size-" + size]);
@@ -4440,11 +4522,6 @@ function buildRadioComponentSet(varMap, page, font) {
               }];
             }
 
-            // Disabled opacity
-            if (state === "disabled") {
-              comp.opacity = 0.6;
-            }
-
             // Grid placement
             var colIndex = (vi * checkedStates.length + chi) * labelModes.length + li;
             var rowIndex = (si * states.length) + sti;
@@ -4465,10 +4542,18 @@ function buildRadioComponentSet(varMap, page, font) {
 }
 
 // Helper: build figmaPath for radio background
-function radioBgPath(variant, checkedState, state) {
+function radioBgPath(varMap, variant, checkedState, state) {
   if (checkedState === "unchecked") {
-    if (state === "default") return "radio/background";
-    return "radio/background-" + state;
+    if (state === "default") {
+      return pickExistingPath(varMap, [
+        "radio/" + variant + "-background",
+        "radio/background"
+      ]);
+    }
+    return pickExistingPath(varMap, [
+      "radio/" + variant + "-background-" + state,
+      "radio/background-" + state
+    ]);
   }
   // checked
   var prefix = "radio/" + variant + "-background-checked";
@@ -4477,15 +4562,44 @@ function radioBgPath(variant, checkedState, state) {
 }
 
 // Helper: build figmaPath for radio border
-function radioBorderPath(state) {
-  if (state === "default") return "radio/border";
-  return "radio/border-" + state;
+function radioBorderPath(varMap, variant, checkedState, state) {
+  var isChecked = checkedState === "checked";
+  if (state === "default") {
+    if (isChecked) {
+      return pickExistingPath(varMap, [
+        "radio/" + variant + "-border-checked",
+        "radio/" + variant + "-border"
+      ]);
+    }
+    return "radio/" + variant + "-border";
+  }
+  if (isChecked) {
+    return pickExistingPath(varMap, [
+      "radio/" + variant + "-border-checked-" + state,
+      "radio/" + variant + "-border-checked",
+      "radio/" + variant + "-border-" + state,
+      "radio/" + variant + "-border"
+    ]);
+  }
+  return pickExistingPath(varMap, [
+    "radio/" + variant + "-border-" + state,
+    "radio/" + variant + "-border"
+  ]);
 }
 
 // Helper: build figmaPath for radio icon (dot) color
-function radioIconColorPath(variant, state) {
-  if (state === "disabled") return "radio/icon-color-disabled";
-  return "radio/icon-color";
+function radioIconColorPath(varMap, variant, state) {
+  if (state === "default") {
+    return pickExistingPath(varMap, [
+      "radio/" + variant + "-icon-color-checked",
+      "radio/icon-color"
+    ]);
+  }
+  return pickExistingPath(varMap, [
+    "radio/" + variant + "-icon-color-checked-" + state,
+    "radio/" + variant + "-icon-color-checked",
+    state === "disabled" ? "radio/icon-color-disabled" : "radio/icon-color"
+  ]);
 }
 
 // Helper: build figmaPath for radio label text

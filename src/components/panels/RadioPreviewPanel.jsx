@@ -55,6 +55,7 @@ export function RadioPreviewContent({
   selectedState,
   showLabel,
 }) {
+  const radioSizeOptions = sizeKeys.includes("default") ? sizeKeys : ["default", ...sizeKeys];
   const matrixRows = RADIO_VARIANTS.flatMap((v) => [
     { label: `${v} / unchecked`, variant: v, checked: false },
     { label: `${v} / checked`, variant: v, checked: true },
@@ -78,7 +79,7 @@ export function RadioPreviewContent({
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
       <SectionLabel mt={20}>All Variants x Sizes</SectionLabel>
       <PreviewMatrix
-        sizeKeys={sizeKeys}
+        sizeKeys={radioSizeOptions}
         rows={matrixRows}
         renderCell={(row, s) => (
           <RadioPreview
@@ -112,10 +113,11 @@ export function RadioPropertiesPanel({
   forcedChecked,
   forcedState,
 }) {
+  const radioSizeOptions = sizeKeys.includes("default") ? sizeKeys : ["default", ...sizeKeys];
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={RADIO_VARIANTS} />
-      <PropertyRow label="Size" value={activeRadioSize} onChange={setActiveRadioSize} options={sizeKeys} />
+      <PropertyRow label="Size" value={activeRadioSize} onChange={setActiveRadioSize} options={radioSizeOptions} />
       <PropertyRow
         label="Selection"
         value={selectedChecked ? "checked" : "unchecked"}
