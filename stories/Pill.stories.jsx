@@ -20,12 +20,12 @@ export default {
   title: "Components/Pill",
   component: PillPreview,
   argTypes: {
-    size: { control: "select", options: ["xs", "sm", "md", "lg", "xl"] },
+    size: { control: "select", options: ["default", "xs", "sm", "md", "lg", "xl"] },
     withRemoveButton: { control: "boolean" },
     text: { control: "text" },
   },
   args: {
-    size: "md",
+    size: "default",
     withRemoveButton: false,
     text: "React",
   },

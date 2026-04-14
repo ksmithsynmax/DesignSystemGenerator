@@ -1,41 +1,43 @@
-import { Badge, Card, Group, Text } from "@mantine/core";
+import { Card, Group, Text } from "@mantine/core";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
 export default function CardPreview({
   brands,
   brandId,
-  size = "md",
-  radius = "md",
+  variant = "default",
+  size = "default",
+  radius = "default",
   withBorder = true,
   withShadow = false,
   showSection = true,
-  showBadge = true,
   title = "PlanetScope vessel",
   description = "Detected vessel metadata and imagery details from latest satellite capture.",
 }) {
   const tokens = COMPONENT_TOKENS.card;
+  const variantKey = String(variant || "default").toLowerCase();
+  const tokenKey = (slot) =>
+    tokens[`card-${variantKey}-${slot}`]
+      ? `card-${variantKey}-${slot}`
+      : (tokens[`card-default-${slot}`] ? `card-default-${slot}` : `card-${slot}`);
 
-  const background = resolveColor(brands, brandId, tokens["card-background"]?.semantic, "light", "card-background");
-  const borderColor = resolveColor(brands, brandId, tokens["card-border"]?.semantic, "light", "card-border");
-  const titleColor = resolveColor(brands, brandId, tokens["card-title"]?.semantic, "light", "card-title");
-  const descriptionColor = resolveColor(brands, brandId, tokens["card-description"]?.semantic, "light", "card-description");
+  const backgroundToken = tokenKey("background");
+  const borderToken = tokenKey("border");
+  const titleToken = tokenKey("title");
+  const descriptionToken = tokenKey("description");
+  const sectionBackgroundToken = tokenKey("section-background");
+
+  const background = resolveColor(brands, brandId, tokens[backgroundToken]?.semantic, "light", backgroundToken);
+  const borderColor = resolveColor(brands, brandId, tokens[borderToken]?.semantic, "light", borderToken);
+  const titleColor = resolveColor(brands, brandId, tokens[titleToken]?.semantic, "light", titleToken);
+  const descriptionColor = resolveColor(brands, brandId, tokens[descriptionToken]?.semantic, "light", descriptionToken);
   const sectionBackground = resolveColor(
     brands,
     brandId,
-    tokens["card-section-background"]?.semantic,
+    tokens[sectionBackgroundToken]?.semantic,
     "light",
-    "card-section-background"
+    sectionBackgroundToken
   );
-  const badgeBackground = resolveColor(
-    brands,
-    brandId,
-    tokens["card-badge-background"]?.semantic,
-    "light",
-    "card-badge-background"
-  );
-  const badgeColor = resolveColor(brands, brandId, tokens["card-badge-color"]?.semantic, "light", "card-badge-color");
-
   const cardPadding = resolveDimension(brands, brandId, "card-padding", size);
   const cardRadius = resolveDimension(brands, brandId, "card-radius", radius);
   const titleFontSize = resolveDimension(brands, brandId, "card-title-font-size", size);
@@ -93,18 +95,6 @@ export default function CardPreview({
           >
             {title}
           </Text>
-          {showBadge && (
-            <Badge
-              size="sm"
-              style={{
-                background: badgeBackground,
-                color: badgeColor,
-                fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
-              }}
-            >
-              New
-            </Badge>
-          )}
         </Group>
         <Text
           style={{

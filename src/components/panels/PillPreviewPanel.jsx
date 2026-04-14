@@ -3,7 +3,7 @@ import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-export const PILL_SIZE_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const PILL_SIZE_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (

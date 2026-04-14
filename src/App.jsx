@@ -114,6 +114,7 @@ const VARIANTS_BY_COMPONENT = {
   checkbox: ["filled", "outlined"],
   chip: ["filled", "light", "outline"],
   badge: ["default", "filled", "light", "outline"],
+  card: ["default", "dark", "outlined", "brand", "transparent"],
   alert: ["default", "filled", "light", "outline", "transparent", "white"],
   radio: ["filled", "outline"],
   textinput: ["default", "filled"],
@@ -295,9 +296,9 @@ export default function App() {
   const chipDefault = getComponentDefaultSize(brands, activeBrand, "chip") || "md";
   const textInputDefault = getComponentDefaultSize(brands, activeBrand, "textinput") || "sm";
   const selectDefault = getComponentDefaultSize(brands, activeBrand, "select") || "sm";
-  const cardDefault = getComponentDefaultSize(brands, activeBrand, "card") || "md";
+  const cardDefault = getComponentDefaultSize(brands, activeBrand, "card") || "default";
   const loaderDefault = getComponentDefaultSize(brands, activeBrand, "loader") || "md";
-  const pillDefault = getComponentDefaultSize(brands, activeBrand, "pill") || "md";
+  const pillDefault = getComponentDefaultSize(brands, activeBrand, "pill") || "default";
   const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "default";
   const modalDefault = getComponentDefaultSize(brands, activeBrand, "modal") || "md";
   const anchorDefault = getComponentDefaultSize(brands, activeBrand, "anchor") || "md";
@@ -393,7 +394,6 @@ export default function App() {
   const [activeCardWithBorder, setActiveCardWithBorder] = useState(true);
   const [activeCardWithShadow, setActiveCardWithShadow] = useState(false);
   const [activeCardShowSection, setActiveCardShowSection] = useState(true);
-  const [activeCardShowBadge, setActiveCardShowBadge] = useState(true);
   const [activeCardTitle, setActiveCardTitle] = useState("PlanetScope vessel");
   const [activeCardDescription, setActiveCardDescription] = useState(
     "Detected vessel metadata and imagery details from latest satellite capture."
@@ -444,9 +444,9 @@ export default function App() {
     const cbDef = getComponentDefaultSize(brands, newBrand, "checkbox") || "md";
     const rdDef = getComponentDefaultSize(brands, newBrand, "radio") || "md";
     const chDef = getComponentDefaultSize(brands, newBrand, "chip") || "md";
-    const caDef = getComponentDefaultSize(brands, newBrand, "card") || "md";
+    const caDef = getComponentDefaultSize(brands, newBrand, "card") || "default";
     const ldDef = getComponentDefaultSize(brands, newBrand, "loader") || "md";
-    const piDef = getComponentDefaultSize(brands, newBrand, "pill") || "md";
+    const piDef = getComponentDefaultSize(brands, newBrand, "pill") || "default";
     const baDef = getComponentDefaultSize(brands, newBrand, "badge") || "default";
     const moDef = getComponentDefaultSize(brands, newBrand, "modal") || "md";
     const anDef = getComponentDefaultSize(brands, newBrand, "anchor") || "md";
@@ -622,7 +622,6 @@ export default function App() {
       setActiveCardWithBorder(true);
       setActiveCardWithShadow(false);
       setActiveCardShowSection(true);
-      setActiveCardShowBadge(true);
       setActiveCardTitle("PlanetScope vessel");
       setActiveCardDescription("Detected vessel metadata and imagery details from latest satellite capture.");
     } else if (newComp === "loader") {
@@ -776,7 +775,7 @@ export default function App() {
       forcedIndeterminate = true;
     }
 
-    if (["button", "actionicon", "tabs", "checkbox", "chip", "badge", "alert", "radio", "textinput", "select"].includes(activeComponent)) {
+    if (["button", "actionicon", "tabs", "checkbox", "chip", "badge", "alert", "radio", "textinput", "select", "card"].includes(activeComponent)) {
       const variantSegment = parts[1];
       const knownVariants = {
         button: ["filled", "outlined", "ghost"],
@@ -785,6 +784,7 @@ export default function App() {
         checkbox: ["filled", "outlined"],
         chip: ["filled", "light", "outline"],
         badge: ["default", "filled", "light", "outline"],
+        card: ["default", "dark", "outlined", "brand", "transparent"],
         alert: ["default", "filled", "light", "outline", "transparent", "white"],
         radio: ["filled", "outline"],
         textinput: ["default", "filled"],
@@ -927,6 +927,7 @@ export default function App() {
       radio: ["filled", "outline"],
       chip: ["filled", "light", "outline"],
       badge: ["default", "filled", "light", "outline"],
+      card: ["default", "dark", "outlined", "brand", "transparent"],
       alert: ["default", "filled", "light", "outline", "transparent", "white"],
       textinput: ["default", "filled"],
       select: ["default", "filled"],
@@ -1025,6 +1026,7 @@ export default function App() {
       checkbox: ["filled", "outlined"],
       radio: ["filled", "outline"],
       badge: ["default", "filled", "light", "outline"],
+      card: ["default", "dark", "outlined", "brand", "transparent"],
       alert: ["default", "filled", "light", "outline", "transparent", "white"],
       textinput: ["default", "filled"],
       select: ["default", "filled"],
@@ -1650,12 +1652,12 @@ export default function App() {
                   brands={brands}
                   activeBrand={activeBrand}
                   activeColorToken={activeColorToken}
+                  activeVariant={forcedVariant || activeVariant}
                   size={activeCardSize}
                   radius={activeCardRadius}
                   withBorder={activeCardWithBorder}
                   withShadow={activeCardWithShadow}
                   showSection={activeCardShowSection}
-                  showBadge={activeCardShowBadge}
                   title={activeCardTitle}
                   description={activeCardDescription}
                 />
@@ -2051,6 +2053,8 @@ export default function App() {
               )}
               {activeComponent === "card" && (
                 <CardPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
                   size={activeCardSize}
                   setSize={setActiveCardSize}
                   radius={activeCardRadius}
@@ -2061,12 +2065,11 @@ export default function App() {
                   setWithShadow={setActiveCardWithShadow}
                   showSection={activeCardShowSection}
                   setShowSection={setActiveCardShowSection}
-                  showBadge={activeCardShowBadge}
-                  setShowBadge={setActiveCardShowBadge}
                   title={activeCardTitle}
                   setTitle={setActiveCardTitle}
                   description={activeCardDescription}
                   setDescription={setActiveCardDescription}
+                  forcedVariant={forcedVariant}
                 />
               )}
               {activeComponent === "loader" && (

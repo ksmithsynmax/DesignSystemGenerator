@@ -1002,7 +1002,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
     return buildSelectComponentSet(varMap, page, font);
   });
   var cardSet = await buildSet("Card", function () {
-    return buildCardComponentSet(varMap, page, font);
+    return buildCardComponentSet(varMap, page, font, { compact: true });
   });
   var actionIconSet = await buildSet("ActionIcon", function () {
     return buildActionIconComponentSet(varMap, page, actionIconFocusRingStyle, actionIconVariants);
@@ -1740,12 +1740,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateStateKey = getPropKey(variantProps, "State");
       var templateSizeKey = getPropKey(variantProps, "Size");
       var templateRadiusKey = getPropKey(variantProps, "Radius");
+      var templateSectionKey = getPropKey(variantProps, "Section");
       var templateCheckedKey = getPropKey(variantProps, "Checked");
       var templateLeftIconKey = getPropKey(variantProps, "LeftIcon");
       var templateRightIconKey = getPropKey(variantProps, "RightIcon");
 
       var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills"];
-      var templateVariantLimit = lowerSetName === "badge" ? 4 : 3;
+      var templateVariantLimit = lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3);
       var templateOrderedVariants = pickOrdered(variants, templateVariantOrder).slice(0, templateVariantLimit);
       var templateOrderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
       var templateOrderedSizesAll = pickOrdered(sizes, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
@@ -1759,17 +1760,29 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       }
 
       var templateDefaultVariant = templateOrderedVariants.length > 0 ? templateOrderedVariants[0] : null;
+      if (lowerSetName === "card" && templateOrderedVariants.length > 0) {
+        for (var tdvi = 0; tdvi < templateOrderedVariants.length; tdvi++) {
+          if (String(templateOrderedVariants[tdvi]).toLowerCase() === "default") {
+            templateDefaultVariant = templateOrderedVariants[tdvi];
+            break;
+          }
+        }
+      }
       var templateDefaultState = templateOrderedStates.length > 0 ? templateOrderedStates[0] : null;
       var templateDefaultSize = pickDefaultSizeValue(templateOrderedSizesAll);
       var templateDefaultRadius = pickDefaultSizeValue(templateOrderedRadiiAll);
 
       var templateLeftValues = templateLeftIconKey ? getPropValues(variantProps, templateLeftIconKey) : [];
       var templateRightValues = templateRightIconKey ? getPropValues(variantProps, templateRightIconKey) : [];
+      var templateSectionValues = templateSectionKey ? getPropValues(variantProps, templateSectionKey) : [];
       var templateCheckedValues = templateCheckedKey ? getPropValues(variantProps, templateCheckedKey) : [];
       var templateLeftOn = templateLeftValues.indexOf("On") >= 0 ? "On" : (templateLeftValues.indexOf("True") >= 0 ? "True" : (templateLeftValues[0] || null));
       var templateLeftOff = templateLeftValues.indexOf("Off") >= 0 ? "Off" : (templateLeftValues.indexOf("False") >= 0 ? "False" : (templateLeftValues[0] || null));
       var templateRightOn = templateRightValues.indexOf("On") >= 0 ? "On" : (templateRightValues.indexOf("True") >= 0 ? "True" : (templateRightValues[0] || null));
       var templateRightOff = templateRightValues.indexOf("Off") >= 0 ? "Off" : (templateRightValues.indexOf("False") >= 0 ? "False" : (templateRightValues[0] || null));
+      var templateSectionOff = templateSectionValues.indexOf("Off") >= 0
+        ? "Off"
+        : (templateSectionValues.indexOf("False") >= 0 ? "False" : (templateSectionValues[0] || null));
       var templateCheckedOn = templateCheckedValues.indexOf("On") >= 0
         ? "On"
         : (templateCheckedValues.indexOf("True") >= 0
@@ -1799,6 +1812,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (templateStateKey && templateDefaultState != null) props[templateStateKey] = templateDefaultState;
           if (templateSizeKey && templateDefaultSize != null) props[templateSizeKey] = templateDefaultSize;
           if (templateRadiusKey && templateDefaultRadius != null) props[templateRadiusKey] = templateDefaultRadius;
+          if (lowerSetName === "card" && templateSectionKey && templateSectionOff != null) props[templateSectionKey] = templateSectionOff;
           if (templateCheckedKey && templateCheckedOff != null) props[templateCheckedKey] = templateCheckedOff;
           if (templateLeftIconKey && templateLeftOff != null) props[templateLeftIconKey] = templateLeftOff;
           if (templateRightIconKey && templateRightOff != null) props[templateRightIconKey] = templateRightOff;
@@ -1891,6 +1905,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             }, false);
             if (templateSliderSecondRow.length > 0) {
               addInstancesRow(templateSizeSlot, "Sizes", templateSliderSecondRow, function (sizeName) {
+                return makeTemplateInstance({ Size: sizeName });
+              }, false);
+            }
+          } else if (lowerSetName === "card" && templateOrderedSizes.length > 3) {
+            var templateCardFirstRow = templateOrderedSizes.slice(0, 3);
+            var templateCardSecondRow = templateOrderedSizes.slice(3);
+            addInstancesRow(templateSizeSlot, "Sizes", templateCardFirstRow, function (sizeName) {
+              return makeTemplateInstance({ Size: sizeName });
+            }, false);
+            if (templateCardSecondRow.length > 0) {
+              addInstancesRow(templateSizeSlot, "Sizes", templateCardSecondRow, function (sizeName) {
                 return makeTemplateInstance({ Size: sizeName });
               }, false);
             }
@@ -2234,12 +2259,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var stateKey = getPropKey(variantProps, "State");
       var sizeKey = getPropKey(variantProps, "Size");
       var radiusKey = getPropKey(variantProps, "Radius");
+      var sectionKey = getPropKey(variantProps, "Section");
       var checkedKey = getPropKey(variantProps, "Checked");
       var leftIconKey = getPropKey(variantProps, "LeftIcon");
       var rightIconKey = getPropKey(variantProps, "RightIcon");
 
       var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills"];
-      var variantLimit = lowerSetName === "badge" ? 4 : 3;
+      var variantLimit = lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3);
       var orderedVariants = pickOrdered(variants, variantOrder).slice(0, variantLimit);
       var orderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
       var orderedSizesAll = pickOrdered(sizes, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
@@ -2253,17 +2279,29 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       }
 
       var defaultVariant = orderedVariants.length > 0 ? orderedVariants[0] : null;
+      if (lowerSetName === "card" && orderedVariants.length > 0) {
+        for (var dvi = 0; dvi < orderedVariants.length; dvi++) {
+          if (String(orderedVariants[dvi]).toLowerCase() === "default") {
+            defaultVariant = orderedVariants[dvi];
+            break;
+          }
+        }
+      }
       var defaultState = orderedStates.length > 0 ? orderedStates[0] : null;
       var defaultSize = pickDefaultSizeValue(orderedSizesAll);
       var defaultRadius = pickDefaultSizeValue(orderedRadiiAll);
 
       var leftValues = leftIconKey ? getPropValues(variantProps, leftIconKey) : [];
       var rightValues = rightIconKey ? getPropValues(variantProps, rightIconKey) : [];
+      var sectionValues = sectionKey ? getPropValues(variantProps, sectionKey) : [];
       var checkedValues = checkedKey ? getPropValues(variantProps, checkedKey) : [];
       var leftOn = leftValues.indexOf("On") >= 0 ? "On" : (leftValues.indexOf("True") >= 0 ? "True" : (leftValues[0] || null));
       var leftOff = leftValues.indexOf("Off") >= 0 ? "Off" : (leftValues.indexOf("False") >= 0 ? "False" : (leftValues[0] || null));
       var rightOn = rightValues.indexOf("On") >= 0 ? "On" : (rightValues.indexOf("True") >= 0 ? "True" : (rightValues[0] || null));
       var rightOff = rightValues.indexOf("Off") >= 0 ? "Off" : (rightValues.indexOf("False") >= 0 ? "False" : (rightValues[0] || null));
+      var sectionOff = sectionValues.indexOf("Off") >= 0
+        ? "Off"
+        : (sectionValues.indexOf("False") >= 0 ? "False" : (sectionValues[0] || null));
       var checkedOn = checkedValues.indexOf("On") >= 0
         ? "On"
         : (checkedValues.indexOf("True") >= 0
@@ -2291,6 +2329,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         if (stateKey && defaultState != null) props[stateKey] = defaultState;
         if (sizeKey && defaultSize != null) props[sizeKey] = defaultSize;
         if (radiusKey && defaultRadius != null) props[radiusKey] = defaultRadius;
+        if (lowerSetName === "card" && sectionKey && sectionOff != null) props[sectionKey] = sectionOff;
         if (checkedKey && checkedOff != null) props[checkedKey] = checkedOff;
         if (leftIconKey && leftOff != null) props[leftIconKey] = leftOff;
         if (rightIconKey && rightOff != null) props[rightIconKey] = rightOff;
@@ -2376,6 +2415,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           }, false);
           if (sliderSecondRow.length > 0) {
             addInstancesRow(sizeSlot, "Sizes", sliderSecondRow, function (sizeName) {
+              return makeInstance({ Size: sizeName });
+            }, false);
+          }
+        } else if (lowerSetName === "card" && orderedSizes.length > 3) {
+          var cardFirstRow = orderedSizes.slice(0, 3);
+          var cardSecondRow = orderedSizes.slice(3);
+          addInstancesRow(sizeSlot, "Sizes", cardFirstRow, function (sizeName) {
+            return makeInstance({ Size: sizeName });
+          }, false);
+          if (cardSecondRow.length > 0) {
+            addInstancesRow(sizeSlot, "Sizes", cardSecondRow, function (sizeName) {
               return makeInstance({ Size: sizeName });
             }, false);
           }
@@ -5878,10 +5928,9 @@ function buildLoaderComponentSet(varMap, page, font) {
 // ---------------------------------------------------------------------------
 
 function buildPillComponentSet(varMap, page, font) {
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var removeModes = ["off", "on"];
   var components = [];
-  var heightBySize = { xs: 18, sm: 22, md: 26, lg: 30, xl: 36 };
   var colWidth = 200;
   var rowHeight = 70;
   var gap = 20;
@@ -5893,9 +5942,7 @@ function buildPillComponentSet(varMap, page, font) {
 
     for (var si = 0; si < sizes.length; si++) {
       var size = sizes[si];
-      var capSize = size.toUpperCase();
-      var h = heightBySize[size];
-
+      var capSize = size === "default" ? "Default" : size.toUpperCase();
       var comp = figma.createComponent();
       comp.name = "Size=" + capSize + ", Remove=" + capRemove;
       comp.layoutMode = "HORIZONTAL";
@@ -5906,9 +5953,8 @@ function buildPillComponentSet(varMap, page, font) {
       comp.itemSpacing = 6;
       comp.paddingLeft = 10;
       comp.paddingRight = 10;
-      comp.paddingTop = 0;
-      comp.paddingBottom = 0;
-      comp.minHeight = h;
+      comp.paddingTop = 4;
+      comp.paddingBottom = 4;
       comp.cornerRadius = 12;
       comp.fills = [{ type: "SOLID", color: { r: 0.92, g: 0.96, b: 1 } }];
       comp.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.82, b: 0.87 } }];
@@ -5918,9 +5964,10 @@ function buildPillComponentSet(varMap, page, font) {
       bindPaintVar(comp, "fills", 0, varMap["pill/background"]);
       bindPaintVar(comp, "strokes", 0, varMap["pill/border"]);
       bindVar(comp, "strokeWeight", varMap["pill/border-width"]);
-      bindVar(comp, "minHeight", varMap["pill/height-" + size]);
       bindVar(comp, "paddingLeft", varMap["pill/padding-x-" + size]);
       bindVar(comp, "paddingRight", varMap["pill/padding-x-" + size]);
+      bindVar(comp, "paddingTop", varMap["pill/padding-y-" + size]);
+      bindVar(comp, "paddingBottom", varMap["pill/padding-y-" + size]);
       bindVar(comp, "itemSpacing", varMap["pill/gap-" + size]);
       bindVar(comp, "topLeftRadius", varMap["pill/radius-" + size]);
       bindVar(comp, "topRightRadius", varMap["pill/radius-" + size]);
@@ -6679,11 +6726,16 @@ async function findSelectChevronIconComponent() {
 // Card
 // ---------------------------------------------------------------------------
 
-function buildCardComponentSet(varMap, page, font) {
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
-  var radii = ["xs", "sm", "md", "lg", "xl"];
+function buildCardComponentSet(varMap, page, font, options) {
+  var useCompactMatrix = Boolean(options && options.compact);
+  var variants = ["default", "dark", "outlined", "brand", "transparent"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = useCompactMatrix
+    ? ["default"]
+    : ["default", "xs", "sm", "md", "lg", "xl"];
   var borderModes = ["on", "off"];
   var shadowModes = ["off", "on"];
+  var sectionModes = ["on", "off"];
   var components = [];
 
   var rowGap = 24;
@@ -6691,164 +6743,167 @@ function buildCardComponentSet(varMap, page, font) {
   var colWidth = 360 + colGap;
   var rowHeight = 280 + rowGap;
 
-  for (var si = 0; si < sizes.length; si++) {
-    var size = sizes[si];
-    var capSize = size.toUpperCase();
-    for (var ri = 0; ri < radii.length; ri++) {
-      var radius = radii[ri];
-      var capRadius = radius.toUpperCase();
-      for (var bi = 0; bi < borderModes.length; bi++) {
-        var withBorder = borderModes[bi] === "on";
-        for (var shi = 0; shi < shadowModes.length; shi++) {
-          var withShadow = shadowModes[shi] === "on";
-          var comp = figma.createComponent();
-          comp.name =
-            "Size=" + capSize +
-            ", Radius=" + capRadius +
-            ", Border=" + (withBorder ? "On" : "Off") +
-            ", Shadow=" + (withShadow ? "On" : "Off") +
-            ", Section=On, Badge=On";
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+    for (var si = 0; si < sizes.length; si++) {
+      var size = sizes[si];
+      var capSize = size === "default" ? "Default" : size.toUpperCase();
+      for (var ri = 0; ri < radii.length; ri++) {
+        var radius = radii[ri];
+        var capRadius = radius === "default" ? "Default" : radius.toUpperCase();
+        for (var bi = 0; bi < borderModes.length; bi++) {
+          var withBorder = borderModes[bi] === "on";
+          for (var shi = 0; shi < shadowModes.length; shi++) {
+            var withShadow = shadowModes[shi] === "on";
+            for (var seci = 0; seci < sectionModes.length; seci++) {
+              var withSection = sectionModes[seci] === "on";
+            var comp = figma.createComponent();
+            comp.name =
+              "Variant=" + capVariant +
+              ", " +
+              "Size=" + capSize +
+              ", Radius=" + capRadius +
+              ", Border=" + (withBorder ? "On" : "Off") +
+              ", Shadow=" + (withShadow ? "On" : "Off") +
+              ", Section=" + (withSection ? "On" : "Off");
 
-          comp.layoutMode = "VERTICAL";
-          comp.primaryAxisSizingMode = "AUTO";
-          comp.counterAxisSizingMode = "FIXED";
-          comp.counterAxisAlignItems = "MIN";
-          comp.itemSpacing = 0;
-          comp.resize(320, 180);
-          comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-          comp.clipsContent = true;
-          if (varMap["card/background"]) bindPaintVar(comp, "fills", 0, varMap["card/background"]);
-          if (varMap["card/radius-" + radius]) {
-            bindVar(comp, "topLeftRadius", varMap["card/radius-" + radius]);
-            bindVar(comp, "topRightRadius", varMap["card/radius-" + radius]);
-            bindVar(comp, "bottomLeftRadius", varMap["card/radius-" + radius]);
-            bindVar(comp, "bottomRightRadius", varMap["card/radius-" + radius]);
+            comp.layoutMode = "VERTICAL";
+            comp.primaryAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "FIXED";
+            comp.counterAxisAlignItems = "MIN";
+            comp.itemSpacing = 0;
+            comp.resize(320, 180);
+            comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            comp.clipsContent = true;
+            var backgroundVar = varMap["card/" + variant + "-background"] || varMap["card/default-background"] || varMap["card/background"];
+            var borderVar = varMap["card/" + variant + "-border"] || varMap["card/default-border"] || varMap["card/border"];
+            var titleVar = varMap["card/" + variant + "-title"] || varMap["card/default-title"] || varMap["card/title"];
+            var descriptionVar = varMap["card/" + variant + "-description"] || varMap["card/default-description"] || varMap["card/description"];
+            var sectionBackgroundVar = varMap["card/" + variant + "-section-background"] || varMap["card/default-section-background"] || varMap["card/section-background"];
+
+            if (backgroundVar) bindPaintVar(comp, "fills", 0, backgroundVar);
+            if (varMap["card/radius-" + radius]) {
+              bindVar(comp, "topLeftRadius", varMap["card/radius-" + radius]);
+              bindVar(comp, "topRightRadius", varMap["card/radius-" + radius]);
+              bindVar(comp, "bottomLeftRadius", varMap["card/radius-" + radius]);
+              bindVar(comp, "bottomRightRadius", varMap["card/radius-" + radius]);
+            }
+            if (varMap["card/padding-" + size]) {
+              bindVar(comp, "paddingLeft", varMap["card/padding-" + size]);
+              bindVar(comp, "paddingRight", varMap["card/padding-" + size]);
+              bindVar(comp, "paddingTop", varMap["card/padding-" + size]);
+              bindVar(comp, "paddingBottom", varMap["card/padding-" + size]);
+            } else {
+              comp.paddingLeft = 16;
+              comp.paddingRight = 16;
+              comp.paddingTop = 16;
+              comp.paddingBottom = 16;
+            }
+
+            comp.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+            if (borderVar) bindPaintVar(comp, "strokes", 0, borderVar);
+            if (withBorder) {
+              comp.strokeWeight = 1;
+              if (varMap["card/border-width"]) bindVar(comp, "strokeWeight", varMap["card/border-width"]);
+            } else {
+              comp.strokeWeight = 0;
+            }
+
+            if (withShadow) {
+              comp.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0, g: 0, b: 0, a: 0.18 },
+                offset: { x: 0, y: 6 },
+                radius: 20,
+                spread: 0,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
+
+            if (withSection) {
+              var section = figma.createFrame();
+              section.name = "Section";
+              section.layoutMode = "NONE";
+              section.primaryAxisSizingMode = "FIXED";
+              section.counterAxisSizingMode = "FIXED";
+              section.layoutAlign = "STRETCH";
+              section.resize(320, 110);
+              section.fills = [{ type: "SOLID", color: { r: 0.93, g: 0.95, b: 0.98 } }];
+              if (sectionBackgroundVar) bindPaintVar(section, "fills", 0, sectionBackgroundVar);
+              if (varMap["card/section-height"]) bindVar(section, "minHeight", varMap["card/section-height"]);
+              comp.appendChild(section);
+            }
+
+            var body = figma.createFrame();
+            body.name = "Body";
+            body.layoutMode = "VERTICAL";
+            body.primaryAxisSizingMode = "AUTO";
+            body.counterAxisSizingMode = "AUTO";
+            body.counterAxisAlignItems = "MIN";
+            body.itemSpacing = 8;
+            body.layoutAlign = "STRETCH";
+            body.fills = [];
+            if (varMap["card/gap-" + size]) bindVar(body, "itemSpacing", varMap["card/gap-" + size]);
+            comp.appendChild(body);
+
+            var topRow = figma.createFrame();
+            topRow.name = "TopRow";
+            topRow.layoutMode = "HORIZONTAL";
+            topRow.primaryAxisSizingMode = "AUTO";
+            topRow.counterAxisSizingMode = "AUTO";
+            topRow.primaryAxisAlignItems = "SPACE_BETWEEN";
+            topRow.counterAxisAlignItems = "CENTER";
+            topRow.layoutAlign = "STRETCH";
+            topRow.fills = [];
+            body.appendChild(topRow);
+
+            var titleNode = figma.createText();
+            titleNode.name = "Title";
+            titleNode.fontName = font;
+            titleNode.characters = "PlanetScope vessel";
+            titleNode.fontSize = 14;
+            titleNode.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.1 } }];
+            if (titleVar) bindPaintVar(titleNode, "fills", 0, titleVar);
+            if (varMap["card/title-font-size-" + size]) bindVar(titleNode, "fontSize", varMap["card/title-font-size-" + size]);
+            bindVar(titleNode, "fontFamily", varMap["card/title-font-family"]);
+            bindVar(titleNode, "fontStyle", varMap["card/title-font-weight"]);
+            if (varMap["card/title-line-height-" + size]) bindVar(titleNode, "lineHeight", varMap["card/title-line-height-" + size]);
+            topRow.appendChild(titleNode);
+
+            var descriptionNode = figma.createText();
+            descriptionNode.name = "Description";
+            descriptionNode.fontName = font;
+            descriptionNode.characters = "Detected vessel metadata and imagery details from latest satellite capture.";
+            descriptionNode.fontSize = 12;
+            descriptionNode.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+            descriptionNode.textAutoResize = "HEIGHT";
+            descriptionNode.resize(288, descriptionNode.height);
+            if (descriptionVar) bindPaintVar(descriptionNode, "fills", 0, descriptionVar);
+            if (varMap["card/description-font-size-" + size]) bindVar(descriptionNode, "fontSize", varMap["card/description-font-size-" + size]);
+            bindVar(descriptionNode, "fontFamily", varMap["card/description-font-family"]);
+            bindVar(descriptionNode, "fontStyle", varMap["card/description-font-weight"]);
+            if (varMap["card/description-line-height-" + size]) bindVar(descriptionNode, "lineHeight", varMap["card/description-line-height-" + size]);
+            body.appendChild(descriptionNode);
+
+            // Ensure card height hugs content (section on/off variants)
+            // while width remains fixed to 320.
+            comp.primaryAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "FIXED";
+
+            var colIndex = vi * radii.length * borderModes.length * shadowModes.length * sectionModes.length +
+              ri * borderModes.length * shadowModes.length * sectionModes.length +
+              bi * shadowModes.length * sectionModes.length +
+              shi * sectionModes.length +
+              seci;
+            var rowIndex = si;
+            comp.x = colIndex * colWidth;
+            comp.y = rowIndex * rowHeight;
+            page.appendChild(comp);
+            components.push(comp);
+            }
           }
-          if (varMap["card/padding-" + size]) {
-            bindVar(comp, "paddingLeft", varMap["card/padding-" + size]);
-            bindVar(comp, "paddingRight", varMap["card/padding-" + size]);
-            bindVar(comp, "paddingTop", varMap["card/padding-" + size]);
-            bindVar(comp, "paddingBottom", varMap["card/padding-" + size]);
-          } else {
-            comp.paddingLeft = 16;
-            comp.paddingRight = 16;
-            comp.paddingTop = 16;
-            comp.paddingBottom = 16;
-          }
-
-          comp.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
-          if (varMap["card/border"]) bindPaintVar(comp, "strokes", 0, varMap["card/border"]);
-          if (withBorder) {
-            comp.strokeWeight = 1;
-            if (varMap["card/border-width"]) bindVar(comp, "strokeWeight", varMap["card/border-width"]);
-          } else {
-            comp.strokeWeight = 0;
-          }
-
-          if (withShadow) {
-            comp.effects = [{
-              type: "DROP_SHADOW",
-              color: { r: 0, g: 0, b: 0, a: 0.18 },
-              offset: { x: 0, y: 6 },
-              radius: 20,
-              spread: 0,
-              visible: true,
-              blendMode: "NORMAL"
-            }];
-          }
-
-          var section = figma.createFrame();
-          section.name = "Section";
-          section.layoutMode = "NONE";
-          section.primaryAxisSizingMode = "FIXED";
-          section.counterAxisSizingMode = "FIXED";
-          section.layoutAlign = "STRETCH";
-          section.resize(320, 110);
-          section.fills = [{ type: "SOLID", color: { r: 0.93, g: 0.95, b: 0.98 } }];
-          if (varMap["card/section-background"]) bindPaintVar(section, "fills", 0, varMap["card/section-background"]);
-          if (varMap["card/section-height"]) bindVar(section, "minHeight", varMap["card/section-height"]);
-          comp.appendChild(section);
-
-          var body = figma.createFrame();
-          body.name = "Body";
-          body.layoutMode = "VERTICAL";
-          body.primaryAxisSizingMode = "AUTO";
-          body.counterAxisSizingMode = "AUTO";
-          body.counterAxisAlignItems = "MIN";
-          body.itemSpacing = 8;
-          body.layoutAlign = "STRETCH";
-          body.fills = [];
-          if (varMap["card/gap-" + size]) bindVar(body, "itemSpacing", varMap["card/gap-" + size]);
-          comp.appendChild(body);
-
-          var topRow = figma.createFrame();
-          topRow.name = "TopRow";
-          topRow.layoutMode = "HORIZONTAL";
-          topRow.primaryAxisSizingMode = "AUTO";
-          topRow.counterAxisSizingMode = "AUTO";
-          topRow.primaryAxisAlignItems = "SPACE_BETWEEN";
-          topRow.counterAxisAlignItems = "CENTER";
-          topRow.layoutAlign = "STRETCH";
-          topRow.fills = [];
-          body.appendChild(topRow);
-
-          var titleNode = figma.createText();
-          titleNode.name = "Title";
-          titleNode.fontName = font;
-          titleNode.characters = "PlanetScope vessel";
-          titleNode.fontSize = 14;
-          titleNode.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.1 } }];
-          if (varMap["card/title"]) bindPaintVar(titleNode, "fills", 0, varMap["card/title"]);
-          if (varMap["card/title-font-size-" + size]) bindVar(titleNode, "fontSize", varMap["card/title-font-size-" + size]);
-          bindVar(titleNode, "fontFamily", varMap["card/title-font-family"]);
-          bindVar(titleNode, "fontStyle", varMap["card/title-font-weight"]);
-          if (varMap["card/title-line-height-" + size]) bindVar(titleNode, "lineHeight", varMap["card/title-line-height-" + size]);
-          topRow.appendChild(titleNode);
-
-          var badge = figma.createFrame();
-          badge.name = "Badge";
-          badge.layoutMode = "HORIZONTAL";
-          badge.primaryAxisSizingMode = "AUTO";
-          badge.counterAxisSizingMode = "AUTO";
-          badge.paddingLeft = 8;
-          badge.paddingRight = 8;
-          badge.paddingTop = 4;
-          badge.paddingBottom = 4;
-          badge.cornerRadius = 999;
-          badge.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-          if (varMap["card/badge-background"]) bindPaintVar(badge, "fills", 0, varMap["card/badge-background"]);
-
-          var badgeText = figma.createText();
-          badgeText.name = "BadgeText";
-          badgeText.fontName = font;
-          badgeText.characters = "New";
-          badgeText.fontSize = 12;
-          badgeText.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-          if (varMap["card/badge-color"]) bindPaintVar(badgeText, "fills", 0, varMap["card/badge-color"]);
-          badge.appendChild(badgeText);
-          topRow.appendChild(badge);
-
-          var descriptionNode = figma.createText();
-          descriptionNode.name = "Description";
-          descriptionNode.fontName = font;
-          descriptionNode.characters = "Detected vessel metadata and imagery details from latest satellite capture.";
-          descriptionNode.fontSize = 12;
-          descriptionNode.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
-          descriptionNode.textAutoResize = "HEIGHT";
-          descriptionNode.resize(288, descriptionNode.height);
-          if (varMap["card/description"]) bindPaintVar(descriptionNode, "fills", 0, varMap["card/description"]);
-          if (varMap["card/description-font-size-" + size]) bindVar(descriptionNode, "fontSize", varMap["card/description-font-size-" + size]);
-          bindVar(descriptionNode, "fontFamily", varMap["card/description-font-family"]);
-          bindVar(descriptionNode, "fontStyle", varMap["card/description-font-weight"]);
-          if (varMap["card/description-line-height-" + size]) bindVar(descriptionNode, "lineHeight", varMap["card/description-line-height-" + size]);
-          body.appendChild(descriptionNode);
-
-          var colIndex = ri * borderModes.length * shadowModes.length + bi * shadowModes.length + shi;
-          var rowIndex = si;
-          comp.x = colIndex * colWidth;
-          comp.y = rowIndex * rowHeight;
-          page.appendChild(comp);
-          components.push(comp);
         }
       }
     }

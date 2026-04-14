@@ -3,8 +3,9 @@ import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-export const CARD_SIZE_KEYS = ["xs", "sm", "md", "lg", "xl"];
-export const CARD_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const CARD_SIZE_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
+export const CARD_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
+export const CARD_VARIANTS = ["default", "dark", "outlined", "brand", "transparent"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -59,12 +60,12 @@ export function CardPreviewContent({
   brands,
   activeBrand,
   activeColorToken,
+  activeVariant,
   size,
   radius,
   withBorder,
   withShadow,
   showSection,
-  showBadge,
   title,
   description,
 }) {
@@ -81,12 +82,12 @@ export function CardPreviewContent({
         <CardPreview
           brands={brands}
           brandId={activeBrand}
+          variant={activeVariant}
           size={size}
           radius={radius}
           withBorder={withBorder}
           withShadow={withShadow}
           showSection={showSection}
-          showBadge={showBadge}
           title={title}
           description={description}
         />
@@ -101,12 +102,12 @@ export function CardPreviewContent({
           <CardPreview
             brands={brands}
             brandId={activeBrand}
+            variant={activeVariant}
             size={s}
             radius={radius}
             withBorder={row.withBorder}
             withShadow={row.withShadow}
             showSection={showSection}
-            showBadge={showBadge}
             title="Card title"
             description="Card content preview."
           />
@@ -117,6 +118,8 @@ export function CardPreviewContent({
 }
 
 export function CardPropertiesPanel({
+  activeVariant,
+  setActiveVariant,
   size,
   setSize,
   radius,
@@ -127,15 +130,21 @@ export function CardPropertiesPanel({
   setWithShadow,
   showSection,
   setShowSection,
-  showBadge,
-  setShowBadge,
   title,
   setTitle,
   description,
   setDescription,
+  forcedVariant,
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      <PropertyRow
+        label="Variant"
+        value={activeVariant}
+        onChange={setActiveVariant}
+        options={CARD_VARIANTS}
+        disabled={Boolean(forcedVariant)}
+      />
       <PropertyRow label="Size" value={size} onChange={setSize} options={CARD_SIZE_KEYS} />
       <PropertyRow label="Radius" value={radius} onChange={setRadius} options={CARD_RADIUS_KEYS} />
       <PropertyRow
@@ -154,12 +163,6 @@ export function CardPropertiesPanel({
         label="Section"
         value={showSection ? "on" : "off"}
         onChange={(v) => setShowSection(v === "on")}
-        options={["off", "on"]}
-      />
-      <PropertyRow
-        label="Badge"
-        value={showBadge ? "on" : "off"}
-        onChange={(v) => setShowBadge(v === "on")}
         options={["off", "on"]}
       />
       <div>

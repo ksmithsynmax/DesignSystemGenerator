@@ -74,9 +74,10 @@ export function resolveDimension(brands, brandId, tokenName, size) {
   const brand = brands[brandId];
   const tokenDef = findTokenDef(tokenName);
   if (!tokenDef || (tokenDef.type !== TOKEN_TYPES.FLOAT && tokenDef.type !== TOKEN_TYPES.STRING)) return null;
+  const hasExplicitDefaultSize = Boolean(tokenDef.sizes && Object.prototype.hasOwnProperty.call(tokenDef.sizes, "default"));
   const effectiveSize =
     tokenDef.sizes && size === "default"
-      ? (getDefaultSizeKey(brands, brandId, tokenName) || null)
+      ? (getDefaultSizeKey(brands, brandId, tokenName) || (hasExplicitDefaultSize ? "default" : null))
       : size;
 
   // Check brand overrides first

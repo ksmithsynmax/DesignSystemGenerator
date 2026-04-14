@@ -57,10 +57,10 @@ const EXTRA_FIGMA_PROPERTIES = {
     { name: "WithCloseButton", values: ["Off", "On"], notes: "Close icon visibility." },
   ],
   card: [
+    { name: "Variant", values: ["Default", "Dark", "Outlined", "Brand", "Transparent"], notes: "Card visual style variant." },
     { name: "WithBorder", values: ["Off", "On"], notes: "Card border visibility." },
     { name: "WithShadow", values: ["Off", "On"], notes: "Shadow visibility." },
     { name: "ShowSection", values: ["Off", "On"], notes: "Media/section block visibility." },
-    { name: "ShowBadge", values: ["Off", "On"], notes: "Badge visibility." },
   ],
   pill: [{ name: "WithRemoveButton", values: ["Off", "On"], notes: "Remove affordance visibility." }],
   badge: [
