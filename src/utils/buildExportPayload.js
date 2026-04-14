@@ -250,10 +250,23 @@ export function buildExportPayload(brands, options) {
             }
             return GLOBAL_SPACING.includes(Number(val)) ? `spacing/${val}` : null;
           };
+          const resolveSizedFloatValue = (sizeKey) => {
+            if (sizeKey === "default" && Object.prototype.hasOwnProperty.call(def.sizes || {}, "default")) {
+              const explicitDefaultOverride = brand.dimensionOverrides?.[tokenName]?.default;
+              if (explicitDefaultOverride !== undefined) return explicitDefaultOverride;
+              return def.sizes.default;
+            }
+            return resolveDimension(brands, brandId, tokenName, sizeKey);
+          };
 
           if (def.sizes) {
-            sizeKeys.forEach((size) => {
-              const val = resolveDimension(brands, brandId, tokenName, size);
+            const tokenSizeKeys = Object.keys(def.sizes || {});
+            const orderedSizeKeys = [
+              ...sizeKeys,
+              ...tokenSizeKeys.filter((k) => !sizeKeys.includes(k)),
+            ];
+            orderedSizeKeys.forEach((size) => {
+              const val = resolveSizedFloatValue(size);
               out[brandId].components[`${def.figmaPath}-${size}`] = {
                 type: "FLOAT",
                 value: val,
@@ -261,7 +274,8 @@ export function buildExportPayload(brands, options) {
               };
             });
             const defaultSize = getDefaultSizeKey(brands, brandId, tokenName);
-            if (defaultSize) {
+            const hasExplicitDefaultSize = Object.prototype.hasOwnProperty.call(def.sizes || {}, "default");
+            if (!hasExplicitDefaultSize && defaultSize) {
               const defaultVal = resolveDimension(brands, brandId, tokenName, defaultSize);
               out[brandId].components[`${def.figmaPath}-default`] = {
                 type: "FLOAT",

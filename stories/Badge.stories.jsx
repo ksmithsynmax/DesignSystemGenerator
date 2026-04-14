@@ -23,17 +23,17 @@ export default {
   title: "Components/Badge",
   component: BadgePreview,
   argTypes: {
-    variant: { control: "select", options: ["filled", "light", "outline", "dot"] },
-    size: { control: "select", options: ["xs", "sm", "md", "lg", "xl"] },
-    radius: { control: "select", options: ["xs", "sm", "md", "lg", "xl"] },
+    variant: { control: "select", options: ["default", "filled", "light", "outline"] },
+    size: { control: "select", options: ["default", "xs", "sm", "md", "lg", "xl"] },
+    radius: { control: "select", options: ["default", "xs", "sm", "md", "lg", "xl"] },
     circle: { control: "boolean" },
     fullWidth: { control: "boolean" },
     text: { control: "text" },
   },
   args: {
-    variant: "filled",
-    size: "md",
-    radius: "md",
+    variant: "default",
+    size: "default",
+    radius: "default",
     circle: false,
     fullWidth: false,
     text: "Badge",
@@ -53,4 +53,4 @@ export default {
 export const Filled = { args: { variant: "filled" } };
 export const Light = { args: { variant: "light" } };
 export const Outline = { args: { variant: "outline" } };
-export const Dot = { args: { variant: "dot" } };
+export const Default = { args: { variant: "default" } };

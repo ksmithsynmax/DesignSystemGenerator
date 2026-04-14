@@ -27,10 +27,19 @@ export default function DimensionTokenRow({
 
   const isSingleValue = tokenDef.value !== undefined && !tokenDef.sizes;
   const defaultResolvedSize = defaultSize || sizeKeys[0];
+  const hasExplicitDefaultSize = Boolean(tokenDef.sizes && Object.prototype.hasOwnProperty.call(tokenDef.sizes, "default"));
+  const resolveValueForSize = (size) => {
+    if (hasExplicitDefaultSize && size === "default") {
+      const override = brand.dimensionOverrides?.[tokenName]?.default;
+      if (override !== undefined) return override;
+      return tokenDef.sizes.default ?? null;
+    }
+    return resolveDimension(brands, brandId, tokenName, size);
+  };
   const visibleSizes = isSingleValue
     ? []
     : selectedSize === "default"
-      ? [defaultResolvedSize]
+      ? [hasExplicitDefaultSize ? "default" : defaultResolvedSize]
       : selectedSize && sizeKeys.includes(selectedSize)
         ? [selectedSize]
         : sizeKeys;
@@ -38,7 +47,7 @@ export default function DimensionTokenRow({
   // Resolve a display value for the collapsed card
   const displayValue = isSingleValue
     ? resolveDimension(brands, brandId, tokenName)
-    : resolveDimension(brands, brandId, tokenName, defaultSize || sizeKeys[0]);
+    : resolveValueForSize(hasExplicitDefaultSize ? "default" : (defaultSize || sizeKeys[0]));
   const unit = tokenDef.unit || "";
   const displayText = isString ? displayValue : `${displayValue}${unit}`;
 
@@ -177,7 +186,7 @@ export default function DimensionTokenRow({
           ) : (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
               {visibleSizes.map((size) => {
-                const val = resolveDimension(brands, brandId, tokenName, size);
+                const val = resolveValueForSize(size);
                 const isDefault = size === defaultSize;
                 const isOverridden = hasOverride(size);
                 return (

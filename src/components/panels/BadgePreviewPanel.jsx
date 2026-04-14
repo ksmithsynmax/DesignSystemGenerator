@@ -3,9 +3,9 @@ import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-export const BADGE_VARIANTS = ["filled", "light", "outline", "dot"];
-export const BADGE_SIZE_KEYS = ["xs", "sm", "md", "lg", "xl"];
-export const BADGE_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const BADGE_VARIANTS = ["default", "filled", "light", "outline"];
+export const BADGE_SIZE_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
+export const BADGE_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (

@@ -113,7 +113,7 @@ const VARIANTS_BY_COMPONENT = {
   tabs: ["default", "outlined", "pills"],
   checkbox: ["filled", "outlined"],
   chip: ["filled", "light", "outline"],
-  badge: ["filled", "light", "outline", "dot"],
+  badge: ["default", "filled", "light", "outline"],
   alert: ["default", "filled", "light", "outline", "transparent", "white"],
   radio: ["filled", "outline"],
   textinput: ["default", "filled"],
@@ -298,7 +298,7 @@ export default function App() {
   const cardDefault = getComponentDefaultSize(brands, activeBrand, "card") || "md";
   const loaderDefault = getComponentDefaultSize(brands, activeBrand, "loader") || "md";
   const pillDefault = getComponentDefaultSize(brands, activeBrand, "pill") || "md";
-  const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "md";
+  const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "default";
   const modalDefault = getComponentDefaultSize(brands, activeBrand, "modal") || "md";
   const anchorDefault = getComponentDefaultSize(brands, activeBrand, "anchor") || "md";
 
@@ -447,7 +447,7 @@ export default function App() {
     const caDef = getComponentDefaultSize(brands, newBrand, "card") || "md";
     const ldDef = getComponentDefaultSize(brands, newBrand, "loader") || "md";
     const piDef = getComponentDefaultSize(brands, newBrand, "pill") || "md";
-    const baDef = getComponentDefaultSize(brands, newBrand, "badge") || "md";
+    const baDef = getComponentDefaultSize(brands, newBrand, "badge") || "default";
     const moDef = getComponentDefaultSize(brands, newBrand, "modal") || "md";
     const anDef = getComponentDefaultSize(brands, newBrand, "anchor") || "md";
     setActiveSize(btnDef);
@@ -638,7 +638,7 @@ export default function App() {
       setActiveBadgeCircle(false);
       setActiveBadgeFullWidth(false);
       setActiveBadgeText("Badge");
-      setActiveVariant("filled");
+      setActiveVariant("default");
     } else if (newComp === "tooltip") {
       setActiveTooltipPosition("top");
       setActiveTooltipWithArrow(true);
@@ -784,7 +784,7 @@ export default function App() {
         tabs: ["default", "outlined", "pills"],
         checkbox: ["filled", "outlined"],
         chip: ["filled", "light", "outline"],
-        badge: ["filled", "light", "outline", "dot"],
+        badge: ["default", "filled", "light", "outline"],
         alert: ["default", "filled", "light", "outline", "transparent", "white"],
         radio: ["filled", "outline"],
         textinput: ["default", "filled"],
@@ -926,7 +926,7 @@ export default function App() {
       checkbox: ["filled", "outlined"],
       radio: ["filled", "outline"],
       chip: ["filled", "light", "outline"],
-      badge: ["filled", "light", "outline", "dot"],
+      badge: ["default", "filled", "light", "outline"],
       alert: ["default", "filled", "light", "outline", "transparent", "white"],
       textinput: ["default", "filled"],
       select: ["default", "filled"],
@@ -1024,7 +1024,7 @@ export default function App() {
       tabs: ["default", "outlined", "pills"],
       checkbox: ["filled", "outlined"],
       radio: ["filled", "outline"],
-      badge: ["filled", "light", "outline", "dot"],
+      badge: ["default", "filled", "light", "outline"],
       alert: ["default", "filled", "light", "outline", "transparent", "white"],
       textinput: ["default", "filled"],
       select: ["default", "filled"],
@@ -1038,6 +1038,13 @@ export default function App() {
 
   useEffect(() => {
     if (!activeDimensionToken) return;
+    if (activeComponent === "badge") {
+      const badgeRadiusMatch = activeDimensionToken.match(/^badge-radius-(default|xs|sm|md|lg|xl)$/);
+      if (badgeRadiusMatch && badgeRadiusMatch[1] !== activeBadgeRadius) {
+        setActiveBadgeRadius(badgeRadiusMatch[1]);
+      }
+      return;
+    }
     if (activeComponent !== "tabs") return;
     if (activeTabsRadius === "default" && activeDimensionToken === "tabs-radius") {
       setActiveDimensionToken(null);
@@ -1056,7 +1063,7 @@ export default function App() {
     if (match[1] !== activeVariant) {
       setActiveDimensionToken(null);
     }
-  }, [activeComponent, activeDimensionToken, activeVariant, activeTabsRadius]);
+  }, [activeBadgeRadius, activeComponent, activeDimensionToken, activeVariant, activeTabsRadius]);
 
   const tabStyle = (t) => ({
     background: activeTab === t ? "#25262B" : "transparent",

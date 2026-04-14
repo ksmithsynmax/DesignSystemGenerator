@@ -773,20 +773,18 @@ export const COMPONENT_TOKENS = {
     "badge-outline-text": { type: "COLOR", semantic: "interactive-primary", figmaPath: "badge/outline-text" },
     "badge-outline-border": { type: "COLOR", semantic: "interactive-primary", figmaPath: "badge/outline-border" },
 
-    "badge-dot-background": { type: "COLOR", semantic: "surface-default", figmaPath: "badge/dot-background" },
-    "badge-dot-text": { type: "COLOR", semantic: "text-default", figmaPath: "badge/dot-text" },
-    "badge-dot-border": { type: "COLOR", semantic: "border-default", figmaPath: "badge/dot-border" },
-    "badge-dot-color": { type: "COLOR", semantic: "interactive-primary", figmaPath: "badge/dot-color" },
+    "badge-default-background": { type: "COLOR", semantic: "surface-default", figmaPath: "badge/default-background" },
+    "badge-default-text": { type: "COLOR", semantic: "text-default", figmaPath: "badge/default-text" },
+    "badge-default-border": { type: "COLOR", semantic: "border-default", figmaPath: "badge/default-border" },
 
-    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
-    "badge-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 18, md: 20, lg: 24, xl: 28 }, figmaPath: "badge/height" },
-    "badge-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "badge/font-size" },
+    // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
+    "badge-font-size": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "badge/font-size" },
     "badge-font-family": { type: "STRING", value: "Inter", figmaPath: "badge/font-family" },
     "badge-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "badge/font-weight" },
-    "badge-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "badge/line-height" },
-    "badge-padding-x": { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 7, md: 9, lg: 11, xl: 13 }, figmaPath: "badge/padding-x" },
-    "badge-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "badge/radius" },
-    "badge-dot-size": { type: "FLOAT", unit: "px", sizes: { xs: 4, sm: 5, md: 6, lg: 7, xl: 8 }, figmaPath: "badge/dot-size" },
+    "badge-line-height": { type: "FLOAT", unit: "px", sizes: { default: 16, xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "badge/line-height" },
+    "badge-padding-x": { type: "FLOAT", unit: "px", sizes: { default: 9, xs: 6, sm: 7, md: 9, lg: 11, xl: 13 }, figmaPath: "badge/padding-x" },
+    "badge-padding-y": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1, sm: 2, md: 2, lg: 4, xl: 4 }, figmaPath: "badge/padding-y" },
+    "badge-radius": { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "badge/radius" },
 
     // ── FLOAT TOKENS (single value) ──
     "badge-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "badge/border-width" },
@@ -1115,7 +1113,7 @@ export const COMPONENT_SIZE_KEYS = {
   tooltip: [],
   loader: ["xs", "sm", "md", "lg", "xl"],
   pill: ["xs", "sm", "md", "lg", "xl"],
-  badge: ["xs", "sm", "md", "lg", "xl"],
+  badge: ["default", "xs", "sm", "md", "lg", "xl"],
   alert: ["xs", "sm", "md", "lg", "xl"],
   modal: ["xs", "sm", "md", "lg", "xl"],
   anchor: ["xs", "sm", "md", "lg", "xl"],
