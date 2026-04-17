@@ -78,6 +78,8 @@ export default function SelectPreview({
 
   return (
     <Select
+      size={size}
+      radius={radius}
       label={showLabel ? labelText : undefined}
       withAsterisk={showLabel && withAsterisk}
       placeholder={placeholder}
@@ -111,10 +113,10 @@ export default function SelectPreview({
         input: {
           backgroundColor: bg,
           color: textColor,
+          "--input-placeholder-color": isError ? errorColor : placeholderColor,
           fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
           fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
           lineHeight: lineHeight ? `${lineHeight}px` : undefined,
-          "--_input-placeholder-color": placeholderColor,
           ...(isFocus
             ? {
                 boxShadow: `0 0 0 2px ${focusRingColor}40`,

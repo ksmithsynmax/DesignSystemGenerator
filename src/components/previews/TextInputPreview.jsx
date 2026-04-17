@@ -1,5 +1,5 @@
 import { TextInput } from "@mantine/core";
-import { resolveColor, resolveDimension } from "../../utils/resolveToken";
+import { resolveColor, resolveDimension, getDefaultSizeKey } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
 export default function TextInputPreview({
@@ -45,7 +45,15 @@ export default function TextInputPreview({
     ? resolveColor(brands, brandId, tokens["textinput-text-disabled"]?.semantic, "light", "textinput-text-disabled")
     : resolveColor(brands, brandId, tokens["textinput-text"]?.semantic, "light", "textinput-text");
   const placeholderColor = resolveColor(brands, brandId, tokens["textinput-placeholder"]?.semantic, "light", "textinput-placeholder");
-  const labelColor = resolveColor(brands, brandId, tokens["textinput-label-color"]?.semantic, "light", "textinput-label-color");
+  const labelColor = isDisabled
+    ? resolveColor(
+        brands,
+        brandId,
+        tokens["textinput-label-color-disabled"]?.semantic,
+        "light",
+        "textinput-label-color-disabled"
+      )
+    : resolveColor(brands, brandId, tokens["textinput-label-color"]?.semantic, "light", "textinput-label-color");
   const asteriskColor = resolveColor(brands, brandId, tokens["textinput-asterisk-color"]?.semantic, "light", "textinput-asterisk-color");
   const errorColor = resolveColor(brands, brandId, tokens["textinput-error-color"]?.semantic, "light", "textinput-error-color");
   const focusRingColor = resolveColor(brands, brandId, tokens["textinput-focus-ring"]?.semantic, "light", "textinput-focus-ring");
@@ -58,11 +66,11 @@ export default function TextInputPreview({
   const paddingX = resolveDimension(brands, brandId, "textinput-padding-x", size);
   const borderRadius = resolveDimension(brands, brandId, "textinput-radius", radius);
   const borderWidth = resolveDimension(brands, brandId, "textinput-border-width");
-  const labelFontSize = resolveDimension(brands, brandId, "textinput-label-font-size");
+  const labelFontSize = resolveDimension(brands, brandId, "textinput-label-font-size", size);
   const labelFontFamily = resolveDimension(brands, brandId, "textinput-label-font-family");
   const labelFontWeight = resolveDimension(brands, brandId, "textinput-label-font-weight");
   const labelLineHeight = resolveDimension(brands, brandId, "textinput-label-line-height");
-  const labelGap = resolveDimension(brands, brandId, "textinput-label-gap");
+  const labelGap = resolveDimension(brands, brandId, "textinput-label-gap", size);
   const errorFontSize = resolveDimension(brands, brandId, "textinput-error-font-size");
   const errorFontFamily = resolveDimension(brands, brandId, "textinput-error-font-family");
   const errorFontWeight = resolveDimension(brands, brandId, "textinput-error-font-weight");
@@ -71,9 +79,13 @@ export default function TextInputPreview({
 
   const mantineVariant = variant === "filled" ? "filled" : "default";
   const bdValue = `${borderWidth}px solid ${borderColor}`;
+  const mantineSize = size === "default" ? getDefaultSizeKey(brands, brandId, "textinput-height") || "sm" : size;
+  const mantineRadius = radius === "default" ? getDefaultSizeKey(brands, brandId, "textinput-radius") || "sm" : radius;
 
   return (
     <TextInput
+      size={mantineSize}
+      radius={mantineRadius}
       label={showLabel ? labelText : undefined}
       withAsterisk={showLabel && withAsterisk}
       placeholder={placeholder}
@@ -81,12 +93,12 @@ export default function TextInputPreview({
       disabled={isDisabled}
       variant={mantineVariant}
       vars={() => ({
-        root: {
+        // Mantine Input reads layout vars from the wrapper; --input-bd is color-only (see styles.css: solid var(--input-bd)).
+        wrapper: {
           "--input-height": `${height}px`,
           "--input-fz": `${fontSize}px`,
-          "--input-padding-x": `${paddingX}px`,
           "--input-radius": `${borderRadius}px`,
-          "--input-bd": bdValue,
+          "--input-padding": `${paddingX}px`,
         },
       })}
       styles={{
@@ -101,10 +113,12 @@ export default function TextInputPreview({
         input: {
           backgroundColor: bg,
           color: textColor,
+          border: bdValue,
+          // Mantine 8: `.input::placeholder { color: var(--input-placeholder-color) }` — set the variable so token edits win over global CSS.
+          "--input-placeholder-color": isError ? errorColor : placeholderColor,
           fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
           fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
           lineHeight: lineHeight ? `${lineHeight}px` : undefined,
-          "--_input-placeholder-color": placeholderColor,
           ...(isFocus
             ? {
                 boxShadow: `0 0 0 2px ${focusRingColor}40`,

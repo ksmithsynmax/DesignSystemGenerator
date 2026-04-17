@@ -4,7 +4,7 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
 export const TEXTINPUT_VARIANTS = ["default", "filled"];
-export const TEXTINPUT_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const TEXTINPUT_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const TEXTINPUT_STATES = ["default", "hover", "focus", "error", "disabled"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {

@@ -337,8 +337,12 @@ export const STORYBOOK_BRANDS = {
       "chip-font-size-default": "sm",
       "chip-radius-default": "sm",
       "chip-spacing-default": "sm",
+      "textinput-panel-default": "default",
       "textinput-height-default": "sm",
       "textinput-font-size-default": "sm",
+      "textinput-line-height-default": "sm",
+      "textinput-label-font-size-default": "sm",
+      "textinput-label-gap-default": "sm",
       "textinput-padding-x-default": "sm",
       "textinput-radius-default": "sm",
       "text-font-size-default": "sm",
@@ -481,6 +485,71 @@ export const STORYBOOK_BRANDS = {
         "md": 4,
         "lg": 8,
         "xl": 8
+      },
+      "badge-padding-x": {
+        "xs": 4,
+        "default": 8
+      },
+      "badge-padding-y": {
+        "xs": 4,
+        "default": 4
+      },
+      "badge-radius": {
+        "xs": 0,
+        "default": 4,
+        "sm": 2,
+        "md": 4,
+        "lg": 6
+      },
+      "badge-font-size": {
+        "xs": 8,
+        "sm": 10
+      },
+      "badge-line-height": {
+        "xs": 8
+      },
+      "pill-gap": {
+        "md": 3,
+        "default": 2
+      },
+      "pill-padding-x": {
+        "default": 12
+      },
+      "pill-font-size": {
+        "default": 12
+      },
+      "pill-font-family": {
+        "_value": "Inter"
+      },
+      "pill-font-weight": {
+        "_value": "Bold"
+      },
+      "pill-padding-y": {
+        "default": 4
+      },
+      "pill-remove-size": {
+        "default": 18
+      },
+      "pill-radius": {
+        "default": 32
+      },
+      "pill-border-width": {
+        "_value": 1
+      },
+      "card-radius": {
+        "default": 4,
+        "xs": 0,
+        "md": 6,
+        "lg": 8,
+        "xl": 12
+      },
+      "card-padding": {
+        "xs": 8,
+        "sm": 10,
+        "md": 12,
+        "lg": 16,
+        "xl": 20,
+        "default": 12
       }
     },
     "componentOverridesDark": {
@@ -1028,11 +1097,11 @@ export const STORYBOOK_BRANDS = {
       },
       "checkbox-filled-border-disabled": {
         "color": "slate-gray",
-        "index": 3,
+        "index": 7,
         "opacity": 100
       },
       "checkbox-filled-icon-color-disabled": {
-        "color": "red",
+        "color": "slate-gray",
         "index": 7,
         "opacity": 100
       },
@@ -1120,6 +1189,236 @@ export const STORYBOOK_BRANDS = {
       "actionicon-light-background": {
         "color": "blue",
         "index": 0,
+        "opacity": 100
+      },
+      "checkbox-outlined-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "checkbox-outlined-background-checked-focus": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "checkbox-outlined-background-checked-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "checkbox-filled-background-hover": {
+        "color": "navy",
+        "index": 9,
+        "opacity": 100
+      },
+      "checkbox-filled-border-hover": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "checkbox-filled-background-pressed": {
+        "color": "navy",
+        "index": 9,
+        "opacity": 100
+      },
+      "checkbox-filled-border-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "radio-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "radio-border": {
+        "color": "slate-gray",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-focus-ring": {
+        "color": "blue",
+        "index": 5
+      },
+      "radio-background-hover": {
+        "color": "navy",
+        "index": 9,
+        "opacity": 100
+      },
+      "radio-border-hover": {
+        "color": "slate-gray",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-background-focus": {
+        "color": "navy",
+        "index": 9,
+        "opacity": 100
+      },
+      "radio-border-focus": {
+        "color": "slate-gray",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-background-pressed": {
+        "color": "navy",
+        "index": 9,
+        "opacity": 100
+      },
+      "radio-border-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "radio-filled-background-checked-pressed": {
+        "color": "blue",
+        "index": 4
+      },
+      "radio-background-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-border-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "radio-label-text-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-filled-background-checked-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "radio-icon-color-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-filled-background": {
+        "color": "navy",
+        "index": 9,
+        "opacity": 100
+      },
+      "radio-outline-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "radio-filled-border": {
+        "color": "slate-gray",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-outline-border": {
+        "color": "slate-gray",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-outline-background-hover": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "radio-outline-border-hover": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-outline-background-focus": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "radio-outline-border-focus": {
+        "color": "slate-gray",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-outline-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "radio-outline-border-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "radio-outline-background-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "radio-outline-border-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-filled-background-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "radio-filled-border-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "badge-outline-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "badge-outline-text": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "badge-default-background": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "badge-default-border": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "badge-light-background": {
+        "color": "blue",
+        "index": 8,
+        "opacity": 100
+      },
+      "badge-light-border": {
+        "color": "blue",
+        "index": 8,
+        "opacity": 100
+      },
+      "slider-track-background": {
+        "color": "neutral",
+        "index": 9
+      },
+      "slider-thumb-background": {
+        "color": "neutral",
+        "index": 0
+      },
+      "slider-mark-color": {
+        "color": "neutral",
+        "index": 0
+      },
+      "pill-background": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "pill-border": {
+        "color": "steel",
+        "index": 8,
         "opacity": 100
       }
     },
@@ -1692,9 +1991,9 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "checkbox-background-focus": {
-        "color": "navy",
+        "color": "transparent",
         "index": 0,
-        "opacity": 100
+        "opacity": 0
       },
       "checkbox-filled-background-disabled": {
         "color": "slate-gray",
@@ -1718,7 +2017,7 @@ export const STORYBOOK_BRANDS = {
       },
       "checkbox-label-text-disabled": {
         "color": "slate-gray",
-        "index": 5,
+        "index": 7,
         "opacity": 100
       },
       "checkbox-outlined-background-checked": {
@@ -1761,12 +2060,12 @@ export const STORYBOOK_BRANDS = {
       },
       "checkbox-outlined-border-disabled": {
         "color": "slate-gray",
-        "index": 5,
+        "index": 7,
         "opacity": 100
       },
       "checkbox-outlined-icon-color-disabled": {
         "color": "slate-gray",
-        "index": 5,
+        "index": 7,
         "opacity": 100
       },
       "checkbox-outlined-background": {
@@ -1805,6 +2104,369 @@ export const STORYBOOK_BRANDS = {
         "opacity": 0
       },
       "checkbox-outlined-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "checkbox-outlined-border": {
+        "color": "neutral",
+        "index": 5
+      },
+      "checkbox-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "checkbox-outlined-border-focus": {
+        "color": "neutral",
+        "index": 5
+      },
+      "checkbox-outlined-border-pressed": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-label-text": {
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
+      },
+      "radio-border": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "radio-focus-ring": {
+        "color": "blue",
+        "index": 5
+      },
+      "radio-border-hover": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-border-focus": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "radio-filled-background-checked-pressed": {
+        "color": "blue",
+        "index": 4
+      },
+      "radio-border-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "radio-filled-background-checked-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "radio-border-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-icon-color-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-label-text-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-background-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "radio-background-pressed": {
+        "color": "blue",
+        "index": 0,
+        "opacity": 100
+      },
+      "radio-background-focus": {
+        "color": "blue",
+        "index": 0,
+        "opacity": 100
+      },
+      "radio-background-hover": {
+        "color": "blue",
+        "index": 0,
+        "opacity": 100
+      },
+      "radio-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "radio-filled-background-disabled": {
+        "color": "slate-gray",
+        "index": 1,
+        "opacity": 100
+      },
+      "radio-filled-border-disabled": {
+        "color": "slate-purple",
+        "index": 4,
+        "opacity": 100
+      },
+      "radio-filled-background": {
+        "color": "slate-gray",
+        "index": 0,
+        "opacity": 100
+      },
+      "radio-filled-border": {
+        "color": "slate-gray",
+        "index": 4,
+        "opacity": 100
+      },
+      "radio-filled-background-hover": {
+        "color": "slate-gray",
+        "index": 0,
+        "opacity": 100
+      },
+      "radio-filled-border-hover": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-filled-background-focus": {
+        "color": "slate-gray",
+        "index": 0,
+        "opacity": 100
+      },
+      "radio-filled-border-focus": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "radio-filled-background-pressed": {
+        "color": "slate-gray",
+        "index": 0,
+        "opacity": 100
+      },
+      "radio-filled-border-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "radio-outline-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "radio-outline-border": {
+        "color": "slate-gray",
+        "index": 4,
+        "opacity": 100
+      },
+      "radio-outline-background-hover": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "radio-outline-border-hover": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-outline-background-focus": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "radio-outline-border-focus": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "radio-outline-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "radio-outline-border-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "radio-outline-background-disabled": {
+        "color": "slate-gray",
+        "index": 1,
+        "opacity": 100
+      },
+      "radio-outline-border-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "radio-icon-color": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-outline-background-checked": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-outline-background-checked-hover": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "radio-outline-background-checked-focus": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "radio-outline-background-checked-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "radio-outline-border-checked-pressed": {
+        "color": "blue",
+        "index": 4
+      },
+      "radio-outline-background-checked-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "radio-outline-border-checked-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "radio-outline-icon-color-checked-pressed": {
+        "color": "blue",
+        "index": 4
+      },
+      "badge-default-background": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "badge-default-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "badge-outline-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "badge-light-background": {
+        "color": "blue",
+        "index": 1,
+        "opacity": 100
+      },
+      "badge-light-border": {
+        "color": "blue",
+        "index": 1,
+        "opacity": 100
+      },
+      "pill-background": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "pill-border": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "card-background": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "card-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "card-section-background": {
+        "color": "slate-gray",
+        "index": 0,
+        "opacity": 100
+      },
+      "card-badge-color": {
+        "color": "yellow",
+        "index": 5,
+        "opacity": 100
+      },
+      "card-default-background": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "card-default-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "card-outlined-background": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 10
+      },
+      "card-outlined-title": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "card-outlined-description": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "card-dark-background": {
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
+      },
+      "card-dark-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "card-default-section-background": {
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
+      },
+      "card-brand-section-background": {
+        "color": "blue",
+        "index": 0
+      },
+      "card-outlined-section-background": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 9
+      },
+      "card-transparent-border": {
+        "color": "blue",
+        "index": 0,
+        "opacity": 100
+      },
+      "card-transparent-title": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "card-transparent-description": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "card-transparent-background": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
@@ -2215,8 +2877,12 @@ export const STORYBOOK_BRANDS = {
       "chip-font-size-default": "md",
       "chip-radius-default": "md",
       "chip-spacing-default": "md",
+      "textinput-panel-default": "default",
       "textinput-height-default": "md",
       "textinput-font-size-default": "md",
+      "textinput-line-height-default": "md",
+      "textinput-label-font-size-default": "md",
+      "textinput-label-gap-default": "md",
       "textinput-padding-x-default": "md",
       "textinput-radius-default": "md",
       "text-font-size-default": "md",

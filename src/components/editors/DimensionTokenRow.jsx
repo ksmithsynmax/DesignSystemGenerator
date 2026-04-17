@@ -28,6 +28,9 @@ export default function DimensionTokenRow({
   const isSingleValue = tokenDef.value !== undefined && !tokenDef.sizes;
   const defaultResolvedSize = defaultSize || sizeKeys[0];
   const hasExplicitDefaultSize = Boolean(tokenDef.sizes && Object.prototype.hasOwnProperty.call(tokenDef.sizes, "default"));
+  const canUseSelectedForDisplay =
+    selectedSize != null &&
+    (selectedSize === "default" ? hasExplicitDefaultSize : sizeKeys.includes(selectedSize));
   const resolveValueForSize = (size) => {
     if (hasExplicitDefaultSize && size === "default") {
       const override = brand.dimensionOverrides?.[tokenName]?.default;
@@ -44,10 +47,12 @@ export default function DimensionTokenRow({
         ? [selectedSize]
         : sizeKeys;
 
-  // Resolve a display value for the collapsed card
+  // Resolve a display value for the collapsed card (match preview / property panel size bucket)
   const displayValue = isSingleValue
     ? resolveDimension(brands, brandId, tokenName)
-    : resolveValueForSize(hasExplicitDefaultSize ? "default" : (defaultSize || sizeKeys[0]));
+    : canUseSelectedForDisplay
+      ? resolveValueForSize(selectedSize)
+      : resolveValueForSize(hasExplicitDefaultSize ? "default" : (defaultSize || sizeKeys[0]));
   const unit = tokenDef.unit || "";
   const displayText = isString ? displayValue : `${displayValue}${unit}`;
 

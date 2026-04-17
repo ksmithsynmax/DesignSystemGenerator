@@ -6134,13 +6134,13 @@ function buildBadgeComponentSet(varMap, page, font) {
 
 function buildTextInputComponentSet(varMap, page, font) {
   var variants = ["default", "filled"];
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
-  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "error", "disabled"];
   var labelModes = ["none", "label", "required"];
   var components = [];
 
-  var sizeHeights = { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
+  var sizeHeights = { default: 36, xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
   var gap = 20;
   var colWidth = 220;
 
@@ -6156,11 +6156,11 @@ function buildTextInputComponentSet(varMap, page, font) {
 
       for (var si = 0; si < sizes.length; si++) {
         var size = sizes[si];
-        var capSize = size.toUpperCase();
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
 
         for (var ri = 0; ri < radii.length; ri++) {
           var rad = radii[ri];
-          var capRad = rad.toUpperCase();
+          var capRad = rad === "default" ? "Default" : rad.toUpperCase();
 
           for (var sti = 0; sti < states.length; sti++) {
             var state = states[sti];
@@ -6176,8 +6176,12 @@ function buildTextInputComponentSet(varMap, page, font) {
             comp.itemSpacing = 4;
             comp.fills = [];
 
-            if (varMap["textinput/label-gap"]) {
-              bindVar(comp, "itemSpacing", varMap["textinput/label-gap"]);
+            var textInputLabelGapVar =
+              varMap["textinput/label-gap-" + size] ||
+              varMap["textinput/label-gap-default"] ||
+              varMap["textinput/label-gap"];
+            if (textInputLabelGapVar) {
+              bindVar(comp, "itemSpacing", textInputLabelGapVar);
             }
 
             // --- Optional label row ---
@@ -6196,11 +6200,17 @@ function buildTextInputComponentSet(varMap, page, font) {
               labelNode.characters = "Label";
               labelNode.fontSize = 14;
               labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-              if (varMap["textinput/label-color"]) {
+              if (state === "disabled" && varMap["textinput/label-color-disabled"]) {
+                bindPaintVar(labelNode, "fills", 0, varMap["textinput/label-color-disabled"]);
+              } else if (varMap["textinput/label-color"]) {
                 bindPaintVar(labelNode, "fills", 0, varMap["textinput/label-color"]);
               }
-              if (varMap["textinput/label-font-size"]) {
-                bindVar(labelNode, "fontSize", varMap["textinput/label-font-size"]);
+              var textInputLabelFontSizeVar =
+                varMap["textinput/label-font-size-" + size] ||
+                varMap["textinput/label-font-size-default"] ||
+                varMap["textinput/label-font-size"];
+              if (textInputLabelFontSizeVar) {
+                bindVar(labelNode, "fontSize", textInputLabelFontSizeVar);
                 bindVar(labelNode, "fontFamily", varMap["textinput/label-font-family"]);
                 bindVar(labelNode, "fontStyle", varMap["textinput/label-font-weight"]);
                 bindVar(labelNode, "lineHeight", varMap["textinput/label-line-height"]);
@@ -6217,8 +6227,8 @@ function buildTextInputComponentSet(varMap, page, font) {
                 if (varMap["textinput/asterisk-color"]) {
                   bindPaintVar(asteriskNode, "fills", 0, varMap["textinput/asterisk-color"]);
                 }
-                if (varMap["textinput/label-font-size"]) {
-                  bindVar(asteriskNode, "fontSize", varMap["textinput/label-font-size"]);
+                if (textInputLabelFontSizeVar) {
+                  bindVar(asteriskNode, "fontSize", textInputLabelFontSizeVar);
                   bindVar(asteriskNode, "fontFamily", varMap["textinput/label-font-family"]);
                   bindVar(asteriskNode, "fontStyle", varMap["textinput/label-font-weight"]);
                   bindVar(asteriskNode, "lineHeight", varMap["textinput/label-line-height"]);
@@ -6389,8 +6399,8 @@ function textInputColorPath(variant, property, state) {
 
 async function buildSelectComponentSet(varMap, page, font) {
   var variants = ["default", "filled"];
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
-  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "error", "disabled"];
   var labelModes = ["none", "label", "required"];
   var components = [];
@@ -6405,7 +6415,7 @@ async function buildSelectComponentSet(varMap, page, font) {
     progress("[Select] Warning: no icon component found, using vector fallback");
   }
 
-  var sizeHeights = { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
+  var sizeHeights = { default: 36, xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
   var gap = 20;
   var colWidth = 220;
 
@@ -6421,11 +6431,11 @@ async function buildSelectComponentSet(varMap, page, font) {
 
       for (var si = 0; si < sizes.length; si++) {
         var size = sizes[si];
-        var capSize = size.toUpperCase();
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
 
         for (var ri = 0; ri < radii.length; ri++) {
           var rad = radii[ri];
-          var capRad = rad.toUpperCase();
+          var capRad = rad === "default" ? "Default" : rad.toUpperCase();
 
           for (var sti = 0; sti < states.length; sti++) {
             var state = states[sti];
@@ -6439,8 +6449,12 @@ async function buildSelectComponentSet(varMap, page, font) {
             comp.itemSpacing = 4;
             comp.fills = [];
 
-            if (varMap["select/label-gap"]) {
-              bindVar(comp, "itemSpacing", varMap["select/label-gap"]);
+            var selectLabelGapVar =
+              varMap["select/label-gap-" + size] ||
+              varMap["select/label-gap-default"] ||
+              varMap["select/label-gap"];
+            if (selectLabelGapVar) {
+              bindVar(comp, "itemSpacing", selectLabelGapVar);
             }
 
             if (hasLabel) {
@@ -6461,8 +6475,12 @@ async function buildSelectComponentSet(varMap, page, font) {
               if (varMap["select/label-color"]) {
                 bindPaintVar(labelNode, "fills", 0, varMap["select/label-color"]);
               }
-              if (varMap["select/label-font-size"]) {
-                bindVar(labelNode, "fontSize", varMap["select/label-font-size"]);
+              var selectLabelFontSizeVar =
+                varMap["select/label-font-size-" + size] ||
+                varMap["select/label-font-size-default"] ||
+                varMap["select/label-font-size"];
+              if (selectLabelFontSizeVar) {
+                bindVar(labelNode, "fontSize", selectLabelFontSizeVar);
                 bindVar(labelNode, "fontFamily", varMap["select/label-font-family"]);
                 bindVar(labelNode, "fontStyle", varMap["select/label-font-weight"]);
                 bindVar(labelNode, "lineHeight", varMap["select/label-line-height"]);
@@ -6479,8 +6497,8 @@ async function buildSelectComponentSet(varMap, page, font) {
                 if (varMap["select/asterisk-color"]) {
                   bindPaintVar(asteriskNode, "fills", 0, varMap["select/asterisk-color"]);
                 }
-                if (varMap["select/label-font-size"]) {
-                  bindVar(asteriskNode, "fontSize", varMap["select/label-font-size"]);
+                if (selectLabelFontSizeVar) {
+                  bindVar(asteriskNode, "fontSize", selectLabelFontSizeVar);
                   bindVar(asteriskNode, "fontFamily", varMap["select/label-font-family"]);
                   bindVar(asteriskNode, "fontStyle", varMap["select/label-font-weight"]);
                   bindVar(asteriskNode, "lineHeight", varMap["select/label-line-height"]);
