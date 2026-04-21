@@ -996,7 +996,12 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
     return buildBadgeComponentSet(varMap, page, font);
   });
   var textInputSet = await buildSet("TextInput", function () {
-    return buildTextInputComponentSet(varMap, page, font);
+    return buildTextInputComponentSet(
+      varMap,
+      page,
+      font,
+      Boolean(buildOptions && buildOptions.textInputDebugDefaultOnly)
+    );
   });
   var selectSet = await buildSet("Select", function () {
     return buildSelectComponentSet(varMap, page, font);
@@ -1575,6 +1580,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     rowWrap.primaryAxisSizingMode = "AUTO";
     rowWrap.counterAxisSizingMode = "AUTO";
     rowWrap.counterAxisAlignItems = "CENTER";
+    rowWrap.layoutAlign = "STRETCH";
     rowWrap.itemSpacing = 8;
     rowWrap.clipsContent = false;
     rowWrap.fills = [];
@@ -1588,6 +1594,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     row.primaryAxisSizingMode = "AUTO";
     row.counterAxisSizingMode = "AUTO";
     row.counterAxisAlignItems = "MIN";
+    row.primaryAxisAlignItems = "CENTER";
+    row.layoutAlign = "STRETCH";
     row.itemSpacing = 12;
     row.clipsContent = false;
     row.fills = [];
@@ -1749,7 +1757,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateVariantLimit = lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3);
       var templateOrderedVariants = pickOrdered(variants, templateVariantOrder).slice(0, templateVariantLimit);
       var templateOrderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
-      var templateOrderedSizesAll = pickOrdered(sizes, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+      var templateOrderedSizesAll = pickOrdered(sizes, ["Default", "Label", "Caption", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 8);
       var templateOrderedTextWeights = pickOrdered(textWeights, ["Regular", "Medium", "Semibold", "Bold"]).slice(0, 6);
       var templateOrderedTextColors = pickOrdered(textColors, ["Default", "Dimmed", "Brand"]).slice(0, 6);
       var templateRadii = getPropValues(variantProps, "Radius");
@@ -2268,7 +2276,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var variantLimit = lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3);
       var orderedVariants = pickOrdered(variants, variantOrder).slice(0, variantLimit);
       var orderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
-      var orderedSizesAll = pickOrdered(sizes, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+      var orderedSizesAll = pickOrdered(sizes, ["Default", "Label", "Caption", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 8);
       var orderedTextWeights = pickOrdered(textWeights, ["Regular", "Medium", "Semibold", "Bold"]).slice(0, 6);
       var orderedTextColors = pickOrdered(textColors, ["Default", "Dimmed", "Brand"]).slice(0, 6);
       var radii = getPropValues(variantProps, "Radius");
@@ -3887,10 +3895,11 @@ async function buildAnchorComponentSet(varMap, page, font) {
 
 function buildTitleComponentSet(varMap, page, font, sampleText) {
   var orders = [1, 2, 3, 4, 5, 6];
-  var sizeModes = ["auto", "h1", "h2", "h3", "h4", "h5", "h6"];
+  var sizeModes = ["h1", "h2", "h3", "h4", "h5", "h6"];
   var wrapModes = ["wrap", "balance", "nowrap"];
   var clampModes = ["off", "2", "3"];
   var components = [];
+  var defaultTitleWidth = 380;
 
   var colGap = 16;
   var rowGap = 16;
@@ -3903,7 +3912,7 @@ function buildTitleComponentSet(varMap, page, font, sampleText) {
     var order = orders[oi];
     for (var si = 0; si < sizeModes.length; si++) {
       var sizeMode = sizeModes[si];
-      var capSize = sizeMode === "auto" ? "Auto" : sizeMode.toUpperCase();
+      var capSize = sizeMode.toUpperCase();
       for (var wmi = 0; wmi < wrapModes.length; wmi++) {
         var wrapMode = wrapModes[wmi];
         var capWrap = wrapMode.charAt(0).toUpperCase() + wrapMode.slice(1);
@@ -3918,13 +3927,15 @@ function buildTitleComponentSet(varMap, page, font, sampleText) {
             ", Wrap=" + capWrap +
             ", Clamp=" + capClamp;
           comp.layoutMode = "HORIZONTAL";
-          comp.primaryAxisSizingMode = "AUTO";
+          comp.primaryAxisSizingMode = "FIXED";
           comp.counterAxisSizingMode = "AUTO";
           comp.primaryAxisAlignItems = "MIN";
           comp.counterAxisAlignItems = "CENTER";
           comp.itemSpacing = 0;
           comp.fills = [];
           comp.clipsContent = false;
+          try { comp.layoutSizingHorizontal = "FILL"; } catch (_titleRootSizeErr) {}
+          try { comp.layoutSizingVertical = "FILL"; } catch (_titleRootSizeVerticalErr) {}
 
           var textNode = figma.createText();
           textNode.name = "title";
@@ -3933,8 +3944,15 @@ function buildTitleComponentSet(varMap, page, font, sampleText) {
           textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
           textNode.fontSize = defaultFontSizeByOrder[order] || 20;
           textNode.textAutoResize = "WIDTH_AND_HEIGHT";
+          textNode.textAlignHorizontal = "CENTER";
+          textNode.layoutGrow = 1;
+          try {
+            var titleNaturalHeight = Math.max(1, Math.ceil(textNode.height || 1));
+            textNode.textAutoResize = "HEIGHT";
+            textNode.resize(defaultTitleWidth, titleNaturalHeight);
+          } catch (_titleTextResizeErr) {}
 
-          var sizeKey = sizeMode === "auto" ? "h" + order : sizeMode;
+          var sizeKey = sizeMode;
           var tokenVar = varMap["title/font-size-" + sizeKey];
           bindVar(textNode, "fontSize", tokenVar);
           bindVar(textNode, "fontFamily", varMap["title/font-family"]);
@@ -3951,7 +3969,26 @@ function buildTitleComponentSet(varMap, page, font, sampleText) {
             } catch (e) {}
           }
 
-          comp.appendChild(textNode);
+          var titleContent = figma.createFrame();
+          titleContent.name = "Content";
+          titleContent.layoutMode = "HORIZONTAL";
+          titleContent.primaryAxisSizingMode = "FIXED";
+          titleContent.counterAxisSizingMode = "AUTO";
+          titleContent.primaryAxisAlignItems = "MIN";
+          titleContent.counterAxisAlignItems = "MIN";
+          titleContent.itemSpacing = 0;
+          titleContent.fills = [];
+          titleContent.strokes = [];
+          titleContent.layoutGrow = 1;
+          titleContent.layoutAlign = "STRETCH";
+          try { titleContent.layoutSizingHorizontal = "FILL"; } catch (_titleContentSizeErr) {}
+          try {
+            var titleContentHeight = Math.max(1, Math.ceil(textNode.height || 1));
+            titleContent.resize(defaultTitleWidth, titleContentHeight);
+          } catch (_titleContentResizeErr) {}
+          titleContent.appendChild(textNode);
+          comp.appendChild(titleContent);
+          try { comp.resize(defaultTitleWidth, comp.height); } catch (_titleCompResizeErr) {}
 
           if (typeof rowXOffsets[oi] === "undefined") rowXOffsets[oi] = 0;
           page.appendChild(comp);
@@ -3971,10 +4008,11 @@ function buildTitleComponentSet(varMap, page, font, sampleText) {
 }
 
 async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"];
   var weights = ["regular", "medium", "semibold", "bold"];
   var colors = ["default", "dimmed", "brand"];
   var components = [];
+  var defaultTextWidth = 320;
 
   var colGap = 18;
   var rowGap = 16;
@@ -4038,7 +4076,11 @@ async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
 
   for (var si = 0; si < sizes.length; si++) {
     var size = sizes[si];
-    var capSize = size.toUpperCase();
+    var capSize = size === "default"
+      ? "Default"
+      : (size === "label" || size === "caption"
+        ? size.charAt(0).toUpperCase() + size.slice(1)
+        : size.toUpperCase());
     for (var wi = 0; wi < weights.length; wi++) {
       var weight = weights[wi];
       var capWeight = weight.charAt(0).toUpperCase() + weight.slice(1);
@@ -4052,13 +4094,15 @@ async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
           ", Weight=" + capWeight +
           ", Color=" + capColor;
         comp.layoutMode = "HORIZONTAL";
-        comp.primaryAxisSizingMode = "AUTO";
+        comp.primaryAxisSizingMode = "FIXED";
         comp.counterAxisSizingMode = "AUTO";
         comp.primaryAxisAlignItems = "MIN";
         comp.counterAxisAlignItems = "CENTER";
         comp.itemSpacing = 0;
         comp.fills = [];
         comp.clipsContent = false;
+        try { comp.layoutSizingHorizontal = "FILL"; } catch (_textRootSizeErr) {}
+        try { comp.layoutSizingVertical = "FILL"; } catch (_textRootSizeVerticalErr) {}
 
         var textNode = figma.createText();
         textNode.name = "text";
@@ -4066,6 +4110,13 @@ async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
         textNode.characters = sampleText || "Why guess when you can know.";
         textNode.fontSize = 16;
         textNode.textAutoResize = "WIDTH_AND_HEIGHT";
+        textNode.textAlignHorizontal = "CENTER";
+        textNode.layoutGrow = 1;
+        try {
+          var textNaturalHeight = Math.max(1, Math.ceil(textNode.height || 1));
+          textNode.textAutoResize = "HEIGHT";
+          textNode.resize(defaultTextWidth, textNaturalHeight);
+        } catch (_textNodeResizeErr) {}
         textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
 
         bindVar(textNode, "fontSize", varMap["text/font-size-" + size]);
@@ -4074,7 +4125,26 @@ async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
         bindVar(textNode, "lineHeight", varMap["text/line-height-" + size]);
         bindPaintVar(textNode, "fills", 0, varMap[textColorPath(color)]);
 
-        comp.appendChild(textNode);
+        var textContent = figma.createFrame();
+        textContent.name = "Content";
+        textContent.layoutMode = "HORIZONTAL";
+        textContent.primaryAxisSizingMode = "FIXED";
+        textContent.counterAxisSizingMode = "AUTO";
+        textContent.primaryAxisAlignItems = "MIN";
+        textContent.counterAxisAlignItems = "MIN";
+        textContent.itemSpacing = 0;
+        textContent.fills = [];
+        textContent.strokes = [];
+        textContent.layoutGrow = 1;
+        textContent.layoutAlign = "STRETCH";
+        try { textContent.layoutSizingHorizontal = "FILL"; } catch (_textContentSizeErr) {}
+        try {
+          var textContentHeight = Math.max(1, Math.ceil(textNode.height || 1));
+          textContent.resize(defaultTextWidth, textContentHeight);
+        } catch (_textContentResizeErr) {}
+        textContent.appendChild(textNode);
+        comp.appendChild(textContent);
+        try { comp.resize(defaultTextWidth, comp.height); } catch (_textCompResizeErr) {}
 
         page.appendChild(comp);
         if (typeof rowXOffsets[si] === "undefined") rowXOffsets[si] = 0;
@@ -5286,7 +5356,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
     return null;
   }
 
-  var titleVariant = findVariantComponent(titleSet, { Order: "4", Size: "Auto" });
+  var titleVariant = findVariantComponent(titleSet, { Order: "4", Size: "H4" });
   var bodyTextVariant = findVariantComponent(textSet, { Size: "MD", Weight: "Regular", Color: "Default" });
   var cancelButtonVariant = findVariantComponent(buttonSet, { Variant: "Outlined", Size: "MD", State: "Default" });
   var confirmButtonVariant = findVariantComponent(buttonSet, { Variant: "Filled", Size: "MD", State: "Default" });
@@ -6132,13 +6202,16 @@ function buildBadgeComponentSet(varMap, page, font) {
 // TextInput
 // ---------------------------------------------------------------------------
 
-function buildTextInputComponentSet(varMap, page, font) {
+async function buildTextInputComponentSet(varMap, page, font, debugDefaultOnly) {
   var variants = ["default", "filled"];
-  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
-  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var sizes = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "error", "disabled"];
   var labelModes = ["none", "label", "required"];
+  var leftIconModes = ["off", "on"];
+  var rightIconModes = ["off", "on"];
   var components = [];
+  var iconComponents = await findTextInputIconComponents();
 
   var sizeHeights = { default: 36, xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
   var gap = 20;
@@ -6154,6 +6227,16 @@ function buildTextInputComponentSet(varMap, page, font) {
       var hasLabel = (labelMode !== "none");
       var hasAsterisk = (labelMode === "required");
 
+      for (var lii = 0; lii < leftIconModes.length; lii++) {
+        var leftMode = leftIconModes[lii];
+        var hasLeftIcon = leftMode === "on";
+        var capLeftIcon = hasLeftIcon ? "On" : "Off";
+
+        for (var rii = 0; rii < rightIconModes.length; rii++) {
+          var rightMode = rightIconModes[rii];
+          var hasRightIcon = rightMode === "on";
+          var capRightIcon = hasRightIcon ? "On" : "Off";
+
       for (var si = 0; si < sizes.length; si++) {
         var size = sizes[si];
         var capSize = size === "default" ? "Default" : size.toUpperCase();
@@ -6167,14 +6250,22 @@ function buildTextInputComponentSet(varMap, page, font) {
             var capState = state.charAt(0).toUpperCase() + state.slice(1);
 
             var comp = figma.createComponent();
-            comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", Radius=" + capRad + ", State=" + capState + ", Label=" + capLabelMode;
+            comp.name =
+              "Variant=" + capVariant +
+              ", Size=" + capSize +
+              ", Radius=" + capRad +
+              ", State=" + capState +
+              ", Label=" + capLabelMode +
+              ", LeftIcon=" + capLeftIcon +
+              ", RightIcon=" + capRightIcon;
 
             // Root: vertical auto-layout
             comp.layoutMode = "VERTICAL";
             comp.primaryAxisSizingMode = "AUTO";
-            comp.counterAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "FIXED";
             comp.itemSpacing = 4;
             comp.fills = [];
+            try { comp.layoutSizingHorizontal = "FIXED"; } catch (_sizeModeErr) {}
 
             var textInputLabelGapVar =
               varMap["textinput/label-gap-" + size] ||
@@ -6191,8 +6282,10 @@ function buildTextInputComponentSet(varMap, page, font) {
               labelRow.layoutMode = "HORIZONTAL";
               labelRow.primaryAxisSizingMode = "AUTO";
               labelRow.counterAxisSizingMode = "AUTO";
+              labelRow.layoutAlign = "STRETCH";
               labelRow.itemSpacing = 2;
               labelRow.fills = [];
+              try { labelRow.layoutSizingHorizontal = "FILL"; } catch (_labelSizeModeErr) {}
 
               var labelNode = figma.createText();
               labelNode.name = "Label";
@@ -6243,17 +6336,20 @@ function buildTextInputComponentSet(varMap, page, font) {
             var input = figma.createFrame();
             input.name = "Input";
             input.layoutMode = "HORIZONTAL";
-            input.primaryAxisSizingMode = "FIXED";
+            input.primaryAxisSizingMode = "AUTO";
             input.counterAxisSizingMode = "AUTO";
+            input.layoutAlign = "STRETCH";
             input.primaryAxisAlignItems = "MIN";
             input.counterAxisAlignItems = "CENTER";
-            input.resize(200, sizeHeights[size]);
+            input.resize(colWidth, sizeHeights[size]);
+            try { input.layoutSizingHorizontal = "FILL"; } catch (_inputSizeModeErr) {}
             input.cornerRadius = 4;
             input.paddingLeft = 10;
             input.paddingRight = 10;
             input.paddingTop = 0;
             input.paddingBottom = 0;
             input.minHeight = sizeHeights[size];
+            input.itemSpacing = 8;
 
             // Bind input dimensions (size-based)
             if (varMap["textinput/height-" + size]) {
@@ -6262,6 +6358,21 @@ function buildTextInputComponentSet(varMap, page, font) {
             if (varMap["textinput/padding-x-" + size]) {
               bindVar(input, "paddingLeft", varMap["textinput/padding-x-" + size]);
               bindVar(input, "paddingRight", varMap["textinput/padding-x-" + size]);
+            }
+            var textInputPaddingYVar =
+              varMap["textinput/padding-y-" + size] ||
+              varMap["textinput/padding-y-default"] ||
+              varMap["textinput/padding-y"];
+            if (textInputPaddingYVar) {
+              bindVar(input, "paddingTop", textInputPaddingYVar);
+              bindVar(input, "paddingBottom", textInputPaddingYVar);
+            }
+            var textInputIconGapVar =
+              varMap["textinput/icon-gap-" + size] ||
+              varMap["textinput/icon-gap-default"] ||
+              varMap["textinput/icon-gap"];
+            if (textInputIconGapVar) {
+              bindVar(input, "itemSpacing", textInputIconGapVar);
             }
             // Bind radius (independent from size)
             if (varMap["textinput/radius-" + rad]) {
@@ -6294,6 +6405,34 @@ function buildTextInputComponentSet(varMap, page, font) {
               bindVar(input, "strokeWeight", varMap["textinput/border-width"]);
             }
 
+            var textInputIconColorPath = state === "disabled"
+              ? "textinput/text-disabled"
+              : (state === "focus" ? "textinput/text" : "textinput/placeholder");
+
+            function appendTextInputIcon(iconComp, iconName) {
+              if (!iconComp) return null;
+              var iconInst = iconComp.createInstance();
+              iconInst.name = iconName;
+              try { iconInst.resize(16, 16); } catch (_resizeErr) {}
+              var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
+              for (var vci = 0; vci < vectors.length; vci++) {
+                if (vectors[vci].strokes && vectors[vci].strokes.length > 0 && varMap[textInputIconColorPath]) {
+                  vectors[vci].strokes = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+                  bindPaintVar(vectors[vci], "strokes", 0, varMap[textInputIconColorPath]);
+                }
+                if (vectors[vci].fills && vectors[vci].fills.length > 0 && varMap[textInputIconColorPath]) {
+                  vectors[vci].fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+                  bindPaintVar(vectors[vci], "fills", 0, varMap[textInputIconColorPath]);
+                }
+              }
+              return iconInst;
+            }
+
+            if (hasLeftIcon) {
+              var leftIconNode = appendTextInputIcon(iconComponents.left || iconComponents.fallback, "LeftIcon");
+              if (leftIconNode) input.appendChild(leftIconNode);
+            }
+
             // Text inside input
             var textNode = figma.createText();
             textNode.name = (state === "focus") ? "InputText" : "Placeholder";
@@ -6324,7 +6463,14 @@ function buildTextInputComponentSet(varMap, page, font) {
               bindVar(textNode, "lineHeight", varMap["textinput/line-height-" + size]);
             }
 
+            // Keep text independent from icon instances.
+            textNode.layoutGrow = 1;
             input.appendChild(textNode);
+
+            if (hasRightIcon) {
+              var rightIconNode = appendTextInputIcon(iconComponents.right || iconComponents.fallback, "RightIcon");
+              if (rightIconNode) input.appendChild(rightIconNode);
+            }
 
             // Focus ring effect
             if (state === "focus") {
@@ -6361,13 +6507,14 @@ function buildTextInputComponentSet(varMap, page, font) {
               comp.appendChild(errorNode);
             }
 
-            // Disabled opacity
-            if (state === "disabled") {
-              comp.opacity = 0.6;
-            }
+            // Keep a fixed-width root with auto-computed height from children,
+            // so the instance bounds match the full visible rectangle.
+            try {
+              comp.resize(colWidth, comp.height);
+            } catch (_rootResizeErr) {}
 
             // Grid placement
-            var colIndex = vi * labelModes.length + li;
+            var colIndex = (((vi * labelModes.length + li) * leftIconModes.length + lii) * rightIconModes.length + rii);
             var rowIndex = (si * radii.length + ri) * states.length + sti;
             comp.x = colIndex * (colWidth + gap);
             comp.y = rowIndex * 80;
@@ -6376,6 +6523,8 @@ function buildTextInputComponentSet(varMap, page, font) {
             components.push(comp);
           }
         }
+      }
+      }
       }
     }
   }
@@ -6391,6 +6540,74 @@ function textInputColorPath(variant, property, state) {
     return "textinput/" + variant + "-" + property;
   }
   return "textinput/" + variant + "-" + property + "-" + state;
+}
+
+async function findTextInputIconComponents() {
+  var result = { left: null, right: null, fallback: null };
+  var iconCandidates = [];
+  var iconsPage = null;
+
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var page = figma.root.children[pi];
+    if (page.type !== "PAGE") continue;
+    await page.loadAsync();
+    if (!iconsPage && page.name && page.name.toLowerCase() === "icons") {
+      iconsPage = page;
+    }
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function(n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") iconCandidates.push(setChildren[ci]);
+      }
+    }
+  }
+
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var name = String(iconCandidates[j].name || "").toLowerCase();
+    var normalized = name.replace(/[\s_\-\/]+/g, "");
+    if (!result.left && (
+      normalized.indexOf("search") >= 0 ||
+      normalized.indexOf("mail") >= 0 ||
+      normalized.indexOf("user") >= 0 ||
+      normalized.indexOf("check") >= 0
+    )) {
+      result.left = iconCandidates[j];
+    }
+    if (!result.right && (
+      normalized.indexOf("xclose") >= 0 ||
+      normalized.indexOf("close") >= 0 ||
+      normalized.indexOf("eye") >= 0 ||
+      normalized.indexOf("chevrondown") >= 0 ||
+      normalized.indexOf("chevronright") >= 0
+    )) {
+      result.right = iconCandidates[j];
+    }
+  }
+
+  if (iconCandidates.length > 0) {
+    var sorted = iconCandidates.slice().sort(function(a, b) {
+      return a.name.localeCompare(b.name);
+    });
+    result.fallback = sorted[0];
+  }
+
+  if (result.left) progress("[TextInput] Left icon source: " + result.left.name);
+  if (result.right) progress("[TextInput] Right icon source: " + result.right.name);
+  if (!result.left || !result.right) {
+    progress("[TextInput] Warning: could not find both icon sources; using fallback when needed.");
+  }
+
+  return result;
 }
 
 // ---------------------------------------------------------------------------

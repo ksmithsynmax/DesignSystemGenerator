@@ -24,7 +24,7 @@ export const GLOBAL_WEIGHTS = {
 
 export const GLOBAL_BORDER_WIDTHS = [0, 1, 1.25, 1.5, 1.75, 2, 2.25, 4];
 export const GLOBAL_FONT_SIZES = [8, 10, 12, 13, 14, 16, 18, 20, 24, 28, 30, 32, 36, 40, 48, 64];
-export const GLOBAL_LINE_HEIGHTS = [8, 10, 12, 14, 16, 17, 18, 20, 22, 24, 28, 32, 36, 42];
+export const GLOBAL_LINE_HEIGHTS = [8, 10, 12, 14, 16, 17, 18, 20, 22, 24, 28, 30, 32, 34, 36, 42, 44, 48];
 
 export const INITIAL_BRANDS = {
   theia: {
@@ -181,8 +181,14 @@ export const INITIAL_BRANDS = {
       "textinput-line-height-default": "sm",
       "textinput-label-font-size-default": "sm",
       "textinput-label-gap-default": "sm",
+      "textinput-icon-size-default": "sm",
+      "textinput-icon-gap-default": "sm",
+      "textinput-section-size-default": "sm",
       "textinput-padding-x-default": "sm",
+      "textinput-padding-y-default": "sm",
       "textinput-radius-default": "sm",
+      "text-font-size-default": "sm",
+      "text-line-height-default": "sm",
     },
     dimensionOverrides: {},
   },
@@ -344,8 +350,14 @@ export const INITIAL_BRANDS = {
       "textinput-line-height-default": "md",
       "textinput-label-font-size-default": "md",
       "textinput-label-gap-default": "md",
+      "textinput-icon-size-default": "md",
+      "textinput-icon-gap-default": "md",
+      "textinput-section-size-default": "md",
       "textinput-padding-x-default": "md",
+      "textinput-padding-y-default": "md",
       "textinput-radius-default": "md",
+      "text-font-size-default": "md",
+      "text-line-height-default": "md",
     },
     dimensionOverrides: {},
   },

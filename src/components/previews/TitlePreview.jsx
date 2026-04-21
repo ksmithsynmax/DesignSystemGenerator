@@ -18,7 +18,7 @@ export default function TitlePreview({
   text = "Build fully functional accessible web applications faster than ever",
 }) {
   const tokens = COMPONENT_TOKENS.title;
-  const effectiveSizeKey = sizeKey === "auto" ? `h${order}` : sizeKey;
+  const effectiveSizeKey = sizeKey;
 
   const color = resolveColor(
     brands,
@@ -31,10 +31,9 @@ export default function TitlePreview({
   const lineHeight = resolveDimension(brands, brandId, "title-line-height", effectiveSizeKey);
   const fontWeight = resolveDimension(brands, brandId, "title-font-weight");
   const fontFamily = resolveDimension(brands, brandId, "title-font-family");
-  const maxWidth = resolveDimension(brands, brandId, "title-max-width");
 
   return (
-    <div style={{ width: "100%", maxWidth }}>
+    <div style={{ width: "100%" }}>
       <Title
         order={toOrder(order)}
         textWrap={textWrap}

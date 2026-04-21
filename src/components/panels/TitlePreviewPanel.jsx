@@ -4,7 +4,7 @@ import PreviewMatrix from "../shared/PreviewMatrix";
 import TitlePreview from "../previews/TitlePreview";
 
 export const TITLE_ORDER_OPTIONS = ["1", "2", "3", "4", "5", "6"];
-export const TITLE_SIZE_OPTIONS = ["auto", "h1", "h2", "h3", "h4", "h5", "h6"];
+export const TITLE_SIZE_OPTIONS = ["h1", "h2", "h3", "h4", "h5", "h6"];
 export const TITLE_WRAP_OPTIONS = ["wrap", "balance", "nowrap"];
 export const TITLE_LINE_CLAMP_OPTIONS = ["off", "2", "3"];
 

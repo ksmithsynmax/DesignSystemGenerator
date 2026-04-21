@@ -1,4 +1,6 @@
 import { TextInput } from "@mantine/core";
+import CheckIcon from "@untitledui-icons/react/line/CheckIcon";
+import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
 import { resolveColor, resolveDimension, getDefaultSizeKey } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
@@ -16,6 +18,8 @@ export default function TextInputPreview({
   placeholder = "Placeholder",
   state,
   disabled,
+  showLeftIcon = false,
+  showRightIcon = false,
 }) {
   const tokens = COMPONENT_TOKENS.textinput;
   const prefix = `textinput-${variant}`;
@@ -64,6 +68,11 @@ export default function TextInputPreview({
   const fontWeight = resolveDimension(brands, brandId, "textinput-font-weight");
   const lineHeight = resolveDimension(brands, brandId, "textinput-line-height", size);
   const paddingX = resolveDimension(brands, brandId, "textinput-padding-x", size);
+  const paddingY = resolveDimension(brands, brandId, "textinput-padding-y", size);
+  const iconSize = resolveDimension(brands, brandId, "textinput-icon-size", size) ?? 16;
+  const iconGap = resolveDimension(brands, brandId, "textinput-icon-gap", size) ?? 8;
+  const sectionSize =
+    resolveDimension(brands, brandId, "textinput-section-size", size) ?? iconSize + iconGap * 2;
   const borderRadius = resolveDimension(brands, brandId, "textinput-radius", radius);
   const borderWidth = resolveDimension(brands, brandId, "textinput-border-width");
   const labelFontSize = resolveDimension(brands, brandId, "textinput-label-font-size", size);
@@ -81,6 +90,8 @@ export default function TextInputPreview({
   const bdValue = `${borderWidth}px solid ${borderColor}`;
   const mantineSize = size === "default" ? getDefaultSizeKey(brands, brandId, "textinput-height") || "sm" : size;
   const mantineRadius = radius === "default" ? getDefaultSizeKey(brands, brandId, "textinput-radius") || "sm" : radius;
+  const iconColor = isDisabled ? placeholderColor : textColor;
+  const iconProps = { width: iconSize, height: iconSize, style: { color: iconColor } };
 
   return (
     <TextInput
@@ -91,14 +102,21 @@ export default function TextInputPreview({
       placeholder={placeholder}
       error={isError ? errorText : undefined}
       disabled={isDisabled}
+      leftSection={showLeftIcon ? <CheckIcon {...iconProps} /> : undefined}
+      rightSection={showRightIcon ? <ChevronRightIcon {...iconProps} style={{ ...iconProps.style, transform: "rotate(90deg)" }} /> : undefined}
+      leftSectionPointerEvents="none"
+      rightSectionPointerEvents="none"
       variant={mantineVariant}
       vars={() => ({
-        // Mantine Input reads layout vars from the wrapper; --input-bd is color-only (see styles.css: solid var(--input-bd)).
-        wrapper: {
+        root: {
           "--input-height": `${height}px`,
           "--input-fz": `${fontSize}px`,
           "--input-radius": `${borderRadius}px`,
-          "--input-padding": `${paddingX}px`,
+          "--input-padding-x": `${paddingX}px`,
+          "--input-padding-y": `${paddingY}px`,
+          "--input-left-section-size": `${sectionSize}px`,
+          "--input-right-section-size": `${sectionSize}px`,
+          "--input-section-size": `${sectionSize}px`,
         },
       })}
       styles={{

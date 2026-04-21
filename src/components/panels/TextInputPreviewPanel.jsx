@@ -70,6 +70,8 @@ export function TextInputPreviewContent({
   withAsterisk,
   showError,
   errorText,
+  showLeftIcon,
+  showRightIcon,
 }) {
 
   const matrixRows = TEXTINPUT_VARIANTS.flatMap((v) => [
@@ -96,6 +98,8 @@ export function TextInputPreviewContent({
             showError={selectedState === "error" || showError}
             errorText={errorText}
             state={selectedState === "default" ? undefined : selectedState}
+            showLeftIcon={showLeftIcon}
+            showRightIcon={showRightIcon}
           />
         </div>
       </PreviewStage>
@@ -117,6 +121,8 @@ export function TextInputPreviewContent({
               showLabel={false}
               showError={row.state === "error"}
               errorText="Error"
+              showLeftIcon={showLeftIcon}
+              showRightIcon={showRightIcon}
             />
           </div>
         )}
@@ -146,6 +152,10 @@ export function TextInputPropertiesPanel({
   setShowError,
   errorText,
   setErrorText,
+  showLeftIcon,
+  setShowLeftIcon,
+  showRightIcon,
+  setShowRightIcon,
   forcedState,
 }) {
   return (
@@ -188,6 +198,18 @@ export function TextInputPropertiesPanel({
         label="Error Message"
         value={showError ? "on" : "off"}
         onChange={(v) => setShowError(v === "on")}
+        options={["off", "on"]}
+      />
+      <PropertyRow
+        label="Left Icon"
+        value={showLeftIcon ? "on" : "off"}
+        onChange={(v) => setShowLeftIcon(v === "on")}
+        options={["off", "on"]}
+      />
+      <PropertyRow
+        label="Right Icon"
+        value={showRightIcon ? "on" : "off"}
+        onChange={(v) => setShowRightIcon(v === "on")}
         options={["off", "on"]}
       />
       {showError && (

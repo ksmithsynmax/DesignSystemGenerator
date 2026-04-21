@@ -37,6 +37,7 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
   const { status, pluginConnected, sync, error, lastSyncMessage } = useFigmaSync();
   const [buildMode, setBuildMode] = useState("all");
   const [selectedComponents, setSelectedComponents] = useState(BUILDABLE_COMPONENTS);
+  const [textInputDebugDefaultOnly, setTextInputDebugDefaultOnly] = useState(false);
 
   const selectedCount = selectedComponents.length;
   const selectionError = buildMode === "selected" && selectedCount === 0
@@ -55,13 +56,14 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
   const handleSync = useCallback(() => {
     if (buildMode === "selected" && selectedComponents.length === 0) return;
     var buildOptions = Object.assign({}, syncBuildOptions || {});
+    buildOptions.textInputDebugDefaultOnly = textInputDebugDefaultOnly;
     if (buildMode === "selected") {
       buildOptions.componentsToBuild = selectedComponents.slice();
     }
     if (Object.keys(buildOptions).length === 0) buildOptions = null;
     const payload = buildExportPayload(brands, buildOptions);
     sync(payload);
-  }, [brands, buildMode, selectedComponents, sync, syncBuildOptions]);
+  }, [brands, buildMode, selectedComponents, sync, syncBuildOptions, textInputDebugDefaultOnly]);
 
   const toggleComponent = useCallback((name) => {
     setSelectedComponents((curr) => {
@@ -219,6 +221,14 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
             </div>
           </div>
         )}
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#CED4DA" }}>
+          <input
+            type="checkbox"
+            checked={textInputDebugDefaultOnly}
+            onChange={(e) => setTextInputDebugDefaultOnly(e.target.checked)}
+          />
+          TextInput debug: only Default size/radius
+        </label>
       </div>
 
       <button

@@ -343,7 +343,11 @@ export const STORYBOOK_BRANDS = {
       "textinput-line-height-default": "sm",
       "textinput-label-font-size-default": "sm",
       "textinput-label-gap-default": "sm",
+      "textinput-icon-size-default": "sm",
+      "textinput-icon-gap-default": "sm",
+      "textinput-section-size-default": "sm",
       "textinput-padding-x-default": "sm",
+      "textinput-padding-y-default": "sm",
       "textinput-radius-default": "sm",
       "text-font-size-default": "sm",
       "text-line-height-default": "sm"
@@ -2883,7 +2887,11 @@ export const STORYBOOK_BRANDS = {
       "textinput-line-height-default": "md",
       "textinput-label-font-size-default": "md",
       "textinput-label-gap-default": "md",
+      "textinput-icon-size-default": "md",
+      "textinput-icon-gap-default": "md",
+      "textinput-section-size-default": "md",
       "textinput-padding-x-default": "md",
+      "textinput-padding-y-default": "md",
       "textinput-radius-default": "md",
       "text-font-size-default": "md",
       "text-line-height-default": "md"

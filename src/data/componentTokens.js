@@ -936,6 +936,10 @@ export const COMPONENT_TOKENS = {
     "textinput-font-weight": { type: "STRING", value: "Regular", figmaPath: "textinput/font-weight" },
     "textinput-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "textinput/line-height" },
     "textinput-padding-x": { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 },  figmaPath: "textinput/padding-x" },
+    "textinput-padding-y": { type: "FLOAT", unit: "px", sizes: { xs: 6,  sm: 8,  md: 10, lg: 12, xl: 14 },  figmaPath: "textinput/padding-y" },
+    "textinput-icon-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "textinput/icon-size" },
+    "textinput-icon-gap": { type: "FLOAT", unit: "px", sizes: { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 }, figmaPath: "textinput/icon-gap" },
+    "textinput-section-size": { type: "FLOAT", unit: "px", sizes: { xs: 20, sm: 26, md: 32, lg: 38, xl: 44 }, figmaPath: "textinput/section-size" },
 
     // ── FLOAT TOKENS (radius variants: xs, sm, md, lg, xl — independent from size) ──
     "textinput-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "textinput/radius" },
@@ -1068,7 +1072,6 @@ export const COMPONENT_TOKENS = {
 
     // ── STRING TOKENS (single value) ──
     "title-font-weight": { type: "STRING", value: "Bold", figmaPath: "title/font-weight" },
-    "title-max-width": { type: "FLOAT", unit: "px", value: 520, figmaPath: "title/max-width" },
   },
 
   text: {
@@ -1077,18 +1080,18 @@ export const COMPONENT_TOKENS = {
     "text-color-dimmed": { type: "COLOR", semantic: "text-disabled", figmaPath: "text/color-dimmed" },
     "text-color-brand": { type: "COLOR", semantic: "interactive-primary", figmaPath: "text/color-brand" },
 
-    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    // ── FLOAT TOKENS (size variants: label, caption, xs, sm, md, lg, xl) ──
     "text-font-family": { type: "STRING", value: "Inter", figmaPath: "text/font-family" },
     "text-font-size": {
       type: "FLOAT",
       unit: "px",
-      sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },
+      sizes: { label: 14, caption: 12, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },
       figmaPath: "text/font-size",
     },
     "text-line-height": {
       type: "FLOAT",
       unit: "px",
-      sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },
+      sizes: { label: 20, caption: 16, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },
       figmaPath: "text/line-height",
     },
 
@@ -1097,7 +1100,6 @@ export const COMPONENT_TOKENS = {
     "text-font-weight-medium": { type: "STRING", value: "Medium", figmaPath: "text/font-weight-medium" },
     "text-font-weight-semibold": { type: "STRING", value: "Semi Bold", figmaPath: "text/font-weight-semibold" },
     "text-font-weight-bold": { type: "STRING", value: "Bold", figmaPath: "text/font-weight-bold" },
-    "text-max-width": { type: "FLOAT", unit: "px", value: 520, figmaPath: "text/max-width" },
   },
 };
 
@@ -1143,7 +1145,7 @@ export const COMPONENT_SIZE_KEYS = {
   textinput: ["default", "xs", "sm", "md", "lg", "xl"],
   select: ["xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
-  text: ["xs", "sm", "md", "lg", "xl"],
+  text: ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"],
 };
 
 export function getColorTokens(componentName) {

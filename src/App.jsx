@@ -175,6 +175,14 @@ function enforceTextDefaultMappings(brandsInput) {
   // Backfill newly introduced semantic scalar maps for users with persisted local state.
   Object.keys(INITIAL_BRANDS).forEach((brandId) => {
     if (!next[brandId]) return;
+    if (!next[brandId].componentDefaults) next[brandId].componentDefaults = {};
+    const initialComponentDefaults = INITIAL_BRANDS[brandId]?.componentDefaults || {};
+    Object.entries(initialComponentDefaults).forEach(([defaultKey, defaultValue]) => {
+      if (next[brandId].componentDefaults[defaultKey] === undefined) {
+        next[brandId].componentDefaults[defaultKey] = defaultValue;
+      }
+    });
+
     semanticScaleKeys.forEach((mapKey) => {
       if (next[brandId][mapKey] && Object.keys(next[brandId][mapKey]).length > 0) return;
       const fallbackMap = INITIAL_BRANDS[brandId]?.[mapKey];
@@ -232,6 +240,7 @@ export default function App() {
   });
   if (typeof window !== "undefined") {
     window.__DSG_PREVIEW_THEME = previewTheme;
+    window.__DSG_PREVIEW_BRAND = activeBrand;
   }
   const [storybookLoading, setStorybookLoading] = useState(false);
   const [storybookError, setStorybookError] = useState(null);
@@ -302,6 +311,7 @@ export default function App() {
   const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "default";
   const modalDefault = getComponentDefaultSize(brands, activeBrand, "modal") || "md";
   const anchorDefault = getComponentDefaultSize(brands, activeBrand, "anchor") || "md";
+  const textDefault = getComponentDefaultSize(brands, activeBrand, "text") || "md";
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
   const [activeActionIconSize, setActiveActionIconSize] = useState(actionIconDefault);
@@ -329,13 +339,13 @@ export default function App() {
   const [activeRangeSliderValue, setActiveRangeSliderValue] = useState([20, 60]);
   const [activeRangeSliderLabelMode, setActiveRangeSliderLabelMode] = useState("hover");
   const [activeTitleOrder, setActiveTitleOrder] = useState("1");
-  const [activeTitleSize, setActiveTitleSize] = useState("auto");
+  const [activeTitleSize, setActiveTitleSize] = useState("h1");
   const [activeTitleTextWrap, setActiveTitleTextWrap] = useState("wrap");
   const [activeTitleLineClamp, setActiveTitleLineClamp] = useState(0);
   const [activeTitleText, setActiveTitleText] = useState(
     DEFAULT_TITLE_TEXT
   );
-  const [activeTextSizeToken, setActiveTextSizeToken] = useState("md");
+  const [activeTextSizeToken, setActiveTextSizeToken] = useState(textDefault);
   const [activeTextWeightMode, setActiveTextWeightMode] = useState("regular");
   const [activeTextStyleMode, setActiveTextStyleMode] = useState("normal");
   const [activeTextDecoration, setActiveTextDecoration] = useState("none");
@@ -379,6 +389,8 @@ export default function App() {
   const [activeTextInputWithAsterisk, setActiveTextInputWithAsterisk] = useState(false);
   const [activeTextInputShowError, setActiveTextInputShowError] = useState(false);
   const [activeTextInputErrorText, setActiveTextInputErrorText] = useState("Error message");
+  const [activeTextInputLeftIcon, setActiveTextInputLeftIcon] = useState(false);
+  const [activeTextInputRightIcon, setActiveTextInputRightIcon] = useState(false);
   const [activeSelectSize, setActiveSelectSize] = useState(selectDefault);
   const [activeSelectRadius, setActiveSelectRadius] = useState(selectDefault);
   const [activeSelectState, setActiveSelectState] = useState("default");
@@ -450,6 +462,7 @@ export default function App() {
     const baDef = getComponentDefaultSize(brands, newBrand, "badge") || "default";
     const moDef = getComponentDefaultSize(brands, newBrand, "modal") || "md";
     const anDef = getComponentDefaultSize(brands, newBrand, "anchor") || "md";
+    const txDef = getComponentDefaultSize(brands, newBrand, "text") || "md";
     setActiveSize(btnDef);
     setActiveActionIconSize(aiDef);
     setActiveActionIconRadius(aiDef);
@@ -479,6 +492,7 @@ export default function App() {
     setActiveModalSize(moDef);
     setActiveModalRadius(moDef);
     setActiveAnchorSize(anDef);
+    setActiveTextSizeToken(txDef);
     const nextBrandColors = Object.keys(brands[newBrand]?.primitives || {});
     const nextDefaultColor = nextBrandColors.includes("blue") ? "blue" : (nextBrandColors[0] || "blue");
     setActiveNotificationColor(nextDefaultColor);
@@ -529,12 +543,12 @@ export default function App() {
       setActiveRangeSliderLabelMode("hover");
     } else if (newComp === "title") {
       setActiveTitleOrder("1");
-      setActiveTitleSize("auto");
+      setActiveTitleSize("h1");
       setActiveTitleTextWrap("wrap");
       setActiveTitleLineClamp(0);
       setActiveTitleText(DEFAULT_TITLE_TEXT);
     } else if (newComp === "text") {
-      setActiveTextSizeToken("md");
+      setActiveTextSizeToken(textDefault);
       setActiveTextWeightMode("regular");
       setActiveTextStyleMode("normal");
       setActiveTextDecoration("none");
@@ -603,6 +617,8 @@ export default function App() {
       setActiveTextInputWithAsterisk(false);
       setActiveTextInputShowError(false);
       setActiveTextInputErrorText("Error message");
+      setActiveTextInputLeftIcon(false);
+      setActiveTextInputRightIcon(false);
       setActiveVariant("default");
     } else if (newComp === "select") {
       setActiveSelectSize(selectDefault);
@@ -642,7 +658,7 @@ export default function App() {
       setActiveTooltipPosition("top");
       setActiveTooltipWithArrow(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, loaderDefault, pillDefault, badgeDefault, modalDefault, anchorDefault, defaultBrandColor]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, loaderDefault, pillDefault, badgeDefault, modalDefault, anchorDefault, textDefault, defaultBrandColor]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -679,18 +695,16 @@ export default function App() {
       setBrands((prev) => {
         const next = JSON.parse(JSON.stringify(prev));
         const brand = next[activeBrand];
-        if (previewTheme === "dark") {
-          if (!brand.componentOverridesDark) brand.componentOverridesDark = {};
-          brand.componentOverridesDark[componentToken] = mapping;
-          return next;
-        }
-
         if (!brand.componentOverrides) brand.componentOverrides = {};
+        if (!brand.componentOverridesDark) brand.componentOverridesDark = {};
         brand.componentOverrides[componentToken] = mapping;
+        // Temporary behavior while light/dark token sets are not finalized:
+        // keep both theme buckets in sync so preview edits match Figma modes.
+        brand.componentOverridesDark[componentToken] = mapping;
         return next;
       });
     },
-    [activeBrand, previewTheme]
+    [activeBrand]
   );
 
   const updateDimensionOverride = useCallback(
@@ -723,6 +737,29 @@ export default function App() {
       setActiveBrand(id);
     },
     [activeBrand, brands]
+  );
+
+  const removeBrand = useCallback(
+    (brandId) => {
+      if (!brands[brandId]) return;
+      const brandIds = Object.keys(brands);
+      if (brandIds.length <= 1) return;
+      if (typeof window !== "undefined") {
+        const confirmed = window.confirm(`Delete brand "${brands[brandId].name || brandId}"? This cannot be undone.`);
+        if (!confirmed) return;
+      }
+
+      const next = JSON.parse(JSON.stringify(brands));
+      delete next[brandId];
+      setBrands(next);
+
+      if (activeBrand === brandId) {
+        const remaining = Object.keys(next);
+        const fallbackBrand = remaining.includes("theia") ? "theia" : remaining[0];
+        if (fallbackBrand) handleBrandChange(fallbackBrand);
+      }
+    },
+    [activeBrand, brands, handleBrandChange]
   );
 
   const brandNames = Object.keys(brands);
@@ -1084,7 +1121,7 @@ export default function App() {
     switch: activeSwitchSize,
     slider: activeSliderSize,
     rangeslider: activeRangeSliderSize,
-    title: activeTitleSize === "auto" ? `h${activeTitleOrder}` : activeTitleSize,
+    title: activeTitleSize,
     text: activeTextSizeToken,
     anchor: activeAnchorSize,
     checkbox: activeCheckboxSize,
@@ -1144,7 +1181,7 @@ export default function App() {
       activeComponent === "title" &&
       (tokenName === "title-font-size" || tokenName === "title-line-height")
     ) {
-      return activeTitleSize === "auto" ? `h${activeTitleOrder}` : activeTitleSize;
+      return activeTitleSize;
     }
     return activeDimensionSize;
   };
@@ -1626,6 +1663,8 @@ export default function App() {
                   withAsterisk={activeTextInputWithAsterisk}
                   showError={activeTextInputShowError}
                   errorText={activeTextInputErrorText}
+                  showLeftIcon={activeTextInputLeftIcon}
+                  showRightIcon={activeTextInputRightIcon}
                 />
               )}
               {activeComponent === "select" && (
@@ -2020,6 +2059,10 @@ export default function App() {
                   setShowError={setActiveTextInputShowError}
                   errorText={activeTextInputErrorText}
                   setErrorText={setActiveTextInputErrorText}
+                  showLeftIcon={activeTextInputLeftIcon}
+                  setShowLeftIcon={setActiveTextInputLeftIcon}
+                  showRightIcon={activeTextInputRightIcon}
+                  setShowRightIcon={setActiveTextInputRightIcon}
                   forcedState={forcedState}
                 />
               )}

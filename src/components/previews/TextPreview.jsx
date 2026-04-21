@@ -36,10 +36,9 @@ export default function TextPreview({
   const lineHeight = resolveDimension(brands, brandId, "text-line-height", size);
   const fontWeight = resolveDimension(brands, brandId, WEIGHT_TOKEN_BY_MODE[weightMode]);
   const fontFamily = resolveDimension(brands, brandId, "text-font-family");
-  const maxWidth = resolveDimension(brands, brandId, "text-max-width");
 
   return (
-    <div style={{ width: "100%", maxWidth }}>
+    <div style={{ width: "100%" }}>
       <Text
         fs={styleMode === "italic" ? "italic" : "normal"}
         td={decoration}

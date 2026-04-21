@@ -75,9 +75,10 @@ export function resolveDimension(brands, brandId, tokenName, size) {
   const tokenDef = findTokenDef(tokenName);
   if (!tokenDef || (tokenDef.type !== TOKEN_TYPES.FLOAT && tokenDef.type !== TOKEN_TYPES.STRING)) return null;
   const hasExplicitDefaultSize = Boolean(tokenDef.sizes && Object.prototype.hasOwnProperty.call(tokenDef.sizes, "default"));
+  const fallbackSizeKey = tokenDef.sizes ? getFallbackSizeKey(tokenDef.sizes) : null;
   const effectiveSize =
     tokenDef.sizes && size === "default"
-      ? (getDefaultSizeKey(brands, brandId, tokenName) || (hasExplicitDefaultSize ? "default" : null))
+      ? (getDefaultSizeKey(brands, brandId, tokenName) || (hasExplicitDefaultSize ? "default" : fallbackSizeKey))
       : size;
 
   // Check brand overrides first
@@ -118,5 +119,15 @@ function findTokenDef(tokenName) {
   for (const tokens of Object.values(COMPONENT_TOKENS)) {
     if (tokens[tokenName]) return tokens[tokenName];
   }
+  return null;
+}
+
+function getFallbackSizeKey(sizes) {
+  if (!sizes || typeof sizes !== "object") return null;
+  if (Object.prototype.hasOwnProperty.call(sizes, "sm")) return "sm";
+  if (Object.prototype.hasOwnProperty.call(sizes, "md")) return "md";
+  const keys = Object.keys(sizes).filter((key) => key !== "default");
+  if (keys.length > 0) return keys[0];
+  if (Object.prototype.hasOwnProperty.call(sizes, "default")) return "default";
   return null;
 }

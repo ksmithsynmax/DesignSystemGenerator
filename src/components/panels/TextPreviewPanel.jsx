@@ -3,7 +3,7 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 import TextPreview from "../previews/TextPreview";
 
-export const TEXT_SIZE_OPTIONS = ["xs", "sm", "md", "lg", "xl"];
+export const TEXT_SIZE_OPTIONS = ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"];
 export const TEXT_WEIGHT_OPTIONS = ["regular", "medium", "semibold", "bold"];
 export const TEXT_STYLE_OPTIONS = ["normal", "italic"];
 export const TEXT_DECORATION_OPTIONS = ["none", "underline", "line-through"];

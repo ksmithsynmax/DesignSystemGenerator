@@ -8,8 +8,14 @@ export default function PreviewStage({
 }) {
   const previewTheme =
     typeof window !== "undefined" && window.__DSG_PREVIEW_THEME === "light" ? "light" : "dark";
-  const background = previewTheme === "light" ? "#F1F3F5" : "#181926";
-  const labelColor = previewTheme === "light" ? "#495057" : "#868E96";
+  const previewBrand =
+    typeof window !== "undefined" ? String(window.__DSG_PREVIEW_BRAND || "").toLowerCase() : "";
+
+  // Temporary preview-only brand backgrounds until true light/dark token sets are ready.
+  const isTheia = previewBrand === "theia";
+  const isHyperion = previewBrand === "hyperion";
+  const background = isTheia ? "#181926" : isHyperion ? "#F1F3F5" : previewTheme === "light" ? "#F1F3F5" : "#181926";
+  const labelColor = isTheia ? "#868E96" : isHyperion ? "#495057" : previewTheme === "light" ? "#495057" : "#868E96";
 
   return (
     <div
