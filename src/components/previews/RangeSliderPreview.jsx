@@ -64,14 +64,23 @@ export default function RangeSliderPreview({
         marks={marks}
         label={labelMode === "off" ? null : undefined}
         labelAlwaysOn={labelMode === "always"}
+        vars={() => ({
+          root: {
+            "--slider-track-bg": trackBg,
+          },
+        })}
         styles={{
+          trackContainer: {
+            height: trackHeight,
+            borderRadius: sliderRadius,
+          },
           track: {
-            background: trackBg,
+            backgroundColor: trackBg,
             height: trackHeight,
             borderRadius: sliderRadius,
           },
           bar: {
-            background: barBg,
+            backgroundColor: barBg,
             height: trackHeight,
             borderRadius: sliderRadius,
           },

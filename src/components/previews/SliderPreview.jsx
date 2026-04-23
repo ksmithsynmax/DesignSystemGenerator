@@ -58,6 +58,11 @@ export default function SliderPreview({
         marks={marks}
         label={labelMode === "off" ? null : undefined}
         labelAlwaysOn={labelMode === "always"}
+        vars={() => ({
+          root: {
+            "--slider-track-bg": trackBg,
+          },
+        })}
         styles={{
           track: {
             background: trackBg,

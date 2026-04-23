@@ -4,7 +4,7 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
 export const RANGESLIDER_STATES = ["default", "focus", "disabled"];
-export const RANGESLIDER_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const RANGESLIDER_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (

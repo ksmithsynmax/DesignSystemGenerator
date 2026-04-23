@@ -42,6 +42,7 @@ export default function TabsPreview({
   const tokens = COMPONENT_TOKENS.tabs;
   const prefix = `tabs-${variant}`;
   const isDefaultVariant = variant === "default";
+  const isPillsVariant = variant === "pills";
 
   const listBg = isDefaultVariant ? "transparent" : getColor(brands, brandId, `${prefix}-list-background`, tokens);
   const listBorder = getColor(brands, brandId, `${prefix}-list-border`, tokens);
@@ -67,13 +68,15 @@ export default function TabsPreview({
   const tabsFontFamily = resolveDimension(brands, brandId, "tabs-font-family");
   const tabsFontWeight = resolveDimension(brands, brandId, "tabs-font-weight");
   const tabsLineHeight = resolveDimension(brands, brandId, "tabs-line-height");
-  const tabPaddingX = resolveDimension(brands, brandId, "tabs-tab-padding-x");
-  const tabPaddingY = resolveDimension(brands, brandId, "tabs-tab-padding-y");
+  const tabPaddingX = resolveDimension(brands, brandId, `${prefix}-tab-padding-x`);
+  const tabPaddingY = resolveDimension(brands, brandId, `${prefix}-tab-padding-y`);
   const listPadding = resolveDimension(brands, brandId, `${prefix}-list-padding`);
   const listGap = resolveDimension(brands, brandId, `${prefix}-list-gap`);
   const listBorderWidth = resolveDimension(brands, brandId, "tabs-list-border-width");
   const tabBorderWidth = resolveDimension(brands, brandId, "tabs-tab-border-width");
-  const tabBorderWidthActive = resolveDimension(brands, brandId, "tabs-tab-border-width-active");
+  const tabBorderWidthActive =
+    resolveDimension(brands, brandId, `${prefix}-tab-border-width-active`) ??
+    resolveDimension(brands, brandId, "tabs-tab-border-width-active");
   const panelPadding = resolveDimension(brands, brandId, "tabs-panel-padding");
   const iconSize = resolveDimension(brands, brandId, "tabs-icon-size");
   const iconStroke = resolveDimension(brands, brandId, "tabs-icon-stroke-width");
@@ -129,11 +132,11 @@ export default function TabsPreview({
     gap: `${listGap}px`,
     backgroundColor: isDefaultVariant ? "transparent" : listBg,
     borderBottom:
-      orientation === "horizontal"
+      !isPillsVariant && orientation === "horizontal"
         ? `${listBorderWidth}px solid ${listBorder}`
         : "none",
     borderRight:
-      orientation === "vertical"
+      !isPillsVariant && orientation === "vertical"
         ? `${listBorderWidth}px solid ${listBorder}`
         : "none",
     padding: `${listPadding}px`,
@@ -141,7 +144,7 @@ export default function TabsPreview({
   };
 
   return (
-    <div style={{ width: orientation === "vertical" ? 620 : 580 }}>
+    <div style={{ width: orientation === "vertical" ? 620 : 580, margin: "0 auto" }}>
       <Tabs
         unstyled
         orientation={orientation}
@@ -151,7 +154,7 @@ export default function TabsPreview({
         }}
       >
         <Tabs.List style={listStyle}>
-          {TAB_ITEMS.map(({ key, label, Icon }) => {
+          {TAB_ITEMS.map(({ key, label, Icon }, tabIndex) => {
             const tabVisual = getTabVisual(key);
             const interactiveDisabled = forcedDisabled;
             const isFocusedPreviewTab = forcedFocus && key === activeDemoKey;
@@ -190,7 +193,27 @@ export default function TabsPreview({
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: tabVisual.bg,
-                  border: `${resolvedTabBorderWidth}px solid ${tabVisual.border}`,
+                  borderStyle: "solid",
+                  borderColor: tabVisual.border,
+                  borderTopWidth: `${resolvedTabBorderWidth}px`,
+                  borderRightWidth: `${resolvedTabBorderWidth}px`,
+                  borderBottomWidth: `${resolvedTabBorderWidth}px`,
+                  borderLeftWidth:
+                    isPillsVariant && orientation === "horizontal"
+                      ? tabIndex === 0
+                        ? `${resolvedTabBorderWidth}px`
+                        : "0px"
+                      : `${resolvedTabBorderWidth}px`,
+                  ...(isPillsVariant && orientation === "vertical" && tabIndex > 0
+                    ? { borderTopWidth: "0px" }
+                    : {}),
+                  ...(isPillsVariant &&
+                  orientation === "horizontal" &&
+                  tabVisual.visualState === "active"
+                    ? {
+                        borderBottomWidth: "0px",
+                      }
+                    : {}),
                   borderRadius: `${tabsRadius}px`,
                   padding: `${tabPaddingY}px ${tabPaddingX}px`,
                   color: tabVisual.text,

@@ -62,12 +62,11 @@ export default function CheckboxPreview({
   ]);
 
   const iconColor = resolveFirst([
+    `${prefix}-icon-color${stateSuffix}`,
     `${prefix}-icon-color`,
-    "checkbox-icon-color",
   ]);
   const disabledIconColor = resolveFirst([
     `${prefix}-icon-color-disabled`,
-    "checkbox-icon-color-disabled",
   ]);
   const focusRing = resolveFirst(["checkbox-focus-ring"]);
   const labelColor = resolveFirst([isDisabled ? "checkbox-label-text-disabled" : "checkbox-label-text"]);

@@ -61,7 +61,7 @@ export default function AnchorPreview({
         cursor: state === "disabled" ? "default" : "pointer",
       }}
     >
-      {text}
+      {text} asdf
     </Anchor>
   );
 }

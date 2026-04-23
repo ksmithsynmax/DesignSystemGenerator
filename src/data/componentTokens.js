@@ -260,8 +260,12 @@ export const COMPONENT_TOKENS = {
     "tabs-font-family": { type: "STRING", value: "Inter", figmaPath: "tabs/font-family" },
     "tabs-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "tabs/font-weight" },
     "tabs-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "tabs/line-height" },
-    "tabs-tab-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/tab-padding-x" },
-    "tabs-tab-padding-y": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/tab-padding-y" },
+    "tabs-default-tab-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/default-tab-padding-x" },
+    "tabs-default-tab-padding-y": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/default-tab-padding-y" },
+    "tabs-outlined-tab-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/outlined-tab-padding-x" },
+    "tabs-outlined-tab-padding-y": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/outlined-tab-padding-y" },
+    "tabs-pills-tab-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/pills-tab-padding-x" },
+    "tabs-pills-tab-padding-y": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/pills-tab-padding-y" },
     "tabs-default-list-padding": { type: "FLOAT", unit: "px", value: 0, figmaPath: "tabs/default-list-padding" },
     "tabs-outlined-list-padding": { type: "FLOAT", unit: "px", value: 4, figmaPath: "tabs/outlined-list-padding" },
     "tabs-pills-list-padding": { type: "FLOAT", unit: "px", value: 4, figmaPath: "tabs/pills-list-padding" },
@@ -271,6 +275,9 @@ export const COMPONENT_TOKENS = {
     "tabs-list-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "tabs/list-border-width" },
     "tabs-tab-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "tabs/tab-border-width" },
     "tabs-tab-border-width-active": { type: "FLOAT", unit: "px", value: 2, figmaPath: "tabs/tab-border-width-active" },
+    "tabs-default-tab-border-width-active": { type: "FLOAT", unit: "px", value: 2, figmaPath: "tabs/default-tab-border-width-active" },
+    "tabs-outlined-tab-border-width-active": { type: "FLOAT", unit: "px", value: 2, figmaPath: "tabs/outlined-tab-border-width-active" },
+    "tabs-pills-tab-border-width-active": { type: "FLOAT", unit: "px", value: 2, figmaPath: "tabs/pills-tab-border-width-active" },
     "tabs-panel-padding": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/panel-padding" },
     "tabs-icon-size": { type: "FLOAT", unit: "px", value: 16, figmaPath: "tabs/icon-size" },
     "tabs-icon-stroke-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "tabs/icon-stroke-width" },
@@ -298,6 +305,10 @@ export const COMPONENT_TOKENS = {
     "switch-track-border-focus":    { type: "COLOR", semantic: "border-default",  figmaPath: "switch/track-border-focus" },
     "switch-track-border-pressed":  { type: "COLOR", semantic: "border-default",  figmaPath: "switch/track-border-pressed" },
     "switch-track-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "switch/track-border-disabled" },
+    "switch-track-border-checked":  { type: "COLOR", semantic: "interactive-primary", figmaPath: "switch/track-border-checked" },
+    "switch-track-border-checked-hover": { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "switch/track-border-checked-hover" },
+    "switch-track-border-checked-focus": { type: "COLOR", semantic: "interactive-primary", figmaPath: "switch/track-border-checked-focus" },
+    "switch-track-border-checked-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "switch/track-border-checked-pressed" },
 
     // ── THUMB BACKGROUND ──
     "switch-thumb-background":          { type: "COLOR", semantic: "surface-default", figmaPath: "switch/thumb-background" },
@@ -311,15 +322,15 @@ export const COMPONENT_TOKENS = {
     "switch-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "switch/focus-ring" },
 
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
-    "switch-width":              { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 34, md: 42, lg: 52, xl: 64 },           figmaPath: "switch/width" },
-    "switch-height":             { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 18, md: 22, lg: 28, xl: 34 },           figmaPath: "switch/height" },
-    "switch-thumb-size":         { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 18, lg: 24, xl: 30 },           figmaPath: "switch/thumb-size" },
-    "switch-border-radius":      { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 9,  md: 11, lg: 14, xl: 17 },           figmaPath: "switch/border-radius" },
-    "switch-label-font-size":    { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },           figmaPath: "switch/label-font-size" },
-    "switch-label-line-height":  { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },   figmaPath: "switch/label-line-height" },
+    "switch-width":              { type: "FLOAT", unit: "px", sizes: { default: 42, xs: 28, sm: 34, md: 42, lg: 52, xl: 64 },           figmaPath: "switch/width" },
+    "switch-height":             { type: "FLOAT", unit: "px", sizes: { default: 22, xs: 16, sm: 18, md: 22, lg: 28, xl: 34 },           figmaPath: "switch/height" },
+    "switch-thumb-size":         { type: "FLOAT", unit: "px", sizes: { default: 18, xs: 12, sm: 14, md: 18, lg: 24, xl: 30 },           figmaPath: "switch/thumb-size" },
+    "switch-border-radius":      { type: "FLOAT", unit: "px", sizes: { default: 11, xs: 8,  sm: 9,  md: 11, lg: 14, xl: 17 },           figmaPath: "switch/border-radius" },
+    "switch-label-font-size":    { type: "FLOAT", unit: "px", sizes: { default: 16, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },           figmaPath: "switch/label-font-size" },
+    "switch-label-line-height":  { type: "FLOAT", unit: "px", sizes: { default: 24, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },   figmaPath: "switch/label-line-height" },
     "switch-label-font-family":  { type: "STRING", value: "Inter", figmaPath: "switch/label-font-family" },
     "switch-label-font-weight":  { type: "STRING", value: "Regular", figmaPath: "switch/label-font-weight" },
-    "switch-label-gap":          { type: "FLOAT", unit: "px", sizes: { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 },             figmaPath: "switch/label-gap" },
+    "switch-label-gap":          { type: "FLOAT", unit: "px", sizes: { default: 10, xs: 6, sm: 8, md: 10, lg: 12, xl: 14 },             figmaPath: "switch/label-gap" },
 
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "switch-track-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "switch/track-border-width" },
@@ -368,6 +379,9 @@ export const COMPONENT_TOKENS = {
     "checkbox-outlined-border-checked-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "checkbox/outlined-border-checked-pressed" },
     "checkbox-outlined-border-disabled":     { type: "COLOR", semantic: "border-disabled",      figmaPath: "checkbox/outlined-border-disabled" },
     "checkbox-outlined-icon-color":          { type: "COLOR", semantic: "interactive-primary",  figmaPath: "checkbox/outlined-icon-color" },
+    "checkbox-outlined-icon-color-hover":    { type: "COLOR", semantic: "interactive-primary-hover",  figmaPath: "checkbox/outlined-icon-color-hover" },
+    "checkbox-outlined-icon-color-focus":    { type: "COLOR", semantic: "interactive-primary",  figmaPath: "checkbox/outlined-icon-color-focus" },
+    "checkbox-outlined-icon-color-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed",  figmaPath: "checkbox/outlined-icon-color-pressed" },
     "checkbox-outlined-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",        figmaPath: "checkbox/outlined-icon-color-disabled" },
 
     // ── BOX BACKGROUND — UNCHECKED (per state) ──
@@ -392,8 +406,6 @@ export const COMPONENT_TOKENS = {
     "checkbox-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "checkbox/border-disabled" },
 
     // ── ICON COLOR ──
-    "checkbox-icon-color":          { type: "COLOR", semantic: "text-on-interactive", figmaPath: "checkbox/icon-color" },
-    "checkbox-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",       figmaPath: "checkbox/icon-color-disabled" },
 
     // ── LABEL TEXT ──
     "checkbox-label-text":          { type: "COLOR", semantic: "text-default",  figmaPath: "checkbox/label-text" },
@@ -482,10 +494,6 @@ export const COMPONENT_TOKENS = {
     "radio-outline-icon-color-checked-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "radio/outline-icon-color-checked-focus" },
     "radio-outline-icon-color-checked-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "radio/outline-icon-color-checked-pressed" },
     "radio-outline-icon-color-checked-disabled": { type: "COLOR", semantic: "text-disabled",               figmaPath: "radio/outline-icon-color-checked-disabled" },
-
-    // ── RADIO ICON (dot) COLOR (legacy shared fallback) ──
-    "radio-icon-color":          { type: "COLOR", semantic: "text-on-interactive", figmaPath: "radio/icon-color" },
-    "radio-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",       figmaPath: "radio/icon-color-disabled" },
 
     // ── LABEL TEXT ──
     "radio-label-text":          { type: "COLOR", semantic: "text-default",  figmaPath: "radio/label-text" },
@@ -651,7 +659,7 @@ export const COMPONENT_TOKENS = {
     "rangeslider-mark-label-font-family": { type: "STRING", value: "Inter", figmaPath: "rangeslider/mark-label-font-family" },
     "rangeslider-mark-label-font-weight": { type: "STRING", value: "Regular", figmaPath: "rangeslider/mark-label-font-weight" },
     "rangeslider-mark-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "rangeslider/mark-label-line-height" },
-    "rangeslider-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "rangeslider/radius" },
+    "rangeslider-radius": { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "rangeslider/radius" },
 
     // ── FLOAT TOKENS (single value) ──
     "rangeslider-thumb-border-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "rangeslider/thumb-border-width" },

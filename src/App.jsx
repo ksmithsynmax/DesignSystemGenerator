@@ -873,9 +873,10 @@ export default function App() {
 
       const targetChecked = forcedChecked != null ? forcedChecked : activeSwitchChecked;
       const isTrackBackgroundToken = parts[1] === "track" && parts[2] === "background";
+      const isTrackBorderToken = parts[1] === "track" && parts[2] === "border";
       const isCheckedToken = parts.includes("checked");
 
-      if (isTrackBackgroundToken) {
+      if (isTrackBackgroundToken || isTrackBorderToken) {
         return isCheckedToken === Boolean(targetChecked);
       }
       return !isCheckedToken || Boolean(targetChecked);
@@ -1047,6 +1048,10 @@ export default function App() {
     if (radiusMatch) return radiusMatch[1] === activeVariant;
     const listPaddingMatch = token.match(/^tabs-(default|outlined|pills)-list-padding$/);
     if (listPaddingMatch) return listPaddingMatch[1] === activeVariant;
+    const tabPadXMatch = token.match(/^tabs-(default|outlined|pills)-tab-padding-x$/);
+    if (tabPadXMatch) return tabPadXMatch[1] === activeVariant;
+    const tabPadYMatch = token.match(/^tabs-(default|outlined|pills)-tab-padding-y$/);
+    if (tabPadYMatch) return tabPadYMatch[1] === activeVariant;
     const match = token.match(/^tabs-(default|outlined|pills)-list-gap$/);
     if (!match) return true;
     return match[1] === activeVariant;
@@ -1097,7 +1102,9 @@ export default function App() {
       setActiveDimensionToken(null);
       return;
     }
-    const match = activeDimensionToken.match(/^tabs-(default|outlined|pills)-(list-gap|list-padding|radius-default)$/);
+    const match = activeDimensionToken.match(
+      /^tabs-(default|outlined|pills)-(list-gap|list-padding|tab-padding-x|tab-padding-y|radius-default)$/,
+    );
     if (!match) return;
     if (match[1] !== activeVariant) {
       setActiveDimensionToken(null);

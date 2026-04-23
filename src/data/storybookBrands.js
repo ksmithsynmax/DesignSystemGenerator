@@ -322,6 +322,7 @@ export const STORYBOOK_BRANDS = {
       "checkbox-border-radius-default": "md",
       "checkbox-radius-default": "md",
       "checkbox-icon-size-default": "md",
+      "checkbox-icon-stroke-width-default": "md",
       "checkbox-label-font-size-default": "md",
       "checkbox-label-line-height-default": "md",
       "checkbox-label-gap-default": "md",
@@ -444,11 +445,23 @@ export const STORYBOOK_BRANDS = {
       "tabs-font-weight": {
         "_value": "Medium"
       },
-      "tabs-tab-padding-y": {
+      "tabs-default-tab-padding-x": {
+        "_value": 16
+      },
+      "tabs-default-tab-padding-y": {
         "_value": 8
       },
-      "tabs-tab-padding-x": {
-        "_value": 16
+      "tabs-outlined-tab-padding-x": {
+        "_value": 12
+      },
+      "tabs-outlined-tab-padding-y": {
+        "_value": 10
+      },
+      "tabs-pills-tab-padding-x": {
+        "_value": 20
+      },
+      "tabs-pills-tab-padding-y": {
+        "_value": 8
       },
       "tabs-icon-gap": {
         "_value": 6
@@ -1298,11 +1311,6 @@ export const STORYBOOK_BRANDS = {
         "index": 7,
         "opacity": 100
       },
-      "radio-icon-color-disabled": {
-        "color": "slate-gray",
-        "index": 5,
-        "opacity": 100
-      },
       "radio-filled-background": {
         "color": "navy",
         "index": 9,
@@ -2014,11 +2022,6 @@ export const STORYBOOK_BRANDS = {
         "index": 3,
         "opacity": 100
       },
-      "checkbox-icon-color-disabled": {
-        "color": "green",
-        "index": 5,
-        "opacity": 100
-      },
       "checkbox-label-text-disabled": {
         "color": "slate-gray",
         "index": 7,
@@ -2173,11 +2176,6 @@ export const STORYBOOK_BRANDS = {
         "index": 5,
         "opacity": 100
       },
-      "radio-icon-color-disabled": {
-        "color": "slate-gray",
-        "index": 5,
-        "opacity": 100
-      },
       "radio-label-text-disabled": {
         "color": "slate-gray",
         "index": 5,
@@ -2306,11 +2304,6 @@ export const STORYBOOK_BRANDS = {
       "radio-outline-border-disabled": {
         "color": "slate-gray",
         "index": 3,
-        "opacity": 100
-      },
-      "radio-icon-color": {
-        "color": "blue",
-        "index": 5,
         "opacity": 100
       },
       "radio-outline-background-checked": {
@@ -2866,6 +2859,7 @@ export const STORYBOOK_BRANDS = {
       "checkbox-border-radius-default": "md",
       "checkbox-radius-default": "md",
       "checkbox-icon-size-default": "md",
+      "checkbox-icon-stroke-width-default": "md",
       "checkbox-label-font-size-default": "md",
       "checkbox-label-line-height-default": "md",
       "checkbox-label-gap-default": "md",

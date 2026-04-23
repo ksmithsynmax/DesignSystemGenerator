@@ -46,7 +46,6 @@ export default function RadioPreview({
   const iconColor = resolveFirst([
     `radio-${variant}-icon-color-checked${stateSuffix}`,
     `radio-${variant}-icon-color-checked`,
-    isDisabled ? "radio-icon-color-disabled" : "radio-icon-color",
   ]);
   const focusRing = resolveFirst(["radio-focus-ring"]);
   const labelColor = resolveFirst([isDisabled ? "radio-label-text-disabled" : "radio-label-text"]);

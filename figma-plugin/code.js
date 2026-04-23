@@ -727,7 +727,13 @@ async function syncTokens(payload) {
 
   // ── Build visual components ──
   progress("Building visual components...");
-  var componentBuild = await buildComponents(componentVarMap, buildOptions.componentsToBuild || null, buildOptions);
+  var componentBuild = await buildComponents(componentVarMap, buildOptions.componentsToBuild || null, buildOptions, {
+    syncBrands: syncBrands,
+    compModes: compModes,
+    semModes: semModes,
+    componentsCol: componentsCol,
+    semanticCol: semanticCol,
+  });
   var componentFailures = (componentBuild && componentBuild.failures) ? componentBuild.failures : [];
 
   var doneMsg = "Sync complete! " + totalCreated + " vars, " + totalAliases + " aliases, " + syncModes.length + " modes, components built.";
@@ -840,7 +846,7 @@ function resolveManagedComponentKeyFromName(name) {
   return null;
 }
 
-async function buildComponents(varMap, componentsToBuild, buildOptions) {
+async function buildComponents(varMap, componentsToBuild, buildOptions, collectionsCtx) {
   var page = figma.currentPage;
   if (page && page.name === "Component Documentation") {
     page = null;
@@ -855,6 +861,22 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
       page = figma.createPage();
       page.name = "Components";
     }
+  }
+  // With documentAccess: "dynamic-page", nodes are created on `page` while the editor can
+  // stay on another page — switch and load so the user actually sees the new component sets.
+  try {
+    await page.loadAsync();
+  } catch (loadPageErr) {
+    progress("Components target page load: " + String(loadPageErr));
+  }
+  try {
+    if (typeof figma.setCurrentPageAsync === "function") {
+      await figma.setCurrentPageAsync(page);
+    } else if (page && figma.currentPage && figma.currentPage.id !== page.id) {
+      figma.currentPage = page;
+    }
+  } catch (navErr) {
+    progress("Could not switch to components page: " + String(navErr));
   }
   var buildFailures = [];
   var requestedSet = null;
@@ -1084,22 +1106,31 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
 
   // Match generated component visuals to the app preview theme/brand when provided.
   try {
+    var ctx = collectionsCtx || {};
+    var ctxSyncBrands = ctx.syncBrands;
+    var ctxCompModes = ctx.compModes;
+    var ctxSemModes = ctx.semModes;
+    var ctxComponentsCol = ctx.componentsCol;
+    var ctxSemanticCol = ctx.semanticCol;
+    if (!ctxCompModes || !ctxSemModes || !ctxComponentsCol || !ctxSemanticCol || !ctxSyncBrands || !ctxSyncBrands.length) {
+      progress("Skipping explicit variable modes (sync context not passed to component build).");
+    } else {
     var preferredTheme = (buildOptions && buildOptions.previewTheme === "dark") ? "dark" : "light";
     var preferredBrand = buildOptions && typeof buildOptions.activeBrand === "string"
       ? String(buildOptions.activeBrand).toLowerCase()
-      : syncBrands[0];
+      : ctxSyncBrands[0];
     var preferredModeKey = preferredBrand + "-" + preferredTheme;
-    var preferredCompModeId = compModes.modeMap[preferredModeKey];
-    var preferredSemModeId = semModes.modeMap[preferredModeKey];
+    var preferredCompModeId = ctxCompModes.modeMap[preferredModeKey];
+    var preferredSemModeId = ctxSemModes.modeMap[preferredModeKey];
 
     if (preferredCompModeId || preferredSemModeId) {
       function applyModesNode(node) {
         if (!node || typeof node.setExplicitVariableModeForCollection !== "function") return;
         if (preferredCompModeId) {
-          try { node.setExplicitVariableModeForCollection(componentsCol.id, preferredCompModeId); } catch (_e1) {}
+          try { node.setExplicitVariableModeForCollection(ctxComponentsCol.id, preferredCompModeId); } catch (_e1) {}
         }
         if (preferredSemModeId) {
-          try { node.setExplicitVariableModeForCollection(semanticCol.id, preferredSemModeId); } catch (_e2) {}
+          try { node.setExplicitVariableModeForCollection(ctxSemanticCol.id, preferredSemModeId); } catch (_e2) {}
         }
       }
       function applyModesTree(root) {
@@ -1115,6 +1146,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
         applyModesTree(validSets[msi]);
       }
       progress("Applied component mode: " + preferredModeKey);
+    }
     }
   } catch (_applySetModesErr) {}
 
@@ -1134,7 +1166,13 @@ async function buildComponents(varMap, componentsToBuild, buildOptions) {
   }
 
   // Scroll viewport to show all component sets
-  figma.viewport.scrollAndZoomIntoView(validSets);
+  if (validSets.length > 0) {
+    try {
+      figma.viewport.scrollAndZoomIntoView(validSets);
+    } catch (scrollErr) {
+      progress("Viewport scroll: " + String(scrollErr));
+    }
+  }
 
   if (buildFailures.length > 0) {
     progress("Component set failures: " + buildFailures.join(" | "));
@@ -1344,6 +1382,46 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     appendText(block, titleFont, title, 20, DOC_COLORS.sectionHeading, "Section Heading", "sectionHeading");
     appendText(block, bodyFont, subtitle, 14, subtitleColor || DOC_COLORS.subtitle, "Section Subtitle", "textSubtle");
     return block;
+  }
+
+  function docTextIsUnderInstance(node) {
+    var current = node;
+    while (current && current.parent) {
+      current = current.parent;
+      if (current && current.type === "INSTANCE") return true;
+    }
+    return false;
+  }
+
+  /** Template files often use centered headings; match code-built docs (left body copy). */
+  function leftAlignTemplateDocHeadings(root) {
+    if (!root || typeof root.findAll !== "function") return;
+    var texts = [];
+    try {
+      texts = root.findAll(function (n) {
+        return n.type === "TEXT";
+      });
+    } catch (_findTextErr) {
+      return;
+    }
+    var leftAlignByLayerName = {
+      "Component Title": true,
+      "Component Subtitle": true,
+      "Section Heading": true,
+      "Section Subtitle": true,
+      "Variant Heading": true,
+      "Variant Description": true,
+    };
+    for (var lai = 0; lai < texts.length; lai++) {
+      var tn = texts[lai];
+      if (!tn || tn.type !== "TEXT") continue;
+      if (docTextIsUnderInstance(tn)) continue;
+      var layer = String(tn.name || "");
+      if (!leftAlignByLayerName[layer]) continue;
+      try {
+        tn.textAlignHorizontal = "LEFT";
+      } catch (_taErr) {}
+    }
   }
 
   function bindTextRole(textNode, role) {
@@ -1575,6 +1653,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var shouldShowTitle = showTitle !== false;
     var rowTitleFont = (titleConfig && titleConfig.font) ? titleConfig.font : titleFont;
     var rowTitleSize = (titleConfig && titleConfig.size) ? titleConfig.size : 18;
+    var rowItemSpacing = (titleConfig && titleConfig.rowItemSpacing != null) ? titleConfig.rowItemSpacing : 12;
     var rowWrap = figma.createFrame();
     rowWrap.layoutMode = "VERTICAL";
     rowWrap.primaryAxisSizingMode = "AUTO";
@@ -1596,7 +1675,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     row.counterAxisAlignItems = "MIN";
     row.primaryAxisAlignItems = "CENTER";
     row.layoutAlign = "STRETCH";
-    row.itemSpacing = 12;
+    row.itemSpacing = rowItemSpacing;
     row.clipsContent = false;
     row.fills = [];
 
@@ -1730,6 +1809,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       templatedDoc.name = "__AUTO_DOCS__ - " + setName;
       templatedDoc.clipsContent = false;
       clearExplicitModesInSubtree(templatedDoc);
+      // Match programmatic docs (see non-template doc frame): left-align intro and section
+      // headers on the cross axis; preview panels (e.g. createPanel slots) keep inner CENTER.
+      try {
+        if (templatedDoc.layoutMode === "VERTICAL") {
+          templatedDoc.counterAxisAlignItems = "MIN";
+        }
+      } catch (_docRootAlignErr) {}
 
       await setNamedText(templatedDoc, "Component Title", setName);
       await setNamedText(
@@ -1872,7 +1958,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                   return makeTemplateInstance(patch);
                 };
               })(templateVariantName),
-              false
+              false,
+              lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null
             );
 
             templateVariantSection.appendChild(templateVariantStatesPanel);
@@ -1885,6 +1972,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
         if (hasSizes && templateSizeSlot && templateOrderedSizes.length > 0) {
           clearChildren(templateSizeSlot);
+          if (stackSizeRows && templateSizeSlot.layoutMode === "VERTICAL") {
+            templateSizeSlot.counterAxisAlignItems = "CENTER";
+          }
           if (lowerSetName === "switch") {
             templateSizeSlot.fills = [];
             templateSizeSlot.strokes = [];
@@ -2072,7 +2162,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           } else {
             addInstancesRow(templateStatesSlot, "States", templateOrderedStates, function (stateName) {
               return makeTemplateInstance({ State: stateName });
-            }, false);
+            }, false, lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null);
           }
         } else if (!hasStates) {
           removeSectionOrSlot(templatedDoc, slug, "states");
@@ -2151,6 +2241,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       }
 
       clearExplicitModesInSubtree(templatedDoc);
+      leftAlignTemplateDocHeadings(templatedDoc);
       applyDocVariableBindings(templatedDoc);
 
       docsPage.appendChild(templatedDoc);
@@ -2385,7 +2476,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 return makeInstance(patch);
               };
             })(variantName),
-            false
+            false,
+            lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null
           );
           variantSection.appendChild(variantStatesPanel);
           variantBlock.appendChild(variantSection);
@@ -2603,7 +2695,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         } else {
           addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
               return makeInstance({ State: stateName });
-          }, false);
+          }, false, lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null);
         }
       }
 
@@ -3112,14 +3204,14 @@ async function findButtonIconComponents() {
 // ---------------------------------------------------------------------------
 
 function buildSwitchComponentSet(varMap, page, font) {
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var checkedStates = [false, true];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
   var labelModes = ["hide", "show"];
   var components = [];
 
   // Known switch heights per size for dynamic grid spacing
-  var sizeHeights = { xs: 16, sm: 18, md: 22, lg: 28, xl: 34 };
+  var sizeHeights = { default: 22, xs: 16, sm: 18, md: 22, lg: 28, xl: 34 };
   var gap = 16;
   var colGap = 16;
 
@@ -3149,7 +3241,7 @@ function buildSwitchComponentSet(varMap, page, font) {
 
       for (var si = 0; si < sizes.length; si++) {
         var size = sizes[si];
-        var capSize = size.toUpperCase();
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
 
         for (var sti = 0; sti < states.length; sti++) {
           var state = states[sti];
@@ -3202,7 +3294,7 @@ function buildSwitchComponentSet(varMap, page, font) {
           bindPaintVar(track, "fills", 0, varMap[trackBgPath]);
 
           // Track border — state specific
-          var trackBorderPath = switchTrackBorderPath(state);
+          var trackBorderPath = switchTrackBorderPath(varMap, isChecked, state);
           track.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
           track.strokeWeight = 1.5;
           track.strokeAlign = "INSIDE";
@@ -3311,9 +3403,19 @@ function switchTrackBgPath(isChecked, state) {
 }
 
 // Helper: build figmaPath for switch track border given interaction state
-function switchTrackBorderPath(state) {
-  if (state === "default") return "switch/track-border";
-  return "switch/track-border-" + state;
+function switchTrackBorderPath(varMap, isChecked, state) {
+  if (state === "default") {
+    return pickExistingPath(varMap, [
+      isChecked ? "switch/track-border-checked" : null,
+      "switch/track-border"
+    ].filter(Boolean));
+  }
+  return pickExistingPath(varMap, [
+    isChecked ? "switch/track-border-checked-" + state : null,
+    "switch/track-border-" + state,
+    isChecked ? "switch/track-border-checked" : null,
+    "switch/track-border"
+  ].filter(Boolean));
 }
 
 // Helper: build figmaPath for switch thumb background given interaction state
@@ -3589,7 +3691,7 @@ function buildRangeSliderComponentSet(varMap, page, font) {
           track.y = trackY;
           track.cornerRadius = 999;
           track.fills = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.28 } }];
-          bindPaintVar(track, "fills", 0, varMap[rangeSliderTrackBgPath(state)]);
+          bindPaintVar(track, "fills", 0, varMap[rangeSliderTrackBgPath(varMap, state)]);
           bindVar(track, "height", varMap["rangeslider/track-height-" + size]);
           bindVar(track, "topLeftRadius", varMap["rangeslider/radius-" + radius]);
           bindVar(track, "topRightRadius", varMap["rangeslider/radius-" + radius]);
@@ -3707,8 +3809,19 @@ function buildRangeSliderComponentSet(varMap, page, font) {
   return componentSet;
 }
 
-function rangeSliderTrackBgPath(state) {
-  if (state === "disabled") return "rangeslider/track-background-disabled";
+function rangeSliderTrackBgPath(varMap, state) {
+  if (state === "disabled") {
+    return pickExistingPath(varMap, [
+      "rangeslider/track-background-disabled",
+      "rangeslider/track-background"
+    ]);
+  }
+  if (state !== "default") {
+    return pickExistingPath(varMap, [
+      "rangeslider/track-background-" + state,
+      "rangeslider/track-background"
+    ]);
+  }
   return "rangeslider/track-background";
 }
 
@@ -3944,7 +4057,7 @@ function buildTitleComponentSet(varMap, page, font, sampleText) {
           textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
           textNode.fontSize = defaultFontSizeByOrder[order] || 20;
           textNode.textAutoResize = "WIDTH_AND_HEIGHT";
-          textNode.textAlignHorizontal = "CENTER";
+          textNode.textAlignHorizontal = "LEFT";
           textNode.layoutGrow = 1;
           try {
             var titleNaturalHeight = Math.max(1, Math.ceil(textNode.height || 1));
@@ -4094,15 +4207,13 @@ async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
           ", Weight=" + capWeight +
           ", Color=" + capColor;
         comp.layoutMode = "HORIZONTAL";
-        comp.primaryAxisSizingMode = "FIXED";
+        comp.primaryAxisSizingMode = "AUTO";
         comp.counterAxisSizingMode = "AUTO";
         comp.primaryAxisAlignItems = "MIN";
         comp.counterAxisAlignItems = "CENTER";
         comp.itemSpacing = 0;
         comp.fills = [];
         comp.clipsContent = false;
-        try { comp.layoutSizingHorizontal = "FILL"; } catch (_textRootSizeErr) {}
-        try { comp.layoutSizingVertical = "FILL"; } catch (_textRootSizeVerticalErr) {}
 
         var textNode = figma.createText();
         textNode.name = "text";
@@ -4110,13 +4221,8 @@ async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
         textNode.characters = sampleText || "Why guess when you can know.";
         textNode.fontSize = 16;
         textNode.textAutoResize = "WIDTH_AND_HEIGHT";
-        textNode.textAlignHorizontal = "CENTER";
-        textNode.layoutGrow = 1;
-        try {
-          var textNaturalHeight = Math.max(1, Math.ceil(textNode.height || 1));
-          textNode.textAutoResize = "HEIGHT";
-          textNode.resize(defaultTextWidth, textNaturalHeight);
-        } catch (_textNodeResizeErr) {}
+        textNode.textAlignHorizontal = "LEFT";
+        textNode.layoutGrow = 0;
         textNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
 
         bindVar(textNode, "fontSize", varMap["text/font-size-" + size]);
@@ -4128,23 +4234,17 @@ async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
         var textContent = figma.createFrame();
         textContent.name = "Content";
         textContent.layoutMode = "HORIZONTAL";
-        textContent.primaryAxisSizingMode = "FIXED";
+        textContent.primaryAxisSizingMode = "AUTO";
         textContent.counterAxisSizingMode = "AUTO";
         textContent.primaryAxisAlignItems = "MIN";
         textContent.counterAxisAlignItems = "MIN";
         textContent.itemSpacing = 0;
         textContent.fills = [];
         textContent.strokes = [];
-        textContent.layoutGrow = 1;
-        textContent.layoutAlign = "STRETCH";
-        try { textContent.layoutSizingHorizontal = "FILL"; } catch (_textContentSizeErr) {}
-        try {
-          var textContentHeight = Math.max(1, Math.ceil(textNode.height || 1));
-          textContent.resize(defaultTextWidth, textContentHeight);
-        } catch (_textContentResizeErr) {}
+        textContent.layoutGrow = 0;
+        textContent.layoutAlign = "MIN";
         textContent.appendChild(textNode);
         comp.appendChild(textContent);
-        try { comp.resize(defaultTextWidth, comp.height); } catch (_textCompResizeErr) {}
 
         page.appendChild(comp);
         if (typeof rowXOffsets[si] === "undefined") rowXOffsets[si] = 0;
@@ -4481,11 +4581,16 @@ function checkboxBorderPath(varMap, variant, checkedState, state) {
 function checkboxIconColorPath(varMap, variant, state) {
   if (state === "disabled") {
     return pickExistingPath(varMap, [
-      "checkbox/" + variant + "-icon-color-disabled",
-      "checkbox/icon-color-disabled"
+      "checkbox/" + variant + "-icon-color-disabled"
     ]);
   }
-  return pickExistingPath(varMap, ["checkbox/" + variant + "-icon-color", "checkbox/icon-color"]);
+  if (state !== "default") {
+    return pickExistingPath(varMap, [
+      "checkbox/" + variant + "-icon-color-" + state,
+      "checkbox/" + variant + "-icon-color"
+    ]);
+  }
+  return pickExistingPath(varMap, ["checkbox/" + variant + "-icon-color"]);
 }
 
 // Helper: build figmaPath for checkbox label text
@@ -4725,14 +4830,12 @@ function radioBorderPath(varMap, variant, checkedState, state) {
 function radioIconColorPath(varMap, variant, state) {
   if (state === "default") {
     return pickExistingPath(varMap, [
-      "radio/" + variant + "-icon-color-checked",
-      "radio/icon-color"
+      "radio/" + variant + "-icon-color-checked"
     ]);
   }
   return pickExistingPath(varMap, [
     "radio/" + variant + "-icon-color-checked-" + state,
-    "radio/" + variant + "-icon-color-checked",
-    state === "disabled" ? "radio/icon-color-disabled" : "radio/icon-color"
+    "radio/" + variant + "-icon-color-checked"
   ]);
 }
 
@@ -7467,7 +7570,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               list.paddingTop = 0;
               list.paddingBottom = 0;
               list.fills = variant === "default" ? [] : [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-              list.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+              list.strokes = variant === "pills" ? [] : [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
               list.strokeAlign = "INSIDE";
               list.clipsContent = false;
               var radiusVar = rad === "default"
@@ -7477,7 +7580,9 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               if (variant !== "default") {
                 bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
               }
-              bindPaintVar(list, "strokes", 0, varMap["tabs/" + variant + "-list-border"]);
+              if (variant !== "pills") {
+                bindPaintVar(list, "strokes", 0, varMap["tabs/" + variant + "-list-border"]);
+              }
               if (variant === "default") {
                 list.strokeTopWeight = 0;
                 list.strokeLeftWeight = 0;
@@ -7488,6 +7593,8 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 } else {
                   bindVar(list, "strokeRightWeight", varMap["tabs/list-border-width"]);
                 }
+              } else if (variant === "pills") {
+                list.strokeWeight = 0;
               } else {
                 bindVar(list, "strokeWeight", varMap["tabs/list-border-width"]);
               }
@@ -7496,10 +7603,17 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               bindVar(list, "paddingTop", varMap["tabs/" + variant + "-list-padding"]);
               bindVar(list, "paddingBottom", varMap["tabs/" + variant + "-list-padding"]);
               bindVar(list, "itemSpacing", varMap["tabs/" + variant + "-list-gap"]);
-              bindVar(list, "topLeftRadius", radiusVar);
-              bindVar(list, "topRightRadius", radiusVar);
-              bindVar(list, "bottomLeftRadius", radiusVar);
-              bindVar(list, "bottomRightRadius", radiusVar);
+              if (variant === "default") {
+                list.topLeftRadius = 0;
+                list.topRightRadius = 0;
+                list.bottomLeftRadius = 0;
+                list.bottomRightRadius = 0;
+              } else {
+                bindVar(list, "topLeftRadius", radiusVar);
+                bindVar(list, "topRightRadius", radiusVar);
+                bindVar(list, "bottomLeftRadius", radiusVar);
+                bindVar(list, "bottomRightRadius", radiusVar);
+              }
 
               var tabDefs = [
                 { label: "Tab", active: false, icon: "image" },
@@ -7552,17 +7666,17 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   tabContent.strokes = [];
                   tabContent.clipsContent = false;
 
-                  bindVar(tabContent, "paddingLeft", varMap["tabs/tab-padding-x"]);
-                  bindVar(tabContent, "paddingRight", varMap["tabs/tab-padding-x"]);
-                  bindVar(tabContent, "paddingTop", varMap["tabs/tab-padding-y"]);
-                  bindVar(tabContent, "paddingBottom", varMap["tabs/tab-padding-y"]);
+                  bindVar(tabContent, "paddingLeft", varMap["tabs/" + variant + "-tab-padding-x"]);
+                  bindVar(tabContent, "paddingRight", varMap["tabs/" + variant + "-tab-padding-x"]);
+                  bindVar(tabContent, "paddingTop", varMap["tabs/" + variant + "-tab-padding-y"]);
+                  bindVar(tabContent, "paddingBottom", varMap["tabs/" + variant + "-tab-padding-y"]);
 
                   tab.appendChild(tabContent);
                 } else {
-                  bindVar(tab, "paddingLeft", varMap["tabs/tab-padding-x"]);
-                  bindVar(tab, "paddingRight", varMap["tabs/tab-padding-x"]);
-                  bindVar(tab, "paddingTop", varMap["tabs/tab-padding-y"]);
-                  bindVar(tab, "paddingBottom", varMap["tabs/tab-padding-y"]);
+                  bindVar(tab, "paddingLeft", varMap["tabs/" + variant + "-tab-padding-x"]);
+                  bindVar(tab, "paddingRight", varMap["tabs/" + variant + "-tab-padding-x"]);
+                  bindVar(tab, "paddingTop", varMap["tabs/" + variant + "-tab-padding-y"]);
+                  bindVar(tab, "paddingBottom", varMap["tabs/" + variant + "-tab-padding-y"]);
                 }
 
                 if (variant !== "default") {
@@ -7582,6 +7696,9 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 var tabBgPath = tabsTabColorPath(variant, "background", visualState);
                 var tabTextPath = tabsTabColorPath(variant, "text", visualState);
                 var tabBorderPath = tabsTabColorPath(variant, "border", visualState);
+                var tabBorderWidthActiveVar =
+                  varMap["tabs/" + variant + "-tab-border-width-active"] ||
+                  varMap["tabs/tab-border-width-active"];
 
                 if (variant !== "default") {
                   bindPaintVar(tab, "fills", 0, varMap[tabBgPath]);
@@ -7592,10 +7709,18 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 }
                 if (variant !== "default") {
                   var tabBorderWidthVar = visualState === "active"
-                    ? varMap["tabs/tab-border-width-active"]
+                    ? tabBorderWidthActiveVar
                     : varMap["tabs/tab-border-width"];
                   bindVar(tab, "strokeWeight", tabBorderWidthVar);
                   bindPaintVar(tab, "strokes", 0, varMap[tabBorderPath]);
+                  if (variant === "pills" && orientation === "horizontal" && visualState === "active") {
+                    tab.strokeBottomWeight = 0;
+                  }
+                  if (variant === "pills" && orientation === "horizontal" && ti > 0) {
+                    tab.strokeLeftWeight = 0;
+                  } else if (variant === "pills" && orientation === "vertical" && ti > 0) {
+                    tab.strokeTopWeight = 0;
+                  }
                 }
 
                 if (showLeftIcon) {
@@ -7673,9 +7798,9 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   indicator.resize(1, 1);
                   indicator.layoutAlign = "STRETCH";
                   if (orientation === "horizontal") {
-                    bindVar(indicator, "height", varMap["tabs/tab-border-width-active"]);
+                    bindVar(indicator, "height", tabBorderWidthActiveVar);
                   } else {
-                    bindVar(indicator, "width", varMap["tabs/tab-border-width-active"]);
+                    bindVar(indicator, "width", tabBorderWidthActiveVar);
                   }
                   tab.appendChild(indicator);
                 }
@@ -7688,7 +7813,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   focusRing.strokeAlign = "INSIDE";
                   focusRing.strokeWeight = 2;
                   bindPaintVar(focusRing, "strokes", 0, varMap["tabs/focus-ring"]);
-                  bindVar(focusRing, "strokeWeight", varMap["tabs/tab-border-width-active"]);
+                  bindVar(focusRing, "strokeWeight", tabBorderWidthActiveVar);
 
                   if (variant !== "default") {
                     bindVar(focusRing, "topLeftRadius", radiusVar);
@@ -7833,8 +7958,6 @@ function validateTabsVariables(varMap) {
   var states = ["default", "hover", "active", "disabled"];
   var required = [
     "tabs/font-size",
-    "tabs/tab-padding-x",
-    "tabs/tab-padding-y",
     "tabs/list-border-width",
     "tabs/tab-border-width",
     "tabs/tab-border-width-active",
@@ -7856,6 +7979,8 @@ function validateTabsVariables(varMap) {
     }
     required.push("tabs/" + variant + "-list-padding");
     required.push("tabs/" + variant + "-list-gap");
+    required.push("tabs/" + variant + "-tab-padding-x");
+    required.push("tabs/" + variant + "-tab-padding-y");
     required.push("tabs/" + variant + "-list-border");
     for (var si = 0; si < states.length; si++) {
       var state = states[si];

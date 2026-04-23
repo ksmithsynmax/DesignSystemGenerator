@@ -40,11 +40,30 @@ export default function SwitchPreview({
     return resolveColor(brands, brandId, tokens[baseKey]?.semantic, previewTheme, baseKey);
   };
 
+  const getTrackBorderColor = () => {
+    const suffix = state && state !== "default" ? `-${state}` : "";
+    const checkedStateKey = `switch-track-border-checked${suffix}`;
+    const stateKey = `switch-track-border${suffix}`;
+    const checkedBaseKey = "switch-track-border-checked";
+    const baseKey = "switch-track-border";
+
+    if (checked && state !== "default" && tokens[checkedStateKey]) {
+      return resolveColor(brands, brandId, tokens[checkedStateKey]?.semantic, previewTheme, checkedStateKey);
+    }
+    if (tokens[stateKey]) {
+      return resolveColor(brands, brandId, tokens[stateKey]?.semantic, previewTheme, stateKey);
+    }
+    if (checked && tokens[checkedBaseKey]) {
+      return resolveColor(brands, brandId, tokens[checkedBaseKey]?.semantic, previewTheme, checkedBaseKey);
+    }
+    return resolveColor(brands, brandId, tokens[baseKey]?.semantic, previewTheme, baseKey);
+  };
+
   const checkedBg = getTokenColor("switch-track-background", true, state);
   const uncheckedBg = getTokenColor("switch-track-background", false, state);
   const checkedDisabledBg = getTokenColor("switch-track-background", true, "disabled");
   const uncheckedDisabledBg = getTokenColor("switch-track-background", false, "disabled");
-  const trackBorder = getTokenColor("switch-track-border");
+  const trackBorder = getTrackBorderColor();
   const thumbBg = getTokenColor("switch-thumb-background");
   const focusRing = resolveColor(brands, brandId, tokens["switch-focus-ring"]?.semantic, previewTheme, "switch-focus-ring");
   const isDisabled = state === "disabled";
@@ -89,7 +108,7 @@ export default function SwitchPreview({
       styles={{
         track: {
           backgroundColor: checked ? undefined : uncheckedBg,
-          borderColor: checked ? "transparent" : trackBorder,
+          borderColor: trackBorder,
         },
         thumb: {
           backgroundColor: thumbBg,
