@@ -1,6 +1,15 @@
 import { useState, useCallback, useEffect } from "react";
-import { Switch as MantineSwitch } from "@mantine/core";
+import {
+  Switch as MantineSwitch,
+  Modal,
+  Button,
+  TextInput,
+  Stack,
+  Text,
+  Group,
+} from "@mantine/core";
 import { INITIAL_BRANDS } from "./data/brands";
+import { createNewBrand } from "./utils/createNewBrand";
 import {
   COMPONENT_NAMES,
   COMPONENT_SIZE_KEYS,
@@ -238,6 +247,9 @@ export default function App() {
     const persisted = loadPersistedAppState();
     return persisted?.previewTheme === "light" ? "light" : "dark";
   });
+  const [brandDeleteModalOpened, setBrandDeleteModalOpened] = useState(false);
+  const [brandDeleteTargetId, setBrandDeleteTargetId] = useState(null);
+  const [brandDeleteConfirmInput, setBrandDeleteConfirmInput] = useState("");
   if (typeof window !== "undefined") {
     window.__DSG_PREVIEW_THEME = previewTheme;
     window.__DSG_PREVIEW_BRAND = activeBrand;
@@ -290,7 +302,9 @@ export default function App() {
   const brand = brands[activeBrand];
   const colorNames = Object.keys(brand.primitives);
   const globalColorNames = Object.keys(GLOBAL_PRIMITIVES);
-  const defaultBrandColor = colorNames.includes("blue") ? "blue" : (colorNames[0] || "blue");
+  const defaultBrandColor = colorNames.includes("blue")
+    ? "blue"
+    : (colorNames[0] || globalColorNames[0] || "neutral");
   const sizeKeys = COMPONENT_SIZE_KEYS[activeComponent] || [];
 
   // Derive default size per component from brand data
@@ -726,41 +740,72 @@ export default function App() {
 
   const addBrand = useCallback(
     (name) => {
-      const id = name.toLowerCase().replace(/\s+/g, "-");
-      if (brands[id]) return;
-      setBrands((prev) => {
-        const next = JSON.parse(JSON.stringify(prev));
-        next[id] = JSON.parse(JSON.stringify(prev[activeBrand]));
-        next[id].name = name;
-        return next;
-      });
+      const trimmed = String(name || "").trim();
+      if (!trimmed) return;
+      const existingIds = Object.keys(brands);
+      const { id, brand } = createNewBrand(trimmed, existingIds);
+      setBrands((prev) => ({
+        ...prev,
+        [id]: brand,
+      }));
       setActiveBrand(id);
     },
-    [activeBrand, brands]
+    [brands]
   );
 
-  const removeBrand = useCallback(
-    (brandId) => {
-      if (!brands[brandId]) return;
-      const brandIds = Object.keys(brands);
-      if (brandIds.length <= 1) return;
-      if (typeof window !== "undefined") {
-        const confirmed = window.confirm(`Delete brand "${brands[brandId].name || brandId}"? This cannot be undone.`);
-        if (!confirmed) return;
-      }
+  const openBrandDeleteModal = useCallback(() => {
+    const ids = Object.keys(brands);
+    if (ids.length <= 1) return;
+    const id = activeBrand;
+    if (!brands[id]) return;
+    setBrandDeleteTargetId(id);
+    setBrandDeleteConfirmInput("");
+    setBrandDeleteModalOpened(true);
+  }, [activeBrand, brands]);
 
-      const next = JSON.parse(JSON.stringify(brands));
-      delete next[brandId];
-      setBrands(next);
+  const closeBrandDeleteModal = useCallback(() => {
+    setBrandDeleteModalOpened(false);
+    setBrandDeleteTargetId(null);
+    setBrandDeleteConfirmInput("");
+  }, []);
 
-      if (activeBrand === brandId) {
-        const remaining = Object.keys(next);
-        const fallbackBrand = remaining.includes("theia") ? "theia" : remaining[0];
-        if (fallbackBrand) handleBrandChange(fallbackBrand);
-      }
-    },
-    [activeBrand, brands, handleBrandChange]
-  );
+  const brandDeleteExpectedName =
+    brandDeleteTargetId && brands[brandDeleteTargetId]
+      ? String(brands[brandDeleteTargetId].name || brandDeleteTargetId).trim()
+      : "";
+
+  const canSubmitBrandDelete =
+    Boolean(brandDeleteTargetId) &&
+    Object.keys(brands).length > 1 &&
+    brandDeleteConfirmInput.trim() === brandDeleteExpectedName;
+
+  const executeBrandDelete = useCallback(() => {
+    if (!brandDeleteTargetId) return;
+    const expected = String(brands[brandDeleteTargetId]?.name || brandDeleteTargetId).trim();
+    if (brandDeleteConfirmInput.trim() !== expected) return;
+    if (Object.keys(brands).length <= 1) return;
+    const id = brandDeleteTargetId;
+    const remainingAfter = Object.keys(brands).filter((k) => k !== id);
+    setBrands((prev) => {
+      const keys = Object.keys(prev);
+      if (keys.length <= 1 || !prev[id]) return prev;
+      const next = { ...prev };
+      delete next[id];
+      return next;
+    });
+    closeBrandDeleteModal();
+    if (activeBrand === id) {
+      const fallbackBrand = remainingAfter.includes("theia") ? "theia" : remainingAfter[0];
+      if (fallbackBrand) handleBrandChange(fallbackBrand);
+    }
+  }, [
+    activeBrand,
+    brandDeleteTargetId,
+    brandDeleteConfirmInput,
+    brands,
+    closeBrandDeleteModal,
+    handleBrandChange,
+  ]);
 
   const brandNames = Object.keys(brands);
   const colorTokens = getColorTokens(activeComponent);
@@ -1271,6 +1316,42 @@ export default function App() {
         overflow: "hidden",
       }}
     >
+      <Modal
+        opened={brandDeleteModalOpened}
+        onClose={closeBrandDeleteModal}
+        title="Delete brand"
+        centered
+        overlayProps={{ backgroundOpacity: 0.55 }}
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            This removes the brand from this browser (including saved local data). You cannot undo it.
+          </Text>
+          <Text size="sm">
+            Type the brand name{" "}
+            <Text component="span" fw={700} c="red.4" ff="monospace">
+              {brandDeleteExpectedName}
+            </Text>{" "}
+            exactly to confirm.
+          </Text>
+          <TextInput
+            label="Brand name"
+            placeholder={brandDeleteExpectedName || "…"}
+            value={brandDeleteConfirmInput}
+            onChange={(e) => setBrandDeleteConfirmInput(e.currentTarget.value)}
+            autoComplete="off"
+          />
+          <Group justify="flex-end" mt="xs">
+            <Button variant="default" onClick={closeBrandDeleteModal}>
+              Cancel
+            </Button>
+            <Button color="red" disabled={!canSubmitBrandDelete} onClick={executeBrandDelete}>
+              Delete brand
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
       {/* Header */}
       <div
         style={{
@@ -1335,7 +1416,41 @@ export default function App() {
               placeholder="Search brands..."
               onAdd={addBrand}
               addLabel="+ New brand"
+              addPlaceholder="Brand name..."
             />
+            <div
+              style={{
+                marginTop: 8,
+                fontSize: 11,
+                lineHeight: 1.45,
+                color: "#5C5F66",
+              }}
+            >
+              New brands start with no brand color palettes — semantics point at shared global primitives until you add
+              your own (e.g. blue) with + Add color, then map tokens to those names.
+            </div>
+            <button
+              type="button"
+              onClick={openBrandDeleteModal}
+              disabled={brandNames.length <= 1}
+              title={brandNames.length <= 1 ? "Keep at least one brand" : "Delete the selected brand"}
+              style={{
+                marginTop: 10,
+                display: "block",
+                width: "100%",
+                padding: "8px 10px",
+                fontSize: 12,
+                fontFamily: "monospace",
+                fontWeight: 600,
+                color: brandNames.length <= 1 ? "#5C5F66" : "#FA5252",
+                background: brandNames.length <= 1 ? "#1A1B1E" : "transparent",
+                border: `1px solid ${brandNames.length <= 1 ? "#2C2E33" : "#862E2E"}`,
+                borderRadius: 6,
+                cursor: brandNames.length <= 1 ? "not-allowed" : "pointer",
+              }}
+            >
+              Delete this brand…
+            </button>
             <div style={{ marginTop: 20 }} />
             <Section title={`Primitives — ${brand.name}`}>
               {colorNames.map((c) => (

@@ -26,6 +26,57 @@ export const GLOBAL_BORDER_WIDTHS = [0, 1, 1.25, 1.5, 1.75, 2, 2.25, 4];
 export const GLOBAL_FONT_SIZES = [8, 10, 12, 13, 14, 16, 18, 20, 24, 28, 30, 32, 36, 40, 48, 64];
 export const GLOBAL_LINE_HEIGHTS = [8, 10, 12, 14, 16, 17, 18, 20, 22, 24, 28, 30, 32, 34, 36, 42, 44, 48];
 
+/** Semantic → primitive mappings using only keys from GLOBAL_PRIMITIVES (for new brands with empty `primitives`). */
+export const BRAND_STARTER_SEMANTIC_MAP = {
+  transparent: { color: "transparent", index: 0 },
+  "interactive-primary": { color: "navy", index: 5 },
+  "interactive-primary-hover": { color: "navy", index: 6 },
+  "interactive-primary-pressed": { color: "navy", index: 7 },
+  "interactive-secondary": { color: "neutral", index: 1 },
+  "interactive-secondary-hover": { color: "neutral", index: 2 },
+  "text-on-interactive": { color: "neutral", index: 0 },
+  "text-default": { color: "neutral", index: 0 },
+  "text-subtle": { color: "slate-gray", index: 3 },
+  "surface-primary": { color: "slate-gray", index: 9 },
+  "surface-secondary": { color: "slate-gray", index: 8 },
+  "subtle-primary": { color: "slate-purple", index: 1 },
+  "subtle-secondary": { color: "slate-gray", index: 1 },
+  "border-primary": { color: "slate-gray", index: 6 },
+  "surface-default": { color: "neutral", index: 0 },
+  "border-default": { color: "neutral", index: 3 },
+  "border-subtle": { color: "neutral", index: 2 },
+  "feedback-error": { color: "navy", index: 7 },
+  "feedback-success": { color: "slate-gray", index: 4 },
+  "interactive-disabled": { color: "neutral", index: 3 },
+  "text-disabled": { color: "neutral", index: 5 },
+  "border-disabled": { color: "neutral", index: 4 },
+  "border-focus": { color: "navy", index: 4 },
+  "surface-inverse": { color: "neutral", index: 8 },
+  "text-inverse": { color: "neutral", index: 0 },
+  "text-placeholder": { color: "neutral", index: 5 },
+};
+
+export const BRAND_STARTER_DARK_SEMANTIC_OVERRIDES = {
+  "interactive-secondary": { color: "neutral", index: 8 },
+  "interactive-secondary-hover": { color: "neutral", index: 7 },
+  "text-default": { color: "neutral", index: 0 },
+  "text-subtle": { color: "slate-gray", index: 3 },
+  "surface-primary": { color: "slate-gray", index: 9 },
+  "surface-secondary": { color: "slate-gray", index: 8 },
+  "subtle-primary": { color: "slate-purple", index: 1 },
+  "subtle-secondary": { color: "slate-gray", index: 8 },
+  "border-primary": { color: "slate-gray", index: 7 },
+  "surface-default": { color: "neutral", index: 9 },
+  "border-default": { color: "neutral", index: 6 },
+  "border-subtle": { color: "neutral", index: 7 },
+  "interactive-disabled": { color: "neutral", index: 7 },
+  "text-disabled": { color: "neutral", index: 6 },
+  "border-disabled": { color: "neutral", index: 6 },
+  "surface-inverse": { color: "neutral", index: 1 },
+  "text-inverse": { color: "neutral", index: 9 },
+  "text-placeholder": { color: "neutral", index: 5 },
+};
+
 export const INITIAL_BRANDS = {
   theia: {
     name: "Theia",

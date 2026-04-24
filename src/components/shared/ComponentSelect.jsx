@@ -8,6 +8,7 @@ export default function ComponentSelect({
   placeholder = "Search...",
   onAdd,
   addLabel = "+ Add new",
+  addPlaceholder = "Name...",
 }) {
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
@@ -31,16 +32,17 @@ export default function ComponentSelect({
 
   useEffect(() => {
     function handleClick(e) {
-      if (containerRef.current && !containerRef.current.contains(e.target)) {
-        setOpen(false);
-        setSearch("");
-        setAdding(false);
-        setNewName("");
-      }
+      if (!containerRef.current || containerRef.current.contains(e.target)) return;
+      // Avoid work on every document mousedown when menu is closed (e.g. native color popover is outside this tree).
+      if (!open && !adding) return;
+      setOpen(false);
+      setSearch("");
+      setAdding(false);
+      setNewName("");
     }
     document.addEventListener("mousedown", handleClick);
     return () => document.removeEventListener("mousedown", handleClick);
-  }, []);
+  }, [open, adding]);
 
   function handleSelect(opt) {
     onChange(opt);
@@ -216,7 +218,7 @@ export default function ComponentSelect({
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
                     onKeyDown={handleAddKeyDown}
-                    placeholder="Name..."
+                    placeholder={addPlaceholder}
                     style={{
                       flex: 1,
                       background: "#1A1B1E",
