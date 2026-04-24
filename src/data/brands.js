@@ -242,6 +242,17 @@ export const INITIAL_BRANDS = {
       "text-font-size-default": "sm",
       "text-line-height-default": "sm",
     },
+    /** Named linear gradients; stops reference primitive palette keys + 0–9 indices. */
+    gradients: {
+      "primary-sheen": {
+        type: "linear",
+        angle: 135,
+        stops: [
+          { color: "blue", index: 3, position: 0, opacity: 100 },
+          { color: "blue", index: 8, position: 100, opacity: 100 },
+        ],
+      },
+    },
     dimensionOverrides: {},
   },
   hyperion: {
@@ -412,6 +423,7 @@ export const INITIAL_BRANDS = {
       "text-font-size-default": "md",
       "text-line-height-default": "md",
     },
+    gradients: {},
     dimensionOverrides: {},
   },
 };

@@ -3,6 +3,8 @@ import Swatch from "../shared/Swatch";
 import Arrow from "../shared/Arrow";
 import Tag from "../shared/Tag";
 
+const GRADIENT_PREFIX = "__gradient__:";
+
 export default function TokenChainCard({
   componentToken,
   semanticToken,
@@ -13,16 +15,25 @@ export default function TokenChainCard({
   onUpdate,
   brandColors,
   globalColors,
+  gradientIds = [],
 }) {
   const opacity = Number.isFinite(Number(mapping.opacity))
     ? Math.min(100, Math.max(0, Math.round(Number(mapping.opacity))))
     : 100;
-  const isTransparent = mapping.color === "transparent";
-  const primitive = isTransparent
-    ? "transparent"
-    : `${mapping.color}/${mapping.index}${opacity !== 100 ? ` @ ${opacity}%` : ""}`;
+  const isGradient = Boolean(mapping?.gradient && String(mapping.gradient).trim());
+  const isTransparent = !isGradient && mapping.color === "transparent";
+  const primitive = isGradient
+    ? `gradient/${String(mapping.gradient).trim()}`
+    : isTransparent
+      ? "transparent"
+      : `${mapping.color}/${mapping.index}${opacity !== 100 ? ` @ ${opacity}%` : ""}`;
+
+  const paletteSelectValue = isGradient
+    ? `${GRADIENT_PREFIX}${String(mapping.gradient).trim()}`
+    : mapping.color || "neutral";
 
   const updateOpacity = (nextValue) => {
+    if (isGradient) return;
     const parsed = Number.parseInt(nextValue, 10);
     const safeOpacity = Number.isFinite(parsed) ? Math.min(100, Math.max(0, parsed)) : 0;
     onUpdate(componentToken, { ...mapping, opacity: safeOpacity });
@@ -109,12 +120,16 @@ export default function TokenChainCard({
           {/* Editing controls */}
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             <select
-              value={mapping.color}
+              value={paletteSelectValue}
               onChange={(e) => {
-                const nextColor = e.target.value;
-                if (nextColor === "transparent") {
+                const raw = e.target.value;
+                if (raw.startsWith(GRADIENT_PREFIX)) {
+                  const gid = raw.slice(GRADIENT_PREFIX.length);
+                  onUpdate(componentToken, { gradient: gid, opacity });
+                  return;
+                }
+                if (raw === "transparent") {
                   onUpdate(componentToken, {
-                    ...mapping,
                     color: "transparent",
                     index: 0,
                     opacity: 0,
@@ -123,8 +138,8 @@ export default function TokenChainCard({
                 }
                 const nextOpacity = isTransparent && opacity === 0 ? 100 : opacity;
                 onUpdate(componentToken, {
-                  ...mapping,
-                  color: nextColor,
+                  color: raw,
+                  index: isGradient ? 5 : (Number.isFinite(Number(mapping.index)) ? Number(mapping.index) : 5),
                   opacity: nextOpacity,
                 });
               }}
@@ -150,6 +165,15 @@ export default function TokenChainCard({
                   <option key={c} value={c}>{c}</option>
                 ))}
               </optgroup>
+              {gradientIds.length > 0 && (
+                <optgroup label="Gradients">
+                  {gradientIds.map((id) => (
+                    <option key={`grad-${id}`} value={`${GRADIENT_PREFIX}${id}`}>
+                      {id}
+                    </option>
+                  ))}
+                </optgroup>
+              )}
               <optgroup label="Global">
                 {globalColors.map((c) => (
                   <option key={c} value={c}>{c}</option>
@@ -162,7 +186,7 @@ export default function TokenChainCard({
             <span style={{ color: "#5C5F66", fontSize: 12, flexShrink: 0 }}>/</span>
             <select
               value={mapping.index}
-              disabled={isTransparent}
+              disabled={isTransparent || isGradient}
               onChange={(e) =>
                 onUpdate(componentToken, {
                   ...mapping,
@@ -185,7 +209,7 @@ export default function TokenChainCard({
                 backgroundRepeat: "no-repeat",
                 backgroundPosition: "right 10px center",
                 paddingRight: 28,
-                opacity: isTransparent ? 0.55 : 1,
+                opacity: isTransparent || isGradient ? 0.55 : 1,
               }}
             >
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
@@ -214,16 +238,16 @@ export default function TokenChainCard({
                 min={0}
                 max={100}
                 value={opacity}
-                disabled={isTransparent}
+                disabled={isTransparent || isGradient}
                 onChange={(e) => updateOpacity(e.target.value)}
-                style={{ flex: 1, accentColor: "#228BE6", opacity: isTransparent ? 0.45 : 1 }}
+                style={{ flex: 1, accentColor: "#228BE6", opacity: isTransparent || isGradient ? 0.45 : 1 }}
               />
               <input
                 type="number"
                 min={0}
                 max={100}
                 value={opacity}
-                disabled={isTransparent}
+                disabled={isTransparent || isGradient}
                 onChange={(e) => updateOpacity(e.target.value)}
                 style={{
                   width: 58,
@@ -234,7 +258,7 @@ export default function TokenChainCard({
                   fontSize: 12,
                   fontFamily: "monospace",
                   padding: "6px 8px",
-                  opacity: isTransparent ? 0.55 : 1,
+                  opacity: isTransparent || isGradient ? 0.55 : 1,
                 }}
               />
               <span style={{ color: "#5C5F66", fontSize: 12, flexShrink: 0 }}>%</span>

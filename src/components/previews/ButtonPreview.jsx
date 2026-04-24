@@ -2,6 +2,7 @@ import { Button } from "@mantine/core";
 import PlusIcon from "@untitledui-icons/react/line/PlusIcon";
 import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
 import { getDefaultSizeKey, resolveColor, resolveDimension } from "../../utils/resolveToken";
+import { resolveGradientCss } from "../../utils/resolveGradient";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
 const VARIANT_MAP = {
@@ -32,6 +33,8 @@ export default function ButtonPreview({
   focusRingStyle = "offset",
   showLeftIcon = false,
   showRightIcon = false,
+  /** When set with variant `filled`, overrides solid `--button-bg` / hover with this CSS gradient. */
+  fillGradientCss = null,
 }) {
   const tokens = COMPONENT_TOKENS.button;
   const prefix = `button-${variant}`;
@@ -42,6 +45,14 @@ export default function ButtonPreview({
   const bgKey = suffix && tokens[`${prefix}-background${suffix}`] ? `${prefix}-background${suffix}` : `${prefix}-background`;
   const textKey = suffix && tokens[`${prefix}-text${suffix}`] ? `${prefix}-text${suffix}` : `${prefix}-text`;
   const borderKey = suffix && tokens[`${prefix}-border${suffix}`] ? `${prefix}-border${suffix}` : `${prefix}-border`;
+
+  const brand = brands[brandId];
+  const bgOverride =
+    previewTheme === "dark" ? brand?.componentOverridesDark?.[bgKey] : brand?.componentOverrides?.[bgKey];
+  const overrideGradientCss =
+    variant === "filled" && bgOverride?.gradient && String(bgOverride.gradient).trim()
+      ? resolveGradientCss(brand, String(bgOverride.gradient).trim())
+      : null;
 
   const bg = resolveColor(brands, brandId, tokens[bgKey]?.semantic, previewTheme, bgKey);
   const bgHover = state
@@ -79,6 +90,11 @@ export default function ButtonPreview({
   const iconSize = tokenIconSize || Math.max(14, Math.round((fontSize || 14) * 1.1));
   const computedHeight = Math.round((lineHeight || fontSize || 14) + 2 * (paddingY || 0));
 
+  const effectiveGradientCss = overrideGradientCss || fillGradientCss;
+  const useGradientFill = Boolean(effectiveGradientCss && variant === "filled");
+  const bgVar = useGradientFill ? effectiveGradientCss : bg;
+  const bgHoverVar = useGradientFill ? effectiveGradientCss : bgHover || bg;
+
   const bdValue =
     border !== "transparent"
       ? `${borderWidth}px solid ${border}`
@@ -99,7 +115,7 @@ export default function ButtonPreview({
   const disabledStyles = isDisabled
     ? {
         opacity: 1,
-        background: bg,
+        background: useGradientFill ? effectiveGradientCss : bg,
         color: text,
         border: bdValue,
       }
@@ -132,8 +148,8 @@ export default function ButtonPreview({
       }
       vars={() => ({
         root: {
-          "--button-bg": bg,
-          "--button-hover": bgHover || bg,
+          "--button-bg": bgVar,
+          "--button-hover": bgHoverVar,
           "--button-color": text,
           "--button-bd": bdValue,
           "--button-height": `${computedHeight}px`,

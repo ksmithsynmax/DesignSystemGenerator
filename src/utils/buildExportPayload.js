@@ -1,5 +1,6 @@
 import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/componentTokens";
 import { resolveDimension, getDefaultSizeKey } from "./resolveToken";
+import { gradientCssFromDef, gradientFirstStopHex, gradientFigmaExport } from "./resolveGradient";
 import {
   GLOBAL_PRIMITIVES,
   GLOBAL_SPACING,
@@ -45,8 +46,20 @@ function applyOpacity(hex, opacity) {
 }
 
 function resolveMappingToColor(brand, mapping) {
-  if (!mapping) return { value: "#FF00FF", primitiveAlias: null };
-  if (mapping.color === "transparent") return { value: "transparent", primitiveAlias: "transparent" };
+  if (!mapping) return { value: "#FF00FF", primitiveAlias: null, gradientSpec: null };
+  if (mapping.gradient && String(mapping.gradient).trim()) {
+    const gid = String(mapping.gradient).trim();
+    const def = brand.gradients?.[gid];
+    const css = def ? gradientCssFromDef(brand, def) : null;
+    const firstHex = gradientFirstStopHex(brand, gid);
+    const gradientSpec = css ? gradientFigmaExport(brand, gid) : null;
+    return {
+      value: firstHex || "#FF00FF",
+      primitiveAlias: css ? `gradient/${gid}` : null,
+      gradientSpec,
+    };
+  }
+  if (mapping.color === "transparent") return { value: "transparent", primitiveAlias: "transparent", gradientSpec: null };
   const baseValue = brand.primitives[mapping.color]?.[mapping.index]
     ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
     ?? null;
@@ -54,7 +67,7 @@ function resolveMappingToColor(brand, mapping) {
   const value = baseValue ? applyOpacity(baseValue, opacity) : "#FF00FF";
   // Opacity colors must stay raw to preserve alpha channel in Figma.
   const primitiveAlias = opacity === 100 ? `${mapping.color}/${mapping.index}` : null;
-  return { value, primitiveAlias };
+  return { value, primitiveAlias, gradientSpec: null };
 }
 
 /**
@@ -225,11 +238,13 @@ export function buildExportPayload(brands, options) {
               value: lightResolved.value,
               alias: lightAlias,
               primitiveAlias: lightResolved.primitiveAlias,
+              gradientSpec: lightResolved.gradientSpec || null,
             },
             dark: {
               value: darkResolved.value,
               alias: darkAlias,
               primitiveAlias: darkResolved.primitiveAlias,
+              gradientSpec: darkResolved.gradientSpec || null,
             },
           };
         } else if (def.type === TOKEN_TYPES.FLOAT) {
@@ -310,6 +325,16 @@ export function buildExportPayload(brands, options) {
         }
       });
     });
+
+    // Serializable multi-stop gradients for Figma paint styles (plugin); not used for COLOR variables.
+    const gradientExports = {};
+    const gradientSource =
+      brand.gradients && typeof brand.gradients === "object" ? brand.gradients : {};
+    Object.keys(gradientSource).forEach((gid) => {
+      const spec = gradientFigmaExport(brand, gid);
+      if (spec) gradientExports[gid] = spec;
+    });
+    out[brandId].gradientExports = gradientExports;
   });
   return out;
 }

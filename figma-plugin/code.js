@@ -10,6 +10,137 @@ figma.ui.onmessage = async function (msg) {
   }
 };
 
+function linearGradientTransformFromCssAngleDeg(angleDeg) {
+  var angleInRadians = (angleDeg * Math.PI) / 180;
+  var transformedAngle = angleInRadians - Math.PI / 2;
+  var sin = Math.sin(transformedAngle);
+  var cos = Math.cos(transformedAngle);
+  var primary = cos;
+  var secondary = sin;
+  return [
+    [primary, secondary, 0.5 - primary * 0.5 - secondary * 0.5],
+    [-secondary, primary, 0.5 + secondary * 0.5 - primary * 0.5],
+  ];
+}
+
+function figmaGradientPaintFromSpec(spec) {
+  if (!spec || !spec.stops || spec.stops.length < 2) return null;
+  var stops = [];
+  for (var gi = 0; gi < spec.stops.length; gi++) {
+    var s = spec.stops[gi];
+    stops.push({
+      position: s.position,
+      color: { r: s.r, g: s.g, b: s.b, a: s.a != null ? s.a : 1 },
+    });
+  }
+  if (spec.kind === "radial") {
+    return {
+      type: "GRADIENT_RADIAL",
+      gradientStops: stops,
+      gradientTransform: [
+        [1, 0, 0.5],
+        [0, 1, 0.5],
+      ],
+      opacity: 1,
+    };
+  }
+  var angle = spec.angleDeg != null ? Number(spec.angleDeg) : 90;
+  if (!isFinite(angle)) angle = 90;
+  return {
+    type: "GRADIENT_LINEAR",
+    gradientStops: stops,
+    gradientTransform: linearGradientTransformFromCssAngleDeg(angle),
+    opacity: 1,
+  };
+}
+
+function dsgGradientPaintStyleName(brandId, gradientId) {
+  var cap = brandId.charAt(0).toUpperCase() + brandId.slice(1);
+  var safeId = String(gradientId).replace(/\//g, "-");
+  return "Gradient / " + cap + " / " + safeId;
+}
+
+/**
+ * Create/update local paint styles from payload[brand].gradientExports (multi-stop).
+ * Marks styles with pluginData dsgGradient = "brandId|gradientId" for idempotent sync and stale removal.
+ */
+function syncGradientPaintStyles(payload, syncBrands) {
+  var desiredKeys = {};
+  var created = 0;
+  var updated = 0;
+  var touchedNames = [];
+  for (var bi = 0; bi < syncBrands.length; bi++) {
+    var bid = syncBrands[bi];
+    var pack = payload[bid];
+    if (!pack || !pack.gradientExports) continue;
+    var gx = pack.gradientExports;
+    var gkeys = Object.keys(gx);
+    for (var gki = 0; gki < gkeys.length; gki++) {
+      var gid = gkeys[gki];
+      var spec = gx[gid];
+      var paint = figmaGradientPaintFromSpec(spec);
+      if (!paint) continue;
+      var key = bid + "|" + gid;
+      desiredKeys[key] = true;
+      var styleName = dsgGradientPaintStyleName(bid, gid);
+      var existing = null;
+      var allStyles = figma.getLocalPaintStyles();
+      for (var si = 0; si < allStyles.length; si++) {
+        try {
+          if (allStyles[si].getPluginData("dsgGradient") === key) {
+            existing = allStyles[si];
+            break;
+          }
+        } catch (_pluginDataRead) {}
+      }
+      if (existing) {
+        existing.name = styleName;
+        existing.paints = [paint];
+        updated++;
+        touchedNames.push(styleName);
+      } else {
+        var st = figma.createPaintStyle();
+        st.name = styleName;
+        st.paints = [paint];
+        try {
+          st.setPluginData("dsgGradient", key);
+        } catch (_pd) {}
+        created++;
+        touchedNames.push(styleName);
+      }
+    }
+  }
+  var removed = 0;
+  var allPaint = figma.getLocalPaintStyles();
+  for (var ri = allPaint.length - 1; ri >= 0; ri--) {
+    try {
+      var marker = allPaint[ri].getPluginData("dsgGradient");
+      if (!marker || marker.indexOf("|") < 0) continue;
+      if (!desiredKeys[marker]) {
+        allPaint[ri].remove();
+        removed++;
+      }
+    } catch (_remErr) {}
+  }
+  if (touchedNames.length === 0) {
+    progress(
+      "Gradient paint styles: none synced. Payload needs gradientExports (named gradient with 2+ stops per brand). Rebuild the app and sync again."
+    );
+  } else {
+    progress(
+      "Gradient paint styles: " +
+        created +
+        " created, " +
+        updated +
+        " updated, " +
+        removed +
+        " removed — " +
+        touchedNames.join(" · ") +
+        " (variable fills stay solid; detach Fill variable then apply these as styles if needed)"
+    );
+  }
+}
+
 async function syncTokens(payload) {
   var buildOptions = payload.__buildOptions || {};
 
@@ -724,6 +855,12 @@ async function syncTokens(payload) {
   totalCreated += compCreated;
   totalAliases += compAliases;
   progress("Components: " + compCreated + " created, " + compAliases + " aliases");
+
+  try {
+    syncGradientPaintStyles(payload, syncBrands);
+  } catch (gradStyleErr) {
+    progress("Gradient paint styles skipped: " + String(gradStyleErr));
+  }
 
   // ── Build visual components ──
   progress("Building visual components...");
@@ -3001,7 +3138,7 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
             var textPath = btnColorPath(variant, "text", colorState);
             var borderPath = btnColorPath(variant, "border", colorState);
 
-            // Background fill
+            // Background fill — COLOR variable (gradient tokens resolve to first-stop in payload).
             var bgVar = varMap[bgPath];
             if (variant === "ghost" && (colorState === "default" || colorState === "focus" || colorState === "disabled")) {
               buttonNode.fills = [];

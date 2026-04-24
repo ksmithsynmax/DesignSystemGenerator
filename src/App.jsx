@@ -17,12 +17,14 @@ import {
   getDimensionTokens,
 } from "./data/componentTokens";
 import { resolveColor, getComponentDefaultSize } from "./utils/resolveToken";
+import { resolveGradientCss } from "./utils/resolveGradient";
 import Section from "./components/shared/Section";
 import ComponentSelect from "./components/shared/ComponentSelect";
 import PrimitiveScale from "./components/editors/PrimitiveScale";
 import TokenChainCard from "./components/editors/TokenChainCard";
 import DimensionTokenRow from "./components/editors/DimensionTokenRow";
 import AddPrimitiveForm from "./components/editors/AddPrimitiveForm";
+import BrandGradientsSection from "./components/editors/BrandGradientsSection";
 import {
   ButtonPreviewContent,
   ButtonPropertiesPanel,
@@ -216,6 +218,13 @@ function enforceTextDefaultMappings(brandsInput) {
     }
   });
 
+  Object.keys(next).forEach((brandId) => {
+    if (!next[brandId].gradients || typeof next[brandId].gradients !== "object") {
+      const fallback = INITIAL_BRANDS[brandId]?.gradients;
+      next[brandId].gradients = fallback ? JSON.parse(JSON.stringify(fallback)) : {};
+    }
+  });
+
   return next;
 }
 
@@ -266,6 +275,8 @@ export default function App() {
   const [activeButtonLeftIcon, setActiveButtonLeftIcon] = useState(false);
   const [activeButtonRightIcon, setActiveButtonRightIcon] = useState(false);
   const [activeButtonFocusRingStyle, setActiveButtonFocusRingStyle] = useState("offset");
+  /** When set, filled Button preview uses this gradient instead of token solid fill. */
+  const [buttonFillGradientId, setButtonFillGradientId] = useState(null);
   const [activeActionIconState, setActiveActionIconState] = useState("default");
   const [activeActionIconFocusRingStyle, setActiveActionIconFocusRingStyle] = useState("offset");
   const [buildButtonVariants, setBuildButtonVariants] = useState(() => [...VARIANTS_BY_COMPONENT.button]);
@@ -302,6 +313,11 @@ export default function App() {
   const brand = brands[activeBrand];
   const colorNames = Object.keys(brand.primitives);
   const globalColorNames = Object.keys(GLOBAL_PRIMITIVES);
+  const gradientPaletteColorNames = [...new Set([...globalColorNames, ...colorNames])].sort((a, b) =>
+    a.localeCompare(b)
+  );
+  const buttonFillGradientCss =
+    buttonFillGradientId && brand ? resolveGradientCss(brand, buttonFillGradientId) : null;
   const defaultBrandColor = colorNames.includes("blue")
     ? "blue"
     : (colorNames[0] || globalColorNames[0] || "neutral");
@@ -704,6 +720,28 @@ export default function App() {
     [activeBrand]
   );
 
+  const upsertBrandGradient = useCallback((id, def) => {
+    const key = String(id || "").trim();
+    if (!key) return;
+    setBrands((prev) => {
+      const next = JSON.parse(JSON.stringify(prev));
+      const b = next[activeBrand];
+      if (!b.gradients) b.gradients = {};
+      b.gradients[key] = def;
+      return next;
+    });
+  }, [activeBrand]);
+
+  const removeBrandGradient = useCallback((id) => {
+    setBrands((prev) => {
+      const next = JSON.parse(JSON.stringify(prev));
+      if (!next[activeBrand]?.gradients?.[id]) return prev;
+      delete next[activeBrand].gradients[id];
+      return next;
+    });
+    setButtonFillGradientId((cur) => (cur === id ? null : cur));
+  }, [activeBrand]);
+
   const updateComponentOverride = useCallback(
     (componentToken, mapping) => {
       setBrands((prev) => {
@@ -826,6 +864,13 @@ export default function App() {
       // Ignore storage write errors (quota/private mode).
     }
   }, [brands, activeBrand, previewTheme]);
+
+  useEffect(() => {
+    if (!buttonFillGradientId || !brand?.gradients) return;
+    if (!Object.prototype.hasOwnProperty.call(brand.gradients, buttonFillGradientId)) {
+      setButtonFillGradientId(null);
+    }
+  }, [activeBrand, brand, buttonFillGradientId]);
 
   useEffect(() => {
     if (brands[activeBrand]) return;
@@ -1463,6 +1508,14 @@ export default function App() {
               ))}
               <AddPrimitiveForm existingNames={colorNames} onAdd={addPrimitive} />
             </Section>
+            <Section title={`Gradients — ${brand.name}`} defaultOpen={false}>
+              <BrandGradientsSection
+                brand={brand}
+                paletteColorNames={gradientPaletteColorNames}
+                onUpsert={upsertBrandGradient}
+                onRemove={removeBrandGradient}
+              />
+            </Section>
             <Section title="Primitives — Global" defaultOpen={false}>
               {globalColorNames.map((c) => (
                 <PrimitiveScale key={c} name={c} scale={GLOBAL_PRIMITIVES[c]} readOnly />
@@ -1493,6 +1546,7 @@ export default function App() {
                     onUpdate={updateComponentOverride}
                     brandColors={colorNames}
                     globalColors={globalColorNames}
+                    gradientIds={Object.keys(brand.gradients || {}).sort()}
                   />
                 );
               })}
@@ -1549,6 +1603,9 @@ export default function App() {
                   focusRingStyle={activeButtonFocusRingStyle}
                   showLeftIcon={activeButtonLeftIcon}
                   showRightIcon={activeButtonRightIcon}
+                  fillGradientCss={
+                    (forcedVariant || activeVariant) === "filled" ? buttonFillGradientCss : null
+                  }
                 />
               )}
 
@@ -1891,6 +1948,9 @@ export default function App() {
                   setShowRightIcon={setActiveButtonRightIcon}
                   buildVariants={buildButtonVariants}
                   setBuildVariants={setBuildButtonVariants}
+                  fillGradientId={buttonFillGradientId}
+                  setFillGradientId={setButtonFillGradientId}
+                  gradientIds={Object.keys(brands[activeBrand]?.gradients || {}).sort()}
                 />
               )}
               {activeComponent === "actionicon" && (

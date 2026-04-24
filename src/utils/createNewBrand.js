@@ -40,5 +40,6 @@ export function createNewBrand(displayName, existingIds, templateId = NEW_BRAND_
   brand.primitives = {};
   brand.semanticMap = JSON.parse(JSON.stringify(BRAND_STARTER_SEMANTIC_MAP));
   brand.darkSemanticOverrides = JSON.parse(JSON.stringify(BRAND_STARTER_DARK_SEMANTIC_OVERRIDES));
+  brand.gradients = {};
   return { id, brand };
 }

@@ -1,5 +1,6 @@
 import { COMPONENT_TOKENS, TOKEN_TYPES } from "../data/componentTokens";
 import { GLOBAL_PRIMITIVES } from "../data/brands";
+import { gradientFirstStopHex } from "./resolveGradient";
 
 function normalizeOpacity(opacity) {
   const parsed = Number(opacity);
@@ -50,6 +51,10 @@ export function resolveColor(brands, brandId, semanticKey, theme = "light", comp
       : brand.componentOverrides?.[componentToken];
   if (componentToken && themedComponentOverride) {
     const mapping = themedComponentOverride;
+    if (mapping.gradient && String(mapping.gradient).trim()) {
+      const g = gradientFirstStopHex(brand, String(mapping.gradient).trim());
+      return g || "#FF00FF";
+    }
     if (mapping.color === "transparent") return "transparent";
     const baseColor = brand.primitives[mapping.color]?.[mapping.index]
       ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]

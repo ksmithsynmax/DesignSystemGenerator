@@ -101,6 +101,7 @@ export function ButtonPreviewContent({
   focusRingStyle,
   showLeftIcon,
   showRightIcon,
+  fillGradientCss = null,
 }) {
   const matrixRows = BUTTON_VARIANTS.map((v) => ({ label: buttonVariantLabel(v), variant: v }));
   return (
@@ -116,6 +117,7 @@ export function ButtonPreviewContent({
           focusRingStyle={focusRingStyle}
           showLeftIcon={showLeftIcon}
           showRightIcon={showRightIcon}
+          fillGradientCss={activeVariant === "filled" ? fillGradientCss : null}
         />
       </PreviewStage>
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
@@ -133,6 +135,7 @@ export function ButtonPreviewContent({
             focusRingStyle={focusRingStyle}
             showLeftIcon={showLeftIcon}
             showRightIcon={showRightIcon}
+            fillGradientCss={row.variant === "filled" ? fillGradientCss : null}
           />
         )}
       />
@@ -157,6 +160,9 @@ export function ButtonPropertiesPanel({
   setShowRightIcon,
   buildVariants = BUTTON_VARIANTS,
   setBuildVariants = () => {},
+  fillGradientId = null,
+  setFillGradientId = () => {},
+  gradientIds = [],
 }) {
   const buttonSizeOptions = sizeKeys.includes("default") ? sizeKeys : ["default", ...sizeKeys];
   const toggleBuildVariant = (variant) => {
@@ -183,6 +189,14 @@ export function ButtonPropertiesPanel({
         optionLabel={buttonVariantLabel}
       /> */}
       <PropertyRow label="Size" value={activeSize} onChange={setActiveSize} options={buttonSizeOptions} />
+      <PropertyRow
+        label="Filled background"
+        value={fillGradientId || ""}
+        onChange={(v) => setFillGradientId(v ? v : null)}
+        options={["", ...gradientIds]}
+        disabled={activeVariant !== "filled"}
+        optionLabel={(opt) => (opt === "" ? "Solid (tokens)" : opt)}
+      />
       {selectedState === "focus" && (
         <PropertyRow
           label="Focus Ring Style"
@@ -234,6 +248,9 @@ export default function ButtonPreviewPanel(props) {
         setShowLeftIcon={props.setShowLeftIcon}
         showRightIcon={props.showRightIcon}
         setShowRightIcon={props.setShowRightIcon}
+        fillGradientId={props.fillGradientId ?? null}
+        setFillGradientId={props.setFillGradientId ?? (() => {})}
+        gradientIds={props.gradientIds ?? []}
       />
       <div style={{ marginTop: 24 }}>
         <ButtonPreviewContent
@@ -247,6 +264,7 @@ export default function ButtonPreviewPanel(props) {
           focusRingStyle={props.focusRingStyle}
           showLeftIcon={props.showLeftIcon}
           showRightIcon={props.showRightIcon}
+          fillGradientCss={props.fillGradientCss ?? null}
         />
       </div>
     </div>
