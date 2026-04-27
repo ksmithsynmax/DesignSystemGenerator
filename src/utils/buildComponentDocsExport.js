@@ -42,10 +42,21 @@ const EXTRA_FIGMA_PROPERTIES = {
     { name: "WithArrow", values: ["Off", "On"], notes: "Arrow pointer visibility." },
   ],
   notification: [
-    { name: "WithBorder", values: ["Off", "On"], notes: "Border visibility." },
+    { name: "WithBorder", values: ["Off", "On"], notes: "Outer border visibility." },
     { name: "WithCloseButton", values: ["Off", "On"], notes: "Close action visibility." },
     { name: "WithIcon", values: ["Off", "On"], notes: "Leading icon visibility." },
     { name: "Loading", values: ["Off", "On"], notes: "Loading visual state." },
+    {
+      name: "Accent",
+      values: ["Off", "On"],
+      notes: "Left accent bar (hidden while loading).",
+    },
+    {
+      name: "Color",
+      values: ["Primary", "Dark", "Error", "Warning", "Success"],
+      notes:
+        "Semantic tone for accent, borders when on, and indicators. Dark uses inverse surface and copy tokens for neutral chrome.",
+    },
   ],
   alert: [
     { name: "WithCloseButton", values: ["Off", "On"], notes: "Close action visibility." },

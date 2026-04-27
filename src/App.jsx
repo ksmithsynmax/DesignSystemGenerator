@@ -118,6 +118,7 @@ import {
   AnchorPreviewContent,
   AnchorPropertiesPanel,
 } from "./components/panels/AnchorPreviewPanel";
+import { DefaultPreviewContent } from "./components/panels/DefaultPreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { buildComponentDocsExport } from "./utils/buildComponentDocsExport";
@@ -132,6 +133,7 @@ const VARIANTS_BY_COMPONENT = {
   badge: ["default", "filled", "light", "outline"],
   card: ["default", "dark", "outlined", "brand", "transparent"],
   alert: ["default", "filled", "light", "outline", "transparent", "white"],
+  notification: ["default"],
   radio: ["filled", "outline"],
   textinput: ["default", "filled"],
   select: ["default", "filled"],
@@ -258,6 +260,7 @@ export default function App() {
     textinput: "TextInput",
     rangeslider: "RangeSlider",
     multiselect: "MultiSelect",
+    default: "Default",
   };
   const getComponentLabel = (name) =>
     COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
@@ -362,7 +365,6 @@ export default function App() {
   const textInputDefault = getComponentDefaultSize(brands, activeBrand, "textinput") || "sm";
   const selectDefault = getComponentDefaultSize(brands, activeBrand, "select") || "sm";
   const cardDefault = getComponentDefaultSize(brands, activeBrand, "card") || "default";
-  const loaderDefault = getComponentDefaultSize(brands, activeBrand, "loader") || "md";
   const pillDefault = getComponentDefaultSize(brands, activeBrand, "pill") || "default";
   const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "default";
   const modalDefault = getComponentDefaultSize(brands, activeBrand, "modal") || "md";
@@ -427,7 +429,7 @@ export default function App() {
   const [activeChipState, setActiveChipState] = useState("default");
   const [activeTooltipPosition, setActiveTooltipPosition] = useState("top");
   const [activeTooltipWithArrow, setActiveTooltipWithArrow] = useState(true);
-  const [activeLoaderSize, setActiveLoaderSize] = useState(loaderDefault);
+  const [activeLoaderSize, setActiveLoaderSize] = useState("default");
   const [activeLoaderType, setActiveLoaderType] = useState("oval");
   const [activePillSize, setActivePillSize] = useState(pillDefault);
   const [activePillWithRemoveButton, setActivePillWithRemoveButton] = useState(false);
@@ -467,11 +469,12 @@ export default function App() {
   const [activeCardDescription, setActiveCardDescription] = useState(
     "Detected vessel metadata and imagery details from latest satellite capture."
   );
-  const [activeNotificationRadius, setActiveNotificationRadius] = useState("md");
-  const [activeNotificationColor, setActiveNotificationColor] = useState(defaultBrandColor);
+  const [activeNotificationRadius, setActiveNotificationRadius] = useState("default");
+  const [activeNotificationColor, setActiveNotificationColor] = useState("primary");
   const [activeNotificationWithBorder, setActiveNotificationWithBorder] = useState(false);
   const [activeNotificationWithCloseButton, setActiveNotificationWithCloseButton] = useState(false);
   const [activeNotificationWithIcon, setActiveNotificationWithIcon] = useState(false);
+  const [activeNotificationWithAccent, setActiveNotificationWithAccent] = useState(true);
   const [activeNotificationLoading, setActiveNotificationLoading] = useState(false);
   const [activeNotificationTitle, setActiveNotificationTitle] = useState("We notify you that");
   const [activeNotificationDescription, setActiveNotificationDescription] = useState(
@@ -514,7 +517,6 @@ export default function App() {
     const rdDef = getComponentDefaultSize(brands, newBrand, "radio") || "md";
     const chDef = getComponentDefaultSize(brands, newBrand, "chip") || "md";
     const caDef = getComponentDefaultSize(brands, newBrand, "card") || "default";
-    const ldDef = getComponentDefaultSize(brands, newBrand, "loader") || "md";
     const piDef = getComponentDefaultSize(brands, newBrand, "pill") || "default";
     const baDef = getComponentDefaultSize(brands, newBrand, "badge") || "default";
     const moDef = getComponentDefaultSize(brands, newBrand, "modal") || "md";
@@ -542,7 +544,7 @@ export default function App() {
     setActiveSelectRadius(seDef);
     setActiveCardSize(caDef);
     setActiveCardRadius(caDef);
-    setActiveLoaderSize(ldDef);
+    setActiveLoaderSize("default");
     setActivePillSize(piDef);
     setActiveBadgeSize(baDef);
     setActiveBadgeRadius(baDef);
@@ -649,11 +651,13 @@ export default function App() {
       setActiveChipState("default");
       setActiveVariant("filled");
     } else if (newComp === "notification") {
-      setActiveNotificationRadius("md");
-      setActiveNotificationColor(defaultBrandColor);
+      setActiveVariant("default");
+      setActiveNotificationRadius("default");
+      setActiveNotificationColor("primary");
       setActiveNotificationWithBorder(false);
       setActiveNotificationWithCloseButton(false);
       setActiveNotificationWithIcon(false);
+      setActiveNotificationWithAccent(true);
       setActiveNotificationLoading(false);
       setActiveNotificationTitle("We notify you that");
       setActiveNotificationDescription("You are now obligated to give a star to Mantine project on GitHub");
@@ -698,7 +702,7 @@ export default function App() {
       setActiveCardTitle("PlanetScope vessel");
       setActiveCardDescription("Detected vessel metadata and imagery details from latest satellite capture.");
     } else if (newComp === "loader") {
-      setActiveLoaderSize(loaderDefault);
+      setActiveLoaderSize("default");
       setActiveLoaderType("oval");
     } else if (newComp === "pill") {
       setActivePillSize(pillDefault);
@@ -716,7 +720,7 @@ export default function App() {
       setActiveTooltipPosition("top");
       setActiveTooltipWithArrow(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, loaderDefault, pillDefault, badgeDefault, modalDefault, anchorDefault, textDefault, defaultBrandColor]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, anchorDefault, textDefault, defaultBrandColor]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -1131,6 +1135,7 @@ export default function App() {
       select: ["default", "filled"],
     };
     const variants = variantsByComponent[activeComponent];
+
     if (!variants) return true;
     if (activeComponent === "checkbox") {
       const checkboxSharedSegments = ["background", "icon", "label", "focus"];
@@ -1871,6 +1876,7 @@ export default function App() {
                   brands={brands}
                   activeBrand={activeBrand}
                   activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
                   radius={activeNotificationRadius}
                   color={activeNotificationColor}
                   title={activeNotificationTitle}
@@ -1879,6 +1885,7 @@ export default function App() {
                   withCloseButton={activeNotificationWithCloseButton}
                   withIcon={activeNotificationWithIcon}
                   loading={activeNotificationLoading}
+                  withAccent={activeNotificationWithAccent}
                 />
               )}
               {activeComponent === "alert" && (
@@ -1956,6 +1963,14 @@ export default function App() {
                   activeColorToken={activeColorToken}
                   size={activeLoaderSize}
                   type={activeLoaderType}
+                />
+              )}
+              {activeComponent === "default" && (
+                <DefaultPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
                 />
               )}
               {activeComponent === "pill" && (
@@ -2263,6 +2278,8 @@ export default function App() {
                   setWithCloseButton={setActiveNotificationWithCloseButton}
                   withIcon={activeNotificationWithIcon}
                   setWithIcon={setActiveNotificationWithIcon}
+                  withAccent={activeNotificationWithAccent}
+                  setWithAccent={setActiveNotificationWithAccent}
                   loading={activeNotificationLoading}
                   setLoading={setActiveNotificationLoading}
                   title={activeNotificationTitle}

@@ -3,10 +3,10 @@ import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-export const LOADER_SIZE_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const LOADER_SIZE_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const LOADER_TYPES = ["oval", "bars", "dots"];
 
-function PropertyRow({ label, value, onChange, options, disabled = false }) {
+function PropertyRow({ label, value, onChange, options, disabled = false, formatOption }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
       <SectionLabel mb={0}>{label}</SectionLabel>
@@ -35,7 +35,7 @@ function PropertyRow({ label, value, onChange, options, disabled = false }) {
       >
         {options.map((opt) => (
           <option key={opt} value={opt}>
-            {opt}
+            {formatOption ? formatOption(opt) : opt}
           </option>
         ))}
       </select>
@@ -78,7 +78,13 @@ export function LoaderPropertiesPanel({
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow label="Type" value={type} onChange={setType} options={LOADER_TYPES} />
-      <PropertyRow label="Size" value={size} onChange={setSize} options={LOADER_SIZE_KEYS} />
+      <PropertyRow
+        label="Size"
+        value={size}
+        onChange={setSize}
+        options={LOADER_SIZE_KEYS}
+        formatOption={(opt) => (opt === "default" ? "Default" : opt.toUpperCase())}
+      />
     </div>
   );
 }

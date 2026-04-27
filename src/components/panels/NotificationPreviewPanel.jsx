@@ -2,9 +2,10 @@ import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 import NotificationPreview from "../previews/NotificationPreview";
+import { NOTIFICATION_SEMANTIC_COLORS } from "../../utils/notificationSemanticColors";
 
-export const NOTIFICATION_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
-export const NOTIFICATION_COLORS = ["blue", "teal", "red", "yellow", "gray"];
+export const NOTIFICATION_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
+export { NOTIFICATION_SEMANTIC_COLORS };
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -59,6 +60,7 @@ export function NotificationPreviewContent({
   brands,
   activeBrand,
   activeColorToken,
+  previewTheme,
   radius,
   color,
   title,
@@ -67,14 +69,16 @@ export function NotificationPreviewContent({
   withCloseButton,
   withIcon,
   loading,
+  withAccent,
 }) {
-  const matrixRows = NOTIFICATION_COLORS.map((rowColor) => ({ label: rowColor, rowColor }));
+  const matrixRows = NOTIFICATION_SEMANTIC_COLORS.map((rowColor) => ({ label: rowColor, rowColor }));
   return (
     <div>
       <PreviewStage label={activeColorToken}>
         <NotificationPreview
           brands={brands}
           brandId={activeBrand}
+          previewTheme={previewTheme}
           radius={radius}
           color={color}
           title={title}
@@ -83,6 +87,7 @@ export function NotificationPreviewContent({
           withCloseButton={withCloseButton}
           withIcon={withIcon}
           loading={loading}
+          withAccent={withAccent}
         />
       </PreviewStage>
 
@@ -95,12 +100,14 @@ export function NotificationPreviewContent({
           <NotificationPreview
             brands={brands}
             brandId={activeBrand}
+            previewTheme={previewTheme}
             radius={radius}
             color={row.rowColor}
             withBorder={withBorder}
             withCloseButton={withCloseButton}
             withIcon={col === "with icon"}
             loading={false}
+            withAccent={withAccent}
           />
         )}
       />
@@ -119,6 +126,8 @@ export function NotificationPropertiesPanel({
   setWithCloseButton,
   withIcon,
   setWithIcon,
+  withAccent,
+  setWithAccent,
   loading,
   setLoading,
   title,
@@ -128,7 +137,7 @@ export function NotificationPropertiesPanel({
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      <PropertyRow label="Color" value={color} onChange={setColor} options={NOTIFICATION_COLORS} />
+      <PropertyRow label="Color" value={color} onChange={setColor} options={NOTIFICATION_SEMANTIC_COLORS} />
       <PropertyRow label="Radius" value={radius} onChange={setRadius} options={NOTIFICATION_RADIUS_KEYS} />
       <PropertyRow
         label="Border"
@@ -146,6 +155,12 @@ export function NotificationPropertiesPanel({
         label="Icon"
         value={withIcon ? "on" : "off"}
         onChange={(v) => setWithIcon(v === "on")}
+        options={["off", "on"]}
+      />
+      <PropertyRow
+        label="Accent"
+        value={withAccent ? "on" : "off"}
+        onChange={(v) => setWithAccent(v === "on")}
         options={["off", "on"]}
       />
       <PropertyRow

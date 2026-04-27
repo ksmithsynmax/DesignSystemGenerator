@@ -870,6 +870,8 @@ async function syncTokens(payload) {
     semModes: semModes,
     componentsCol: componentsCol,
     semanticCol: semanticCol,
+    // Resolved component FLOAT/COLOR/STRING from first synced brand (for props Figma cannot bind, e.g. ellipse cornerRadius).
+    componentPayload: payload[syncBrands[0]] && payload[syncBrands[0]].components ? payload[syncBrands[0]].components : null,
   });
   var componentFailures = (componentBuild && componentBuild.failures) ? componentBuild.failures : [];
 
@@ -1058,6 +1060,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
       requestedSet.title = true;
       requestedSet.text = true;
     }
+    if (requestedSet.notification) {
+      requestedSet.loader = true;
+    }
     progress("Building selected components: " + Object.keys(requestedSet).join(", "));
   } else {
     progress("Building all components.");
@@ -1068,6 +1073,16 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
 
   // Load font for button text and switch labels
   var font = await loadFont();
+  var componentPayload =
+    collectionsCtx && collectionsCtx.componentPayload ? collectionsCtx.componentPayload : null;
+
+  function resolvedComponentFloat(figmaPathKey, fallback) {
+    if (!componentPayload || !figmaPathKey) return fallback;
+    var t = componentPayload[figmaPathKey];
+    if (!t || t.value == null) return fallback;
+    var n = Number(t.value);
+    return Number.isFinite(n) ? n : fallback;
+  }
 
   var compSetGap = 300;
   var buttonFocusRingStyle = (buildOptions && buildOptions.buttonFocusRingStyle === "attached") ? "attached" : "offset";
@@ -1141,17 +1156,17 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var chipSet = await buildSet("Chip", function () {
     return buildChipComponentSet(varMap, page, font);
   });
+  var loaderSet = await buildSet("Loader", function () {
+    return buildLoaderComponentSet(varMap, page, font, resolvedComponentFloat);
+  });
   var notificationSet = await buildSet("Notification", function () {
-    return buildNotificationComponentSet(varMap, page, font);
+    return buildNotificationComponentSet(varMap, page, font, loaderSet, resolvedComponentFloat);
   });
   var alertSet = await buildSet("Alert", function () {
     return buildAlertComponentSet(varMap, page, font);
   });
   var tooltipSet = await buildSet("Tooltip", function () {
     return buildTooltipComponentSet(varMap, page, font);
-  });
-  var loaderSet = await buildSet("Loader", function () {
-    return buildLoaderComponentSet(varMap, page, font);
   });
   var pillSet = await buildSet("Pill", function () {
     return buildPillComponentSet(varMap, page, font);
@@ -1205,11 +1220,11 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     checkboxSet,
     radioSet,
     chipSet,
+    loaderSet,
     notificationSet,
     alertSet,
     modalSet,
     tooltipSet,
-    loaderSet,
     pillSet,
     badgeSet,
     textInputSet,
@@ -1801,6 +1816,37 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var rowTitleFont = (titleConfig && titleConfig.font) ? titleConfig.font : titleFont;
     var rowTitleSize = (titleConfig && titleConfig.size) ? titleConfig.size : 18;
     var rowItemSpacing = (titleConfig && titleConfig.rowItemSpacing != null) ? titleConfig.rowItemSpacing : 12;
+    var itemsPerRow = 0;
+    if (titleConfig && titleConfig.itemsPerRow != null) {
+      var ipr = Number(titleConfig.itemsPerRow);
+      if (Number.isFinite(ipr) && ipr >= 1) itemsPerRow = Math.min(12, Math.floor(ipr));
+    }
+
+    function appendLabelCells(rowFrame, labelSlice) {
+      for (var i = 0; i < labelSlice.length; i++) {
+        var label = labelSlice[i];
+        var cell = figma.createFrame();
+        cell.layoutMode = "VERTICAL";
+        cell.primaryAxisSizingMode = "AUTO";
+        cell.counterAxisSizingMode = "AUTO";
+        cell.counterAxisAlignItems = "CENTER";
+        cell.itemSpacing = 6;
+        cell.clipsContent = false;
+        cell.fills = [];
+        if (label != null && String(label).trim().length > 0) {
+          appendText(cell, bodyFont, String(label), 10, DOC_COLORS.cellLabel, "Cell Label");
+        }
+        var inst = null;
+        try {
+          inst = createInstanceForLabel(label);
+        } catch (instErr) {
+          progress("Docs instance creation failed (" + String(label) + "): " + String(instErr));
+        }
+        if (inst) cell.appendChild(inst);
+        rowFrame.appendChild(cell);
+      }
+    }
+
     var rowWrap = figma.createFrame();
     rowWrap.layoutMode = "VERTICAL";
     rowWrap.primaryAxisSizingMode = "AUTO";
@@ -1815,41 +1861,37 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       appendText(rowWrap, rowTitleFont, title, rowTitleSize, DOC_COLORS.panelHeading, "Row Title");
     }
 
-    var row = figma.createFrame();
-    row.layoutMode = "HORIZONTAL";
-    row.primaryAxisSizingMode = "AUTO";
-    row.counterAxisSizingMode = "AUTO";
-    row.counterAxisAlignItems = "MIN";
-    row.primaryAxisAlignItems = "CENTER";
-    row.layoutAlign = "STRETCH";
-    row.itemSpacing = rowItemSpacing;
-    row.clipsContent = false;
-    row.fills = [];
-
-    for (var i = 0; i < labels.length; i++) {
-      var label = labels[i];
-      var cell = figma.createFrame();
-      cell.layoutMode = "VERTICAL";
-      cell.primaryAxisSizingMode = "AUTO";
-      cell.counterAxisSizingMode = "AUTO";
-      cell.counterAxisAlignItems = "CENTER";
-      cell.itemSpacing = 6;
-      cell.clipsContent = false;
-      cell.fills = [];
-      if (label != null && String(label).trim().length > 0) {
-        appendText(cell, bodyFont, String(label), 10, DOC_COLORS.cellLabel, "Cell Label");
+    if (itemsPerRow > 0) {
+      for (var start = 0; start < labels.length; start += itemsPerRow) {
+        var slice = labels.slice(start, start + itemsPerRow);
+        var rowChunk = figma.createFrame();
+        rowChunk.layoutMode = "HORIZONTAL";
+        rowChunk.primaryAxisSizingMode = "AUTO";
+        rowChunk.counterAxisSizingMode = "AUTO";
+        rowChunk.counterAxisAlignItems = "MIN";
+        rowChunk.primaryAxisAlignItems = "CENTER";
+        rowChunk.layoutAlign = "STRETCH";
+        rowChunk.itemSpacing = rowItemSpacing;
+        rowChunk.clipsContent = false;
+        rowChunk.fills = [];
+        appendLabelCells(rowChunk, slice);
+        rowWrap.appendChild(rowChunk);
       }
-      var inst = null;
-      try {
-        inst = createInstanceForLabel(label);
-      } catch (instErr) {
-        progress("Docs instance creation failed (" + String(label) + "): " + String(instErr));
-      }
-      if (inst) cell.appendChild(inst);
-      row.appendChild(cell);
+    } else {
+      var row = figma.createFrame();
+      row.layoutMode = "HORIZONTAL";
+      row.primaryAxisSizingMode = "AUTO";
+      row.counterAxisSizingMode = "AUTO";
+      row.counterAxisAlignItems = "MIN";
+      row.primaryAxisAlignItems = "CENTER";
+      row.layoutAlign = "STRETCH";
+      row.itemSpacing = rowItemSpacing;
+      row.clipsContent = false;
+      row.fills = [];
+      appendLabelCells(row, labels);
+      rowWrap.appendChild(row);
     }
 
-    rowWrap.appendChild(row);
     target.appendChild(rowWrap);
   }
 
@@ -2444,6 +2486,126 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         } else if (!hasIcons) {
           removeSectionOrSlot(templatedDoc, slug, "icons-right");
         }
+
+        // Notification has no Variant/Size/State axes in the template flow; fill Color + Radius explicitly.
+        if (lowerSetName === "notification" && templateBaseComponent) {
+          var notifTplColorKey = getPropKey(variantProps, "Color");
+          var notifTplColorVals = notifTplColorKey ? getPropValues(variantProps, "Color") : [];
+          var notifTplRadiusKey = getPropKey(variantProps, "Radius");
+          var notifTplRadiusVals = notifTplRadiusKey ? getPropValues(variantProps, "Radius") : [];
+          var notifTplPanel = getTemplateSlot(templatedDoc, slug, "variants") || getTemplateSlot(templatedDoc, slug, "size");
+          if (!notifTplPanel) {
+            templatedDoc.appendChild(createSectionHeader("Examples", "Semantic colors and radius scale.", DOC_COLORS.subtitle));
+            notifTplPanel = createPanel("slot:" + slug + ":notification-examples", 10);
+            notifTplPanel.resize(1192, notifTplPanel.height);
+            templatedDoc.appendChild(notifTplPanel);
+          } else {
+            clearChildren(notifTplPanel);
+            try {
+              if (notifTplPanel.layoutMode === "VERTICAL") notifTplPanel.itemSpacing = 16;
+            } catch (_eNotifTpl) {}
+          }
+          if (notifTplColorVals.length > 0) {
+            addInstancesRow(
+              notifTplPanel,
+              "Color",
+              notifTplColorVals,
+              function (cName) {
+                return makeTemplateInstance({ Color: cName });
+              },
+              false,
+              { itemsPerRow: 3 }
+            );
+          }
+          if (notifTplRadiusVals.length > 1) {
+            var notifTplRadiusPanel = createPanel("notification-template-radius-row", 10);
+            notifTplRadiusPanel.resize(1192, notifTplRadiusPanel.height);
+            notifTplPanel.appendChild(notifTplRadiusPanel);
+            addInstancesRow(
+              notifTplRadiusPanel,
+              "Radius",
+              pickOrdered(notifTplRadiusVals, ["Default", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6),
+              function (rName) {
+                return makeTemplateInstance({ Radius: rName });
+              },
+              false,
+              { itemsPerRow: 3 }
+            );
+          }
+        }
+
+        // Tooltip uses Direction + Arrow only (no Variant/Size); template flow would otherwise leave the page empty.
+        if (lowerSetName === "tooltip" && templateBaseComponent) {
+          var ttTplDirKey = getPropKey(variantProps, "Direction");
+          var ttTplArrowKey = getPropKey(variantProps, "Arrow");
+          var ttTplDirs = ttTplDirKey ? getPropValues(variantProps, "Direction") : [];
+          var ttTplArrows = ttTplArrowKey ? getPropValues(variantProps, "Arrow") : [];
+          var ttTplDefArrow = null;
+          var ttTplDefDir = null;
+          for (var tta = 0; tta < ttTplArrows.length; tta++) {
+            var al = String(ttTplArrows[tta] || "").toLowerCase();
+            if (al.indexOf("without") < 0 && al.indexOf("with") >= 0) {
+              ttTplDefArrow = ttTplArrows[tta];
+              break;
+            }
+          }
+          if (ttTplDefArrow == null && ttTplArrows.length > 0) ttTplDefArrow = ttTplArrows[0];
+          for (var ttd = 0; ttd < ttTplDirs.length; ttd++) {
+            if (String(ttTplDirs[ttd] || "").toLowerCase() === "top") {
+              ttTplDefDir = ttTplDirs[ttd];
+              break;
+            }
+          }
+          if (ttTplDefDir == null && ttTplDirs.length > 0) ttTplDefDir = ttTplDirs[0];
+
+          var ttTplPanel = getTemplateSlot(templatedDoc, slug, "variants") || getTemplateSlot(templatedDoc, slug, "size");
+          if (!ttTplPanel) {
+            templatedDoc.appendChild(createSectionHeader("Examples", "Placement direction and arrow visibility.", DOC_COLORS.subtitle));
+            ttTplPanel = createPanel("slot:" + slug + ":tooltip-examples", 10);
+            ttTplPanel.resize(1192, ttTplPanel.height);
+            templatedDoc.appendChild(ttTplPanel);
+          } else {
+            clearChildren(ttTplPanel);
+            try {
+              if (ttTplPanel.layoutMode === "VERTICAL") ttTplPanel.itemSpacing = 16;
+            } catch (_eTtTpl) {}
+          }
+          if (ttTplDirs.length > 0 && ttTplDefArrow != null) {
+            var ttOrderedDirs = pickOrdered(ttTplDirs, ["top", "bottom", "left", "right"]);
+            addInstancesRow(
+              ttTplPanel,
+              "Direction",
+              ttOrderedDirs,
+              function (dirName) {
+                var ttPatch = {};
+                if (ttTplDirKey) ttPatch.Direction = dirName;
+                if (ttTplArrowKey) ttPatch.Arrow = ttTplDefArrow;
+                return makeTemplateInstance(ttPatch);
+              },
+              false,
+              { itemsPerRow: 4 }
+            );
+          }
+          if (ttTplArrows.length > 1 && ttTplDefDir != null) {
+            var ttTplArrowStrip = createPanel("tooltip-template-arrow-row", 10);
+            ttTplArrowStrip.resize(1192, ttTplArrowStrip.height);
+            ttTplPanel.appendChild(ttTplArrowStrip);
+            var ttOrderedArrows = pickOrdered(ttTplArrows, ["with-arrow", "without-arrow"]);
+            addInstancesRow(
+              ttTplArrowStrip,
+              "Arrow",
+              ttOrderedArrows,
+              function (arrowName) {
+                var ttPatch2 = {};
+                if (ttTplDirKey) ttPatch2.Direction = ttTplDefDir;
+                if (ttTplArrowKey) ttPatch2.Arrow = arrowName;
+                return makeTemplateInstance(ttPatch2);
+              },
+              false,
+              { itemsPerRow: 2 }
+            );
+          }
+        }
       }
 
       clearExplicitModesInSubtree(templatedDoc);
@@ -2977,6 +3139,108 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               return makeInstance({ Color: innerColorName });
             }, false);
           })(orderedTextColors[csi]);
+        }
+      }
+
+      if (lowerSetName === "notification" && baseComponent) {
+        var notifProgColors = colorKey ? getPropValues(variantProps, "Color") : [];
+        var notifProgRadii = radiusKey ? getPropValues(variantProps, "Radius") : [];
+        if (notifProgColors.length > 0) {
+          doc.appendChild(createSectionHeader("Colors", "Semantic tones for accent, border, and indicators.", DOC_COLORS.subtitle));
+          var notifProgColorPanel = createPanel("notification-programmatic-colors", 10);
+          notifProgColorPanel.resize(1192, notifProgColorPanel.height);
+          doc.appendChild(notifProgColorPanel);
+          addInstancesRow(
+            notifProgColorPanel,
+            "Color",
+            notifProgColors,
+            function (cName) {
+              return makeInstance({ Color: cName });
+            },
+            false,
+            { itemsPerRow: 3 }
+          );
+        }
+        if (notifProgRadii.length > 1) {
+          doc.appendChild(createSectionHeader("Radius", "Corner radius scale.", DOC_COLORS.subtitle));
+          var notifProgRadPanel = createPanel("notification-programmatic-radii", 10);
+          notifProgRadPanel.resize(1192, notifProgRadPanel.height);
+          doc.appendChild(notifProgRadPanel);
+          addInstancesRow(
+            notifProgRadPanel,
+            "Radius",
+            pickOrdered(notifProgRadii, ["Default", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6),
+            function (rName) {
+              return makeInstance({ Radius: rName });
+            },
+            false,
+            { itemsPerRow: 3 }
+          );
+        }
+      }
+
+      if (lowerSetName === "tooltip" && baseComponent) {
+        var ttProgDirKey = getPropKey(variantProps, "Direction");
+        var ttProgArrowKey = getPropKey(variantProps, "Arrow");
+        var ttProgDirs = ttProgDirKey ? getPropValues(variantProps, "Direction") : [];
+        var ttProgArrows = ttProgArrowKey ? getPropValues(variantProps, "Arrow") : [];
+        var ttProgDefArrow = null;
+        var ttProgDefDir = null;
+        for (var tpa = 0; tpa < ttProgArrows.length; tpa++) {
+          var al2 = String(ttProgArrows[tpa] || "").toLowerCase();
+          if (al2.indexOf("without") < 0 && al2.indexOf("with") >= 0) {
+            ttProgDefArrow = ttProgArrows[tpa];
+            break;
+          }
+        }
+        if (ttProgDefArrow == null && ttProgArrows.length > 0) ttProgDefArrow = ttProgArrows[0];
+        for (var tpd = 0; tpd < ttProgDirs.length; tpd++) {
+          if (String(ttProgDirs[tpd] || "").toLowerCase() === "top") {
+            ttProgDefDir = ttProgDirs[tpd];
+            break;
+          }
+        }
+        if (ttProgDefDir == null && ttProgDirs.length > 0) ttProgDefDir = ttProgDirs[0];
+
+        if (ttProgDirs.length > 0 && ttProgDefArrow != null) {
+          doc.appendChild(createSectionHeader("Direction", "Tooltip placement relative to the trigger.", DOC_COLORS.subtitle));
+          var ttProgDirPanel = createPanel("tooltip-programmatic-direction", 10);
+          ttProgDirPanel.resize(1192, ttProgDirPanel.height);
+          doc.appendChild(ttProgDirPanel);
+          var ttProgOrderedDirs = pickOrdered(ttProgDirs, ["top", "bottom", "left", "right"]);
+          addInstancesRow(
+            ttProgDirPanel,
+            "Direction",
+            ttProgOrderedDirs,
+            function (dirName) {
+              var p = {};
+              if (ttProgDirKey) p.Direction = dirName;
+              if (ttProgArrowKey) p.Arrow = ttProgDefArrow;
+              return makeInstance(p);
+            },
+            false,
+            { itemsPerRow: 4 }
+          );
+        }
+        if (ttProgArrows.length > 1 && ttProgDefDir != null) {
+          doc.appendChild(createSectionHeader("Arrow", "Pointer on or off for each placement.", DOC_COLORS.subtitle));
+          var ttProgArrowPanel = createPanel("tooltip-programmatic-arrow", 10);
+          ttProgArrowPanel.resize(1192, ttProgArrowPanel.height);
+          doc.appendChild(ttProgArrowPanel);
+          var ttProgOrderedArrows = pickOrdered(ttProgArrows, ["with-arrow", "without-arrow"]);
+          addInstancesRow(
+            ttProgArrowPanel,
+            "Arrow",
+            ttProgOrderedArrows,
+            function (arrowName) {
+              var p2 = {};
+              if (ttProgDirKey) p2.Direction = ttProgDefDir;
+              if (ttProgArrowKey) p2.Arrow = arrowName;
+              return makeInstance(p2);
+            },
+            false,
+            { itemsPerRow: 2 }
+          );
         }
       }
     }
@@ -5360,17 +5624,510 @@ function chipIconColorPath(variant, state) {
 // Notification Component Set
 // ---------------------------------------------------------------------------
 
-function buildNotificationComponentSet(varMap, page, font) {
+function bindNotificationIconTokenVectors(iconInst, varMap) {
+  bindNotificationGraphicNodesToIconToken(iconInst, varMap);
+}
+
+function bindNotificationGraphicNodesToIconToken(root, varMap) {
+  if (!root || !varMap) return;
+  bindNotificationGraphicNodesToPaintVar(root, varMap["notification/icon"]);
+}
+
+/** Binds vector/ellipse strokes + fills on a close icon instance to `notification/close` (tone-aware). */
+function bindNotificationCloseIconGraphicNodes(root, varMap, colorTone) {
+  if (!root || !varMap) return;
+  var paintVar = notificationResolvedVar(varMap, "close", colorTone) || varMap["notification/icon"];
+  if (paintVar) bindNotificationGraphicNodesToPaintVar(root, paintVar);
+}
+
+function bindNotificationGraphicNodesToPaintVar(root, paintVar) {
+  if (!root || !paintVar) return;
+  var base = { r: 0.2, g: 0.53, b: 0.87 };
+  var nodes = root.findAll(function(n) {
+    return n.type === "VECTOR" || n.type === "ELLIPSE" || n.type === "RECTANGLE";
+  });
+  for (var ni = 0; ni < nodes.length; ni++) {
+    var v = nodes[ni];
+    if (v.strokes && v.strokes.length > 0) {
+      v.strokes = [{ type: "SOLID", color: base }];
+      bindPaintVar(v, "strokes", 0, paintVar);
+    }
+    if (v.fills && v.fills.length > 0) {
+      v.fills = [{ type: "SOLID", color: base }];
+      bindPaintVar(v, "fills", 0, paintVar);
+    }
+  }
+}
+
+function notificationResolvedVar(varMap, suffix, colorTone) {
+  var t = String(colorTone || "primary").toLowerCase();
+  var darkLayers = { background: true, title: true, description: true, icon: true, close: true, accent: true };
+  if (t === "dark" && darkLayers[suffix]) {
+    var darkPath = "notification/dark-" + suffix;
+    if (varMap[darkPath]) return varMap[darkPath];
+  }
+  return varMap["notification/" + suffix];
+}
+
+function notificationIndicatorVarForTone(varMap, tone, colorTone) {
+  var t = String(tone || "").toLowerCase();
+  var pathSuffix =
+    t === "primary"
+      ? "indicator-primary"
+      : t === "dark"
+        ? "indicator-dark"
+        : t === "error"
+          ? "indicator-error"
+          : t === "warning"
+            ? "indicator-warning"
+            : t === "success"
+              ? "indicator-success"
+              : "indicator-primary";
+  var hit = notificationResolvedVar(varMap, pathSuffix, colorTone);
+  if (hit) return hit;
+  var accentHit = notificationResolvedVar(varMap, "accent", colorTone);
+  if (accentHit) return accentHit;
+  return varMap["notification/accent"] || varMap["notification/icon"];
+}
+
+function notificationBorderVarForTone(varMap, tone, colorTone) {
+  var t = String(tone || "").toLowerCase();
+  var pathSuffix =
+    t === "primary"
+      ? "border-primary"
+      : t === "dark"
+        ? "border-dark"
+        : t === "error"
+          ? "border-error"
+          : t === "warning"
+            ? "border-warning"
+            : t === "success"
+              ? "border-success"
+              : "border-primary";
+  var hit = notificationResolvedVar(varMap, pathSuffix, colorTone);
+  if (hit) return hit;
+  var defBorder = notificationResolvedVar(varMap, "border-default", colorTone);
+  if (defBorder) return defBorder;
+  return notificationResolvedVar(varMap, "border-primary", colorTone);
+}
+
+/** Binds Loader shapes to `loader/color` (strokes + fills). Stroke-only arcs get a matching fill to remove inner seam/white line. */
+function bindLoaderGraphicNodesToLoaderColor(root, varMap) {
+  if (!root || !varMap) return;
+  var colorVar = varMap["loader/color"];
+  var base = { r: 0.13, g: 0.55, b: 0.9 };
+  var nodes = root.findAll(function(n) {
+    return (
+      n.type === "VECTOR" ||
+      n.type === "ELLIPSE" ||
+      n.type === "RECTANGLE" ||
+      n.type === "POLYGON" ||
+      n.type === "STAR"
+    );
+  });
+  for (var ni = 0; ni < nodes.length; ni++) {
+    var v = nodes[ni];
+    if (v.strokes && v.strokes.length > 0) {
+      v.strokes = [{ type: "SOLID", color: base }];
+      if (colorVar) bindPaintVar(v, "strokes", 0, colorVar);
+    }
+    if (v.fills && v.fills.length > 0) {
+      v.fills = [{ type: "SOLID", color: base }];
+      if (colorVar) bindPaintVar(v, "fills", 0, colorVar);
+    } else if (v.strokes && v.strokes.length > 0) {
+      v.fills = [{ type: "SOLID", color: base }];
+      if (colorVar) bindPaintVar(v, "fills", 0, colorVar);
+    }
+  }
+}
+
+function findLoaderOvalComponent(loaderSet) {
+  if (!loaderSet || loaderSet.type !== "COMPONENT_SET" || !loaderSet.children) return null;
+  var children = loaderSet.children;
+  for (var i = 0; i < children.length; i++) {
+    var child = children[i];
+    if (child.type !== "COMPONENT") continue;
+    var nn = String(child.name || "").toLowerCase().replace(/\s+/g, "");
+    if (nn.indexOf("type=oval") >= 0 && nn.indexOf("size=default") >= 0) return child;
+  }
+  for (var i0 = 0; i0 < children.length; i0++) {
+    var ch0 = children[i0];
+    if (ch0.type !== "COMPONENT") continue;
+    var n0 = String(ch0.name || "").toLowerCase().replace(/\s+/g, "");
+    if (n0.indexOf("type=oval") >= 0 && n0.indexOf("size=md") >= 0) return ch0;
+  }
+  for (var j = 0; j < children.length; j++) {
+    var c2 = children[j];
+    if (c2.type !== "COMPONENT") continue;
+    var n2 = String(c2.name || "").toLowerCase().replace(/\s+/g, "");
+    if (n2.indexOf("type=oval") >= 0) return c2;
+  }
+  return null;
+}
+
+function resolveNotificationLoaderSource(loaderSet, page) {
+  var fromSet = findLoaderOvalComponent(loaderSet);
+  if (fromSet) return fromSet;
+  if (!page || !page.children) return null;
+  for (var pi = 0; pi < page.children.length; pi++) {
+    var ch = page.children[pi];
+    if (ch.type === "COMPONENT_SET" && String(ch.name || "") === "Loader") {
+      var hit = findLoaderOvalComponent(ch);
+      if (hit) return hit;
+    }
+  }
+  return null;
+}
+
+async function buildNotificationComponentSet(varMap, page, font, loaderSet, resolvedComponentFloat) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var borderStates = ["off", "on"];
   var closeStates = ["off", "on"];
   var iconStates = ["off", "on"];
   var loadingStates = ["off", "on"];
-  var components = [];
+  var accentStates = ["on", "off"];
+  var colorTones = ["primary", "dark", "error", "warning", "success"];
   var gap = 24;
   var colWidth = 420;
   var rowHeight = 130;
 
+  var notificationIcons = await findNotificationIconComponents();
+  if (notificationIcons.leading) {
+    progress("[Notification] Icon source: " + notificationIcons.leading.name);
+  } else {
+    progress("[Notification] Warning: no matching icon on Icons page; using placeholder when Icon=On.");
+  }
+  if (notificationIcons.close) {
+    progress("[Notification] Close icon source: " + notificationIcons.close.name);
+  } else {
+    progress("[Notification] Warning: no close icon on Icons page; Close=On uses × text (add X/Close icon to Icons for instance swap).");
+  }
+
+  var loaderSource = resolveNotificationLoaderSource(loaderSet, page);
+  if (loaderSource) {
+    progress("[Notification] Loading state uses Loader: " + loaderSource.name);
+  } else {
+    progress("[Notification] Warning: no Loader set (Oval/MD) found; loading state uses stroke ellipse.");
+  }
+
+  function appendNotificationVariant(targetComponents, layout, variantSpec) {
+    var radius = variantSpec.radius;
+    var withBorder = variantSpec.withBorder;
+    var withClose = variantSpec.withClose;
+    var withIcon = variantSpec.withIcon;
+    var isLoading = variantSpec.isLoading;
+    var withAccent = variantSpec.withAccent;
+    var colorTone = variantSpec.colorTone;
+    var compName = variantSpec.compName;
+    var strokeOn = withBorder;
+    var hasAccent = withAccent && !isLoading;
+    var indicatorVar = notificationIndicatorVarForTone(varMap, colorTone, colorTone);
+
+    var comp = figma.createComponent();
+    comp.name = compName;
+    comp.resize(360, 110);
+    comp.clipsContent = false;
+    comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+    comp.strokes = strokeOn ? [{ type: "SOLID", color: { r: 0.84, g: 0.84, b: 0.84 } }] : [];
+    comp.strokeWeight = strokeOn ? 1 : 0;
+    comp.strokeAlign = "INSIDE";
+    comp.cornerRadius = 8;
+
+    var nBg = notificationResolvedVar(varMap, "background", colorTone);
+    if (nBg) bindPaintVar(comp, "fills", 0, nBg);
+    if (strokeOn) {
+      var borderVar = notificationBorderVarForTone(varMap, colorTone, colorTone);
+      if (borderVar) bindPaintVar(comp, "strokes", 0, borderVar);
+    }
+    if (strokeOn && varMap["notification/border-width"]) bindVar(comp, "strokeWeight", varMap["notification/border-width"]);
+    if (varMap["notification/radius-" + radius]) {
+      bindVar(comp, "topLeftRadius", varMap["notification/radius-" + radius]);
+      bindVar(comp, "topRightRadius", varMap["notification/radius-" + radius]);
+      bindVar(comp, "bottomLeftRadius", varMap["notification/radius-" + radius]);
+      bindVar(comp, "bottomRightRadius", varMap["notification/radius-" + radius]);
+    }
+
+    function appendNotificationCloseControl() {
+      if (!withClose) return;
+      var notifW = 360;
+      var closeIconW = 16;
+      var closePadRight = 8;
+      var closeX = notifW - closeIconW - closePadRight;
+      var closeComp = notificationIcons.close;
+      if (closeComp && closeComp.type === "COMPONENT") {
+        var closeInst = closeComp.createInstance();
+        closeInst.name = "close";
+        try {
+          closeInst.resize(closeIconW, closeIconW);
+        } catch (_eCloseResize) {}
+        bindNotificationCloseIconGraphicNodes(closeInst, varMap, colorTone);
+        closeInst.x = closeX;
+        closeInst.y = 12;
+        comp.appendChild(closeInst);
+      } else {
+        var closeNode = figma.createText();
+        closeNode.name = "close";
+        closeNode.fontName = font;
+        closeNode.characters = "×";
+        closeNode.fontSize = 14;
+        closeNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+        var nCloseFallback = notificationResolvedVar(varMap, "close", colorTone);
+        if (nCloseFallback) bindPaintVar(closeNode, "fills", 0, nCloseFallback);
+        closeNode.x = closeX;
+        closeNode.y = 12;
+        comp.appendChild(closeNode);
+      }
+    }
+
+    if (isLoading) {
+      // Same layer stack as non-loading: accent exists but stays hidden while loading (no left bar).
+      var accentLoad = figma.createRectangle();
+      accentLoad.name = "accent";
+      accentLoad.resize(6, 94);
+      accentLoad.x = 8;
+      accentLoad.y = 8;
+      accentLoad.cornerRadius = 3;
+      accentLoad.visible = false;
+      accentLoad.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
+      if (indicatorVar) bindPaintVar(accentLoad, "fills", 0, indicatorVar);
+      else if (notificationResolvedVar(varMap, "accent", colorTone))
+        bindPaintVar(accentLoad, "fills", 0, notificationResolvedVar(varMap, "accent", colorTone));
+      else if (notificationResolvedVar(varMap, "icon", colorTone))
+        bindPaintVar(accentLoad, "fills", 0, notificationResolvedVar(varMap, "icon", colorTone));
+      comp.appendChild(accentLoad);
+
+      // Row: loader left (vertically centered vs copy), title + description right, left-aligned.
+      var loadingBody = figma.createFrame();
+      loadingBody.name = "body";
+      loadingBody.resize(360, 110);
+      loadingBody.x = 0;
+      loadingBody.y = 0;
+      loadingBody.clipsContent = false;
+      loadingBody.layoutMode = "HORIZONTAL";
+      loadingBody.primaryAxisSizingMode = "FIXED";
+      loadingBody.counterAxisSizingMode = "FIXED";
+      loadingBody.primaryAxisAlignItems = "MIN";
+      loadingBody.counterAxisAlignItems = "CENTER";
+      loadingBody.itemSpacing = 12;
+      loadingBody.paddingLeft = 20;
+      loadingBody.paddingRight = withClose ? 46 : 20;
+      loadingBody.paddingTop = 12;
+      loadingBody.paddingBottom = 12;
+      loadingBody.fills = [];
+
+      var loaderW = 18;
+      if (loaderSource) {
+        var loaderInst = loaderSource.createInstance();
+        loaderInst.name = "loader";
+        try {
+          var lw = loaderSource.width;
+          var lh = loaderSource.height;
+          var target = 22;
+          var scale = target / Math.max(lw || 72, lh || 56);
+          loaderInst.resize(
+            Math.max(1, Math.round((lw || 72) * scale)),
+            Math.max(1, Math.round((lh || 56) * scale))
+          );
+        } catch (eLoaderResize) {}
+        loaderW = loaderInst.width;
+        try {
+          loaderInst.layoutGrow = 0;
+          loaderInst.layoutSizingHorizontal = "FIXED";
+          loaderInst.layoutSizingVertical = "FIXED";
+        } catch (eLoaderLayout) {}
+        bindLoaderGraphicNodesToLoaderColor(loaderInst, varMap);
+        loadingBody.appendChild(loaderInst);
+      } else {
+        var loaderNode = figma.createEllipse();
+        loaderNode.name = "loader";
+        loaderNode.resize(18, 18);
+        loaderW = 18;
+        loaderNode.strokeAlign = "CENTER";
+        loaderNode.arcData = { startingAngle: 0, endingAngle: Math.PI * 1.55, innerRadius: 0.72 };
+        loaderNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+        loaderNode.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+        loaderNode.strokeWeight = Math.max(2, Math.round(18 * 0.14));
+        loaderNode.cornerRadius = resolveCompFloat("loader/oval-corner-radius-sm", 0);
+        bindVar(loaderNode, "strokeWeight", varMap["loader/stroke-width-sm"]);
+        if (varMap["loader/color"]) {
+          bindPaintVar(loaderNode, "fills", 0, varMap["loader/color"]);
+          bindPaintVar(loaderNode, "strokes", 0, varMap["loader/color"]);
+        } else if (notificationResolvedVar(varMap, "icon", colorTone)) {
+          var nIconL = notificationResolvedVar(varMap, "icon", colorTone);
+          bindPaintVar(loaderNode, "fills", 0, nIconL);
+          bindPaintVar(loaderNode, "strokes", 0, nIconL);
+        }
+        loadingBody.appendChild(loaderNode);
+      }
+
+      var padL = 20;
+      var padR = withClose ? 46 : 20;
+      var rowGap = 12;
+      var loadColW = Math.max(
+        160,
+        Math.floor(360 - padL - padR - rowGap - loaderW)
+      );
+
+      var textColumn = figma.createFrame();
+      textColumn.name = "content";
+      textColumn.layoutMode = "VERTICAL";
+      textColumn.primaryAxisSizingMode = "AUTO";
+      textColumn.counterAxisSizingMode = "FIXED";
+      textColumn.primaryAxisAlignItems = "MIN";
+      textColumn.counterAxisAlignItems = "MIN";
+      textColumn.itemSpacing = 4;
+      textColumn.fills = [];
+      textColumn.resize(loadColW, 40);
+
+      var titleNode = figma.createText();
+      titleNode.name = "title";
+      titleNode.fontName = font;
+      titleNode.characters = "We notify you that";
+      titleNode.fontSize = 14;
+      titleNode.textAutoResize = "HEIGHT";
+      titleNode.textAlignHorizontal = "LEFT";
+      titleNode.resize(loadColW, titleNode.height);
+      titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+      var nTitleL = notificationResolvedVar(varMap, "title", colorTone);
+      if (nTitleL) bindPaintVar(titleNode, "fills", 0, nTitleL);
+      if (varMap["notification/title-font-size"]) bindVar(titleNode, "fontSize", varMap["notification/title-font-size"]);
+      bindVar(titleNode, "fontFamily", varMap["notification/title-font-family"]);
+      bindVar(titleNode, "fontStyle", varMap["notification/title-font-weight"]);
+      bindVar(titleNode, "lineHeight", varMap["notification/title-line-height"]);
+      try {
+        titleNode.layoutSizingHorizontal = "FIXED";
+        titleNode.layoutSizingVertical = "HUG";
+        titleNode.layoutGrow = 0;
+      } catch (eTitleLayout) {}
+      textColumn.appendChild(titleNode);
+
+      var descNode = figma.createText();
+      descNode.name = "description";
+      descNode.fontName = font;
+      descNode.characters = "You are now obligated to give a star to Mantine project on GitHub";
+      descNode.fontSize = 13;
+      descNode.textAutoResize = "HEIGHT";
+      descNode.textAlignHorizontal = "LEFT";
+      descNode.resize(loadColW, descNode.height);
+      descNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+      var nDescL = notificationResolvedVar(varMap, "description", colorTone);
+      if (nDescL) bindPaintVar(descNode, "fills", 0, nDescL);
+      if (varMap["notification/description-font-size"]) bindVar(descNode, "fontSize", varMap["notification/description-font-size"]);
+      bindVar(descNode, "fontFamily", varMap["notification/description-font-family"]);
+      bindVar(descNode, "fontStyle", varMap["notification/description-font-weight"]);
+      bindVar(descNode, "lineHeight", varMap["notification/description-line-height"]);
+      try {
+        descNode.layoutSizingHorizontal = "FIXED";
+        descNode.layoutSizingVertical = "HUG";
+        descNode.layoutGrow = 0;
+      } catch (eDescLayout) {}
+      textColumn.appendChild(descNode);
+
+      try {
+        textColumn.layoutSizingHorizontal = "FIXED";
+        textColumn.layoutSizingVertical = "HUG";
+      } catch (eColLayout) {}
+      loadingBody.appendChild(textColumn);
+
+      comp.appendChild(loadingBody);
+
+      appendNotificationCloseControl();
+    } else {
+      var accent = figma.createRectangle();
+      accent.name = "accent";
+      accent.resize(6, 94);
+      accent.x = 8;
+      accent.y = 8;
+      accent.cornerRadius = 3;
+      accent.visible = hasAccent;
+      accent.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
+      if (indicatorVar) bindPaintVar(accent, "fills", 0, indicatorVar);
+      else if (notificationResolvedVar(varMap, "accent", colorTone))
+        bindPaintVar(accent, "fills", 0, notificationResolvedVar(varMap, "accent", colorTone));
+      else if (notificationResolvedVar(varMap, "icon", colorTone))
+        bindPaintVar(accent, "fills", 0, notificationResolvedVar(varMap, "icon", colorTone));
+      comp.appendChild(accent);
+
+      if (withIcon) {
+        var iconSource = notificationIcons.leading || notificationIcons.fallback;
+        var iconX = hasAccent ? 24 : 16;
+        if (iconSource) {
+          var iconInst = iconSource.createInstance();
+          iconInst.name = "icon";
+          try { iconInst.resize(16, 16); } catch (eIconResize) {}
+          iconInst.x = iconX;
+          iconInst.y = 14;
+          bindNotificationIconTokenVectors(iconInst, varMap);
+          comp.appendChild(iconInst);
+        } else {
+          var iconFallback = figma.createEllipse();
+          iconFallback.name = "icon";
+          iconFallback.resize(14, 14);
+          iconFallback.x = iconX;
+          iconFallback.y = 16;
+          iconFallback.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
+          var nIconF = notificationResolvedVar(varMap, "icon", colorTone);
+          if (nIconF) bindPaintVar(iconFallback, "fills", 0, nIconF);
+          comp.appendChild(iconFallback);
+        }
+      }
+
+      var textLeft = hasAccent ? (withIcon ? 48 : 24) : (withIcon ? 40 : 16);
+      var textWidth = withClose ? 280 : 305;
+
+      var titleNode = figma.createText();
+      titleNode.name = "title";
+      titleNode.fontName = font;
+      titleNode.characters = "We notify you that";
+      titleNode.fontSize = 14;
+      titleNode.x = textLeft;
+      titleNode.y = 12;
+      titleNode.textAutoResize = "HEIGHT";
+      titleNode.resize(textWidth, titleNode.height);
+      titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+      var nTitle = notificationResolvedVar(varMap, "title", colorTone);
+      if (nTitle) bindPaintVar(titleNode, "fills", 0, nTitle);
+      if (varMap["notification/title-font-size"]) bindVar(titleNode, "fontSize", varMap["notification/title-font-size"]);
+      bindVar(titleNode, "fontFamily", varMap["notification/title-font-family"]);
+      bindVar(titleNode, "fontStyle", varMap["notification/title-font-weight"]);
+      bindVar(titleNode, "lineHeight", varMap["notification/title-line-height"]);
+      comp.appendChild(titleNode);
+
+      var descNode = figma.createText();
+      descNode.name = "description";
+      descNode.fontName = font;
+      descNode.characters = "You are now obligated to give a star to Mantine project on GitHub";
+      descNode.fontSize = 13;
+      descNode.x = textLeft;
+      descNode.y = 44;
+      descNode.textAutoResize = "HEIGHT";
+      descNode.resize(textWidth, descNode.height);
+      descNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+      var nDesc = notificationResolvedVar(varMap, "description", colorTone);
+      if (nDesc) bindPaintVar(descNode, "fills", 0, nDesc);
+      if (varMap["notification/description-font-size"]) bindVar(descNode, "fontSize", varMap["notification/description-font-size"]);
+      bindVar(descNode, "fontFamily", varMap["notification/description-font-family"]);
+      bindVar(descNode, "fontStyle", varMap["notification/description-font-weight"]);
+      bindVar(descNode, "lineHeight", varMap["notification/description-line-height"]);
+      comp.appendChild(descNode);
+
+      appendNotificationCloseControl();
+    }
+
+    comp.x = layout.colIndex * (colWidth + gap);
+    comp.y = layout.rowIndex * (rowHeight + gap);
+
+    page.appendChild(comp);
+    targetComponents.push(comp);
+  }
+
+  var components = [];
   for (var ri = 0; ri < radii.length; ri++) {
     var radius = radii[ri];
     var capRadius = radius.toUpperCase();
@@ -5382,116 +6139,47 @@ function buildNotificationComponentSet(varMap, page, font) {
           var withIcon = iconStates[ii] === "on";
           for (var li = 0; li < loadingStates.length; li++) {
             var isLoading = loadingStates[li] === "on";
-
-            var comp = figma.createComponent();
-            comp.name =
-              "Radius=" + capRadius +
-              ", Border=" + borderStates[bi] +
-              ", Close=" + closeStates[ci] +
-              ", Icon=" + iconStates[ii] +
-              ", Loading=" + loadingStates[li];
-            comp.resize(360, 110);
-            comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-            comp.strokes = withBorder ? [{ type: "SOLID", color: { r: 0.84, g: 0.84, b: 0.84 } }] : [];
-            comp.strokeWeight = withBorder ? 1 : 0;
-            comp.strokeAlign = "INSIDE";
-            comp.cornerRadius = 8;
-
-            if (varMap["notification/background"]) bindPaintVar(comp, "fills", 0, varMap["notification/background"]);
-            if (withBorder && varMap["notification/border"]) bindPaintVar(comp, "strokes", 0, varMap["notification/border"]);
-            if (varMap["notification/border-width"]) bindVar(comp, "strokeWeight", varMap["notification/border-width"]);
-            if (varMap["notification/radius-" + radius]) {
-              bindVar(comp, "topLeftRadius", varMap["notification/radius-" + radius]);
-              bindVar(comp, "topRightRadius", varMap["notification/radius-" + radius]);
-              bindVar(comp, "bottomLeftRadius", varMap["notification/radius-" + radius]);
-              bindVar(comp, "bottomRightRadius", varMap["notification/radius-" + radius]);
-            }
-
-            var accent = figma.createRectangle();
-            accent.name = "accent";
-            accent.resize(6, 94);
-            accent.x = 8;
-            accent.y = 8;
-            accent.cornerRadius = 3;
-            accent.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
-            if (varMap["notification/icon"]) bindPaintVar(accent, "fills", 0, varMap["notification/icon"]);
-            comp.appendChild(accent);
-
-            if (withIcon || isLoading) {
-              var iconNode = figma.createEllipse();
-              iconNode.name = isLoading ? "loader" : "icon";
-              iconNode.resize(14, 14);
-              iconNode.x = 24;
-              iconNode.y = 16;
-              if (isLoading) {
-                iconNode.fills = [];
-                iconNode.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
-                iconNode.strokeWeight = 2;
-                if (varMap["notification/icon"]) bindPaintVar(iconNode, "strokes", 0, varMap["notification/icon"]);
-              } else {
-                iconNode.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
-                if (varMap["notification/icon"]) bindPaintVar(iconNode, "fills", 0, varMap["notification/icon"]);
+            for (var ai = 0; ai < accentStates.length; ai++) {
+              var withAccent = accentStates[ai] === "on";
+              for (var ti = 0; ti < colorTones.length; ti++) {
+                var colorTone = colorTones[ti];
+                var capTone = colorTone.charAt(0).toUpperCase() + colorTone.slice(1);
+                var compNameDefault =
+                  "Radius=" +
+                  capRadius +
+                  ", Border=" +
+                  borderStates[bi] +
+                  ", Close=" +
+                  closeStates[ci] +
+                  ", Icon=" +
+                  iconStates[ii] +
+                  ", Loading=" +
+                  loadingStates[li] +
+                  ", Accent=" +
+                  accentStates[ai] +
+                  ", Color=" +
+                  capTone;
+                var colIndexDefault = ri * borderStates.length + bi;
+                var rowIndexDefault =
+                  (((ci * iconStates.length + ii) * loadingStates.length + li) * accentStates.length + ai) *
+                    colorTones.length +
+                  ti;
+                appendNotificationVariant(
+                  components,
+                  { colIndex: colIndexDefault, rowIndex: rowIndexDefault },
+                  {
+                    radius: radius,
+                    withBorder: withBorder,
+                    withClose: withClose,
+                    withIcon: withIcon,
+                    isLoading: isLoading,
+                    withAccent: withAccent,
+                    colorTone: colorTone,
+                    compName: compNameDefault,
+                  }
+                );
               }
-              comp.appendChild(iconNode);
             }
-
-            var textLeft = (withIcon || isLoading) ? 46 : 24;
-            var textWidth = withClose ? 280 : 305;
-
-            var titleNode = figma.createText();
-            titleNode.name = "title";
-            titleNode.fontName = font;
-            titleNode.characters = "We notify you that";
-            titleNode.fontSize = 14;
-            titleNode.x = textLeft;
-            titleNode.y = 12;
-            titleNode.textAutoResize = "HEIGHT";
-            titleNode.resize(textWidth, titleNode.height);
-            titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-            if (varMap["notification/title"]) bindPaintVar(titleNode, "fills", 0, varMap["notification/title"]);
-            if (varMap["notification/title-font-size"]) bindVar(titleNode, "fontSize", varMap["notification/title-font-size"]);
-            bindVar(titleNode, "fontFamily", varMap["notification/title-font-family"]);
-            bindVar(titleNode, "fontStyle", varMap["notification/title-font-weight"]);
-            bindVar(titleNode, "lineHeight", varMap["notification/title-line-height"]);
-            comp.appendChild(titleNode);
-
-            var descNode = figma.createText();
-            descNode.name = "description";
-            descNode.fontName = font;
-            descNode.characters = "You are now obligated to give a star to Mantine project on GitHub";
-            descNode.fontSize = 13;
-            descNode.x = textLeft;
-            descNode.y = 44;
-            descNode.textAutoResize = "HEIGHT";
-            descNode.resize(textWidth, descNode.height);
-            descNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
-            if (varMap["notification/description"]) bindPaintVar(descNode, "fills", 0, varMap["notification/description"]);
-            if (varMap["notification/description-font-size"]) bindVar(descNode, "fontSize", varMap["notification/description-font-size"]);
-            bindVar(descNode, "fontFamily", varMap["notification/description-font-family"]);
-            bindVar(descNode, "fontStyle", varMap["notification/description-font-weight"]);
-            bindVar(descNode, "lineHeight", varMap["notification/description-line-height"]);
-            comp.appendChild(descNode);
-
-            if (withClose) {
-              var closeNode = figma.createText();
-              closeNode.name = "close";
-              closeNode.fontName = font;
-              closeNode.characters = "×";
-              closeNode.fontSize = 14;
-              closeNode.x = 338;
-              closeNode.y = 12;
-              closeNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
-              if (varMap["notification/close"]) bindPaintVar(closeNode, "fills", 0, varMap["notification/close"]);
-              comp.appendChild(closeNode);
-            }
-
-            var colIndex = ri * borderStates.length + bi;
-            var rowIndex = ((ci * iconStates.length + ii) * loadingStates.length) + li;
-            comp.x = colIndex * (colWidth + gap);
-            comp.y = rowIndex * (rowHeight + gap);
-
-            page.appendChild(comp);
-            components.push(comp);
           }
         }
       }
@@ -6043,7 +6731,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
   return componentSet;
 }
 
-async function findAlertIconComponents() {
+async function collectFigmaIconCandidates() {
   var iconCandidates = [];
   var iconsPage = null;
 
@@ -6072,16 +6760,22 @@ async function findAlertIconComponents() {
     }
   }
 
-  function normalizeName(name) {
-    return String(name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
-  }
+  return iconCandidates;
+}
+
+function normalizeIconCandidateName(name) {
+  return String(name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+}
+
+async function findAlertIconComponents() {
+  var iconCandidates = await collectFigmaIconCandidates();
 
   function pickBest(target) {
     if (!iconCandidates.length) return null;
     var scored = [];
     for (var j = 0; j < iconCandidates.length; j++) {
       var raw = String(iconCandidates[j].name || "").toLowerCase();
-      var n = normalizeName(raw);
+      var n = normalizeIconCandidateName(raw);
       var score = 0;
       if (target === "warning") {
         if (n.indexOf("alerttriangle") >= 0) score += 100;
@@ -6093,7 +6787,6 @@ async function findAlertIconComponents() {
         if (n.indexOf("close") >= 0) score += 70;
         if (n.indexOf("x") >= 0) score += 15;
       }
-      // Prefer line/icon sets over random components.
       if (raw.indexOf("icon") >= 0 || raw.indexOf("line") >= 0) score += 10;
       if (score > 0) scored.push({ comp: iconCandidates[j], score: score });
     }
@@ -6109,6 +6802,65 @@ async function findAlertIconComponents() {
     : null;
 
   return { warning: warningIcon, close: closeIcon, fallback: fallbackIcon };
+}
+
+async function findNotificationIconComponents() {
+  var iconCandidates = await collectFigmaIconCandidates();
+
+  function pickBestLeading() {
+    if (!iconCandidates.length) return null;
+    var scored = [];
+    for (var j = 0; j < iconCandidates.length; j++) {
+      var raw = String(iconCandidates[j].name || "").toLowerCase();
+      var n = normalizeIconCandidateName(raw);
+      var score = 0;
+      if (n.indexOf("messagenotification") >= 0) score += 120;
+      if (n.indexOf("notificationmessage") >= 0) score += 115;
+      if (n.indexOf("notificationbox") >= 0) score += 110;
+      if (n.indexOf("notificationtext") >= 0) score += 105;
+      if (n.indexOf("notification") >= 0 && n.indexOf("message") >= 0) score += 95;
+      if (n.indexOf("notification") >= 0) score += 80;
+      if (n.indexOf("bell") >= 0) score += 75;
+      if (n.indexOf("megaphone") >= 0) score += 50;
+      if (n.indexOf("alertcircle") >= 0) score += 40;
+      if (n.indexOf("infocircle") >= 0) score += 38;
+      if (n.indexOf("info") >= 0) score += 35;
+      if (n.indexOf("alerttriangle") >= 0) score += 25;
+      if (raw.indexOf("icon") >= 0 || raw.indexOf("line") >= 0) score += 10;
+      if (score > 0) scored.push({ comp: iconCandidates[j], score: score });
+    }
+    if (!scored.length) return null;
+    scored.sort(function(a, b) { return b.score - a.score; });
+    return scored[0].comp;
+  }
+
+  function pickBestClose() {
+    if (!iconCandidates.length) return null;
+    var scored = [];
+    for (var jc = 0; jc < iconCandidates.length; jc++) {
+      var rawC = String(iconCandidates[jc].name || "").toLowerCase();
+      var nc = normalizeIconCandidateName(rawC);
+      var scoreC = 0;
+      if (nc.indexOf("xclose") >= 0) scoreC += 100;
+      if (nc.indexOf("close") >= 0) scoreC += 70;
+      if (nc.indexOf("x") >= 0) scoreC += 15;
+      if (rawC.indexOf("icon") >= 0 || rawC.indexOf("line") >= 0) scoreC += 10;
+      if (scoreC > 0) scored.push({ comp: iconCandidates[jc], score: scoreC });
+    }
+    if (!scored.length) return null;
+    scored.sort(function (a, b) {
+      return b.score - a.score;
+    });
+    return scored[0].comp;
+  }
+
+  var leadingIcon = pickBestLeading();
+  var closeIcon = pickBestClose();
+  var fallbackIcon = iconCandidates.length
+    ? iconCandidates.slice().sort(function(a, b) { return a.name.localeCompare(b.name); })[0]
+    : null;
+
+  return { leading: leadingIcon, close: closeIcon, fallback: fallbackIcon };
 }
 
 // ---------------------------------------------------------------------------
@@ -6257,11 +7009,18 @@ function buildTooltipComponentSet(varMap, page, font) {
 // Loader Component Set
 // ---------------------------------------------------------------------------
 
-function buildLoaderComponentSet(varMap, page, font) {
+function buildLoaderComponentSet(varMap, page, font, resolvedComponentFloat) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
   var types = ["oval", "bars", "dots"];
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var components = [];
   var sizePx = { xs: 14, sm: 18, md: 22, lg: 28, xl: 34 };
+  sizePx.default = sizePx.md;
   var gap = 22;
   var colWidth = 120;
   var rowHeight = 80;
@@ -6271,7 +7030,7 @@ function buildLoaderComponentSet(varMap, page, font) {
     var capType = type.charAt(0).toUpperCase() + type.slice(1);
     for (var si = 0; si < sizes.length; si++) {
       var size = sizes[si];
-      var capSize = size.toUpperCase();
+      var capSize = size === "default" ? "Default" : size.toUpperCase();
       var s = sizePx[size];
 
       var comp = figma.createComponent();
@@ -6288,12 +7047,16 @@ function buildLoaderComponentSet(varMap, page, font) {
         var ring = figma.createEllipse();
         ring.name = "Loader";
         ring.resize(s, s);
-        ring.fills = [];
+        ring.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
         ring.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
         ring.strokeWeight = Math.max(2, Math.round(s * 0.14));
         ring.strokeAlign = "CENTER";
         ring.arcData = { startingAngle: 0, endingAngle: Math.PI * 1.55, innerRadius: 0.72 };
+        // Figma VariableBindableNodeField has no "cornerRadius" — variables cannot link here; use literal from synced payload.
+        ring.cornerRadius = resolveCompFloat("loader/oval-corner-radius-" + size, 0);
+        bindPaintVar(ring, "fills", 0, varMap["loader/color"]);
         bindPaintVar(ring, "strokes", 0, varMap["loader/color"]);
+        bindVar(ring, "strokeWeight", varMap["loader/stroke-width-" + size]);
         bindVar(ring, "width", varMap["loader/size-" + size]);
         bindVar(ring, "height", varMap["loader/size-" + size]);
         comp.appendChild(ring);

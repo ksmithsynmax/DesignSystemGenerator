@@ -1,63 +1,104 @@
 import { Notification } from "@mantine/core";
+import MessageNotificationCircleIcon from "@untitledui-icons/react/line/MessageNotificationCircleIcon";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
+import { notificationSemanticToMantineColor } from "../../utils/notificationSemanticColors";
+
+/** Matches Figma `buildNotificationComponentSet` (accent x=8, w=6; title x=24 when accent, no icon). */
+const NOTIFICATION_ACCENT_LEFT = 8;
+const NOTIFICATION_ACCENT_WIDTH = 6;
+const NOTIFICATION_TEXT_INSET_ACCENT = 24;
 
 export default function NotificationPreview({
   brands,
   brandId,
+  previewTheme = "light",
   radius = "md",
-  color = "blue",
+  color = "primary",
   title = "We notify you that",
   description = "You are now obligated to give a star to Mantine project on GitHub",
   withBorder = false,
   withCloseButton = false,
   withIcon = false,
   loading = false,
+  withAccent = true,
 }) {
+  const colorTheme = previewTheme === "dark" ? "dark" : "light";
   const tokens = COMPONENT_TOKENS.notification;
+  const toneKey = String(color || "primary").toLowerCase();
+  const isDarkTone = toneKey === "dark";
+
+  const def = (suffix) => `notification-${suffix}`;
+  const dark = (suffix) => `notification-dark-${suffix}`;
+
+  const pickLayer = (suffix) => {
+    const dk = dark(suffix);
+    if (isDarkTone && tokens[dk]) return { key: dk, def: tokens[dk] };
+    const k = def(suffix);
+    return { key: k, def: tokens[k] };
+  };
+
+  const indicatorToneKey = `indicator-${toneKey}`;
+  const indicatorDefKey = def(indicatorToneKey);
+  let indicatorSemantic;
+  let indicatorLabel;
+  if (tokens[indicatorDefKey]) {
+    indicatorSemantic = tokens[indicatorDefKey].semantic;
+    indicatorLabel = indicatorDefKey;
+  } else if (isDarkTone && tokens[dark("accent")]) {
+    indicatorSemantic = tokens[dark("accent")].semantic;
+    indicatorLabel = dark("accent");
+  } else {
+    indicatorSemantic = tokens[def("accent")]?.semantic;
+    indicatorLabel = def("accent");
+  }
+
+  const accentColor = resolveColor(brands, brandId, indicatorSemantic, colorTheme, indicatorLabel);
+
+  const borderToneKey = `border-${toneKey}`;
+  const borderToneDef = def(borderToneKey);
+  let borderSemantic;
+  let borderTokenLabel;
+  if (tokens[borderToneDef]) {
+    borderSemantic = tokens[borderToneDef].semantic;
+    borderTokenLabel = borderToneDef;
+  } else {
+    borderSemantic =
+      tokens[def("border-default")]?.semantic ||
+      tokens[def("border-primary")]?.semantic;
+    borderTokenLabel = tokens[def("border-default")] ? def("border-default") : def("border-primary");
+  }
+
+  const bgPick = pickLayer("background");
+  const titlePick = pickLayer("title");
+  const descPick = pickLayer("description");
+  const iconPick = pickLayer("icon");
+  const closePick = pickLayer("close");
 
   const background = resolveColor(
     brands,
     brandId,
-    tokens["notification-background"]?.semantic,
-    "light",
-    "notification-background"
+    bgPick.def?.semantic,
+    colorTheme,
+    bgPick.key
   );
   const borderColor = resolveColor(
     brands,
     brandId,
-    tokens["notification-border"]?.semantic,
-    "light",
-    "notification-border"
+    borderSemantic,
+    colorTheme,
+    borderTokenLabel
   );
-  const titleColor = resolveColor(
-    brands,
-    brandId,
-    tokens["notification-title"]?.semantic,
-    "light",
-    "notification-title"
-  );
+  const titleColor = resolveColor(brands, brandId, titlePick.def?.semantic, colorTheme, titlePick.key);
   const descriptionColor = resolveColor(
     brands,
     brandId,
-    tokens["notification-description"]?.semantic,
-    "light",
-    "notification-description"
+    descPick.def?.semantic,
+    colorTheme,
+    descPick.key
   );
-  const iconColor = resolveColor(
-    brands,
-    brandId,
-    tokens["notification-icon"]?.semantic,
-    "light",
-    "notification-icon"
-  );
-  const closeColor = resolveColor(
-    brands,
-    brandId,
-    tokens["notification-close"]?.semantic,
-    "light",
-    "notification-close"
-  );
+  const iconColor = resolveColor(brands, brandId, iconPick.def?.semantic, colorTheme, iconPick.key);
+  const closeColor = resolveColor(brands, brandId, closePick.def?.semantic, colorTheme, closePick.key);
 
   const borderWidth = resolveDimension(brands, brandId, "notification-border-width");
   const cornerRadius = resolveDimension(brands, brandId, "notification-radius", radius);
@@ -77,32 +118,66 @@ export default function NotificationPreview({
   const descriptionLineHeight = resolveDimension(brands, brandId, "notification-description-line-height");
 
   const iconNode = withIcon ? (
-    <div
-      style={{
-        width: 16,
-        height: 16,
-        borderRadius: 999,
-        background: iconColor,
-      }}
-    />
+    <MessageNotificationCircleIcon width={16} height={16} style={{ color: iconColor }} />
   ) : null;
 
-  return (
+  const effectiveWithAccent = Boolean(withAccent) && !loading;
+  const showAccentBar = effectiveWithAccent;
+  const effectiveWithBorder = Boolean(withBorder);
+  const mantineColor = notificationSemanticToMantineColor(color);
+
+  const bw = Number(borderWidth);
+  const borderW = Number.isFinite(bw) && bw > 0 ? bw : 1;
+  const radiusPx = (() => {
+    const n = Number(cornerRadius);
+    return Number.isFinite(n) ? n : 8;
+  })();
+  const padX = Number(paddingX);
+  const padY = Number(paddingY);
+  const padXSafe = Number.isFinite(padX) ? padX : 12;
+  const padYSafe = Number.isFinite(padY) ? padY : 10;
+
+  const accentInsetY = Math.max(8, radiusPx);
+
+  const rootPadding =
+    showAccentBar && !iconNode
+      ? {
+          paddingTop: padYSafe,
+          paddingBottom: padYSafe,
+          paddingInlineStart: NOTIFICATION_TEXT_INSET_ACCENT,
+          paddingInlineEnd: padXSafe,
+        }
+      : { padding: `${padYSafe}px ${padXSafe}px` };
+
+  const accentBarBefore =
+    showAccentBar && !iconNode
+      ? {
+          display: "block",
+          insetInlineStart: NOTIFICATION_ACCENT_LEFT,
+          width: NOTIFICATION_ACCENT_WIDTH,
+          top: accentInsetY,
+          bottom: accentInsetY,
+          borderRadius: radiusPx,
+          backgroundColor: accentColor,
+        }
+      : null;
+
+  const notification = (
     <Notification
       title={title}
-      color={color}
+      color={mantineColor}
       icon={iconNode}
       loading={loading}
       withCloseButton={withCloseButton}
-      withBorder={withBorder}
+      withBorder={false}
       styles={{
         root: {
           background: background,
-          borderColor: withBorder ? borderColor : "transparent",
-          borderWidth: withBorder ? borderWidth : 0,
-          borderRadius: cornerRadius,
-          padding: `${paddingY}px ${paddingX}px`,
+          boxSizing: "border-box",
+          borderRadius: radiusPx,
           width: 360,
+          ...rootPadding,
+          ...(accentBarBefore ? { "&::before": accentBarBefore } : !showAccentBar ? { "&::before": { display: "none" } } : {}),
         },
         title: {
           color: titleColor,
@@ -121,9 +196,36 @@ export default function NotificationPreview({
         closeButton: {
           color: closeColor,
         },
+        icon: {
+          color: iconColor,
+          width: 16,
+          minWidth: 16,
+          height: 16,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          marginTop: 2,
+        },
       }}
     >
       {description}
     </Notification>
+  );
+
+  if (!effectiveWithBorder) return notification;
+
+  return (
+    <div
+      style={{
+        display: "inline-block",
+        borderRadius: radiusPx + borderW,
+        padding: borderW,
+        background: borderColor,
+        boxSizing: "border-box",
+        lineHeight: 0,
+      }}
+    >
+      {notification}
+    </div>
   );
 }

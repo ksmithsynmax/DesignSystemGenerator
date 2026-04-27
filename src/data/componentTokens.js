@@ -722,14 +722,32 @@ export const COMPONENT_TOKENS = {
   notification: {
     // ── COLOR TOKENS ──
     "notification-background": { type: "COLOR", semantic: "surface-default", figmaPath: "notification/background" },
-    "notification-border": { type: "COLOR", semantic: "border-default", figmaPath: "notification/border" },
+    "notification-border-default": { type: "COLOR", semantic: "border-default", figmaPath: "notification/border-default" },
+    "notification-border-primary": { type: "COLOR", semantic: "border-default", figmaPath: "notification/border-primary" },
+    "notification-border-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "notification/border-error" },
+    "notification-border-warning": { type: "COLOR", semantic: "feedback-warning", figmaPath: "notification/border-warning" },
+    "notification-border-success": { type: "COLOR", semantic: "feedback-success", figmaPath: "notification/border-success" },
     "notification-title": { type: "COLOR", semantic: "text-default", figmaPath: "notification/title" },
     "notification-description": { type: "COLOR", semantic: "text-default", figmaPath: "notification/description" },
+    "notification-accent": { type: "COLOR", semantic: "interactive-primary", figmaPath: "notification/accent" },
     "notification-icon": { type: "COLOR", semantic: "interactive-primary", figmaPath: "notification/icon" },
+    "notification-indicator-primary": { type: "COLOR", semantic: "interactive-primary", figmaPath: "notification/indicator-primary" },
+    "notification-indicator-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "notification/indicator-error" },
+    "notification-indicator-warning": { type: "COLOR", semantic: "feedback-warning", figmaPath: "notification/indicator-warning" },
+    "notification-indicator-success": { type: "COLOR", semantic: "feedback-success", figmaPath: "notification/indicator-success" },
+    "notification-indicator-dark": { type: "COLOR", semantic: "interactive-primary", figmaPath: "notification/indicator-dark" },
+    "notification-border-dark": { type: "COLOR", semantic: "border-default", figmaPath: "notification/border-dark" },
     "notification-close": { type: "COLOR", semantic: "text-default", figmaPath: "notification/close" },
+    // Dark tone: inverse surface + copy (semantic “chrome” toast, always valid alongside primary / error / warning / success).
+    "notification-dark-background": { type: "COLOR", semantic: "surface-inverse", figmaPath: "notification/dark-background" },
+    "notification-dark-title": { type: "COLOR", semantic: "text-inverse", figmaPath: "notification/dark-title" },
+    "notification-dark-description": { type: "COLOR", semantic: "text-subtle", figmaPath: "notification/dark-description" },
+    "notification-dark-accent": { type: "COLOR", semantic: "interactive-primary", figmaPath: "notification/dark-accent" },
+    "notification-dark-icon": { type: "COLOR", semantic: "text-inverse", figmaPath: "notification/dark-icon" },
+    "notification-dark-close": { type: "COLOR", semantic: "text-inverse", figmaPath: "notification/dark-close" },
 
     // ── FLOAT TOKENS ──
-    "notification-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "notification/radius" },
+    "notification-radius": { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "notification/radius" },
     "notification-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "notification/padding-x" },
     "notification-padding-y": { type: "FLOAT", unit: "px", value: 10, figmaPath: "notification/padding-y" },
     "notification-title-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "notification/title-font-size" },
@@ -765,6 +783,21 @@ export const COMPONENT_TOKENS = {
 
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "loader-size": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 18, md: 22, lg: 28, xl: 34 }, figmaPath: "loader/size" },
+    // Ring / arc stroke on oval loader (Figma ellipse strokeWeight); matches legacy Math.max(2, round(size * 0.14)).
+    "loader-stroke-width": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { xs: 2, sm: 3, md: 3, lg: 4, xl: 5 },
+      figmaPath: "loader/stroke-width",
+    },
+    // Figma arc “Corner radius” on the oval loader ellipse (rounds arc ends in the UI). Per size.
+    // Note: Figma’s plugin API cannot bind variables to ellipse `cornerRadius` (not in VariableBindableNodeField). Sync + component build applies the resolved numeric value from this token; re-run sync after edits.
+    "loader-oval-corner-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { xs: 0, sm: 0, md: 0, lg: 0, xl: 0 },
+      figmaPath: "loader/oval-corner-radius",
+    },
   },
 
   pill: {
@@ -1132,6 +1165,10 @@ export const COMPONENT_TOKENS = {
     "text-font-weight-semibold": { type: "STRING", value: "Semi Bold", figmaPath: "text/font-weight-semibold" },
     "text-font-weight-bold": { type: "STRING", value: "Bold", figmaPath: "text/font-weight-bold" },
   },
+
+  default: {
+    "default-border": { type: "COLOR", semantic: "border-default", figmaPath: "default/border" },
+  },
 };
 
 const PLACEHOLDER_COMPONENTS = [
@@ -1165,9 +1202,9 @@ export const COMPONENT_SIZE_KEYS = {
   slider: ["xs", "sm", "md", "lg", "xl"],
   rangeslider: ["xs", "sm", "md", "lg", "xl"],
   card: ["default", "xs", "sm", "md", "lg", "xl"],
-  notification: ["xs", "sm", "md", "lg", "xl"],
+  notification: ["default", "xs", "sm", "md", "lg", "xl"],
   tooltip: [],
-  loader: ["xs", "sm", "md", "lg", "xl"],
+  loader: ["default", "xs", "sm", "md", "lg", "xl"],
   pill: ["default", "xs", "sm", "md", "lg", "xl"],
   badge: ["default", "xs", "sm", "md", "lg", "xl"],
   alert: ["xs", "sm", "md", "lg", "xl"],
@@ -1177,6 +1214,7 @@ export const COMPONENT_SIZE_KEYS = {
   select: ["xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
   text: ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"],
+  default: [],
 };
 
 export function getColorTokens(componentName) {
