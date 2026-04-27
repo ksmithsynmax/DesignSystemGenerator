@@ -1,5 +1,5 @@
 import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/componentTokens";
-import { resolveDimension, getDefaultSizeKey } from "./resolveToken";
+import { resolveDimension, getDefaultSizeKey, mergeLightSemanticsForBrand, mergeDarkSemanticsForBrand } from "./resolveToken";
 import { gradientCssFromDef, gradientFirstStopHex, gradientFigmaExport } from "./resolveGradient";
 import {
   GLOBAL_PRIMITIVES,
@@ -177,12 +177,10 @@ export function buildExportPayload(brands, options) {
   };
 
   Object.entries(brands).forEach(([brandId, brand]) => {
-    // Build light semantic (base semanticMap)
-    const lightSemantic = resolveSemanticMap(brand, brand.semanticMap);
-
-    // Build dark semantic (base merged with darkSemanticOverrides)
-    const darkMap = { ...brand.semanticMap, ...(brand.darkSemanticOverrides || {}) };
-    const darkSemantic = resolveSemanticMap(brand, darkMap);
+    const lightMerged = mergeLightSemanticsForBrand(brand);
+    const darkMerged = mergeDarkSemanticsForBrand(brand);
+    const lightSemantic = resolveSemanticMap(brand, lightMerged);
+    const darkSemantic = resolveSemanticMap(brand, darkMerged);
 
     out[brandId] = {
       primitives: brand.primitives,
@@ -208,9 +206,8 @@ export function buildExportPayload(brands, options) {
 
       Object.entries(tokens).forEach(([tokenName, def]) => {
         if (def.type === TOKEN_TYPES.COLOR) {
-          const lightSemanticMapping = brand.semanticMap?.[def.semantic] || null;
-          const darkSemanticMap = { ...brand.semanticMap, ...(brand.darkSemanticOverrides || {}) };
-          const darkSemanticMapping = darkSemanticMap?.[def.semantic] || null;
+          const lightSemanticMapping = def.semantic ? lightMerged[def.semantic] || null : null;
+          const darkSemanticMapping = def.semantic ? darkMerged[def.semantic] || null : null;
           const lightOverride = brand.componentOverrides?.[tokenName] || null;
           const darkOverride = brand.componentOverridesDark?.[tokenName] || null;
 

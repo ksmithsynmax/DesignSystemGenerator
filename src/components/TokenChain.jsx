@@ -2,6 +2,7 @@ import Tag from "./shared/Tag";
 import Arrow from "./shared/Arrow";
 import Swatch from "./shared/Swatch";
 import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/componentTokens";
+import { GLOBAL_PRIMITIVES } from "../data/brands";
 import { resolveDimension, getDefaultSizeKey } from "../utils/resolveToken";
 
 export default function TokenChain({ brands, brandId, componentName }) {
@@ -17,7 +18,9 @@ export default function TokenChain({ brands, brandId, componentName }) {
     .map(([tokenName, def]) => {
       const mapping = brand.semanticMap[def.semantic];
       if (!mapping) return null;
-      const hex = brand.primitives[mapping.color]?.[mapping.index];
+      const hex =
+        brand.primitives[mapping.color]?.[mapping.index] ??
+        GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index];
       if (!hex) return null;
       return {
         tokenName,

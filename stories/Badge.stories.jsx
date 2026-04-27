@@ -5,6 +5,7 @@ import CodeBlock from "./components/CodeBlock";
 function buildCode(args) {
   const props = [];
   props.push(`  variant="${args.variant}"`);
+  if (args.tone && args.tone !== "default") props.push(`  tone="${args.tone}"`);
   props.push(`  size="${args.size}"`);
   props.push(`  radius="${args.radius}"`);
   if (args.circle) props.push("  circle");
@@ -23,7 +24,14 @@ export default {
   title: "Components/Badge",
   component: BadgePreview,
   argTypes: {
-    variant: { control: "select", options: ["default", "filled", "light", "outline"] },
+    variant: {
+      control: "select",
+      options: ["default", "filled", "light", "outline"],
+    },
+    tone: {
+      control: "select",
+      options: ["default", "success", "warning", "error"],
+    },
     size: { control: "select", options: ["default", "xs", "sm", "md", "lg", "xl"] },
     radius: { control: "select", options: ["default", "xs", "sm", "md", "lg", "xl"] },
     circle: { control: "boolean" },
@@ -32,6 +40,7 @@ export default {
   },
   args: {
     variant: "default",
+    tone: "default",
     size: "default",
     radius: "default",
     circle: false,
@@ -54,3 +63,6 @@ export const Filled = { args: { variant: "filled" } };
 export const Light = { args: { variant: "light" } };
 export const Outline = { args: { variant: "outline" } };
 export const Default = { args: { variant: "default" } };
+export const FilledSuccess = { args: { variant: "filled", tone: "success" } };
+export const FilledWarning = { args: { variant: "filled", tone: "warning" } };
+export const OutlineError = { args: { variant: "outline", tone: "error" } };

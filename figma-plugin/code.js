@@ -968,14 +968,19 @@ function normalizeComponentKey(name) {
 
 function resolveManagedComponentKeyFromName(name) {
   var normalized = normalizeComponentKey(name);
+  if (!normalized) return null;
   var managedKeys = [
     "button", "switch", "slider", "rangeslider", "checkbox", "radio",
     "chip", "notification", "alert", "modal", "tooltip", "loader",
     "pill", "badge", "textinput", "select", "card", "actionicon",
     "tabs", "anchor", "title", "text"
   ];
-  for (var i = 0; i < managedKeys.length; i++) {
-    var key = managedKeys[i];
+  // Longest keys first so e.g. "textinput" matches before the "text" prefix rule.
+  var sorted = managedKeys.slice().sort(function (a, b) {
+    return b.length - a.length;
+  });
+  for (var i = 0; i < sorted.length; i++) {
+    var key = sorted[i];
     if (normalized === key || normalized.indexOf(key) === 0) {
       return key;
     }
@@ -1714,6 +1719,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     return out;
   }
 
+  function badgeDocVariantIsFilledOrOutline(variantName) {
+    var n = String(variantName || "").toLowerCase();
+    return n === "filled" || n === "outline";
+  }
+
   function pickDefaultSizeValue(values) {
     if (!values || values.length === 0) return null;
     for (var i = 0; i < values.length; i++) {
@@ -1851,6 +1861,14 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       if (variant === "outlined") return "Provides a medium level of emphasis, guiding user to take action on functions and features.";
       if (variant === "ghost" || variant === "transparent") return "Low-emphasis action used for tertiary interactions and secondary moments.";
     }
+    if (comp === "badge") {
+      if (variant === "filled") {
+        return "Filled emphasis for labels and counts. Default, success, warning, and error colors set semantic tone.";
+      }
+      if (variant === "outline") {
+        return "Outlined style for lighter emphasis. Default, success, warning, and error colors set semantic tone.";
+      }
+    }
     return "Use this variant when that level of visual emphasis is needed.";
   }
 
@@ -1982,7 +2000,14 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateOrderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
       var templateOrderedSizesAll = pickOrdered(sizes, ["Default", "Label", "Caption", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 8);
       var templateOrderedTextWeights = pickOrdered(textWeights, ["Regular", "Medium", "Semibold", "Bold"]).slice(0, 6);
-      var templateOrderedTextColors = pickOrdered(textColors, ["Default", "Dimmed", "Brand"]).slice(0, 6);
+      var templateOrderedTextColors = pickOrdered(textColors, [
+        "Default",
+        "Dimmed",
+        "Brand",
+        "Success",
+        "Warning",
+        "Error",
+      ]).slice(0, 8);
       var templateRadii = getPropValues(variantProps, "Radius");
       var templateOrderedRadiiAll = pickOrdered(templateRadii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
       var templateOrderedSizes = templateOrderedSizesAll.slice();
@@ -2002,6 +2027,23 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateDefaultState = templateOrderedStates.length > 0 ? templateOrderedStates[0] : null;
       var templateDefaultSize = pickDefaultSizeValue(templateOrderedSizesAll);
       var templateDefaultRadius = pickDefaultSizeValue(templateOrderedRadiiAll);
+
+      var templateColorKey = getPropKey(variantProps, "Color");
+      var templateColorValues = templateColorKey ? getPropValues(variantProps, "Color") : [];
+      var templateDefaultColor = null;
+      if (templateColorValues.length > 0) {
+        for (var tci = 0; tci < templateColorValues.length; tci++) {
+          if (String(templateColorValues[tci]).toLowerCase() === "default") {
+            templateDefaultColor = templateColorValues[tci];
+            break;
+          }
+        }
+        if (templateDefaultColor == null) templateDefaultColor = templateColorValues[0];
+      }
+
+      var templateBadgeSemanticColors = (lowerSetName === "badge" && templateColorKey && templateColorValues.length > 0)
+        ? pickOrdered(templateColorValues, ["Default", "Success", "Warning", "Error"])
+        : [];
 
       var templateLeftValues = templateLeftIconKey ? getPropValues(variantProps, templateLeftIconKey) : [];
       var templateRightValues = templateRightIconKey ? getPropValues(variantProps, templateRightIconKey) : [];
@@ -2043,6 +2085,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (templateStateKey && templateDefaultState != null) props[templateStateKey] = templateDefaultState;
           if (templateSizeKey && templateDefaultSize != null) props[templateSizeKey] = templateDefaultSize;
           if (templateRadiusKey && templateDefaultRadius != null) props[templateRadiusKey] = templateDefaultRadius;
+          if (templateColorKey && templateDefaultColor != null) props[templateColorKey] = templateDefaultColor;
           if (lowerSetName === "card" && templateSectionKey && templateSectionOff != null) props[templateSectionKey] = templateSectionOff;
           if (templateCheckedKey && templateCheckedOff != null) props[templateCheckedKey] = templateCheckedOff;
           if (templateLeftIconKey && templateLeftOff != null) props[templateLeftIconKey] = templateLeftOff;
@@ -2076,30 +2119,56 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             templateVariantSection.counterAxisSizingMode = "FIXED";
             templateVariantSection.resize(1192, templateVariantSection.height);
 
-            var templateVariantStatesPanel = createStack("variant-states-" + normalizeName(templateVariantName), 10);
-            templateVariantStatesPanel.paddingLeft = 12;
-            templateVariantStatesPanel.paddingRight = 12;
-            templateVariantStatesPanel.paddingTop = 12;
-            templateVariantStatesPanel.paddingBottom = 12;
-            addInstancesRow(
-              templateVariantStatesPanel,
-              "States",
-              templateVariantStateValues,
-              (function (vName) {
-                return function (stateName) {
-                  var patch = { Variant: vName };
-                  if (stateName != null) patch.State = stateName;
-                  if ((lowerSetName === "checkbox" || lowerSetName === "radio") && templateCheckedOnValue != null) {
-                    patch.Checked = templateCheckedOnValue;
-                  }
-                  return makeTemplateInstance(patch);
-                };
-              })(templateVariantName),
-              false,
-              lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null
-            );
+            var templateBadgeColorStrip =
+              lowerSetName === "badge" &&
+              templateColorKey &&
+              templateBadgeSemanticColors.length > 0 &&
+              badgeDocVariantIsFilledOrOutline(templateVariantName);
 
-            templateVariantSection.appendChild(templateVariantStatesPanel);
+            if (templateBadgeColorStrip) {
+              var templateVariantColorsPanel = createStack("variant-colors-" + normalizeName(templateVariantName), 10);
+              templateVariantColorsPanel.paddingLeft = 12;
+              templateVariantColorsPanel.paddingRight = 12;
+              templateVariantColorsPanel.paddingTop = 12;
+              templateVariantColorsPanel.paddingBottom = 12;
+              addInstancesRow(
+                templateVariantColorsPanel,
+                "Color",
+                templateBadgeSemanticColors,
+                (function (vName) {
+                  return function (colorName) {
+                    return makeTemplateInstance({ Variant: vName, Color: colorName });
+                  };
+                })(templateVariantName),
+                false
+              );
+              templateVariantSection.appendChild(templateVariantColorsPanel);
+            } else {
+              var templateVariantStatesPanel = createStack("variant-states-" + normalizeName(templateVariantName), 10);
+              templateVariantStatesPanel.paddingLeft = 12;
+              templateVariantStatesPanel.paddingRight = 12;
+              templateVariantStatesPanel.paddingTop = 12;
+              templateVariantStatesPanel.paddingBottom = 12;
+              addInstancesRow(
+                templateVariantStatesPanel,
+                "States",
+                templateVariantStateValues,
+                (function (vName) {
+                  return function (stateName) {
+                    var patch = { Variant: vName };
+                    if (stateName != null) patch.State = stateName;
+                    if ((lowerSetName === "checkbox" || lowerSetName === "radio") && templateCheckedOnValue != null) {
+                      patch.Checked = templateCheckedOnValue;
+                    }
+                    return makeTemplateInstance(patch);
+                  };
+                })(templateVariantName),
+                false,
+                lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null
+              );
+              templateVariantSection.appendChild(templateVariantStatesPanel);
+            }
+
             templateVariantBlock.appendChild(templateVariantSection);
             templateVariantsSlot.appendChild(templateVariantBlock);
           }
@@ -2499,6 +2568,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var checkedKey = getPropKey(variantProps, "Checked");
       var leftIconKey = getPropKey(variantProps, "LeftIcon");
       var rightIconKey = getPropKey(variantProps, "RightIcon");
+      var colorKey = getPropKey(variantProps, "Color");
 
       var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills"];
       var variantLimit = lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3);
@@ -2506,7 +2576,14 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var orderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
       var orderedSizesAll = pickOrdered(sizes, ["Default", "Label", "Caption", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 8);
       var orderedTextWeights = pickOrdered(textWeights, ["Regular", "Medium", "Semibold", "Bold"]).slice(0, 6);
-      var orderedTextColors = pickOrdered(textColors, ["Default", "Dimmed", "Brand"]).slice(0, 6);
+      var orderedTextColors = pickOrdered(textColors, [
+        "Default",
+        "Dimmed",
+        "Brand",
+        "Success",
+        "Warning",
+        "Error",
+      ]).slice(0, 8);
       var radii = getPropValues(variantProps, "Radius");
       var orderedRadiiAll = pickOrdered(radii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
       var orderedSizes = orderedSizesAll.slice();
@@ -2526,6 +2603,22 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var defaultState = orderedStates.length > 0 ? orderedStates[0] : null;
       var defaultSize = pickDefaultSizeValue(orderedSizesAll);
       var defaultRadius = pickDefaultSizeValue(orderedRadiiAll);
+
+      var colorValuesAll = colorKey ? getPropValues(variantProps, "Color") : [];
+      var defaultColor = null;
+      if (colorValuesAll.length > 0) {
+        for (var cci = 0; cci < colorValuesAll.length; cci++) {
+          if (String(colorValuesAll[cci]).toLowerCase() === "default") {
+            defaultColor = colorValuesAll[cci];
+            break;
+          }
+        }
+        if (defaultColor == null) defaultColor = colorValuesAll[0];
+      }
+
+      var badgeDocSemanticColors = (lowerSetName === "badge" && colorKey && colorValuesAll.length > 0)
+        ? pickOrdered(colorValuesAll, ["Default", "Success", "Warning", "Error"])
+        : [];
 
       var leftValues = leftIconKey ? getPropValues(variantProps, leftIconKey) : [];
       var rightValues = rightIconKey ? getPropValues(variantProps, rightIconKey) : [];
@@ -2565,6 +2658,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         if (stateKey && defaultState != null) props[stateKey] = defaultState;
         if (sizeKey && defaultSize != null) props[sizeKey] = defaultSize;
         if (radiusKey && defaultRadius != null) props[radiusKey] = defaultRadius;
+        if (colorKey && defaultColor != null) props[colorKey] = defaultColor;
         if (lowerSetName === "card" && sectionKey && sectionOff != null) props[sectionKey] = sectionOff;
         if (checkedKey && checkedOff != null) props[checkedKey] = checkedOff;
         if (leftIconKey && leftOff != null) props[leftIconKey] = leftOff;
@@ -2594,29 +2688,57 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           var variantSection = createPanel("variant-section-" + normalizeName(variantName), 10);
           variantSection.counterAxisSizingMode = "FIXED";
           variantSection.resize(1192, variantSection.height);
-          var variantStatesPanel = createStack("variant-states-" + normalizeName(variantName), 10);
-          variantStatesPanel.paddingLeft = 12;
-          variantStatesPanel.paddingRight = 12;
-          variantStatesPanel.paddingTop = 12;
-          variantStatesPanel.paddingBottom = 12;
-          addInstancesRow(
-            variantStatesPanel,
-            "States",
-            variantStateValues,
-            (function (vName) {
-              return function (stateName) {
-                var patch = { Variant: vName };
-                if (stateName != null) patch.State = stateName;
-                if ((lowerSetName === "checkbox" || lowerSetName === "radio") && checkedOnValue != null) {
-                  patch.Checked = checkedOnValue;
-                }
-                return makeInstance(patch);
-              };
-            })(variantName),
-            false,
-            lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null
-          );
-          variantSection.appendChild(variantStatesPanel);
+
+          var badgeColorStrip =
+            lowerSetName === "badge" &&
+            colorKey &&
+            badgeDocSemanticColors.length > 0 &&
+            badgeDocVariantIsFilledOrOutline(variantName);
+
+          if (badgeColorStrip) {
+            var variantColorsPanel = createStack("variant-colors-" + normalizeName(variantName), 10);
+            variantColorsPanel.paddingLeft = 12;
+            variantColorsPanel.paddingRight = 12;
+            variantColorsPanel.paddingTop = 12;
+            variantColorsPanel.paddingBottom = 12;
+            addInstancesRow(
+              variantColorsPanel,
+              "Color",
+              badgeDocSemanticColors,
+              (function (vName) {
+                return function (colorName) {
+                  return makeInstance({ Variant: vName, Color: colorName });
+                };
+              })(variantName),
+              false
+            );
+            variantSection.appendChild(variantColorsPanel);
+          } else {
+            var variantStatesPanel = createStack("variant-states-" + normalizeName(variantName), 10);
+            variantStatesPanel.paddingLeft = 12;
+            variantStatesPanel.paddingRight = 12;
+            variantStatesPanel.paddingTop = 12;
+            variantStatesPanel.paddingBottom = 12;
+            addInstancesRow(
+              variantStatesPanel,
+              "States",
+              variantStateValues,
+              (function (vName) {
+                return function (stateName) {
+                  var patch = { Variant: vName };
+                  if (stateName != null) patch.State = stateName;
+                  if ((lowerSetName === "checkbox" || lowerSetName === "radio") && checkedOnValue != null) {
+                    patch.Checked = checkedOnValue;
+                  }
+                  return makeInstance(patch);
+                };
+              })(variantName),
+              false,
+              lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null
+            );
+            variantSection.appendChild(variantStatesPanel);
+          }
+
           variantBlock.appendChild(variantSection);
           variantsSlot.appendChild(variantBlock);
         }
@@ -2930,7 +3052,8 @@ async function cleanupExistingComponents(page, requestedSet) {
       if (child.type === "COMPONENT" && (
         child.name.indexOf("Variant=") === 0 || child.name.indexOf("State=") === 0 ||
         child.name.indexOf("Size=") === 0 || child.name.indexOf("Checked=") === 0 ||
-        child.name.indexOf("Label=") === 0 || child.name.indexOf("Direction=") === 0
+        child.name.indexOf("Label=") === 0 || child.name.indexOf("Direction=") === 0 ||
+        child.name.indexOf("Circle=") === 0
       )) {
         child.remove();
       }
@@ -4260,7 +4383,7 @@ function buildTitleComponentSet(varMap, page, font, sampleText) {
 async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
   var sizes = ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"];
   var weights = ["regular", "medium", "semibold", "bold"];
-  var colors = ["default", "dimmed", "brand"];
+  var colors = ["default", "dimmed", "brand", "success", "warning", "error"];
   var components = [];
   var defaultTextWidth = 320;
 
@@ -4402,6 +4525,9 @@ async function buildTextComponentSet(varMap, page, fallbackFont, sampleText) {
 function textColorPath(mode) {
   if (mode === "dimmed") return "text/color-dimmed";
   if (mode === "brand") return "text/color-brand";
+  if (mode === "success") return "text/color-success";
+  if (mode === "warning") return "text/color-warning";
+  if (mode === "error") return "text/color-error";
   return "text/color";
 }
 
@@ -6329,7 +6455,19 @@ function buildPillComponentSet(varMap, page, font) {
 // ---------------------------------------------------------------------------
 
 function buildBadgeComponentSet(varMap, page, font) {
-  var variants = ["default", "filled", "light", "outline"];
+  var variantColorPairs = [];
+  variantColorPairs.push({ variant: "default", color: "default" });
+  variantColorPairs.push({ variant: "light", color: "default" });
+  var filledOutlineColors = ["default", "success", "warning", "error"];
+  for (var foci = 0; foci < filledOutlineColors.length; foci++) {
+    variantColorPairs.push({ variant: "filled", color: filledOutlineColors[foci] });
+  }
+  for (var ooci = 0; ooci < filledOutlineColors.length; ooci++) {
+    variantColorPairs.push({ variant: "outline", color: filledOutlineColors[ooci] });
+  }
+
+  // 10 (variant×color) × 2 (circle) × 6 sizes × 6 radii = 720 — matches badge token scales in componentTokens.
+  // If combineAsVariants fails on very large files, trim sizes/radii arrays here (variables still carry full scales).
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var circles = ["off", "on"];
@@ -6344,13 +6482,23 @@ function buildBadgeComponentSet(varMap, page, font) {
     return str.charAt(0).toUpperCase() + str.slice(1);
   }
 
-  function colorPath(variant, property) {
+  function formatBadgeColorLabel(c) {
+    return c === "default" ? "Default" : cap(c);
+  }
+
+  function colorPath(variant, color, property) {
+    if ((variant === "filled" || variant === "outline") && color && color !== "default") {
+      return "badge/" + variant + "-" + color + "-" + property;
+    }
     return "badge/" + variant + "-" + property;
   }
 
-  for (var vi = 0; vi < variants.length; vi++) {
-    var variant = variants[vi];
+  for (var vi = 0; vi < variantColorPairs.length; vi++) {
+    var pair = variantColorPairs[vi];
+    var variant = pair.variant;
+    var color = pair.color;
     var capVariant = cap(variant);
+    var capColor = formatBadgeColorLabel(color);
 
     for (var ci = 0; ci < circles.length; ci++) {
       var circleMode = circles[ci];
@@ -6369,6 +6517,7 @@ function buildBadgeComponentSet(varMap, page, font) {
           var comp = figma.createComponent();
           comp.name =
             "Variant=" + capVariant +
+            ", Color=" + capColor +
             ", Size=" + capSize +
             ", Radius=" + capRadius +
             ", Circle=" + capCircle;
@@ -6387,8 +6536,8 @@ function buildBadgeComponentSet(varMap, page, font) {
           comp.strokeWeight = 1;
           comp.strokeAlign = "INSIDE";
 
-          bindPaintVar(comp, "fills", 0, varMap[colorPath(variant, "background")]);
-          bindPaintVar(comp, "strokes", 0, varMap[colorPath(variant, "border")]);
+          bindPaintVar(comp, "fills", 0, varMap[colorPath(variant, color, "background")]);
+          bindPaintVar(comp, "strokes", 0, varMap[colorPath(variant, color, "border")]);
           bindVar(comp, "strokeWeight", varMap["badge/border-width"]);
           bindVar(comp, "paddingLeft", varMap["badge/padding-x-" + size]);
           bindVar(comp, "paddingRight", varMap["badge/padding-x-" + size]);
@@ -6414,7 +6563,7 @@ function buildBadgeComponentSet(varMap, page, font) {
           label.characters = isCircle ? "8" : "Badge";
           label.fontSize = 12;
           label.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-          bindPaintVar(label, "fills", 0, varMap[colorPath(variant, "text")]);
+          bindPaintVar(label, "fills", 0, varMap[colorPath(variant, color, "text")]);
           bindVar(label, "fontSize", varMap["badge/font-size-" + size]);
           bindVar(label, "fontFamily", varMap["badge/font-family"]);
           bindVar(label, "fontStyle", varMap["badge/font-weight"]);
@@ -6433,7 +6582,13 @@ function buildBadgeComponentSet(varMap, page, font) {
   }
 
   progress("Created " + components.length + " badge variants");
-  var componentSet = figma.combineAsVariants(components, page);
+  var componentSet;
+  try {
+    componentSet = figma.combineAsVariants(components, page);
+  } catch (combineErr) {
+    progress("Badge combineAsVariants failed: " + String(combineErr));
+    throw combineErr;
+  }
   componentSet.name = "Badge";
   return componentSet;
 }

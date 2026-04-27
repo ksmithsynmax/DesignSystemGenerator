@@ -4,8 +4,23 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
 export const BADGE_VARIANTS = ["default", "filled", "light", "outline"];
+export const BADGE_COLORS = ["default", "success", "warning", "error"];
 export const BADGE_SIZE_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const BADGE_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
+
+/** Matrix rows: variant + optional semantic color (only used for filled / outline). */
+export const BADGE_MATRIX_ROWS = [
+  { label: "default", variant: "default", color: "default" },
+  { label: "light", variant: "light", color: "default" },
+  { label: "filled", variant: "filled", color: "default" },
+  { label: "filled · success", variant: "filled", color: "success" },
+  { label: "filled · warning", variant: "filled", color: "warning" },
+  { label: "filled · error", variant: "filled", color: "error" },
+  { label: "outline", variant: "outline", color: "default" },
+  { label: "outline · success", variant: "outline", color: "success" },
+  { label: "outline · warning", variant: "outline", color: "warning" },
+  { label: "outline · error", variant: "outline", color: "error" },
+];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -61,14 +76,13 @@ export function BadgePreviewContent({
   activeBrand,
   activeColorToken,
   activeVariant,
+  activeTone,
   size,
   radius,
   circle,
   fullWidth,
   text,
 }) {
-  const rows = BADGE_VARIANTS.map((v) => ({ label: v, variant: v }));
-
   return (
     <div>
       <PreviewStage label={activeColorToken} padding={56}>
@@ -76,6 +90,7 @@ export function BadgePreviewContent({
           brands={brands}
           brandId={activeBrand}
           variant={activeVariant}
+          tone={activeTone}
           size={size}
           radius={radius}
           circle={circle}
@@ -85,15 +100,16 @@ export function BadgePreviewContent({
       </PreviewStage>
 
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
-      <SectionLabel mt={20}>All Variants x Sizes</SectionLabel>
+      <SectionLabel mt={20}>Variants × colors × sizes</SectionLabel>
       <PreviewMatrix
         sizeKeys={BADGE_SIZE_KEYS}
-        rows={rows}
+        rows={BADGE_MATRIX_ROWS}
         renderCell={(row, s) => (
           <BadgePreview
             brands={brands}
             brandId={activeBrand}
             variant={row.variant}
+            tone={row.color}
             size={s}
             radius={radius}
             circle={false}
@@ -109,6 +125,8 @@ export function BadgePreviewContent({
 export function BadgePropertiesPanel({
   activeVariant,
   setActiveVariant,
+  activeTone,
+  setActiveTone,
   size,
   setSize,
   radius,
@@ -120,9 +138,17 @@ export function BadgePropertiesPanel({
   text,
   setText,
 }) {
+  const colorEnabled = activeVariant === "filled" || activeVariant === "outline";
   return (
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={BADGE_VARIANTS} />
+      <PropertyRow
+        label="Color"
+        value={colorEnabled ? activeTone : "default"}
+        onChange={setActiveTone}
+        options={BADGE_COLORS}
+        disabled={!colorEnabled}
+      />
       <PropertyRow label="Size" value={size} onChange={setSize} options={BADGE_SIZE_KEYS} />
       <PropertyRow label="Radius" value={radius} onChange={setRadius} options={BADGE_RADIUS_KEYS} />
       <PropertyRow

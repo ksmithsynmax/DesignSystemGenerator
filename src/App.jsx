@@ -8,7 +8,7 @@ import {
   Text,
   Group,
 } from "@mantine/core";
-import { INITIAL_BRANDS } from "./data/brands";
+import { INITIAL_BRANDS, BRAND_STARTER_SEMANTIC_MAP } from "./data/brands";
 import { createNewBrand } from "./utils/createNewBrand";
 import {
   COMPONENT_NAMES,
@@ -16,7 +16,12 @@ import {
   getColorTokens,
   getDimensionTokens,
 } from "./data/componentTokens";
-import { resolveColor, getComponentDefaultSize } from "./utils/resolveToken";
+import {
+  resolveColor,
+  getComponentDefaultSize,
+  mergeLightSemanticsForBrand,
+  mergeDarkSemanticsForBrand,
+} from "./utils/resolveToken";
 import { resolveGradientCss } from "./utils/resolveGradient";
 import Section from "./components/shared/Section";
 import ComponentSelect from "./components/shared/ComponentSelect";
@@ -225,6 +230,25 @@ function enforceTextDefaultMappings(brandsInput) {
     }
   });
 
+  // Backfill feedback-warning for persisted brands (Text success/warning/error colors).
+  Object.keys(next).forEach((brandId) => {
+    const b = next[brandId];
+    if (!b.semanticMap) b.semanticMap = {};
+    if (!b.darkSemanticOverrides) b.darkSemanticOverrides = {};
+    if (!b.semanticMap["feedback-warning"]) {
+      const fromInitial = INITIAL_BRANDS[brandId]?.semanticMap?.["feedback-warning"];
+      b.semanticMap["feedback-warning"] = {
+        ...(fromInitial || BRAND_STARTER_SEMANTIC_MAP["feedback-warning"]),
+      };
+    }
+    if (!b.darkSemanticOverrides["feedback-warning"]) {
+      const fromDark = INITIAL_BRANDS[brandId]?.darkSemanticOverrides?.["feedback-warning"];
+      b.darkSemanticOverrides["feedback-warning"] = {
+        ...(fromDark || b.semanticMap["feedback-warning"]),
+      };
+    }
+  });
+
   return next;
 }
 
@@ -311,6 +335,8 @@ export default function App() {
   const handleLeftPanelDrag = createResizeHandler(setLeftPanelWidth, 300, 760);
 
   const brand = brands[activeBrand];
+  const lightSemanticMerged = brand ? mergeLightSemanticsForBrand(brand) : {};
+  const darkSemanticMerged = brand ? mergeDarkSemanticsForBrand(brand) : {};
   const colorNames = Object.keys(brand.primitives);
   const globalColorNames = Object.keys(GLOBAL_PRIMITIVES);
   const gradientPaletteColorNames = [...new Set([...globalColorNames, ...colorNames])].sort((a, b) =>
@@ -411,6 +437,7 @@ export default function App() {
   const [activeBadgeCircle, setActiveBadgeCircle] = useState(false);
   const [activeBadgeFullWidth, setActiveBadgeFullWidth] = useState(false);
   const [activeBadgeText, setActiveBadgeText] = useState("Badge");
+  const [activeBadgeColor, setActiveBadgeColor] = useState("default");
   const [activeTextInputSize, setActiveTextInputSize] = useState(textInputDefault);
   const [activeTextInputRadius, setActiveTextInputRadius] = useState(textInputDefault);
   const [activeTextInputState, setActiveTextInputState] = useState("default");
@@ -683,6 +710,7 @@ export default function App() {
       setActiveBadgeCircle(false);
       setActiveBadgeFullWidth(false);
       setActiveBadgeText("Badge");
+      setActiveBadgeColor("default");
       setActiveVariant("default");
     } else if (newComp === "tooltip") {
       setActiveTooltipPosition("top");
@@ -697,6 +725,31 @@ export default function App() {
       setActiveVariant(allowedVariants[0]);
     }
   }, [activeComponent, activeVariant]);
+
+  useEffect(() => {
+    if (activeComponent !== "badge") return;
+    if (activeVariant !== "filled" && activeVariant !== "outline") {
+      setActiveBadgeColor("default");
+    }
+  }, [activeComponent, activeVariant]);
+
+  useEffect(() => {
+    if (activeComponent !== "badge" || !activeColorToken?.startsWith("badge-")) return;
+    const p = activeColorToken.split("-");
+    if (p.length < 3) return;
+    const v = p[1];
+    if (!["default", "filled", "light", "outline"].includes(v)) return;
+    let nextColor = "default";
+    if ((v === "filled" || v === "outline") && p.length >= 4 && ["success", "warning", "error"].includes(p[2])) {
+      nextColor = p[2];
+    }
+    if (v !== activeVariant) setActiveVariant(v);
+    if (v === "filled" || v === "outline") {
+      setActiveBadgeColor(nextColor);
+    } else {
+      setActiveBadgeColor("default");
+    }
+  }, [activeComponent, activeColorToken]);
 
   const updatePrimitive = useCallback(
     (colorName, index, value) => {
@@ -1047,6 +1100,23 @@ export default function App() {
       return true;
     }
 
+    if (activeComponent === "badge") {
+      const vSeg = parts[1];
+      if (vSeg !== activeVariant) return false;
+      const isSemanticTone = parts.length === 4 && ["success", "warning", "error"].includes(parts[2]);
+      const isNeutralTriplet =
+        parts.length === 3 && ["background", "text", "border"].includes(parts[2]);
+      if (vSeg === "filled" || vSeg === "outline") {
+        if (isSemanticTone) return parts[2] === activeBadgeColor;
+        if (isNeutralTriplet) return activeBadgeColor === "default";
+        return false;
+      }
+      if (vSeg === "default" || vSeg === "light") {
+        return isNeutralTriplet;
+      }
+      return false;
+    }
+
     const variantsByComponent = {
       button: ["filled", "outlined", "ghost"],
       actionicon: ["default", "filled", "light", "outlined", "transparent"],
@@ -1111,7 +1181,6 @@ export default function App() {
       activeComponent === "tabs" ||
       activeComponent === "textinput"
       || activeComponent === "select"
-      || activeComponent === "badge"
       || activeComponent === "alert"
     ) {
       if (!variants.includes(variantSegment)) return true;
@@ -1524,10 +1593,10 @@ export default function App() {
             <Section title={`Color Tokens — ${getComponentLabel(activeComponent)}`}>
               {visibleColorTokenEntries.map(([token, def]) => {
                 const semantic = def.semantic;
-                const lightMapping = brand.semanticMap[semantic];
-                const darkMapping =
-                  (brand.darkSemanticOverrides && brand.darkSemanticOverrides[semantic]) || lightMapping;
-                const semanticMapping = previewTheme === "dark" ? darkMapping : lightMapping;
+                const semanticMapping =
+                  previewTheme === "dark"
+                    ? darkSemanticMerged[semantic]
+                    : lightSemanticMerged[semantic];
                 if (!semanticMapping) return null;
                 const componentOverride =
                   previewTheme === "dark"
@@ -1905,6 +1974,7 @@ export default function App() {
                   activeBrand={activeBrand}
                   activeColorToken={activeColorToken}
                   activeVariant={forcedVariant || activeVariant}
+                  activeTone={activeBadgeColor}
                   size={activeBadgeSize}
                   radius={activeBadgeRadius}
                   circle={activeBadgeCircle}
@@ -2319,6 +2389,8 @@ export default function App() {
                 <BadgePropertiesPanel
                   activeVariant={forcedVariant || activeVariant}
                   setActiveVariant={setActiveVariant}
+                  activeTone={activeBadgeColor}
+                  setActiveTone={setActiveBadgeColor}
                   size={activeBadgeSize}
                   setSize={setActiveBadgeSize}
                   radius={activeBadgeRadius}

@@ -2,10 +2,32 @@ import { Badge } from "@mantine/core";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
+/** Semantic tones only apply with `filled` or `outline` (see component tokens). */
+export function badgeColorTokenKeys(variant, tone) {
+  const t = tone === "default" ? null : tone;
+  if (
+    (variant === "filled" || variant === "outline") &&
+    t &&
+    ["success", "warning", "error"].includes(t)
+  ) {
+    return {
+      bg: `badge-${variant}-${t}-background`,
+      text: `badge-${variant}-${t}-text`,
+      border: `badge-${variant}-${t}-border`,
+    };
+  }
+  return {
+    bg: `badge-${variant}-background`,
+    text: `badge-${variant}-text`,
+    border: `badge-${variant}-border`,
+  };
+}
+
 export default function BadgePreview({
   brands,
   brandId,
   variant = "filled",
+  tone = "default",
   size = "md",
   radius = "md",
   circle = false,
@@ -14,10 +36,9 @@ export default function BadgePreview({
 }) {
   const tokens = COMPONENT_TOKENS.badge;
   const brand = brands[brandId] || {};
-
-  const bgKey = `badge-${variant}-background`;
-  const textKey = `badge-${variant}-text`;
-  const borderKey = `badge-${variant}-border`;
+  const effectiveTone =
+    variant === "filled" || variant === "outline" ? tone : "default";
+  const { bg: bgKey, text: textKey, border: borderKey } = badgeColorTokenKeys(variant, effectiveTone);
 
   const background = resolveColor(brands, brandId, tokens[bgKey]?.semantic, "light", bgKey);
   const color = resolveColor(brands, brandId, tokens[textKey]?.semantic, "light", textKey);
@@ -40,7 +61,12 @@ export default function BadgePreview({
   const lineHeight = resolveSizedToken("badge-line-height", sizeKey);
   const paddingX = resolveSizedToken("badge-padding-x", sizeKey);
   const paddingY = resolveSizedToken("badge-padding-y", sizeKey);
-  const borderRadius = resolveSizedToken("badge-radius", radiusKey);
+  const radiusDef = tokens["badge-radius"];
+  const borderRadiusRaw = resolveSizedToken("badge-radius", radiusKey);
+  const borderRadiusPx =
+    Number.isFinite(Number(borderRadiusRaw)) && Number(borderRadiusRaw) >= 0
+      ? Number(borderRadiusRaw)
+      : Number(radiusDef?.sizes?.[radiusKey] ?? radiusDef?.sizes?.default ?? 8);
   const borderWidth = resolveDimension(brands, brandId, "badge-border-width");
   const computedHeight = Math.max(16, (lineHeight || fontSize || 12) + (paddingY || 0) * 2 + (borderWidth || 0) * 2);
 
@@ -49,14 +75,17 @@ export default function BadgePreview({
   return (
     <div style={{ width: fullWidth ? 220 : "auto" }}>
       <Badge
-        variant={variant === "default" ? "filled" : variant}
+        variant={
+          variant === "outline" ? "outline" : variant === "light" ? "light" : "filled"
+        }
         size={size === "default" ? "md" : size}
-        radius={radius === "default" ? "md" : radius}
+        // Omit `radius`: Mantine maps it to theme getRadius(), which overrides design-token `badge-radius-*`.
+        radius={undefined}
         circle={circle}
         fullWidth={fullWidth}
         vars={() => ({
           root: {
-            "--badge-radius": circle ? "999px" : `${borderRadius}px`,
+            "--badge-radius": circle ? "9999px" : `${borderRadiusPx}px`,
           },
         })}
         style={{
@@ -65,7 +94,8 @@ export default function BadgePreview({
           border: `${borderWidth}px solid ${borderColor}`,
           minHeight: `${computedHeight}px`,
           width: fullWidth ? "100%" : circle ? `${computedHeight}px` : "fit-content",
-          borderRadius: circle ? "999px" : `${borderRadius}px`,
+          borderRadius: circle ? "9999px" : `${borderRadiusPx}px`,
+          overflow: "hidden",
           paddingLeft: circle ? 0 : `${paddingX}px`,
           paddingRight: circle ? 0 : `${paddingX}px`,
           paddingTop: circle ? 0 : `${paddingY}px`,
@@ -78,7 +108,8 @@ export default function BadgePreview({
         }}
         styles={{
           root: {
-            borderRadius: circle ? "999px" : `${borderRadius}px`,
+            borderRadius: circle ? "9999px" : `${borderRadiusPx}px`,
+            overflow: "hidden",
           },
           label: {
             color,

@@ -1,6 +1,34 @@
 import { COMPONENT_TOKENS, TOKEN_TYPES } from "../data/componentTokens";
-import { GLOBAL_PRIMITIVES } from "../data/brands";
+import { GLOBAL_PRIMITIVES, BRAND_STARTER_SEMANTIC_MAP } from "../data/brands";
 import { gradientFirstStopHex } from "./resolveGradient";
+
+function isValidSemanticMapping(m) {
+  return (
+    m != null &&
+    typeof m === "object" &&
+    m.color != null &&
+    Number.isFinite(Number(m.index))
+  );
+}
+
+/** Starter semantics merged with brand.semanticMap (invalid user entries are ignored). */
+export function mergeLightSemanticsForBrand(brand) {
+  const merged = { ...BRAND_STARTER_SEMANTIC_MAP };
+  for (const [k, v] of Object.entries(brand.semanticMap || {})) {
+    if (isValidSemanticMapping(v)) merged[k] = v;
+  }
+  return merged;
+}
+
+/** Light semantics merged with valid darkSemanticOverrides (Figma + preview dark mode). */
+export function mergeDarkSemanticsForBrand(brand) {
+  const lightMerged = mergeLightSemanticsForBrand(brand);
+  const darkOnly = {};
+  for (const [k, v] of Object.entries(brand.darkSemanticOverrides || {})) {
+    if (isValidSemanticMapping(v)) darkOnly[k] = v;
+  }
+  return { ...lightMerged, ...darkOnly };
+}
 
 function normalizeOpacity(opacity) {
   const parsed = Number(opacity);
@@ -61,10 +89,8 @@ export function resolveColor(brands, brandId, semanticKey, theme = "light", comp
       ?? "#FF00FF";
     return applyOpacity(baseColor, mapping.opacity);
   }
-  // Merge dark overrides when theme is dark
-  const map = activeTheme === "dark"
-    ? { ...brand.semanticMap, ...(brand.darkSemanticOverrides || {}) }
-    : brand.semanticMap;
+  const map =
+    activeTheme === "dark" ? mergeDarkSemanticsForBrand(brand) : mergeLightSemanticsForBrand(brand);
   const mapping = map[semanticKey];
   if (!mapping) return "#FF00FF";
   if (mapping.color === "transparent") return "transparent";

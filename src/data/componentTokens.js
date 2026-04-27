@@ -807,6 +807,26 @@ export const COMPONENT_TOKENS = {
     "badge-default-text": { type: "COLOR", semantic: "text-default", figmaPath: "badge/default-text" },
     "badge-default-border": { type: "COLOR", semantic: "border-default", figmaPath: "badge/default-border" },
 
+    "badge-filled-success-background": { type: "COLOR", semantic: "feedback-success", figmaPath: "badge/filled-success-background" },
+    "badge-filled-success-text": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "badge/filled-success-text" },
+    "badge-filled-success-border": { type: "COLOR", semantic: "feedback-success", figmaPath: "badge/filled-success-border" },
+    "badge-filled-warning-background": { type: "COLOR", semantic: "feedback-warning", figmaPath: "badge/filled-warning-background" },
+    "badge-filled-warning-text": { type: "COLOR", semantic: "text-default", figmaPath: "badge/filled-warning-text" },
+    "badge-filled-warning-border": { type: "COLOR", semantic: "feedback-warning", figmaPath: "badge/filled-warning-border" },
+    "badge-filled-error-background": { type: "COLOR", semantic: "feedback-error", figmaPath: "badge/filled-error-background" },
+    "badge-filled-error-text": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "badge/filled-error-text" },
+    "badge-filled-error-border": { type: "COLOR", semantic: "feedback-error", figmaPath: "badge/filled-error-border" },
+
+    "badge-outline-success-background": { type: "COLOR", semantic: "surface-default", figmaPath: "badge/outline-success-background" },
+    "badge-outline-success-text": { type: "COLOR", semantic: "feedback-success", figmaPath: "badge/outline-success-text" },
+    "badge-outline-success-border": { type: "COLOR", semantic: "feedback-success", figmaPath: "badge/outline-success-border" },
+    "badge-outline-warning-background": { type: "COLOR", semantic: "surface-default", figmaPath: "badge/outline-warning-background" },
+    "badge-outline-warning-text": { type: "COLOR", semantic: "feedback-warning", figmaPath: "badge/outline-warning-text" },
+    "badge-outline-warning-border": { type: "COLOR", semantic: "feedback-warning", figmaPath: "badge/outline-warning-border" },
+    "badge-outline-error-background": { type: "COLOR", semantic: "surface-default", figmaPath: "badge/outline-error-background" },
+    "badge-outline-error-text": { type: "COLOR", semantic: "feedback-error", figmaPath: "badge/outline-error-text" },
+    "badge-outline-error-border": { type: "COLOR", semantic: "feedback-error", figmaPath: "badge/outline-error-border" },
+
     // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
     "badge-font-size": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "badge/font-size" },
     "badge-font-family": { type: "STRING", value: "Inter", figmaPath: "badge/font-family" },
@@ -1087,6 +1107,9 @@ export const COMPONENT_TOKENS = {
     "text-color": { type: "COLOR", semantic: "text-default", figmaPath: "text/color" },
     "text-color-dimmed": { type: "COLOR", semantic: "text-disabled", figmaPath: "text/color-dimmed" },
     "text-color-brand": { type: "COLOR", semantic: "interactive-primary", figmaPath: "text/color-brand" },
+    "text-color-success": { type: "COLOR", semantic: "feedback-success", figmaPath: "text/color-success" },
+    "text-color-warning": { type: "COLOR", semantic: "feedback-warning", figmaPath: "text/color-warning" },
+    "text-color-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "text/color-error" },
 
     // ── FLOAT TOKENS (size variants: label, caption, xs, sm, md, lg, xl) ──
     "text-font-family": { type: "STRING", value: "Inter", figmaPath: "text/font-family" },

@@ -24,12 +24,15 @@ export default function TextPreview({
   text = "Why guess when you can know.",
 }) {
   const tokens = COMPONENT_TOKENS.text;
-  const colorToken =
-    colorMode === "brand"
-      ? "text-color-brand"
-      : colorMode === "dimmed"
-        ? "text-color-dimmed"
-        : "text-color";
+  const TEXT_COLOR_TOKEN = {
+    brand: "text-color-brand",
+    dimmed: "text-color-dimmed",
+    default: "text-color",
+    success: "text-color-success",
+    warning: "text-color-warning",
+    error: "text-color-error",
+  };
+  const colorToken = TEXT_COLOR_TOKEN[colorMode] || TEXT_COLOR_TOKEN.default;
 
   const color = resolveColor(brands, brandId, tokens[colorToken]?.semantic, "light", colorToken);
   const fontSize = resolveDimension(brands, brandId, "text-font-size", size);

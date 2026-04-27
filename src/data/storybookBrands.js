@@ -176,6 +176,10 @@ export const STORYBOOK_BRANDS = {
         "color": "green",
         "index": 5
       },
+      "feedback-warning": {
+        "color": "yellow",
+        "index": 5
+      },
       "interactive-disabled": {
         "color": "neutral",
         "index": 3
@@ -297,6 +301,10 @@ export const STORYBOOK_BRANDS = {
       "border-primary": {
         "color": "steel",
         "index": 7
+      },
+      "feedback-warning": {
+        "color": "yellow",
+        "index": 6
       }
     },
     "componentDefaults": {
@@ -2705,6 +2713,10 @@ export const STORYBOOK_BRANDS = {
         "color": "green",
         "index": 5
       },
+      "feedback-warning": {
+        "color": "orange",
+        "index": 5
+      },
       "interactive-disabled": {
         "color": "neutral",
         "index": 3
@@ -2834,6 +2846,10 @@ export const STORYBOOK_BRANDS = {
       "primary-border": {
         "color": "slate-gray",
         "index": 0
+      },
+      "feedback-warning": {
+        "color": "orange",
+        "index": 6
       }
     },
     "componentDefaults": {

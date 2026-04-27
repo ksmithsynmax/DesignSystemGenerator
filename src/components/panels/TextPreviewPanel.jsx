@@ -9,7 +9,7 @@ export const TEXT_STYLE_OPTIONS = ["normal", "italic"];
 export const TEXT_DECORATION_OPTIONS = ["none", "underline", "line-through"];
 export const TEXT_ALIGN_OPTIONS = ["left", "center", "right"];
 export const TEXT_TRANSFORM_OPTIONS = ["none", "uppercase", "capitalize"];
-export const TEXT_COLOR_OPTIONS = ["default", "dimmed", "brand"];
+export const TEXT_COLOR_OPTIONS = ["default", "dimmed", "brand", "success", "warning", "error"];
 export const TEXT_LINE_CLAMP_OPTIONS = ["off", "2", "3", "4"];
 export const TEXT_TRUNCATE_OPTIONS = ["off", "start", "end"];
 
