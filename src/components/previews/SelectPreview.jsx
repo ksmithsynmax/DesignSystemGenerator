@@ -1,6 +1,8 @@
 import { Select } from "@mantine/core";
+import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
+import classes from "./SelectPreview.module.css";
 
 export default function SelectPreview({
   brands,
@@ -50,13 +52,56 @@ export default function SelectPreview({
   const labelColor = resolveColor(brands, brandId, tokens["select-label-color"]?.semantic, "light", "select-label-color");
   const asteriskColor = resolveColor(brands, brandId, tokens["select-asterisk-color"]?.semantic, "light", "select-asterisk-color");
   const errorColor = resolveColor(brands, brandId, tokens["select-error-color"]?.semantic, "light", "select-error-color");
-  const chevronColor = resolveColor(brands, brandId, tokens["select-chevron-color"]?.semantic, "light", "select-chevron-color");
+  const iconSemantic = isDisabled
+    ? tokens["select-icon-disabled"]?.semantic ?? tokens["select-chevron-color"]?.semantic
+    : isError
+      ? tokens["select-icon-error"]?.semantic ??
+        tokens["select-icon"]?.semantic ??
+        tokens["select-chevron-color"]?.semantic
+      : tokens["select-icon"]?.semantic ?? tokens["select-chevron-color"]?.semantic;
+  const iconColorKey = isDisabled ? "select-icon-disabled" : isError ? "select-icon-error" : "select-icon";
+  const chevronColor = resolveColor(brands, brandId, iconSemantic, "light", iconColorKey);
   const focusRingColor = resolveColor(brands, brandId, tokens["select-focus-ring"]?.semantic, "light", "select-focus-ring");
+  const dropdownBackground = resolveColor(
+    brands,
+    brandId,
+    tokens["select-dropdown-background"]?.semantic,
+    "light",
+    "select-dropdown-background"
+  );
+  const dropdownBorderColor = resolveColor(
+    brands,
+    brandId,
+    tokens["select-dropdown-border"]?.semantic,
+    "light",
+    "select-dropdown-border"
+  );
+  const optionSelectedBackground = resolveColor(
+    brands,
+    brandId,
+    tokens["select-option-selected-background"]?.semantic,
+    "light",
+    "select-option-selected-background"
+  );
+  const optionHoverBackground = resolveColor(
+    brands,
+    brandId,
+    tokens["select-option-hover-background"]?.semantic,
+    "light",
+    "select-option-hover-background"
+  );
+  const optionHoverText = resolveColor(
+    brands,
+    brandId,
+    tokens["select-option-hover-text"]?.semantic,
+    "light",
+    "select-option-hover-text"
+  );
 
   const height = resolveDimension(brands, brandId, "select-height", size);
   const fontSize = resolveDimension(brands, brandId, "select-font-size", size);
-  const fontFamily = resolveDimension(brands, brandId, "select-font-family");
-  const fontWeight = resolveDimension(brands, brandId, "select-font-weight");
+  const fontFamily = resolveDimension(brands, brandId, "select-font-family", size);
+  const fontWeight = resolveDimension(brands, brandId, "select-font-weight", size);
   const lineHeight = resolveDimension(brands, brandId, "select-line-height", size);
   const paddingX = resolveDimension(brands, brandId, "select-padding-x", size);
   const borderRadius = resolveDimension(brands, brandId, "select-radius", radius);
@@ -75,6 +120,8 @@ export default function SelectPreview({
 
   const mantineVariant = variant === "filled" ? "filled" : "default";
   const bdValue = `${borderWidth}px solid ${borderColor}`;
+  const dropdownBdValue = `${borderWidth}px solid ${dropdownBorderColor}`;
+  const chevronIconSize = Math.max(14, Math.round((Number(sectionSize) || 36) * 0.45));
 
   return (
     <Select
@@ -88,16 +135,32 @@ export default function SelectPreview({
       variant={mantineVariant}
       clearable={clearable}
       searchable={searchable}
+      withCheckIcon={false}
+      rightSection={
+        <ChevronRightIcon
+          width={chevronIconSize}
+          height={chevronIconSize}
+          aria-hidden
+          style={{
+            color: chevronColor,
+            transform: "rotate(90deg)",
+            display: "block",
+            flexShrink: 0,
+          }}
+        />
+      }
       data={["Option one", "Option two", "Option three"]}
       value="Option one"
       comboboxProps={{ withinPortal: false }}
+      classNames={{
+        option: classes.option,
+      }}
       vars={() => ({
         root: {
           "--input-height": `${height}px`,
           "--input-fz": `${fontSize}px`,
           "--input-padding-x": `${paddingX}px`,
           "--input-radius": `${borderRadius}px`,
-          "--input-bd": bdValue,
           "--input-section-size": `${sectionSize}px`,
         },
       })}
@@ -113,6 +176,7 @@ export default function SelectPreview({
         input: {
           backgroundColor: bg,
           color: textColor,
+          border: bdValue,
           "--input-placeholder-color": isError ? errorColor : placeholderColor,
           fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
           fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
@@ -122,9 +186,6 @@ export default function SelectPreview({
                 boxShadow: `0 0 0 2px ${focusRingColor}40`,
               }
             : {}),
-        },
-        section: {
-          color: chevronColor,
         },
         error: {
           color: errorColor,
@@ -136,6 +197,16 @@ export default function SelectPreview({
         },
         required: {
           color: asteriskColor,
+        },
+        dropdown: {
+          backgroundColor: dropdownBackground,
+          border: dropdownBdValue,
+          borderRadius: borderRadius,
+        },
+        option: {
+          "--dsg-select-option-selected-background": optionSelectedBackground,
+          "--dsg-select-option-hover-background": optionHoverBackground,
+          "--dsg-select-option-hover-text": optionHoverText,
         },
       }}
     />

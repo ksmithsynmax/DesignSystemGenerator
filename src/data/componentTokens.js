@@ -1056,13 +1056,49 @@ export const COMPONENT_TOKENS = {
     "select-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/asterisk-color" },
     "select-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/error-color" },
     "select-chevron-color":  { type: "COLOR", semantic: "text-default",     figmaPath: "select/chevron-color" },
+    /** Right-slot / chevron icon tint (Mantine `section`); preferred over `select-chevron-color` for new files. */
+    "select-icon":           { type: "COLOR", semantic: "text-default",     figmaPath: "select/icon" },
+    "select-icon-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "select/icon-disabled" },
+    "select-icon-error":     { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/icon-error" },
     "select-focus-ring":     { type: "COLOR", semantic: "border-focus",     figmaPath: "select/focus-ring" },
+    /** Listbox panel (open dropdown behind the trigger). */
+    "select-dropdown-background": { type: "COLOR", semantic: "surface-default", figmaPath: "select/dropdown-background" },
+    "select-dropdown-border":     { type: "COLOR", semantic: "border-default",  figmaPath: "select/dropdown-border" },
+    /** Highlight for the checked row (check icon / current value row). */
+    "select-option-selected-background": {
+      type: "COLOR",
+      semantic: "subtle-primary",
+      figmaPath: "select/option-selected-background",
+    },
+    /**
+     * Hovered row (pointer) and keyboard-highlighted row (`data-combobox-selected`).
+     * Default semantic is subdued so it stays off pure white vs the menu; remap in semantics as needed.
+     */
+    "select-option-hover-background": {
+      type: "COLOR",
+      semantic: "subtle-secondary",
+      figmaPath: "select/option-hover-background",
+    },
+    /** Label text when an option is hovered / keyboard-highlighted (readability vs hover BG). */
+    "select-option-hover-text": {
+      type: "COLOR",
+      semantic: "text-default",
+      figmaPath: "select/option-hover-text",
+    },
 
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "select-height":       { type: "FLOAT", unit: "px", sizes: { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 }, figmaPath: "select/height" },
     "select-font-size":    { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "select/font-size" },
-    "select-font-family": { type: "STRING", value: "Inter", figmaPath: "select/font-family" },
-    "select-font-weight": { type: "STRING", value: "Regular", figmaPath: "select/font-weight" },
+    "select-font-family": {
+      type: "STRING",
+      sizes: { xs: "Inter", sm: "Inter", md: "Inter", lg: "Inter", xl: "Inter" },
+      figmaPath: "select/font-family",
+    },
+    "select-font-weight": {
+      type: "STRING",
+      sizes: { xs: "Regular", sm: "Regular", md: "Regular", lg: "Regular", xl: "Regular" },
+      figmaPath: "select/font-weight",
+    },
     "select-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "select/line-height" },
     "select-padding-x":    { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "select/padding-x" },
     "select-section-size": { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 32, md: 36, lg: 40, xl: 44 }, figmaPath: "select/section-size" },
@@ -1165,10 +1201,6 @@ export const COMPONENT_TOKENS = {
     "text-font-weight-semibold": { type: "STRING", value: "Semi Bold", figmaPath: "text/font-weight-semibold" },
     "text-font-weight-bold": { type: "STRING", value: "Bold", figmaPath: "text/font-weight-bold" },
   },
-
-  default: {
-    "default-border": { type: "COLOR", semantic: "border-default", figmaPath: "default/border" },
-  },
 };
 
 const PLACEHOLDER_COMPONENTS = [
@@ -1214,7 +1246,6 @@ export const COMPONENT_SIZE_KEYS = {
   select: ["xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
   text: ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"],
-  default: [],
 };
 
 export function getColorTokens(componentName) {

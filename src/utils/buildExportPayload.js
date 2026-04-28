@@ -176,6 +176,16 @@ export function buildExportPayload(brands, options) {
     return resolved;
   };
 
+  const inferDefaultSizeKey = (tokenSizeKeys, componentSizeKeys) => {
+    const merged = [
+      ...(componentSizeKeys || []),
+      ...((tokenSizeKeys || []).filter((k) => !(componentSizeKeys || []).includes(k))),
+    ].filter((k) => k !== "default");
+    if (merged.includes("sm")) return "sm";
+    if (merged.includes("md")) return "md";
+    return merged[0] || null;
+  };
+
   Object.entries(brands).forEach(([brandId, brand]) => {
     const lightMerged = mergeLightSemanticsForBrand(brand);
     const darkMerged = mergeDarkSemanticsForBrand(brand);
@@ -285,7 +295,7 @@ export function buildExportPayload(brands, options) {
                 alias: resolveFloatAlias(val)
               };
             });
-            const defaultSize = getDefaultSizeKey(brands, brandId, tokenName);
+            const defaultSize = getDefaultSizeKey(brands, brandId, tokenName) || inferDefaultSizeKey(tokenSizeKeys, sizeKeys);
             const hasExplicitDefaultSize = Object.prototype.hasOwnProperty.call(def.sizes || {}, "default");
             if (!hasExplicitDefaultSize && defaultSize) {
               const defaultVal = resolveDimension(brands, brandId, tokenName, defaultSize);
@@ -304,21 +314,64 @@ export function buildExportPayload(brands, options) {
             };
           }
         } else if (def.type === TOKEN_TYPES.STRING) {
-          const val = resolveDimension(brands, brandId, tokenName);
-          let alias = null;
-          if (def.figmaPath.includes("font-family")) {
-            const key = Object.keys(GLOBAL_FONTS).find(k => GLOBAL_FONTS[k] === val);
-            if (key) alias = `typography/font-family/${key}`;
-          } else if (def.figmaPath.includes("font-weight")) {
-            const key = Object.keys(GLOBAL_WEIGHTS).find(k => GLOBAL_WEIGHTS[k] === val);
-            if (key) alias = `typography/font-weight/${key}`;
-          }
-          
-          out[brandId].components[def.figmaPath] = {
-            type: "STRING",
-            value: val,
-            alias: alias
+          const resolveStringAlias = (val) => {
+            if (def.figmaPath.includes("font-family")) {
+              const key = Object.keys(GLOBAL_FONTS).find((k) => GLOBAL_FONTS[k] === val);
+              if (key) return `typography/font-family/${key}`;
+            } else if (def.figmaPath.includes("font-weight")) {
+              const key = Object.keys(GLOBAL_WEIGHTS).find((k) => GLOBAL_WEIGHTS[k] === val);
+              if (key) return `typography/font-weight/${key}`;
+            }
+            return null;
           };
+
+          const resolveSizedStringValue = (sizeKey) => {
+            if (sizeKey === "default" && Object.prototype.hasOwnProperty.call(def.sizes || {}, "default")) {
+              const explicitDefaultOverride = brand.dimensionOverrides?.[tokenName]?.default;
+              if (explicitDefaultOverride !== undefined) return explicitDefaultOverride;
+              return def.sizes.default;
+            }
+            return resolveDimension(brands, brandId, tokenName, sizeKey);
+          };
+
+          if (def.sizes) {
+            const tokenSizeKeys = Object.keys(def.sizes || {});
+            const orderedSizeKeys = [
+              ...sizeKeys,
+              ...tokenSizeKeys.filter((k) => !sizeKeys.includes(k)),
+            ];
+            orderedSizeKeys.forEach((size) => {
+              const val = resolveSizedStringValue(size);
+              out[brandId].components[`${def.figmaPath}-${size}`] = {
+                type: "STRING",
+                value: val,
+                alias: resolveStringAlias(val),
+              };
+            });
+
+            const defaultSize = getDefaultSizeKey(brands, brandId, tokenName) || inferDefaultSizeKey(tokenSizeKeys, sizeKeys);
+            const hasExplicitDefaultSize = Object.prototype.hasOwnProperty.call(def.sizes || {}, "default");
+            if (!hasExplicitDefaultSize && defaultSize) {
+              out[brandId].components[`${def.figmaPath}-default`] = {
+                type: "STRING",
+                value: resolveDimension(brands, brandId, tokenName, defaultSize),
+                aliasOf: `${def.figmaPath}-${defaultSize}`,
+              };
+              // Backward-compatible base string path used by older plugin bindings.
+              out[brandId].components[def.figmaPath] = {
+                type: "STRING",
+                value: resolveDimension(brands, brandId, tokenName, defaultSize),
+                aliasOf: `${def.figmaPath}-default`,
+              };
+            }
+          } else {
+            const val = resolveDimension(brands, brandId, tokenName);
+            out[brandId].components[def.figmaPath] = {
+              type: "STRING",
+              value: val,
+              alias: resolveStringAlias(val),
+            };
+          }
         }
       });
     });

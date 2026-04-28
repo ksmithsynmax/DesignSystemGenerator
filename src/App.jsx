@@ -118,7 +118,6 @@ import {
   AnchorPreviewContent,
   AnchorPropertiesPanel,
 } from "./components/panels/AnchorPreviewPanel";
-import { DefaultPreviewContent } from "./components/panels/DefaultPreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { buildComponentDocsExport } from "./utils/buildComponentDocsExport";
@@ -260,7 +259,6 @@ export default function App() {
     textinput: "TextInput",
     rangeslider: "RangeSlider",
     multiselect: "MultiSelect",
-    default: "Default",
   };
   const getComponentLabel = (name) =>
     COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
@@ -1963,14 +1961,6 @@ export default function App() {
                   activeColorToken={activeColorToken}
                   size={activeLoaderSize}
                   type={activeLoaderType}
-                />
-              )}
-              {activeComponent === "default" && (
-                <DefaultPreviewContent
-                  brands={brands}
-                  activeBrand={activeBrand}
-                  activeColorToken={activeColorToken}
-                  previewTheme={previewTheme}
                 />
               )}
               {activeComponent === "pill" && (

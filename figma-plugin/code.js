@@ -7777,6 +7777,7 @@ async function buildSelectComponentSet(varMap, page, font) {
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "error", "disabled"];
+  var dropdownModes = ["closed", "open"];
   var labelModes = ["none", "label", "required"];
   var components = [];
 
@@ -7815,9 +7816,11 @@ async function buildSelectComponentSet(varMap, page, font) {
           for (var sti = 0; sti < states.length; sti++) {
             var state = states[sti];
             var capState = state.charAt(0).toUpperCase() + state.slice(1);
-
-            var comp = figma.createComponent();
-            comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", Radius=" + capRad + ", State=" + capState + ", Label=" + capLabelMode;
+            for (var dmi = 0; dmi < dropdownModes.length; dmi++) {
+              var dropdownMode = dropdownModes[dmi];
+              var capDropdown = dropdownMode === "open" ? "Open" : "Closed";
+              var comp = figma.createComponent();
+              comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", Radius=" + capRad + ", State=" + capState + ", Label=" + capLabelMode + ", Dropdown=" + capDropdown;
             comp.layoutMode = "VERTICAL";
             comp.primaryAxisSizingMode = "AUTO";
             comp.counterAxisSizingMode = "AUTO";
@@ -7932,11 +7935,23 @@ async function buildSelectComponentSet(varMap, page, font) {
             } else {
               if (varMap["select/placeholder"]) bindPaintVar(valueNode, "fills", 0, varMap["select/placeholder"]);
             }
+            var selectFontFamilyVar =
+              varMap["select/font-family-" + size] ||
+              varMap["select/font-family-default"] ||
+              varMap["select/font-family"];
+            var selectFontWeightVar =
+              varMap["select/font-weight-" + size] ||
+              varMap["select/font-weight-default"] ||
+              varMap["select/font-weight"];
+            var selectLineHeightVar =
+              varMap["select/line-height-" + size] ||
+              varMap["select/line-height-default"] ||
+              varMap["select/line-height"];
             if (varMap["select/font-size-" + size]) {
               bindVar(valueNode, "fontSize", varMap["select/font-size-" + size]);
-              bindVar(valueNode, "fontFamily", varMap["select/font-family"]);
-              bindVar(valueNode, "fontStyle", varMap["select/font-weight"]);
-              bindVar(valueNode, "lineHeight", varMap["select/line-height-" + size]);
+              if (selectFontFamilyVar) bindVar(valueNode, "fontFamily", selectFontFamilyVar);
+              if (selectFontWeightVar) bindVar(valueNode, "fontStyle", selectFontWeightVar);
+              if (selectLineHeightVar) bindVar(valueNode, "lineHeight", selectLineHeightVar);
             }
             input.appendChild(valueNode);
 
@@ -7952,6 +7967,13 @@ async function buildSelectComponentSet(varMap, page, font) {
             chevronSlot.resize(20, 20);
             input.appendChild(chevronSlot);
 
+            var selectIconPaintVar =
+              state === "disabled" && varMap["select/icon-disabled"]
+                ? varMap["select/icon-disabled"]
+                : state === "error" && varMap["select/icon-error"]
+                  ? varMap["select/icon-error"]
+                  : varMap["select/icon"] || varMap["select/chevron-color"];
+
             if (chevronIconComp) {
               var chevronInstance = chevronIconComp.createInstance();
               chevronInstance.name = "Chevron";
@@ -7961,6 +7983,18 @@ async function buildSelectComponentSet(varMap, page, font) {
                 // Keep default icon size if resize is not allowed.
               }
               chevronSlot.appendChild(chevronInstance);
+              if (selectIconPaintVar && typeof chevronInstance.findAll === "function") {
+                var chevronVectors = chevronInstance.findAll(function (n) {
+                  return n.type === "VECTOR";
+                });
+                for (var cvi = 0; cvi < chevronVectors.length; cvi++) {
+                  try {
+                    if (chevronVectors[cvi].strokes && chevronVectors[cvi].strokes.length > 0) {
+                      bindPaintVar(chevronVectors[cvi], "strokes", 0, selectIconPaintVar);
+                    }
+                  } catch (_cv) {}
+                }
+              }
             } else {
               var chevronVector = figma.createVector();
               chevronVector.name = "Chevron";
@@ -7971,7 +8005,7 @@ async function buildSelectComponentSet(varMap, page, font) {
               chevronVector.strokeWeight = 1.5;
               chevronVector.strokeJoin = "ROUND";
               chevronVector.strokeCap = "ROUND";
-              if (varMap["select/chevron-color"]) bindPaintVar(chevronVector, "strokes", 0, varMap["select/chevron-color"]);
+              if (selectIconPaintVar) bindPaintVar(chevronVector, "strokes", 0, selectIconPaintVar);
               chevronSlot.appendChild(chevronVector);
             }
 
@@ -7988,6 +8022,84 @@ async function buildSelectComponentSet(varMap, page, font) {
             }
 
             comp.appendChild(input);
+
+            if (dropdownMode === "open") {
+              var dropdown = figma.createFrame();
+              dropdown.name = "Dropdown";
+              dropdown.layoutMode = "VERTICAL";
+              dropdown.primaryAxisSizingMode = "AUTO";
+              dropdown.counterAxisSizingMode = "FIXED";
+              dropdown.counterAxisAlignItems = "MIN";
+              dropdown.itemSpacing = 0;
+              dropdown.paddingTop = 4;
+              dropdown.paddingBottom = 4;
+              dropdown.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              dropdown.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+              dropdown.strokeWeight = 1;
+              dropdown.strokeAlign = "INSIDE";
+              dropdown.cornerRadius = 4;
+              dropdown.resize(200, 120);
+              if (varMap["select/dropdown-background"]) bindPaintVar(dropdown, "fills", 0, varMap["select/dropdown-background"]);
+              if (varMap["select/dropdown-border"]) bindPaintVar(dropdown, "strokes", 0, varMap["select/dropdown-border"]);
+              if (varMap["select/radius-" + rad]) {
+                bindVar(dropdown, "topLeftRadius", varMap["select/radius-" + rad]);
+                bindVar(dropdown, "topRightRadius", varMap["select/radius-" + rad]);
+                bindVar(dropdown, "bottomLeftRadius", varMap["select/radius-" + rad]);
+                bindVar(dropdown, "bottomRightRadius", varMap["select/radius-" + rad]);
+              }
+
+              var optionHeight = sizeHeights[size] || 36;
+              var optionLabels = ["Option one", "Option two", "Option three"];
+              for (var oi = 0; oi < optionLabels.length; oi++) {
+                var option = figma.createFrame();
+                option.name = "Option/" + optionLabels[oi];
+                option.layoutMode = "HORIZONTAL";
+                option.primaryAxisSizingMode = "FIXED";
+                option.counterAxisSizingMode = "FIXED";
+                option.primaryAxisAlignItems = "MIN";
+                option.counterAxisAlignItems = "CENTER";
+                option.itemSpacing = 8;
+                option.paddingLeft = 10;
+                option.paddingRight = 10;
+                option.resize(200, optionHeight);
+                option.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0 }];
+
+                var isSelectedOption = false;
+                var isHoverOption = oi === 1;
+                var optionBgVar = null;
+                if (isSelectedOption && varMap["select/option-selected-background"]) {
+                  optionBgVar = varMap["select/option-selected-background"];
+                } else if (isHoverOption && varMap["select/option-hover-background"]) {
+                  optionBgVar = varMap["select/option-hover-background"];
+                }
+                if (optionBgVar) {
+                  option.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                  bindPaintVar(option, "fills", 0, optionBgVar);
+                }
+
+                var optionText = figma.createText();
+                optionText.name = "Label";
+                optionText.fontName = font;
+                optionText.characters = optionLabels[oi];
+                optionText.fontSize = 14;
+                optionText.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
+                if (isHoverOption && varMap["select/option-hover-text"]) {
+                  bindPaintVar(optionText, "fills", 0, varMap["select/option-hover-text"]);
+                } else if (varMap["select/text"]) {
+                  bindPaintVar(optionText, "fills", 0, varMap["select/text"]);
+                }
+                if (varMap["select/font-size-" + size]) {
+                  bindVar(optionText, "fontSize", varMap["select/font-size-" + size]);
+                  if (selectFontFamilyVar) bindVar(optionText, "fontFamily", selectFontFamilyVar);
+                  if (selectFontWeightVar) bindVar(optionText, "fontStyle", selectFontWeightVar);
+                  if (selectLineHeightVar) bindVar(optionText, "lineHeight", selectLineHeightVar);
+                }
+                option.appendChild(optionText);
+                dropdown.appendChild(option);
+              }
+
+              comp.appendChild(dropdown);
+            }
 
             if (state === "error") {
               var errorNode = figma.createText();
@@ -8009,11 +8121,12 @@ async function buildSelectComponentSet(varMap, page, font) {
             if (state === "disabled") comp.opacity = 0.6;
 
             var colIndex = vi * labelModes.length + li;
-            var rowIndex = (si * radii.length + ri) * states.length + sti;
+            var rowIndex = (si * radii.length + ri) * (states.length * dropdownModes.length) + (sti * dropdownModes.length + dmi);
             comp.x = colIndex * (colWidth + gap);
-            comp.y = rowIndex * 80;
+            comp.y = rowIndex * 190;
             page.appendChild(comp);
             components.push(comp);
+            }
           }
         }
       }
