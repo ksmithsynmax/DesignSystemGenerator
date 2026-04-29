@@ -1183,9 +1183,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     );
   });
   var selectSet = await buildSet("Select", function () {
-    return buildSelectComponentSet(varMap, page, font, {
-      defaultOnly: Boolean(buildOptions && buildOptions.selectDebugDefaultOnly)
-    });
+    return buildSelectComponentSet(varMap, page, font);
   });
   var cardSet = await buildSet("Card", function () {
     return buildCardComponentSet(varMap, page, font, { compact: true });
@@ -7774,11 +7772,10 @@ async function findTextInputIconComponents() {
 // Select
 // ---------------------------------------------------------------------------
 
-async function buildSelectComponentSet(varMap, page, font, options) {
+async function buildSelectComponentSet(varMap, page, font) {
   var variants = ["default", "filled"];
-  var defaultOnly = Boolean(options && options.defaultOnly);
-  var sizes = defaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
-  var radii = defaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "error", "disabled"];
   var dropdownModes = ["closed", "open"];
   var labelModes = ["none", "label", "required"];
@@ -7826,8 +7823,12 @@ async function buildSelectComponentSet(varMap, page, font, options) {
               var hoverOptionIndices = [-1];
               if (dropdownMode === "open" && state === "default") {
                 // Keep previous default look first: no active row + hover on option two.
-                activeOptionIndices = [-1, 0, 1, 2];
-                hoverOptionIndices = [1, -1, 0, 2];
+                hoverOptionIndices = [1];
+                // Memory guard: full Active/Hover controls only on default size + default radius.
+                if (size === "default" && rad === "default") {
+                  activeOptionIndices = [-1, 0, 1, 2];
+                  hoverOptionIndices = [1, -1, 0, 2];
+                }
               }
               for (var aoi = 0; aoi < activeOptionIndices.length; aoi++) {
                 var activeOptionIndex = activeOptionIndices[aoi];
