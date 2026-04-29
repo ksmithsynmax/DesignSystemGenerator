@@ -66,6 +66,7 @@ export function ModalPreviewContent({
   withOverlay,
   withCloseButton,
   centered,
+  showSectionDividers,
   title,
   body,
 }) {
@@ -86,6 +87,7 @@ export function ModalPreviewContent({
           withOverlay={withOverlay}
           withCloseButton={withCloseButton}
           centered={centered}
+          showSectionDividers={showSectionDividers}
           title={title}
           body={body}
         />
@@ -106,6 +108,7 @@ export function ModalPreviewContent({
             withOverlay={row.withOverlay}
             withCloseButton={withCloseButton}
             centered={centered}
+            showSectionDividers={showSectionDividers}
             title={title}
             body={body}
           />
@@ -128,6 +131,8 @@ export function ModalPropertiesPanel({
   setWithCloseButton,
   centered,
   setCentered,
+  showSectionDividers,
+  setShowSectionDividers,
   title,
   setTitle,
   body,
@@ -155,6 +160,13 @@ export function ModalPropertiesPanel({
         value={centered ? "on" : "off"}
         onChange={(v) => setCentered(v === "on")}
         options={["off", "on"]}
+      />
+      <PropertyRow
+        label="Dividers"
+        value={showSectionDividers ? "on" : "off"}
+        onChange={(v) => setShowSectionDividers(v === "on")}
+        options={["off", "on"]}
+        disabled={layout !== "centered-ack"}
       />
       <div>
         <SectionLabel mb={6}>Title</SectionLabel>

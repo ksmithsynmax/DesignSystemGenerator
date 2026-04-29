@@ -3,6 +3,23 @@ import { useState } from "react";
 export default function PrimitiveScale({ name, scale, onUpdate, readOnly }) {
   const [editing, setEditing] = useState(null);
   const [val, setVal] = useState("");
+  const normalizeHex = (raw) => {
+    const stripped = String(raw || "").trim().replace(/^#/, "");
+    if (/^[0-9A-Fa-f]{3}$/.test(stripped)) {
+      return "#" + stripped.split("").map((ch) => ch + ch).join("").toUpperCase();
+    }
+    if (/^[0-9A-Fa-f]{6}$/.test(stripped)) {
+      return "#" + stripped.toUpperCase();
+    }
+    return null;
+  };
+
+  const commitEdit = () => {
+    if (editing === null) return;
+    const normalized = normalizeHex(val);
+    if (normalized) onUpdate(name, editing, normalized);
+    setEditing(null);
+  };
 
   return (
     <div style={{ marginBottom: 12 }}>
@@ -34,13 +51,16 @@ export default function PrimitiveScale({ name, scale, onUpdate, readOnly }) {
               <input
                 value={val}
                 onChange={(e) => setVal(e.target.value)}
-                onBlur={() => {
-                  if (/^#[0-9A-Fa-f]{6}$/.test(val)) onUpdate(name, i, val);
-                  setEditing(null);
-                }}
+                onBlur={commitEdit}
                 onKeyDown={(e) => {
-                  if (e.key === "Enter") e.target.blur();
-                  if (e.key === "Escape") setEditing(null);
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    commitEdit();
+                  }
+                  if (e.key === "Escape") {
+                    e.preventDefault();
+                    setEditing(null);
+                  }
                 }}
                 autoFocus
                 style={{
@@ -49,7 +69,7 @@ export default function PrimitiveScale({ name, scale, onUpdate, readOnly }) {
                   fontFamily: "monospace",
                   padding: "2px 4px",
                   background: "#25262B",
-                  border: "1px solid #4DABF7",
+                  border: `1px solid ${normalizeHex(val) ? "#4DABF7" : "#FA5252"}`,
                   borderRadius: 3,
                   color: "#C1C2C5",
                   textAlign: "center",

@@ -497,6 +497,7 @@ export default function App() {
   const [activeModalWithOverlay, setActiveModalWithOverlay] = useState(true);
   const [activeModalWithCloseButton, setActiveModalWithCloseButton] = useState(true);
   const [activeModalCentered, setActiveModalCentered] = useState(true);
+  const [activeModalShowSectionDividers, setActiveModalShowSectionDividers] = useState(true);
   const [activeModalTitle, setActiveModalTitle] = useState("Modal title");
   const [activeModalBody, setActiveModalBody] = useState(
     "This action cannot be undone. Please confirm you want to proceed."
@@ -628,6 +629,7 @@ export default function App() {
       setActiveModalWithOverlay(true);
       setActiveModalWithCloseButton(true);
       setActiveModalCentered(true);
+      setActiveModalShowSectionDividers(true);
       setActiveModalTitle("Modal title");
       setActiveModalBody("This action cannot be undone. Please confirm you want to proceed.");
     } else if (newComp === "checkbox") {
@@ -1807,6 +1809,7 @@ export default function App() {
                   withOverlay={activeModalWithOverlay}
                   withCloseButton={activeModalWithCloseButton}
                   centered={activeModalCentered}
+                  showSectionDividers={activeModalShowSectionDividers}
                   title={activeModalTitle}
                   body={activeModalBody}
                 />
@@ -2184,6 +2187,8 @@ export default function App() {
                   setWithCloseButton={setActiveModalWithCloseButton}
                   centered={activeModalCentered}
                   setCentered={setActiveModalCentered}
+                  showSectionDividers={activeModalShowSectionDividers}
+                  setShowSectionDividers={setActiveModalShowSectionDividers}
                   title={activeModalTitle}
                   setTitle={setActiveModalTitle}
                   body={activeModalBody}

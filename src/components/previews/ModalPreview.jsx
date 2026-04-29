@@ -22,6 +22,7 @@ export default function ModalPreview({
   withOverlay = true,
   withCloseButton = true,
   centered = true,
+  showSectionDividers = true,
   title = "Modal title",
   body = "This action cannot be undone. Please confirm you want to proceed.",
 }) {
@@ -112,7 +113,7 @@ export default function ModalPreview({
                   justifyContent: "center",
                   textAlign: "center",
                   padding: `${paddingY}px ${paddingX}px`,
-                  borderBottom: `${borderWidth}px solid ${dividerColor}`,
+                  borderBottom: showSectionDividers ? `${borderWidth}px solid ${dividerColor}` : "none",
                   fontSize: `${titleFontSize}px`,
                   fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
                   fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
@@ -137,7 +138,7 @@ export default function ModalPreview({
               </div>
               <div
                 style={{
-                  borderTop: `${borderWidth}px solid ${dividerColor}`,
+                  borderTop: showSectionDividers ? `${borderWidth}px solid ${dividerColor}` : "none",
                   padding: `${paddingY}px ${paddingX}px`,
                   display: "flex",
                   alignItems: "center",

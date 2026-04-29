@@ -6373,8 +6373,9 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
   var radii = ["xs", "sm", "md", "lg", "xl"];
   var overlayStates = ["off", "on"];
   var closeStates = ["off", "on"];
-  var layouts = ["basic", "actions-right", "centered-ack"];
+  var layouts = ["basic"];
   var components = [];
+  var headerOnly = true;
   var buttonSet = sourceSets && sourceSets.buttonSet ? sourceSets.buttonSet : null;
   var titleSet = sourceSets && sourceSets.titleSet ? sourceSets.titleSet : null;
   var textSet = sourceSets && sourceSets.textSet ? sourceSets.textSet : null;
@@ -6446,47 +6447,18 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               ", Overlay=" + capOverlay +
               ", Close=" + capClose +
               ", Layout=" + capLayout;
-            comp.resize(700, 420);
+            comp.layoutMode = "VERTICAL";
+            comp.primaryAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "FIXED";
+            comp.counterAxisAlignItems = "MIN";
+            comp.itemSpacing = 0;
+            comp.resize(panelW, 220);
+            // Root is a layout-only container for header + body-wrap (no visual "modal" frame).
             comp.fills = [];
-
-            var overlay = figma.createRectangle();
-            overlay.name = "overlay";
-            overlay.resize(700, 420);
-            overlay.x = 0;
-            overlay.y = 0;
-            overlay.fills = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }];
-            overlay.opacity = withOverlay ? 0.45 : 0;
-            bindPaintVar(overlay, "fills", 0, varMap["modal/overlay"]);
-            bindVar(overlay, "opacity", varMap["modal/overlay-opacity"]);
-            comp.appendChild(overlay);
-
-            var panel = figma.createFrame();
-            panel.name = "modal";
-            panel.layoutMode = "VERTICAL";
-            panel.primaryAxisSizingMode = "AUTO";
-            panel.counterAxisSizingMode = "FIXED";
-            panel.counterAxisAlignItems = "MIN";
-            panel.itemSpacing = 0;
-            panel.resize(panelW, 220);
-            panel.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-            panel.strokes = [{ type: "SOLID", color: { r: 0.86, g: 0.86, b: 0.86 } }];
-            panel.strokeWeight = 1;
-            panel.strokeAlign = "INSIDE";
-            panel.cornerRadius = 8;
-            panel.clipsContent = true;
-            bindPaintVar(panel, "fills", 0, varMap["modal/background"]);
-            bindPaintVar(panel, "strokes", 0, varMap["modal/border"]);
-            bindVar(panel, "strokeWeight", varMap["modal/border-width"]);
-            bindVar(panel, "minWidth", varMap["modal/width-" + size]);
-            bindVar(panel, "maxWidth", varMap["modal/width-" + size]);
-            bindVar(panel, "topLeftRadius", varMap["modal/radius-" + radius]);
-            bindVar(panel, "topRightRadius", varMap["modal/radius-" + radius]);
-            bindVar(panel, "bottomLeftRadius", varMap["modal/radius-" + radius]);
-            bindVar(panel, "bottomRightRadius", varMap["modal/radius-" + radius]);
-
-            panel.x = Math.round((700 - panelW) / 2);
-            panel.y = centered ? 104 : 28;
-            comp.appendChild(panel);
+            comp.strokes = [];
+            comp.clipsContent = false;
+            bindVar(comp, "minWidth", varMap["modal/width-" + size]);
+            bindVar(comp, "maxWidth", varMap["modal/width-" + size]);
 
             var header = figma.createFrame();
             header.name = "header";
@@ -6501,26 +6473,37 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
             header.paddingTop = 14;
             header.paddingBottom = 14;
             header.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            header.strokes = [{ type: "SOLID", color: { r: 0.86, g: 0.86, b: 0.86 } }];
+            header.strokeWeight = 1;
+            header.strokeAlign = "INSIDE";
             bindVar(header, "paddingLeft", varMap["modal/padding-x"]);
             bindVar(header, "paddingRight", varMap["modal/padding-x"]);
             bindVar(header, "paddingTop", varMap["modal/padding-y"]);
             bindVar(header, "paddingBottom", varMap["modal/padding-y"]);
             bindPaintVar(header, "fills", 0, varMap["modal/header-background"]);
-            panel.appendChild(header);
+            bindPaintVar(header, "strokes", 0, varMap["modal/border"]);
+            bindVar(header, "strokeWeight", varMap["modal/border-width"]);
+            bindVar(header, "topLeftRadius", varMap["modal/radius-" + radius]);
+            bindVar(header, "topRightRadius", varMap["modal/radius-" + radius]);
+            comp.appendChild(header);
 
             var titleNode = null;
             if (titleVariant) {
               titleNode = titleVariant.createInstance();
               titleNode.name = "title";
               try {
-                titleNode.resize(Math.max(120, panelW - (withClose ? 88 : 32)), 28);
+                titleNode.resize(Math.max(120, panelW - (withClose ? 88 : 32)), titleNode.height);
               } catch (e) {}
+              try {
+                titleNode.layoutSizingVertical = "HUG";
+              } catch (_layoutErr) {}
             } else {
               titleNode = figma.createText();
               titleNode.name = "title";
               titleNode.fontName = font;
               titleNode.characters = "Modal title";
               titleNode.fontSize = 18;
+              titleNode.textAutoResize = "HEIGHT";
               titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
               bindPaintVar(titleNode, "fills", 0, varMap["modal/title"]);
               bindVar(titleNode, "fontSize", varMap["modal/title-font-size"]);
@@ -6552,48 +6535,57 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               }
             }
 
-            var bodyWrap = figma.createFrame();
-            bodyWrap.name = "body-wrap";
-            bodyWrap.layoutMode = "VERTICAL";
-            bodyWrap.primaryAxisSizingMode = "FIXED";
-            bodyWrap.counterAxisSizingMode = "AUTO";
-            bodyWrap.counterAxisAlignItems = "MIN";
-            bodyWrap.resize(panelW, layout === "actions-right" ? 130 : 100);
-            bodyWrap.paddingLeft = 16;
-            bodyWrap.paddingRight = 16;
-            bodyWrap.paddingBottom = 14;
-            bodyWrap.itemSpacing = 10;
-            bodyWrap.fills = [];
-            bindVar(bodyWrap, "paddingLeft", varMap["modal/padding-x"]);
-            bindVar(bodyWrap, "paddingRight", varMap["modal/padding-x"]);
-            bindVar(bodyWrap, "paddingBottom", varMap["modal/padding-y"]);
-            panel.appendChild(bodyWrap);
+            if (!headerOnly) {
+              var bodyWrap = figma.createFrame();
+              bodyWrap.name = "body-wrap";
+              bodyWrap.layoutMode = "VERTICAL";
+              bodyWrap.primaryAxisSizingMode = "FIXED";
+              bodyWrap.counterAxisSizingMode = "AUTO";
+              bodyWrap.counterAxisAlignItems = "MIN";
+              bodyWrap.resize(panelW, layout === "actions-right" ? 130 : 100);
+              bodyWrap.paddingLeft = 16;
+              bodyWrap.paddingRight = 16;
+              bodyWrap.paddingBottom = 14;
+              bodyWrap.itemSpacing = 10;
+              bodyWrap.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              bodyWrap.strokes = [{ type: "SOLID", color: { r: 0.86, g: 0.86, b: 0.86 } }];
+              bodyWrap.strokeWeight = 1;
+              bodyWrap.strokeAlign = "INSIDE";
+              bindVar(bodyWrap, "paddingLeft", varMap["modal/padding-x"]);
+              bindVar(bodyWrap, "paddingRight", varMap["modal/padding-x"]);
+              bindVar(bodyWrap, "paddingBottom", varMap["modal/padding-y"]);
+              bindPaintVar(bodyWrap, "fills", 0, varMap["modal/background"]);
+              bindPaintVar(bodyWrap, "strokes", 0, varMap["modal/border"]);
+              bindVar(bodyWrap, "strokeWeight", varMap["modal/border-width"]);
+              bindVar(bodyWrap, "bottomLeftRadius", varMap["modal/radius-" + radius]);
+              bindVar(bodyWrap, "bottomRightRadius", varMap["modal/radius-" + radius]);
+              comp.appendChild(bodyWrap);
 
-            var bodyNode = null;
-            if (bodyTextVariant) {
-              bodyNode = bodyTextVariant.createInstance();
-              bodyNode.name = "body";
-              try {
-                bodyNode.resize(panelW - 32, layout === "actions-right" ? 68 : 58);
-              } catch (e) {}
-            } else {
-              bodyNode = figma.createText();
-              bodyNode.name = "body";
-              bodyNode.fontName = font;
-              bodyNode.characters = "This action cannot be undone. Please confirm you want to proceed.";
-              bodyNode.fontSize = 14;
-              bodyNode.textAutoResize = "HEIGHT";
-              bodyNode.resize(panelW - 32, bodyNode.height);
-              bodyNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
-              bindPaintVar(bodyNode, "fills", 0, varMap["modal/body"]);
-              bindVar(bodyNode, "fontSize", varMap["modal/body-font-size"]);
-              bindVar(bodyNode, "fontFamily", varMap["modal/body-font-family"]);
-              bindVar(bodyNode, "fontStyle", varMap["modal/body-font-weight"]);
-              bindVar(bodyNode, "lineHeight", varMap["modal/body-line-height"]);
-            }
-            bodyWrap.appendChild(bodyNode);
+              var bodyNode = null;
+              if (bodyTextVariant) {
+                bodyNode = bodyTextVariant.createInstance();
+                bodyNode.name = "body";
+                try {
+                  bodyNode.resize(panelW - 32, layout === "actions-right" ? 68 : 58);
+                } catch (e) {}
+              } else {
+                bodyNode = figma.createText();
+                bodyNode.name = "body";
+                bodyNode.fontName = font;
+                bodyNode.characters = "This action cannot be undone. Please confirm you want to proceed.";
+                bodyNode.fontSize = 14;
+                bodyNode.textAutoResize = "HEIGHT";
+                bodyNode.resize(panelW - 32, bodyNode.height);
+                bodyNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+                bindPaintVar(bodyNode, "fills", 0, varMap["modal/body"]);
+                bindVar(bodyNode, "fontSize", varMap["modal/body-font-size"]);
+                bindVar(bodyNode, "fontFamily", varMap["modal/body-font-family"]);
+                bindVar(bodyNode, "fontStyle", varMap["modal/body-font-weight"]);
+                bindVar(bodyNode, "lineHeight", varMap["modal/body-line-height"]);
+              }
+              bodyWrap.appendChild(bodyNode);
 
-            if (layout === "actions-right") {
+              if (layout === "actions-right") {
               var actionRow = figma.createFrame();
               actionRow.name = "actions";
               actionRow.layoutMode = "HORIZONTAL";
@@ -6660,17 +6652,17 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 yesTxt.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                 yesBtn.appendChild(yesTxt);
               }
-            }
+              }
 
-            if (layout === "centered-ack") {
+              if (layout === "centered-ack") {
               var divider = figma.createLine();
               divider.name = "divider";
               divider.resize(panelW - 32, 1);
               divider.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
               divider.strokeWeight = 1;
               divider.x = 16;
-              divider.y = panel.height - 56;
-              panel.appendChild(divider);
+              divider.y = comp.height - 56;
+              comp.appendChild(divider);
 
               var footer = figma.createFrame();
               footer.name = "footer";
@@ -6686,7 +6678,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               footer.paddingBottom = 10;
               footer.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
               bindPaintVar(footer, "fills", 0, varMap["modal/footer-background"]);
-              panel.appendChild(footer);
+              comp.appendChild(footer);
 
               if (cancelButtonVariant && confirmButtonVariant) {
                 var declineBtnInstance = cancelButtonVariant.createInstance();
@@ -6711,6 +6703,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 accept.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
                 footer.appendChild(accept);
               }
+            }
             }
 
             var colIndex = (ri * overlayStates.length + oi) * closeStates.length + ci;
@@ -8295,6 +8288,8 @@ function buildCardComponentSet(varMap, page, font, options) {
             var withShadow = shadowModes[shi] === "on";
             for (var seci = 0; seci < sectionModes.length; seci++) {
               var withSection = sectionModes[seci] === "on";
+              var variantSupportsSection = variant === "default" || variant === "dark";
+              if (withSection && !variantSupportsSection) continue;
             var comp = figma.createComponent();
             comp.name =
               "Variant=" + capVariant +
@@ -8319,14 +8314,25 @@ function buildCardComponentSet(varMap, page, font, options) {
             var descriptionVar = varMap["card/" + variant + "-description"] || varMap["card/default-description"] || varMap["card/description"];
             var sectionBackgroundVar = varMap["card/" + variant + "-section-background"] || varMap["card/default-section-background"] || varMap["card/section-background"];
 
-            if (backgroundVar) bindPaintVar(comp, "fills", 0, backgroundVar);
+            if (withSection) {
+              // Section-on layout: keep outer shell transparent so media + body reads as two blocks.
+              comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0 }];
+            } else if (backgroundVar) {
+              bindPaintVar(comp, "fills", 0, backgroundVar);
+            }
             if (varMap["card/radius-" + radius]) {
               bindVar(comp, "topLeftRadius", varMap["card/radius-" + radius]);
               bindVar(comp, "topRightRadius", varMap["card/radius-" + radius]);
               bindVar(comp, "bottomLeftRadius", varMap["card/radius-" + radius]);
               bindVar(comp, "bottomRightRadius", varMap["card/radius-" + radius]);
             }
-            if (varMap["card/padding-" + size]) {
+            if (withSection) {
+              // No shell padding when section is on; body handles content padding.
+              comp.paddingLeft = 0;
+              comp.paddingRight = 0;
+              comp.paddingTop = 0;
+              comp.paddingBottom = 0;
+            } else if (varMap["card/padding-" + size]) {
               bindVar(comp, "paddingLeft", varMap["card/padding-" + size]);
               bindVar(comp, "paddingRight", varMap["card/padding-" + size]);
               bindVar(comp, "paddingTop", varMap["card/padding-" + size]);
@@ -8382,6 +8388,21 @@ function buildCardComponentSet(varMap, page, font, options) {
             body.itemSpacing = 8;
             body.layoutAlign = "STRETCH";
             body.fills = [];
+            if (withSection) {
+              body.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              if (backgroundVar) bindPaintVar(body, "fills", 0, backgroundVar);
+              if (varMap["card/padding-" + size]) {
+                bindVar(body, "paddingLeft", varMap["card/padding-" + size]);
+                bindVar(body, "paddingRight", varMap["card/padding-" + size]);
+                bindVar(body, "paddingTop", varMap["card/padding-" + size]);
+                bindVar(body, "paddingBottom", varMap["card/padding-" + size]);
+              } else {
+                body.paddingLeft = 16;
+                body.paddingRight = 16;
+                body.paddingTop = 16;
+                body.paddingBottom = 16;
+              }
+            }
             if (varMap["card/gap-" + size]) bindVar(body, "itemSpacing", varMap["card/gap-" + size]);
             comp.appendChild(body);
 
