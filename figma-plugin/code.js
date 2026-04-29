@@ -1183,7 +1183,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     );
   });
   var selectSet = await buildSet("Select", function () {
-    return buildSelectComponentSet(varMap, page, font);
+    return buildSelectComponentSet(varMap, page, font, {
+      defaultOnly: Boolean(buildOptions && buildOptions.selectDebugDefaultOnly)
+    });
   });
   var cardSet = await buildSet("Card", function () {
     return buildCardComponentSet(varMap, page, font, { compact: true });
@@ -7772,10 +7774,11 @@ async function findTextInputIconComponents() {
 // Select
 // ---------------------------------------------------------------------------
 
-async function buildSelectComponentSet(varMap, page, font) {
+async function buildSelectComponentSet(varMap, page, font, options) {
   var variants = ["default", "filled"];
-  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
-  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var defaultOnly = Boolean(options && options.defaultOnly);
+  var sizes = defaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = defaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "error", "disabled"];
   var dropdownModes = ["closed", "open"];
   var labelModes = ["none", "label", "required"];
@@ -7819,8 +7822,29 @@ async function buildSelectComponentSet(varMap, page, font) {
             for (var dmi = 0; dmi < dropdownModes.length; dmi++) {
               var dropdownMode = dropdownModes[dmi];
               var capDropdown = dropdownMode === "open" ? "Open" : "Closed";
-              var comp = figma.createComponent();
-              comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", Radius=" + capRad + ", State=" + capState + ", Label=" + capLabelMode + ", Dropdown=" + capDropdown;
+              var activeOptionIndices = [-1];
+              var hoverOptionIndices = [-1];
+              if (dropdownMode === "open" && state === "default") {
+                // Keep previous default look first: no active row + hover on option two.
+                activeOptionIndices = [-1, 0, 1, 2];
+                hoverOptionIndices = [1, -1, 0, 2];
+              }
+              for (var aoi = 0; aoi < activeOptionIndices.length; aoi++) {
+                var activeOptionIndex = activeOptionIndices[aoi];
+                var activeOptionName = activeOptionIndex < 0 ? "Off" : activeOptionIndex === 0 ? "One" : activeOptionIndex === 1 ? "Two" : "Three";
+                for (var hoi = 0; hoi < hoverOptionIndices.length; hoi++) {
+                  var hoverOptionIndex = hoverOptionIndices[hoi];
+                  var hoverOptionName = hoverOptionIndex < 0 ? "Off" : hoverOptionIndex === 0 ? "One" : hoverOptionIndex === 1 ? "Two" : "Three";
+                  var comp = figma.createComponent();
+                  comp.name =
+                    "Variant=" + capVariant +
+                    ", Size=" + capSize +
+                    ", Radius=" + capRad +
+                    ", State=" + capState +
+                    ", Label=" + capLabelMode +
+                    ", Dropdown=" + capDropdown +
+                    ", Active=" + activeOptionName +
+                    ", Hover=" + hoverOptionName;
             comp.layoutMode = "VERTICAL";
             comp.primaryAxisSizingMode = "AUTO";
             comp.counterAxisSizingMode = "AUTO";
@@ -8064,8 +8088,8 @@ async function buildSelectComponentSet(varMap, page, font) {
                 option.resize(200, optionHeight);
                 option.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0 }];
 
-                var isSelectedOption = false;
-                var isHoverOption = oi === 1;
+                var isSelectedOption = oi === activeOptionIndex;
+                var isHoverOption = oi === hoverOptionIndex;
                 var optionBgVar = null;
                 if (isSelectedOption && varMap["select/option-selected-background"]) {
                   optionBgVar = varMap["select/option-selected-background"];
@@ -8121,7 +8145,11 @@ async function buildSelectComponentSet(varMap, page, font) {
             if (state === "disabled") comp.opacity = 0.6;
 
             var colIndex = vi * labelModes.length + li;
-            var rowIndex = (si * radii.length + ri) * (states.length * dropdownModes.length) + (sti * dropdownModes.length + dmi);
+            var comboCountForState = (dropdownMode === "open" && state === "default") ? (4 * 4) : 1;
+            var rowIndexBase = (si * radii.length + ri) * ((states.length - 1) + (1 * 4 * 4));
+            var stateOffset = (state === "default") ? 0 : (4 * 4) + (sti - 1);
+            var comboIndex = aoi * hoverOptionIndices.length + hoi;
+            var rowIndex = rowIndexBase + stateOffset + comboIndex;
             comp.x = colIndex * (colWidth + gap);
             comp.y = rowIndex * 190;
             page.appendChild(comp);
@@ -8131,6 +8159,8 @@ async function buildSelectComponentSet(varMap, page, font) {
         }
       }
     }
+  }
+  }
   }
 
   progress("Created " + components.length + " select variants");
