@@ -932,12 +932,20 @@ export const COMPONENT_TOKENS = {
     "modal-close": { type: "COLOR", semantic: "text-default", figmaPath: "modal/close" },
 
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
-    "modal-width": { type: "FLOAT", unit: "px", sizes: { xs: 280, sm: 340, md: 420, lg: 520, xl: 640 }, figmaPath: "modal/width" },
-    "modal-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "modal/radius" },
+    "modal-width": { type: "FLOAT", unit: "px", sizes: { default: 420, xs: 280, sm: 340, md: 420, lg: 520, xl: 640 }, figmaPath: "modal/width" },
+    "modal-radius": { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "modal/radius" },
 
     // ── FLOAT TOKENS (single value) ──
     "modal-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/padding-x" },
     "modal-padding-y": { type: "FLOAT", unit: "px", value: 14, figmaPath: "modal/padding-y" },
+    "modal-header-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/header-padding-x" },
+    "modal-header-padding-y": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/header-padding-y" },
+    "modal-body-padding-top": { type: "FLOAT", unit: "px", value: 0, figmaPath: "modal/body-padding-top" },
+    "modal-body-padding-right": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/body-padding-right" },
+    "modal-body-padding-bottom": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/body-padding-bottom" },
+    "modal-body-padding-left": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/body-padding-left" },
+    "modal-footer-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/footer-padding-x" },
+    "modal-footer-padding-y": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/footer-padding-y" },
     "modal-title-font-size": { type: "FLOAT", unit: "px", value: 18, figmaPath: "modal/title-font-size" },
     "modal-title-font-family": { type: "STRING", value: "Inter", figmaPath: "modal/title-font-family" },
     "modal-title-font-weight": { type: "STRING", value: "Bold", figmaPath: "modal/title-font-weight" },
@@ -1240,7 +1248,7 @@ export const COMPONENT_SIZE_KEYS = {
   pill: ["default", "xs", "sm", "md", "lg", "xl"],
   badge: ["default", "xs", "sm", "md", "lg", "xl"],
   alert: ["xs", "sm", "md", "lg", "xl"],
-  modal: ["xs", "sm", "md", "lg", "xl"],
+  modal: ["default", "xs", "sm", "md", "lg", "xl"],
   anchor: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["default", "xs", "sm", "md", "lg", "xl"],
   select: ["xs", "sm", "md", "lg", "xl"],

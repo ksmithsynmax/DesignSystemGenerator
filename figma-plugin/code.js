@@ -1750,6 +1750,72 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     return values[0];
   }
 
+  function reorderSizesByDefaultVisualMatch(sizeValues, createSizeInstance) {
+    if (!Array.isArray(sizeValues) || sizeValues.length <= 1 || typeof createSizeInstance !== "function") {
+      return Array.isArray(sizeValues) ? sizeValues.slice() : [];
+    }
+
+    var ordered = sizeValues.slice();
+    var defaultIdx = -1;
+    for (var i = 0; i < ordered.length; i++) {
+      if (String(ordered[i] || "").toLowerCase() === "default") {
+        defaultIdx = i;
+        break;
+      }
+    }
+    if (defaultIdx < 0) return ordered;
+
+    var defaultSizeValue = ordered[defaultIdx];
+    var defaultInst = null;
+    try {
+      defaultInst = createSizeInstance(defaultSizeValue);
+    } catch (_defaultSizeCreateErr) {
+      return ordered;
+    }
+    if (!defaultInst) return ordered;
+
+    var defaultW = Number(defaultInst.width || 0);
+    var defaultH = Number(defaultInst.height || 0);
+
+    var bestIdx = -1;
+    var bestScore = Number.POSITIVE_INFINITY;
+    var candidates = [];
+    for (var c = 0; c < ordered.length; c++) {
+      if (c === defaultIdx) continue;
+      candidates.push({ value: ordered[c], index: c });
+    }
+
+    for (var ci = 0; ci < candidates.length; ci++) {
+      var candidate = candidates[ci];
+      var candidateInst = null;
+      try {
+        candidateInst = createSizeInstance(candidate.value);
+      } catch (_candidateSizeCreateErr) {
+        candidateInst = null;
+      }
+      if (!candidateInst) continue;
+
+      var candidateW = Number(candidateInst.width || 0);
+      var candidateH = Number(candidateInst.height || 0);
+      var score = Math.abs(defaultW - candidateW) + Math.abs(defaultH - candidateH);
+      if (score < bestScore) {
+        bestScore = score;
+        bestIdx = candidate.index;
+      }
+
+      try { candidateInst.remove(); } catch (_candidateRemoveErr) {}
+    }
+
+    try { defaultInst.remove(); } catch (_defaultRemoveErr) {}
+
+    if (bestIdx < 0 || bestIdx === defaultIdx) return ordered;
+
+    ordered.splice(defaultIdx, 1);
+    if (defaultIdx < bestIdx) bestIdx -= 1;
+    ordered.splice(bestIdx + 1, 0, defaultSizeValue);
+    return ordered;
+  }
+
   function clearChildren(node) {
     for (var i = node.children.length - 1; i >= 0; i--) {
       node.children[i].remove();
@@ -1986,9 +2052,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var setName = set.name || ("Component " + (si + 1));
     var slug = normalizeName(setName);
     var lowerSetName = String(setName || "").toLowerCase();
-    var stackSizeRows = lowerSetName === "title" || lowerSetName === "text";
+    var stackSizeRows = lowerSetName === "title" || lowerSetName === "text" || lowerSetName === "modal";
     var variantProps = set.variantGroupProperties || {};
     var variants = getPropValues(variantProps, "Variant");
+    var variantPropName = "Variant";
+    if (lowerSetName === "modal" && variants.length === 0) {
+      var modalLayouts = getPropValues(variantProps, "Layout");
+      if (modalLayouts.length > 0) {
+        variants = modalLayouts.slice();
+        variantPropName = "Layout";
+      }
+    }
     var states = getPropValues(variantProps, "State");
     var sizes = getPropValues(variantProps, "Size");
     var textWeights = getPropValues(variantProps, "Weight");
@@ -2027,7 +2101,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateLeftSlot = getTemplateSlot(templatedDoc, slug, "icons-left");
       var templateRightSlot = getTemplateSlot(templatedDoc, slug, "icons-right");
 
-      var templateVariantKey = getPropKey(variantProps, "Variant");
+      var templateVariantKey = getPropKey(variantProps, variantPropName);
       var templateStateKey = getPropKey(variantProps, "State");
       var templateSizeKey = getPropKey(variantProps, "Size");
       var templateRadiusKey = getPropKey(variantProps, "Radius");
@@ -2053,8 +2127,23 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateRadii = getPropValues(variantProps, "Radius");
       var templateOrderedRadiiAll = pickOrdered(templateRadii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
       var templateOrderedSizes = templateOrderedSizesAll.slice();
-      if (templateOrderedSizes.length > 1) {
+      if (templateOrderedSizes.length > 1 && lowerSetName !== "badge") {
         templateOrderedSizes = templateOrderedSizes.filter(function (s) { return String(s).toLowerCase() !== "default"; });
+      }
+      if (lowerSetName === "badge" && templateOrderedSizes.length > 1) {
+        var templateDefaultSizeIdx = -1;
+        var templateMdSizeIdx = -1;
+        for (var tsi = 0; tsi < templateOrderedSizes.length; tsi++) {
+          var templateSizeName = String(templateOrderedSizes[tsi] || "").toLowerCase();
+          if (templateSizeName === "default") templateDefaultSizeIdx = tsi;
+          if (templateSizeName === "md") templateMdSizeIdx = tsi;
+        }
+        if (templateDefaultSizeIdx >= 0 && templateMdSizeIdx >= 0 && templateDefaultSizeIdx !== templateMdSizeIdx + 1) {
+          var templateDefaultSizeValue = templateOrderedSizes[templateDefaultSizeIdx];
+          templateOrderedSizes.splice(templateDefaultSizeIdx, 1);
+          if (templateDefaultSizeIdx < templateMdSizeIdx) templateMdSizeIdx -= 1;
+          templateOrderedSizes.splice(templateMdSizeIdx + 1, 0, templateDefaultSizeValue);
+        }
       }
 
       var templateDefaultVariant = templateOrderedVariants.length > 0 ? templateOrderedVariants[0] : null;
@@ -2143,6 +2232,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           return inst;
         }
 
+        if (templateSizeKey && templateOrderedSizes.length > 1) {
+          templateOrderedSizes = reorderSizesByDefaultVisualMatch(templateOrderedSizes, function (sizeName) {
+            return makeTemplateInstance({ Size: sizeName });
+          });
+        }
+
         if (hasVariants && templateVariantsSlot && templateOrderedVariants.length > 0) {
           clearChildren(templateVariantsSlot);
           if (templateVariantsSlot.layoutMode === "VERTICAL") {
@@ -2179,7 +2274,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 templateBadgeSemanticColors,
                 (function (vName) {
                   return function (colorName) {
-                    return makeTemplateInstance({ Variant: vName, Color: colorName });
+                    var variantColorPatch = {};
+                    variantColorPatch[variantPropName] = vName;
+                    variantColorPatch.Color = colorName;
+                    return makeTemplateInstance(variantColorPatch);
                   };
                 })(templateVariantName),
                 false
@@ -2197,7 +2295,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 templateVariantStateValues,
                 (function (vName) {
                   return function (stateName) {
-                    var patch = { Variant: vName };
+                    var patch = {};
+                    patch[variantPropName] = vName;
                     if (stateName != null) patch.State = stateName;
                     if ((lowerSetName === "checkbox" || lowerSetName === "radio") && templateCheckedOnValue != null) {
                       patch.Checked = templateCheckedOnValue;
@@ -2236,12 +2335,25 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             templateSizeSlot.counterAxisAlignItems = "MIN";
           }
           if (stackSizeRows) {
-            for (var tsi = 0; tsi < templateOrderedSizes.length; tsi++) {
-              (function (sizeName) {
-                addInstancesRow(templateSizeSlot, "Sizes", [sizeName], function (innerSizeName) {
-                  return makeTemplateInstance({ Size: innerSizeName });
-                }, false);
-              })(templateOrderedSizes[tsi]);
+            if (lowerSetName === "modal" && templateOrderedSizes.length === 5) {
+              addInstancesRow(
+                templateSizeSlot,
+                "Sizes",
+                templateOrderedSizes,
+                function (sizeName) {
+                  return makeTemplateInstance({ Size: sizeName });
+                },
+                false,
+                { itemsPerRow: 3 }
+              );
+            } else {
+              for (var tsi = 0; tsi < templateOrderedSizes.length; tsi++) {
+                (function (sizeName) {
+                  addInstancesRow(templateSizeSlot, "Sizes", [sizeName], function (innerSizeName) {
+                    return makeTemplateInstance({ Size: innerSizeName });
+                  }, false);
+                })(templateOrderedSizes[tsi]);
+              }
             }
           } else if ((lowerSetName === "slider" || lowerSetName === "rangeslider") && templateOrderedSizes.length > 3) {
             var templateSliderFirstRow = templateOrderedSizes.slice(0, 3);
@@ -2722,7 +2834,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         continue;
       }
 
-      var variantKey = getPropKey(variantProps, "Variant");
+      var variantKey = getPropKey(variantProps, variantPropName);
       var stateKey = getPropKey(variantProps, "State");
       var sizeKey = getPropKey(variantProps, "Size");
       var radiusKey = getPropKey(variantProps, "Radius");
@@ -2749,8 +2861,23 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var radii = getPropValues(variantProps, "Radius");
       var orderedRadiiAll = pickOrdered(radii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
       var orderedSizes = orderedSizesAll.slice();
-      if (orderedSizes.length > 1) {
+      if (orderedSizes.length > 1 && lowerSetName !== "badge") {
         orderedSizes = orderedSizes.filter(function (s) { return String(s).toLowerCase() !== "default"; });
+      }
+      if (lowerSetName === "badge" && orderedSizes.length > 1) {
+        var defaultSizeIdx = -1;
+        var mdSizeIdx = -1;
+        for (var osi = 0; osi < orderedSizes.length; osi++) {
+          var sizeName = String(orderedSizes[osi] || "").toLowerCase();
+          if (sizeName === "default") defaultSizeIdx = osi;
+          if (sizeName === "md") mdSizeIdx = osi;
+        }
+        if (defaultSizeIdx >= 0 && mdSizeIdx >= 0 && defaultSizeIdx !== mdSizeIdx + 1) {
+          var defaultSizeValue = orderedSizes[defaultSizeIdx];
+          orderedSizes.splice(defaultSizeIdx, 1);
+          if (defaultSizeIdx < mdSizeIdx) mdSizeIdx -= 1;
+          orderedSizes.splice(mdSizeIdx + 1, 0, defaultSizeValue);
+        }
       }
 
       var defaultVariant = orderedVariants.length > 0 ? orderedVariants[0] : null;
@@ -2836,6 +2963,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         return inst;
       }
 
+      if (sizeKey && orderedSizes.length > 1) {
+        orderedSizes = reorderSizesByDefaultVisualMatch(orderedSizes, function (sizeName) {
+          return makeInstance({ Size: sizeName });
+        });
+      }
+
       if (variantsSlot && orderedVariants.length > 0) {
         clearChildren(variantsSlot);
         var variantStateValues = orderedStates.length > 0 ? orderedStates : [null];
@@ -2869,7 +3002,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               badgeDocSemanticColors,
               (function (vName) {
                 return function (colorName) {
-                  return makeInstance({ Variant: vName, Color: colorName });
+                  var variantColorPatch = {};
+                  variantColorPatch[variantPropName] = vName;
+                  variantColorPatch.Color = colorName;
+                  return makeInstance(variantColorPatch);
                 };
               })(variantName),
               false
@@ -2887,7 +3023,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               variantStateValues,
               (function (vName) {
                 return function (stateName) {
-                  var patch = { Variant: vName };
+                  var patch = {};
+                  patch[variantPropName] = vName;
                   if (stateName != null) patch.State = stateName;
                   if ((lowerSetName === "checkbox" || lowerSetName === "radio") && checkedOnValue != null) {
                     patch.Checked = checkedOnValue;
@@ -2921,12 +3058,25 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           sizeSlot.counterAxisAlignItems = "MIN";
         }
         if (stackSizeRows) {
-          for (var osi = 0; osi < orderedSizes.length; osi++) {
-            (function (sizeName) {
-              addInstancesRow(sizeSlot, "Sizes", [sizeName], function (innerSizeName) {
-                return makeInstance({ Size: innerSizeName });
-              }, false);
-            })(orderedSizes[osi]);
+          if (lowerSetName === "modal" && orderedSizes.length === 5) {
+            addInstancesRow(
+              sizeSlot,
+              "Sizes",
+              orderedSizes,
+              function (sizeName) {
+                return makeInstance({ Size: sizeName });
+              },
+              false,
+              { itemsPerRow: 3 }
+            );
+          } else {
+            for (var osi = 0; osi < orderedSizes.length; osi++) {
+              (function (sizeName) {
+                addInstancesRow(sizeSlot, "Sizes", [sizeName], function (innerSizeName) {
+                  return makeInstance({ Size: innerSizeName });
+                }, false);
+              })(orderedSizes[osi]);
+            }
           }
         } else if ((lowerSetName === "slider" || lowerSetName === "rangeslider") && orderedSizes.length > 3) {
           var sliderFirstRow = orderedSizes.slice(0, 3);
@@ -3959,7 +4109,7 @@ function switchLabelTextPath(state) {
 // ---------------------------------------------------------------------------
 
 function buildSliderComponentSet(varMap, page, font) {
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "focus", "disabled"];
   var markModes = ["off", "on"];
@@ -4153,7 +4303,7 @@ function sliderMarkLabelColorPath(state) {
 }
 
 function buildRangeSliderComponentSet(varMap, page, font) {
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "focus", "disabled"];
   var markModes = ["off", "on"];
@@ -4375,7 +4525,7 @@ function rangeSliderMarkLabelColorPath(state) {
 }
 
 async function buildAnchorComponentSet(varMap, page, font) {
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var underlines = ["always", "hover", "never"];
   var weights = ["regular", "semibold", "bold"];
   var states = ["default", "hover", "visited", "disabled"];
@@ -4441,7 +4591,7 @@ async function buildAnchorComponentSet(varMap, page, font) {
 
   for (var si = 0; si < sizes.length; si++) {
     var size = sizes[si];
-    var capSize = size.toUpperCase();
+    var capSize = size === "default" ? "Default" : size.toUpperCase();
 
     for (var ui = 0; ui < underlines.length; ui++) {
       var underline = underlines[ui];
@@ -5131,7 +5281,7 @@ function checkboxLabelTextPath(varMap, state) {
 // ---------------------------------------------------------------------------
 
 function buildRadioComponentSet(varMap, page, font) {
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var variants = ["filled", "outline"];
   var checkedStates = ["unchecked", "checked"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
@@ -6207,7 +6357,10 @@ async function buildAlertComponentSet(varMap, page, font) {
   var rowHeight = 130;
 
   function cap(str) {
-    return str.charAt(0).toUpperCase() + str.slice(1);
+    return String(str || "")
+      .split("-")
+      .map(function(part) { return part.charAt(0).toUpperCase() + part.slice(1); })
+      .join("-");
   }
 
   var alertIcons = await findAlertIconComponents();
@@ -6369,18 +6522,29 @@ async function buildAlertComponentSet(varMap, page, font) {
 }
 
 async function buildModalComponentSet(varMap, page, font, sourceSets) {
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
-  var radii = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var overlayStates = ["off", "on"];
   var closeStates = ["off", "on"];
-  var layouts = ["basic"];
+  var layouts = ["action-right", "basic", "centered-arch"];
   var components = [];
-  var headerOnly = true;
+  var headerOnly = false;
   var buttonSet = sourceSets && sourceSets.buttonSet ? sourceSets.buttonSet : null;
   var titleSet = sourceSets && sourceSets.titleSet ? sourceSets.titleSet : null;
   var textSet = sourceSets && sourceSets.textSet ? sourceSets.textSet : null;
+  var useLinkedTextComponents = false;
+  var modalTitleCopy = "Modal Title";
+  var modalBodyCopy = "This action cannot be undone. Please confirm you want to proceed.";
+  var headerPaddingXVar = varMap["modal/header-padding-x"] || varMap["modal/padding-x"];
+  var headerPaddingYVar = varMap["modal/header-padding-y"] || varMap["modal/padding-y"];
+  var bodyPaddingTopVar = varMap["modal/body-padding-top"] || null;
+  var bodyPaddingRightVar = varMap["modal/body-padding-right"] || varMap["modal/padding-x"];
+  var bodyPaddingBottomVar = varMap["modal/body-padding-bottom"] || varMap["modal/padding-y"];
+  var bodyPaddingLeftVar = varMap["modal/body-padding-left"] || varMap["modal/padding-x"];
+  var footerPaddingXVar = varMap["modal/footer-padding-x"] || varMap["modal/padding-x"];
+  var footerPaddingYVar = varMap["modal/footer-padding-y"] || varMap["modal/padding-y"];
 
-  var widthBySize = { xs: 280, sm: 340, md: 420, lg: 520, xl: 640 };
+  var widthBySize = { default: 420, xs: 280, sm: 340, md: 420, lg: 520, xl: 640 };
   var colGap = 28;
   var rowGap = 22;
   var colWidth = 700 + colGap;
@@ -6412,15 +6576,15 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
   }
 
   var titleVariant = findVariantComponent(titleSet, { Order: "4", Size: "H4" });
-  var bodyTextVariant = findVariantComponent(textSet, { Size: "MD", Weight: "Regular", Color: "Default" });
-  var cancelButtonVariant = findVariantComponent(buttonSet, { Variant: "Outlined", Size: "MD", State: "Default" });
-  var confirmButtonVariant = findVariantComponent(buttonSet, { Variant: "Filled", Size: "MD", State: "Default" });
+  var bodyTextVariant = findVariantComponent(textSet, { Size: "Default", Weight: "Regular", Color: "Default" });
+  var cancelButtonVariant = findVariantComponent(buttonSet, { Variant: "Outlined", Size: "Default", State: "Default" });
+  var confirmButtonVariant = findVariantComponent(buttonSet, { Variant: "Filled", Size: "Default", State: "Default" });
   var alertIcons = await findAlertIconComponents();
   var modalCloseIconSource = alertIcons.close || alertIcons.fallback;
 
   for (var si = 0; si < sizes.length; si++) {
     var size = sizes[si];
-    var capSize = size.toUpperCase();
+    var capSize = size === "default" ? "Default" : size.toUpperCase();
     var panelW = widthBySize[size] || 420;
 
     for (var ri = 0; ri < radii.length; ri++) {
@@ -6437,8 +6601,8 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
 
           for (var li = 0; li < layouts.length; li++) {
             var layout = layouts[li];
-            var centered = layout === "centered-ack";
             var capLayout = cap(layout);
+            var isCenteredArch = layout === "centered-arch";
 
             var comp = figma.createComponent();
             comp.name =
@@ -6452,45 +6616,60 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
             comp.counterAxisSizingMode = "FIXED";
             comp.counterAxisAlignItems = "MIN";
             comp.itemSpacing = 0;
-            comp.resize(panelW, 220);
-            // Root is a layout-only container for header + body-wrap (no visual "modal" frame).
-            comp.fills = [];
-            comp.strokes = [];
-            comp.clipsContent = false;
+            comp.resize(panelW, 200);
+            try { comp.layoutSizingVertical = "HUG"; } catch (_modalHugErr) {}
+            comp.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.15, b: 0.24 } }];
+            comp.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
+            comp.strokeWeight = 1;
+            comp.strokeAlign = "INSIDE";
+            comp.cornerRadius = 4;
+            comp.clipsContent = true;
             bindVar(comp, "minWidth", varMap["modal/width-" + size]);
             bindVar(comp, "maxWidth", varMap["modal/width-" + size]);
+            bindPaintVar(comp, "fills", 0, varMap["modal/background"]);
+            bindPaintVar(comp, "strokes", 0, varMap["modal/border"]);
+            bindVar(comp, "strokeWeight", varMap["modal/border-width"]);
+            bindVar(comp, "topLeftRadius", varMap["modal/radius-" + radius]);
+            bindVar(comp, "topRightRadius", varMap["modal/radius-" + radius]);
+            bindVar(comp, "bottomLeftRadius", varMap["modal/radius-" + radius]);
+            bindVar(comp, "bottomRightRadius", varMap["modal/radius-" + radius]);
 
             var header = figma.createFrame();
             header.name = "header";
             header.layoutMode = "HORIZONTAL";
             header.primaryAxisSizingMode = "FIXED";
             header.counterAxisSizingMode = "AUTO";
-            header.primaryAxisAlignItems = layout === "centered-ack" ? "CENTER" : "SPACE_BETWEEN";
+            header.primaryAxisAlignItems = isCenteredArch ? "MIN" : "SPACE_BETWEEN";
             header.counterAxisAlignItems = "CENTER";
-            header.resize(panelW, 56);
+            header.resize(panelW, isCenteredArch ? 48 : 44);
             header.paddingLeft = 16;
             header.paddingRight = 16;
-            header.paddingTop = 14;
-            header.paddingBottom = 14;
-            header.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-            header.strokes = [{ type: "SOLID", color: { r: 0.86, g: 0.86, b: 0.86 } }];
-            header.strokeWeight = 1;
-            header.strokeAlign = "INSIDE";
-            bindVar(header, "paddingLeft", varMap["modal/padding-x"]);
-            bindVar(header, "paddingRight", varMap["modal/padding-x"]);
-            bindVar(header, "paddingTop", varMap["modal/padding-y"]);
-            bindVar(header, "paddingBottom", varMap["modal/padding-y"]);
-            bindPaintVar(header, "fills", 0, varMap["modal/header-background"]);
-            bindPaintVar(header, "strokes", 0, varMap["modal/border"]);
-            bindVar(header, "strokeWeight", varMap["modal/border-width"]);
-            bindVar(header, "topLeftRadius", varMap["modal/radius-" + radius]);
-            bindVar(header, "topRightRadius", varMap["modal/radius-" + radius]);
-            comp.appendChild(header);
+            header.paddingTop = 12;
+            header.paddingBottom = 12;
+            header.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.15, b: 0.24 } }];
+            header.strokes = [];
+            bindVar(header, "paddingLeft", headerPaddingXVar);
+            bindVar(header, "paddingRight", headerPaddingXVar);
+            bindVar(header, "paddingTop", headerPaddingYVar);
+            bindVar(header, "paddingBottom", headerPaddingYVar);
+            bindPaintVar(header, "fills", 0, varMap["modal/background"]);
+            if (isCenteredArch) {
+              var leftCloseSpacer = figma.createFrame();
+              leftCloseSpacer.name = "close-spacer";
+              leftCloseSpacer.layoutMode = "NONE";
+              leftCloseSpacer.resize(16, 16);
+              leftCloseSpacer.fills = [];
+              header.appendChild(leftCloseSpacer);
+            }
 
             var titleNode = null;
-            if (titleVariant) {
+            if (titleVariant && useLinkedTextComponents) {
               titleNode = titleVariant.createInstance();
               titleNode.name = "title";
+              try { await setNamedText(titleNode, "title", modalTitleCopy); } catch (_modalTitleNamedTitleErr) {}
+              try { await setNamedText(titleNode, "text", modalTitleCopy); } catch (_modalTitleNamedTextErr) {}
+              try { await setNamedText(titleNode, "Content", modalTitleCopy); } catch (_modalTitleNamedContentErr) {}
+              try { await setNamedText(titleNode, "Contents", modalTitleCopy); } catch (_modalTitleNamedContentsErr) {}
               try {
                 titleNode.resize(Math.max(120, panelW - (withClose ? 88 : 32)), titleNode.height);
               } catch (e) {}
@@ -6501,7 +6680,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               titleNode = figma.createText();
               titleNode.name = "title";
               titleNode.fontName = font;
-              titleNode.characters = "Modal title";
+              titleNode.characters = modalTitleCopy;
               titleNode.fontSize = 18;
               titleNode.textAutoResize = "HEIGHT";
               titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
@@ -6511,16 +6690,61 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               bindVar(titleNode, "fontStyle", varMap["modal/title-font-weight"]);
               bindVar(titleNode, "lineHeight", varMap["modal/title-line-height"]);
             }
-            header.appendChild(titleNode);
+            if (isCenteredArch) {
+              try {
+                if (titleNode.type === "TEXT") {
+                  titleNode.textAutoResize = "WIDTH_AND_HEIGHT";
+                } else {
+                  titleNode.layoutGrow = 0;
+                  titleNode.layoutAlign = "CENTER";
+                  try { titleNode.layoutSizingHorizontal = "HUG"; } catch (_centeredTitleHugWidthErr) {}
+                  try { titleNode.layoutSizingVertical = "HUG"; } catch (_centeredTitleHugHeightErr) {}
+                }
+              } catch (_centeredTitleHugErr) {}
+              var centeredTitleSlot = figma.createFrame();
+              centeredTitleSlot.name = "title-slot";
+              centeredTitleSlot.layoutMode = "HORIZONTAL";
+              centeredTitleSlot.primaryAxisSizingMode = "FIXED";
+              centeredTitleSlot.counterAxisSizingMode = "AUTO";
+              centeredTitleSlot.primaryAxisAlignItems = "CENTER";
+              centeredTitleSlot.counterAxisAlignItems = "CENTER";
+              centeredTitleSlot.layoutGrow = 1;
+              centeredTitleSlot.fills = [];
+              centeredTitleSlot.strokes = [];
+              centeredTitleSlot.resize(Math.max(1, panelW - 72), 24);
+              centeredTitleSlot.appendChild(titleNode);
+              header.appendChild(centeredTitleSlot);
+            } else {
+              titleNode.layoutGrow = 1;
+              titleNode.layoutAlign = "STRETCH";
+              try { titleNode.layoutSizingHorizontal = "FILL"; } catch (_modalTitleFillErr) {}
+              header.appendChild(titleNode);
+            }
 
             if (withClose) {
               if (modalCloseIconSource) {
                 var closeIconInst = modalCloseIconSource.createInstance();
                 closeIconInst.name = "close";
                 try { closeIconInst.resize(16, 16); } catch (e) {}
-                var modalCloseVectors = closeIconInst.findAll(function(n) { return n.type === "VECTOR"; });
-                for (var mcvi = 0; mcvi < modalCloseVectors.length; mcvi++) {
-                  bindVar(modalCloseVectors[mcvi], "strokeWeight", varMap["modal/close-icon-stroke-width"]);
+                var modalCloseNodes = closeIconInst.findAll(function(n) {
+                  return (
+                    n.type === "VECTOR" ||
+                    n.type === "ELLIPSE" ||
+                    n.type === "RECTANGLE" ||
+                    n.type === "POLYGON" ||
+                    n.type === "STAR" ||
+                    n.type === "LINE"
+                  );
+                });
+                for (var mcvi = 0; mcvi < modalCloseNodes.length; mcvi++) {
+                  var modalCloseNode = modalCloseNodes[mcvi];
+                  if (modalCloseNode.strokes && modalCloseNode.strokes.length > 0) {
+                    bindPaintVar(modalCloseNode, "strokes", 0, varMap["modal/close"]);
+                    bindVar(modalCloseNode, "strokeWeight", varMap["modal/close-icon-stroke-width"]);
+                  }
+                  if (modalCloseNode.fills && modalCloseNode.fills.length > 0) {
+                    bindPaintVar(modalCloseNode, "fills", 0, varMap["modal/close"]);
+                  }
                 }
                 header.appendChild(closeIconInst);
               } else {
@@ -6533,50 +6757,74 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 bindPaintVar(closeNode, "fills", 0, varMap["modal/close"]);
                 header.appendChild(closeNode);
               }
+            } else if (isCenteredArch) {
+              var rightCloseSpacer = figma.createFrame();
+              rightCloseSpacer.name = "close-spacer";
+              rightCloseSpacer.layoutMode = "NONE";
+              rightCloseSpacer.resize(16, 16);
+              rightCloseSpacer.fills = [];
+              header.appendChild(rightCloseSpacer);
             }
+            comp.appendChild(header);
 
             if (!headerOnly) {
               var bodyWrap = figma.createFrame();
               bodyWrap.name = "body-wrap";
-              bodyWrap.layoutMode = "VERTICAL";
+              bodyWrap.layoutMode = "HORIZONTAL";
               bodyWrap.primaryAxisSizingMode = "FIXED";
               bodyWrap.counterAxisSizingMode = "AUTO";
-              bodyWrap.counterAxisAlignItems = "MIN";
-              bodyWrap.resize(panelW, layout === "actions-right" ? 130 : 100);
+              bodyWrap.primaryAxisAlignItems = "MIN";
+              bodyWrap.counterAxisAlignItems = "CENTER";
+              bodyWrap.resize(panelW, 1);
+              try { bodyWrap.layoutSizingVertical = "HUG"; } catch (_modalBodyHugErr) {}
               bodyWrap.paddingLeft = 16;
               bodyWrap.paddingRight = 16;
-              bodyWrap.paddingBottom = 14;
-              bodyWrap.itemSpacing = 10;
-              bodyWrap.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-              bodyWrap.strokes = [{ type: "SOLID", color: { r: 0.86, g: 0.86, b: 0.86 } }];
-              bodyWrap.strokeWeight = 1;
-              bodyWrap.strokeAlign = "INSIDE";
-              bindVar(bodyWrap, "paddingLeft", varMap["modal/padding-x"]);
-              bindVar(bodyWrap, "paddingRight", varMap["modal/padding-x"]);
-              bindVar(bodyWrap, "paddingBottom", varMap["modal/padding-y"]);
+              bodyWrap.paddingBottom = 12;
+              bodyWrap.itemSpacing = 0;
+              bodyWrap.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.15, b: 0.24 } }];
+              bodyWrap.strokes = [];
+              bindVar(bodyWrap, "paddingTop", bodyPaddingTopVar);
+              bindVar(bodyWrap, "paddingRight", bodyPaddingRightVar);
+              bindVar(bodyWrap, "paddingBottom", bodyPaddingBottomVar);
+              bindVar(bodyWrap, "paddingLeft", bodyPaddingLeftVar);
               bindPaintVar(bodyWrap, "fills", 0, varMap["modal/background"]);
-              bindPaintVar(bodyWrap, "strokes", 0, varMap["modal/border"]);
-              bindVar(bodyWrap, "strokeWeight", varMap["modal/border-width"]);
-              bindVar(bodyWrap, "bottomLeftRadius", varMap["modal/radius-" + radius]);
-              bindVar(bodyWrap, "bottomRightRadius", varMap["modal/radius-" + radius]);
               comp.appendChild(bodyWrap);
 
               var bodyNode = null;
-              if (bodyTextVariant) {
+              if (bodyTextVariant && useLinkedTextComponents) {
                 bodyNode = bodyTextVariant.createInstance();
                 bodyNode.name = "body";
                 try {
-                  bodyNode.resize(panelW - 32, layout === "actions-right" ? 68 : 58);
+                  if (bodyNode.componentProperties && typeof bodyNode.setProperties === "function") {
+                    var bodyTextPropPatch = {};
+                    var bodyPropKeys = Object.keys(bodyNode.componentProperties);
+                    for (var bpi = 0; bpi < bodyPropKeys.length; bpi++) {
+                      var bodyPropKey = bodyPropKeys[bpi];
+                      var bodyPropMeta = bodyNode.componentProperties[bodyPropKey];
+                      if (bodyPropMeta && bodyPropMeta.type === "TEXT") {
+                        bodyTextPropPatch[bodyPropKey] = modalBodyCopy;
+                      }
+                    }
+                    if (Object.keys(bodyTextPropPatch).length > 0) {
+                      bodyNode.setProperties(bodyTextPropPatch);
+                    }
+                  }
+                } catch (_modalBodyTextOverrideErr) {}
+                try { await setNamedText(bodyNode, "text", modalBodyCopy); } catch (_modalBodyNamedTextErr) {}
+                try { await setNamedText(bodyNode, "Content", modalBodyCopy); } catch (_modalBodyNamedContentErr) {}
+                try { await setNamedText(bodyNode, "Contents", modalBodyCopy); } catch (_modalBodyNamedContentsErr) {}
+                try {
+                  bodyNode.resize(panelW - 32, 58);
                 } catch (e) {}
               } else {
                 bodyNode = figma.createText();
                 bodyNode.name = "body";
                 bodyNode.fontName = font;
-                bodyNode.characters = "This action cannot be undone. Please confirm you want to proceed.";
-                bodyNode.fontSize = 14;
+                bodyNode.characters = modalBodyCopy;
+                bodyNode.fontSize = 12;
                 bodyNode.textAutoResize = "HEIGHT";
                 bodyNode.resize(panelW - 32, bodyNode.height);
-                bodyNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+                bodyNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                 bindPaintVar(bodyNode, "fills", 0, varMap["modal/body"]);
                 bindVar(bodyNode, "fontSize", varMap["modal/body-font-size"]);
                 bindVar(bodyNode, "fontFamily", varMap["modal/body-font-family"]);
@@ -6585,18 +6833,28 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               }
               bodyWrap.appendChild(bodyNode);
 
-              if (layout === "actions-right") {
+              if (layout === "action-right" || layout === "centered-arch") {
               var actionRow = figma.createFrame();
               actionRow.name = "actions";
               actionRow.layoutMode = "HORIZONTAL";
               actionRow.primaryAxisSizingMode = "FIXED";
               actionRow.counterAxisSizingMode = "AUTO";
-              actionRow.primaryAxisAlignItems = "MAX";
+              actionRow.primaryAxisAlignItems = layout === "centered-arch" ? "SPACE_BETWEEN" : "MAX";
               actionRow.counterAxisAlignItems = "CENTER";
-              actionRow.itemSpacing = 10;
-              actionRow.resize(panelW - 32, 34);
-              actionRow.fills = [];
-              bodyWrap.appendChild(actionRow);
+              actionRow.itemSpacing = 12;
+              actionRow.resize(panelW, 58);
+              actionRow.paddingLeft = 16;
+              actionRow.paddingRight = 16;
+              actionRow.paddingTop = 12;
+              actionRow.paddingBottom = 12;
+              actionRow.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.15, b: 0.24 } }];
+              actionRow.strokes = [];
+              bindVar(actionRow, "paddingLeft", footerPaddingXVar);
+              bindVar(actionRow, "paddingRight", footerPaddingXVar);
+              bindVar(actionRow, "paddingTop", footerPaddingYVar);
+              bindVar(actionRow, "paddingBottom", footerPaddingYVar);
+              bindPaintVar(actionRow, "fills", 0, varMap["modal/background"]);
+              comp.appendChild(actionRow);
 
               if (cancelButtonVariant && confirmButtonVariant) {
                 var cancelBtnInstance = cancelButtonVariant.createInstance();
@@ -6604,7 +6862,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 actionRow.appendChild(cancelBtnInstance);
 
                 var yesBtnInstance = confirmButtonVariant.createInstance();
-                yesBtnInstance.name = "Yes";
+                yesBtnInstance.name = "Submit";
                 actionRow.appendChild(yesBtnInstance);
               } else {
                 var cancelBtn = figma.createFrame();
@@ -6631,7 +6889,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 cancelBtn.appendChild(cancelTxt);
 
                 var yesBtn = figma.createFrame();
-                yesBtn.name = "Yes";
+                yesBtn.name = "Submit";
                 yesBtn.layoutMode = "HORIZONTAL";
                 yesBtn.primaryAxisSizingMode = "AUTO";
                 yesBtn.counterAxisSizingMode = "AUTO";
@@ -6647,7 +6905,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
 
                 var yesTxt = figma.createText();
                 yesTxt.fontName = font;
-                yesTxt.characters = "Yes";
+                yesTxt.characters = "Submit";
                 yesTxt.fontSize = 14;
                 yesTxt.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                 yesBtn.appendChild(yesTxt);

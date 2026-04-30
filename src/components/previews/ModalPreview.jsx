@@ -50,8 +50,16 @@ export default function ModalPreview({
 
   const width = resolveDimension(brands, brandId, "modal-width", size);
   const cornerRadius = resolveDimension(brands, brandId, "modal-radius", radius);
-  const paddingX = resolveDimension(brands, brandId, "modal-padding-x");
-  const paddingY = resolveDimension(brands, brandId, "modal-padding-y");
+  const legacyPaddingX = resolveDimension(brands, brandId, "modal-padding-x");
+  const legacyPaddingY = resolveDimension(brands, brandId, "modal-padding-y");
+  const headerPaddingX = resolveDimension(brands, brandId, "modal-header-padding-x") ?? legacyPaddingX;
+  const headerPaddingY = resolveDimension(brands, brandId, "modal-header-padding-y") ?? legacyPaddingY;
+  const bodyPaddingTop = resolveDimension(brands, brandId, "modal-body-padding-top") ?? 0;
+  const bodyPaddingRight = resolveDimension(brands, brandId, "modal-body-padding-right") ?? legacyPaddingX;
+  const bodyPaddingBottom = resolveDimension(brands, brandId, "modal-body-padding-bottom") ?? legacyPaddingY;
+  const bodyPaddingLeft = resolveDimension(brands, brandId, "modal-body-padding-left") ?? legacyPaddingX;
+  const footerPaddingX = resolveDimension(brands, brandId, "modal-footer-padding-x") ?? legacyPaddingX;
+  const footerPaddingY = resolveDimension(brands, brandId, "modal-footer-padding-y") ?? legacyPaddingY;
   const titleFontSize = resolveDimension(brands, brandId, "modal-title-font-size");
   const titleFontFamily = resolveDimension(brands, brandId, "modal-title-font-family");
   const titleFontWeight = resolveDimension(brands, brandId, "modal-title-font-weight");
@@ -112,7 +120,7 @@ export default function ModalPreview({
                   alignItems: "center",
                   justifyContent: "center",
                   textAlign: "center",
-                  padding: `${paddingY}px ${paddingX}px`,
+                  padding: `${headerPaddingY}px ${headerPaddingX}px`,
                   borderBottom: showSectionDividers ? `${borderWidth}px solid ${dividerColor}` : "none",
                   fontSize: `${titleFontSize}px`,
                   fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
@@ -131,7 +139,7 @@ export default function ModalPreview({
                   fontFamily: bodyFontFamily ? `"${bodyFontFamily}", sans-serif` : undefined,
                   fontWeight: bodyFontWeight === "Semi Bold" ? 600 : bodyFontWeight === "Bold" ? 700 : 400,
                   lineHeight: bodyLineHeight ? `${bodyLineHeight}px` : 1.35,
-                  padding: `${paddingY}px ${paddingX}px`,
+                  padding: `${bodyPaddingTop}px ${bodyPaddingRight}px ${bodyPaddingBottom}px ${bodyPaddingLeft}px`,
                 }}
               >
                 {body}
@@ -139,7 +147,7 @@ export default function ModalPreview({
               <div
                 style={{
                   borderTop: showSectionDividers ? `${borderWidth}px solid ${dividerColor}` : "none",
-                  padding: `${paddingY}px ${paddingX}px`,
+                  padding: `${footerPaddingY}px ${footerPaddingX}px`,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
@@ -182,20 +190,42 @@ export default function ModalPreview({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "space-between",
-                  padding: `${paddingY}px ${paddingX}px`,
+                  padding: `${headerPaddingY}px ${headerPaddingX}px`,
                   borderRadius: `${cornerRadius}px ${cornerRadius}px 0 0`,
                   background: headerBackground,
                 }}
               >
-                <div style={{
-                  color: titleColor,
-                  fontSize: `${titleFontSize}px`,
-                  fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
-                  fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
-                  lineHeight: titleLineHeight ? `${titleLineHeight}px` : undefined,
-                }}>{title}</div>
+                <div
+                  style={{
+                    flex: 1,
+                    minWidth: 0,
+                    color: titleColor,
+                    fontSize: `${titleFontSize}px`,
+                    fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
+                    fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
+                    lineHeight: titleLineHeight ? `${titleLineHeight}px` : undefined,
+                  }}
+                >
+                  {title}
+                </div>
                 {withCloseButton ? (
-                  <div style={{ color: closeColor, fontSize: 18, lineHeight: 1, userSelect: "none" }}>×</div>
+                  <div
+                    style={{
+                      width: 16,
+                      height: 16,
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      marginLeft: 12,
+                      color: closeColor,
+                      fontSize: 16,
+                      lineHeight: "16px",
+                      userSelect: "none",
+                      flexShrink: 0,
+                    }}
+                  >
+                    ×
+                  </div>
                 ) : null}
               </div>
               <div
@@ -205,13 +235,13 @@ export default function ModalPreview({
                   fontFamily: bodyFontFamily ? `"${bodyFontFamily}", sans-serif` : undefined,
                   fontWeight: bodyFontWeight === "Semi Bold" ? 600 : bodyFontWeight === "Bold" ? 700 : 400,
                   lineHeight: bodyLineHeight ? `${bodyLineHeight}px` : 1.45,
-                  padding: `0 ${paddingX}px ${paddingY}px ${paddingX}px`,
+                  padding: `${bodyPaddingTop}px ${bodyPaddingRight}px ${bodyPaddingBottom}px ${bodyPaddingLeft}px`,
                 }}
               >
                 {body}
               </div>
               {layout === "actions-right" && (
-                <div style={{ padding: `0 ${paddingX}px ${paddingY}px ${paddingX}px` }}>
+                <div style={{ padding: `${footerPaddingY}px ${footerPaddingX}px` }}>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
                     <button
                       style={{
