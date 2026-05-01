@@ -4,7 +4,7 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
 export const CHIP_VARIANTS = ["filled", "outline", "light"];
-export const CHIP_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const CHIP_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const CHIP_STATES = ["default", "hover", "focus", "pressed", "disabled"];
 export const CHIP_SELECTIONS = ["unchecked", "checked"];
 

@@ -118,6 +118,10 @@ import {
   AnchorPreviewContent,
   AnchorPropertiesPanel,
 } from "./components/panels/AnchorPreviewPanel";
+import {
+  ImagePreviewContent,
+  ImagePropertiesPanel,
+} from "./components/panels/ImagePreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { buildComponentDocsExport } from "./utils/buildComponentDocsExport";
@@ -366,6 +370,7 @@ export default function App() {
   const pillDefault = getComponentDefaultSize(brands, activeBrand, "pill") || "default";
   const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "default";
   const modalDefault = getComponentDefaultSize(brands, activeBrand, "modal") || "md";
+  const imageDefault = getComponentDefaultSize(brands, activeBrand, "image") || "default";
   const anchorDefault = getComponentDefaultSize(brands, activeBrand, "anchor") || "md";
   const textDefault = getComponentDefaultSize(brands, activeBrand, "text") || "md";
 
@@ -502,6 +507,12 @@ export default function App() {
   const [activeModalBody, setActiveModalBody] = useState(
     "This action cannot be undone. Please confirm you want to proceed."
   );
+  const [activeImageSrc, setActiveImageSrc] = useState("https://picsum.photos/id/28/1200/800");
+  const [activeImageAlt, setActiveImageAlt] = useState("Mountain landscape");
+  const [activeImageFallbackSrc, setActiveImageFallbackSrc] = useState("https://placehold.co/1200x800/1A1B1E/C1C2C5?text=Image");
+  const [activeImageSize, setActiveImageSize] = useState(imageDefault);
+  const [activeImageRadius, setActiveImageRadius] = useState(imageDefault);
+  const [activeImageFit, setActiveImageFit] = useState("cover");
 
   // Sync active sizes when brand changes
   const handleBrandChange = useCallback((newBrand) => {
@@ -519,6 +530,7 @@ export default function App() {
     const piDef = getComponentDefaultSize(brands, newBrand, "pill") || "default";
     const baDef = getComponentDefaultSize(brands, newBrand, "badge") || "default";
     const moDef = getComponentDefaultSize(brands, newBrand, "modal") || "md";
+    const imDef = getComponentDefaultSize(brands, newBrand, "image") || "default";
     const anDef = getComponentDefaultSize(brands, newBrand, "anchor") || "md";
     const txDef = getComponentDefaultSize(brands, newBrand, "text") || "md";
     setActiveSize(btnDef);
@@ -549,6 +561,8 @@ export default function App() {
     setActiveBadgeRadius(baDef);
     setActiveModalSize(moDef);
     setActiveModalRadius(moDef);
+    setActiveImageSize(imDef);
+    setActiveImageRadius(imDef);
     setActiveAnchorSize(anDef);
     setActiveTextSizeToken(txDef);
     const nextBrandColors = Object.keys(brands[newBrand]?.primitives || {});
@@ -719,8 +733,15 @@ export default function App() {
     } else if (newComp === "tooltip") {
       setActiveTooltipPosition("top");
       setActiveTooltipWithArrow(true);
+    } else if (newComp === "image") {
+      setActiveImageSrc("https://picsum.photos/id/28/1200/800");
+      setActiveImageAlt("Mountain landscape");
+      setActiveImageFallbackSrc("https://placehold.co/1200x800/1A1B1E/C1C2C5?text=Image");
+      setActiveImageSize(imageDefault);
+      setActiveImageRadius(imageDefault);
+      setActiveImageFit("cover");
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, anchorDefault, textDefault, defaultBrandColor]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, anchorDefault, textDefault, defaultBrandColor]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -1064,7 +1085,17 @@ export default function App() {
 
       if (isVariantToken) {
         if (variantSegment !== activeVariant) return false;
-        return isCheckedToken === Boolean(targetChecked);
+        const wantsChecked = Boolean(targetChecked);
+        if (isCheckedToken === wantsChecked) return true;
+        // Radio filled border/background currently has no checked-specific border tokens.
+        // Keep base variant tokens visible when checked-specific token is missing.
+        if (wantsChecked && !isCheckedToken) {
+          const tokenStateSuffix = tokenState === "default" ? "" : `-${tokenState}`;
+          const baseToken = tokenState === "default" ? token : token.replace(new RegExp(`${tokenStateSuffix}$`), "");
+          const checkedToken = `${baseToken}-checked${tokenStateSuffix}`;
+          return !Boolean(colorTokens[checkedToken]);
+        }
+        return false;
       }
 
   if (variantSegment === "background" || variantSegment === "border") {
@@ -1096,11 +1127,55 @@ export default function App() {
       const targetChecked = forcedChecked != null ? forcedChecked : activeChipChecked;
       const isCheckedToken = parts.includes("checked");
       const isVariantToken = ["filled", "outline", "light"].includes(variantSegment);
+      const hasCheckedCounterpart = (baseToken, tokenStateSuffix) => {
+        const suffixStyleMatch = `${baseToken}-checked${tokenStateSuffix}`;
+        if (Boolean(colorTokens[suffixStyleMatch])) return true;
+        if (baseToken.startsWith("chip-")) {
+          const baseWithoutPrefix = baseToken.slice("chip-".length);
+          const variantStyleMatch = `chip-${activeVariant}-${baseWithoutPrefix}-checked${tokenStateSuffix}`;
+          if (Boolean(colorTokens[variantStyleMatch])) return true;
+          const prefixStyleMatch = `chip-checked-${baseWithoutPrefix}${tokenStateSuffix}`;
+          if (Boolean(colorTokens[prefixStyleMatch])) return true;
+        }
+        return false;
+      };
+      const hasVariantUncheckedCounterpart = (baseToken, tokenStateSuffix) => {
+        if (!baseToken.startsWith("chip-")) return false;
+        const baseWithoutPrefix = baseToken.slice("chip-".length);
+        const variantStyleMatch = `chip-${activeVariant}-${baseWithoutPrefix}${tokenStateSuffix}`;
+        return Boolean(colorTokens[variantStyleMatch]);
+      };
 
-      if (isVariantToken && variantSegment !== activeVariant) return false;
-      // Keep active variant tokens visible even when unchecked so each variant
-      // remains editable from the token list.
-      if (!isVariantToken && !targetChecked && isCheckedToken) return false;
+      if (isVariantToken) {
+        if (variantSegment !== activeVariant) return false;
+        if (!targetChecked && isCheckedToken) return false;
+        if (targetChecked && !isCheckedToken) {
+          const tokenStateSuffix = tokenState === "default" ? "" : `-${tokenState}`;
+          const baseToken = tokenState === "default" ? token : token.replace(new RegExp(`${tokenStateSuffix}$`), "");
+          // Keep base token only when no checked-specific token exists.
+          return !hasCheckedCounterpart(baseToken, tokenStateSuffix);
+        }
+        return true;
+      }
+      if (!targetChecked && isCheckedToken) return false;
+      if (!targetChecked && !isCheckedToken) {
+        const tokenStateSuffix = tokenState === "default" ? "" : `-${tokenState}`;
+        const baseToken = tokenState === "default" ? token : token.replace(new RegExp(`${tokenStateSuffix}$`), "");
+        if (
+          baseToken.startsWith("chip-border") ||
+          baseToken.startsWith("chip-background") ||
+          baseToken.startsWith("chip-text")
+        ) {
+          // Hide shared unchecked token when variant-specific unchecked token exists.
+          return !hasVariantUncheckedCounterpart(baseToken, tokenStateSuffix);
+        }
+      }
+      if (targetChecked && !isCheckedToken) {
+        const tokenStateSuffix = tokenState === "default" ? "" : `-${tokenState}`;
+        const baseToken = tokenState === "default" ? token : token.replace(new RegExp(`${tokenStateSuffix}$`), "");
+        // Keep base token only when no checked-specific token exists.
+        return !hasCheckedCounterpart(baseToken, tokenStateSuffix);
+      }
       return true;
     }
 
@@ -1138,7 +1213,10 @@ export default function App() {
 
     if (!variants) return true;
     if (activeComponent === "checkbox") {
-      const checkboxSharedSegments = ["background", "icon", "label", "focus"];
+      // Preview now relies on filled/outlined checkbox backgrounds only.
+      // Keep shared tokens for icon/label/focus but hide legacy `checkbox-background*`.
+      if (variantSegment === "background") return false;
+      const checkboxSharedSegments = ["icon", "label", "focus"];
       const targetState = effectiveComponentState || "default";
       const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
         ? parts[parts.length - 1]
@@ -1202,6 +1280,14 @@ export default function App() {
   });
 
   const visibleDimensionTokenEntries = Object.entries(dimensionTokens).filter(([token]) => {
+    if (activeComponent === "chip") {
+      const variantRadiusMatch = token.match(/^chip-(filled|outline|light)-radius$/);
+      if (variantRadiusMatch) return activeChipRadius === "default" && variantRadiusMatch[1] === activeVariant;
+      if (token === "chip-radius" && activeChipRadius === "default") {
+        return !Boolean(dimensionTokens[`chip-${activeVariant}-radius`]);
+      }
+      return true;
+    }
     if (activeComponent !== "tabs") return true;
     if (activeVariant === "default") {
       if (token === "tabs-radius") return false;
@@ -1253,6 +1339,23 @@ export default function App() {
       }
       return;
     }
+    if (activeComponent === "chip") {
+      const chipVariantRadiusMatch = activeDimensionToken.match(/^chip-(filled|outline|light)-radius$/);
+      if (chipVariantRadiusMatch) {
+        if (activeChipRadius !== "default" || chipVariantRadiusMatch[1] !== activeVariant) {
+          setActiveDimensionToken(null);
+        }
+        return;
+      }
+      if (
+        activeChipRadius === "default" &&
+        activeDimensionToken === "chip-radius" &&
+        dimensionTokens[`chip-${activeVariant}-radius`]
+      ) {
+        setActiveDimensionToken(null);
+      }
+      return;
+    }
     if (activeComponent !== "tabs") return;
     if (activeTabsRadius === "default" && activeDimensionToken === "tabs-radius") {
       setActiveDimensionToken(null);
@@ -1273,7 +1376,7 @@ export default function App() {
     if (match[1] !== activeVariant) {
       setActiveDimensionToken(null);
     }
-  }, [activeBadgeRadius, activeComponent, activeDimensionToken, activeVariant, activeTabsRadius]);
+  }, [activeBadgeRadius, activeChipRadius, activeComponent, activeDimensionToken, activeVariant, activeTabsRadius, dimensionTokens]);
 
   const tabStyle = (t) => ({
     background: activeTab === t ? "#25262B" : "transparent",
@@ -1305,6 +1408,7 @@ export default function App() {
     pill: activePillSize,
     badge: activeBadgeSize,
     modal: activeModalSize,
+    image: activeImageSize,
     alert: activeAlertRadius,
   };
   const activeDimensionSize = activeSizeByComponent[activeComponent] || sizeKeys[0];
@@ -1333,6 +1437,9 @@ export default function App() {
     if (activeComponent === "chip" && tokenName === "chip-radius") {
       return activeChipRadius;
     }
+    if (activeComponent === "chip" && /^chip-(filled|outline|light)-radius$/.test(tokenName)) {
+      return undefined;
+    }
     if (activeComponent === "notification" && tokenName === "notification-radius") {
       return activeNotificationRadius;
     }
@@ -1341,6 +1448,12 @@ export default function App() {
     }
     if (activeComponent === "modal" && tokenName === "modal-radius") {
       return activeModalRadius;
+    }
+    if (activeComponent === "image" && tokenName === "image-radius") {
+      return activeImageRadius;
+    }
+    if (activeComponent === "image" && (tokenName === "image-width" || tokenName === "image-height")) {
+      return activeImageSize;
     }
     if (activeComponent === "slider" && tokenName === "slider-radius") {
       return activeSliderRadius;
@@ -1990,6 +2103,18 @@ export default function App() {
                   text={activeBadgeText}
                 />
               )}
+              {activeComponent === "image" && (
+                <ImagePreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  src={activeImageSrc}
+                  alt={activeImageAlt}
+                  fallbackSrc={activeImageFallbackSrc}
+                  size={activeImageSize}
+                  radius={activeImageRadius}
+                  fit={activeImageFit}
+                />
+              )}
             </div>
           </div>
 
@@ -2415,7 +2540,23 @@ export default function App() {
                   setText={setActiveBadgeText}
                 />
               )}
-              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "card", "loader", "pill", "badge"].includes(activeComponent) && (
+              {activeComponent === "image" && (
+                <ImagePropertiesPanel
+                  size={activeImageSize}
+                  setSize={setActiveImageSize}
+                  src={activeImageSrc}
+                  setSrc={setActiveImageSrc}
+                  alt={activeImageAlt}
+                  setAlt={setActiveImageAlt}
+                  fallbackSrc={activeImageFallbackSrc}
+                  setFallbackSrc={setActiveImageFallbackSrc}
+                  radius={activeImageRadius}
+                  setRadius={setActiveImageRadius}
+                  fit={activeImageFit}
+                  setFit={setActiveImageFit}
+                />
+              )}
+              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "card", "loader", "pill", "badge", "image"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

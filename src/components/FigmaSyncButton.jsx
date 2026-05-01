@@ -25,6 +25,7 @@ const BUILDABLE_COMPONENTS = [
   "anchor",
   "title",
   "text",
+  "image",
 ];
 
 const COMPONENT_LABELS = {

@@ -975,7 +975,7 @@ function resolveManagedComponentKeyFromName(name) {
     "button", "switch", "slider", "rangeslider", "checkbox", "radio",
     "chip", "notification", "alert", "modal", "tooltip", "loader",
     "pill", "badge", "textinput", "select", "card", "actionicon",
-    "tabs", "anchor", "title", "text"
+    "tabs", "anchor", "title", "text", "image"
   ];
   // Longest keys first so e.g. "textinput" matches before the "text" prefix rule.
   var sorted = managedKeys.slice().sort(function (a, b) {
@@ -1203,6 +1203,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var textSet = await buildSet("Text", function () {
     return buildTextComponentSet(varMap, page, font, textSampleText);
   });
+  var imageSet = await buildSet("Image", function () {
+    return buildImageComponentSet(varMap, page, font);
+  });
   var modalSet = await buildSet("Modal", function () {
     return buildModalComponentSet(varMap, page, font, {
       buttonSet: buttonSet,
@@ -1235,6 +1238,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     anchorSet,
     titleSet,
     textSet,
+    imageSet,
   ];
   var validSets = generatedSets.filter(function (set) { return Boolean(set); });
   try {
@@ -2063,6 +2067,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         variantPropName = "Layout";
       }
     }
+    if (variants.length === 0) {
+      var typeVariants = getPropValues(variantProps, "Type");
+      if (typeVariants.length > 0) {
+        variants = typeVariants.slice();
+        variantPropName = "Type";
+      }
+    }
     var states = getPropValues(variantProps, "State");
     var sizes = getPropValues(variantProps, "Size");
     var textWeights = getPropValues(variantProps, "Weight");
@@ -2074,7 +2085,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var hasStates = states.length > 0;
     var hasIcons = getPropValues(variantProps, "LeftIcon").length > 0 || getPropValues(variantProps, "RightIcon").length > 0;
 
-    var useTemplateForSet = Boolean(docsTemplate) && lowerSetName !== "text";
+    var useTemplateForSet = Boolean(docsTemplate) && lowerSetName !== "text" && lowerSetName !== "image";
     if (useTemplateForSet) {
       var templatedDoc = docsTemplate.clone();
       templatedDoc.name = "__AUTO_DOCS__ - " + setName;
@@ -2110,7 +2121,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateLeftIconKey = getPropKey(variantProps, "LeftIcon");
       var templateRightIconKey = getPropKey(variantProps, "RightIcon");
 
-      var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills"];
+      var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Oval", "Bars", "Dots"];
       var templateVariantLimit = lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3);
       var templateOrderedVariants = pickOrdered(variants, templateVariantOrder).slice(0, templateVariantLimit);
       var templateOrderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
@@ -2346,6 +2357,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 false,
                 { itemsPerRow: 3 }
               );
+            } else if (lowerSetName === "image" && templateOrderedSizes.length === 5) {
+              addInstancesRow(
+                templateSizeSlot,
+                "Sizes",
+                templateOrderedSizes,
+                function (sizeName) {
+                  return makeTemplateInstance({ Size: sizeName });
+                },
+                false,
+                { itemsPerRow: 4 }
+              );
             } else {
               for (var tsi = 0; tsi < templateOrderedSizes.length; tsi++) {
                 (function (sizeName) {
@@ -2377,6 +2399,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 return makeTemplateInstance({ Size: sizeName });
               }, false);
             }
+          } else if (lowerSetName === "image" && templateOrderedSizes.length === 5) {
+            addInstancesRow(
+              templateSizeSlot,
+              "Sizes",
+              templateOrderedSizes,
+              function (sizeName) {
+                return makeTemplateInstance({ Size: sizeName });
+              },
+              false,
+              { itemsPerRow: 4 }
+            );
           } else if ((lowerSetName === "checkbox" || lowerSetName === "radio") && templateCheckedKey && templateCheckedOnValue != null) {
             addInstancesRow(templateSizeSlot, "Sizes", templateOrderedSizes, function (sizeName) {
               return makeTemplateInstance({ Size: sizeName, Checked: templateCheckedOnValue });
@@ -3069,6 +3102,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               false,
               { itemsPerRow: 3 }
             );
+          } else if (lowerSetName === "image" && orderedSizes.length === 5) {
+            addInstancesRow(
+              sizeSlot,
+              "Sizes",
+              orderedSizes,
+              function (sizeName) {
+                return makeInstance({ Size: sizeName });
+              },
+              false,
+              { itemsPerRow: 4 }
+            );
           } else {
             for (var osi = 0; osi < orderedSizes.length; osi++) {
               (function (sizeName) {
@@ -3100,6 +3144,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               return makeInstance({ Size: sizeName });
             }, false);
           }
+        } else if (lowerSetName === "image" && orderedSizes.length === 5) {
+          addInstancesRow(
+            sizeSlot,
+            "Sizes",
+            orderedSizes,
+            function (sizeName) {
+              return makeInstance({ Size: sizeName });
+            },
+            false,
+            { itemsPerRow: 4 }
+          );
         } else if ((lowerSetName === "checkbox" || lowerSetName === "radio") && checkedKey && checkedOnValue != null) {
           addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName, Checked: checkedOnValue });
@@ -4120,15 +4175,16 @@ function buildSliderComponentSet(varMap, page, font) {
   var gap = 18;
   var colGap = 28;
 
-  var sizeThumb = { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 };
-  var sizeTrack = { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 };
+  var sizeThumb = { default: 16, xs: 12, sm: 14, md: 16, lg: 20, xl: 24 };
+  var sizeTrack = { default: 6, xs: 2, sm: 4, md: 6, lg: 8, xl: 10 };
 
   var rowYOffsets = [];
   var runningY = 0;
   for (var rsi = 0; rsi < sizes.length; rsi++) {
     for (var rsti = 0; rsti < states.length; rsti++) {
       rowYOffsets.push(runningY);
-      var rowH = sizeThumb[sizes[rsi]] + 34;
+      var rowThumb = sizeThumb[sizes[rsi]] != null ? sizeThumb[sizes[rsi]] : sizeThumb.default;
+      var rowH = rowThumb + 34;
       runningY += rowH + gap;
     }
   }
@@ -4160,11 +4216,13 @@ function buildSliderComponentSet(varMap, page, font) {
           comp.resize(trackWidth, withMarks ? 58 : 28);
           comp.fills = [];
 
-          var trackY = (sizeThumb[size] - sizeTrack[size]) / 2;
+          var thumbPx = sizeThumb[size] != null ? sizeThumb[size] : sizeThumb.default;
+          var trackPx = sizeTrack[size] != null ? sizeTrack[size] : sizeTrack.default;
+          var trackY = (thumbPx - trackPx) / 2;
 
           var track = figma.createRectangle();
           track.name = "Track";
-          track.resize(trackWidth, sizeTrack[size]);
+          track.resize(trackWidth, trackPx);
           track.x = 0;
           track.y = trackY;
           track.cornerRadius = 999;
@@ -4179,7 +4237,7 @@ function buildSliderComponentSet(varMap, page, font) {
 
           var bar = figma.createRectangle();
           bar.name = "Bar";
-          bar.resize(Math.round((trackWidth * sliderValuePercent) / 100), sizeTrack[size]);
+          bar.resize(Math.round((trackWidth * sliderValuePercent) / 100), trackPx);
           bar.x = 0;
           bar.y = trackY;
           bar.cornerRadius = 999;
@@ -4194,8 +4252,8 @@ function buildSliderComponentSet(varMap, page, font) {
 
           var thumb = figma.createEllipse();
           thumb.name = "Thumb";
-          thumb.resize(sizeThumb[size], sizeThumb[size]);
-          thumb.x = Math.round((trackWidth * sliderValuePercent) / 100) - Math.round(sizeThumb[size] / 2);
+          thumb.resize(thumbPx, thumbPx);
+          thumb.x = Math.round((trackWidth * sliderValuePercent) / 100) - Math.round(thumbPx / 2);
           thumb.y = 0;
           thumb.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
           thumb.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
@@ -4227,7 +4285,7 @@ function buildSliderComponentSet(varMap, page, font) {
               mark.name = "Mark-" + labels[mki];
               mark.resize(8, 8);
               mark.x = markX - 4;
-              mark.y = trackY + Math.round(sizeTrack[size] / 2) - 4;
+              mark.y = trackY + Math.round(trackPx / 2) - 4;
               mark.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.52, b: 0.56 } }];
               bindPaintVar(mark, "fills", 0, varMap[sliderMarkColorPath(state)]);
               bindVar(mark, "width", varMap["slider/mark-size"]);
@@ -4246,7 +4304,7 @@ function buildSliderComponentSet(varMap, page, font) {
               bindVar(labelNode, "fontStyle", varMap["slider/mark-label-font-weight"]);
               bindVar(labelNode, "lineHeight", varMap["slider/mark-label-line-height-" + size]);
               labelNode.x = markX - 12;
-              labelNode.y = trackY + sizeTrack[size] + 10;
+              labelNode.y = trackY + trackPx + 10;
               comp.appendChild(labelNode);
             }
           }
@@ -4314,15 +4372,16 @@ function buildRangeSliderComponentSet(varMap, page, font) {
   var gap = 18;
   var colGap = 28;
 
-  var sizeThumb = { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 };
-  var sizeTrack = { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 };
+  var sizeThumb = { default: 16, xs: 12, sm: 14, md: 16, lg: 20, xl: 24 };
+  var sizeTrack = { default: 6, xs: 2, sm: 4, md: 6, lg: 8, xl: 10 };
 
   var rowYOffsets = [];
   var runningY = 0;
   for (var rsi = 0; rsi < sizes.length; rsi++) {
     for (var rsti = 0; rsti < states.length; rsti++) {
       rowYOffsets.push(runningY);
-      var rowH = sizeThumb[sizes[rsi]] + 34;
+      var rowThumb = sizeThumb[sizes[rsi]] != null ? sizeThumb[sizes[rsi]] : sizeThumb.default;
+      var rowH = rowThumb + 34;
       runningY += rowH + gap;
     }
   }
@@ -4354,13 +4413,15 @@ function buildRangeSliderComponentSet(varMap, page, font) {
           comp.resize(trackWidth, withMarks ? 58 : 28);
           comp.fills = [];
 
-          var trackY = (sizeThumb[size] - sizeTrack[size]) / 2;
+          var thumbPx = sizeThumb[size] != null ? sizeThumb[size] : sizeThumb.default;
+          var trackPx = sizeTrack[size] != null ? sizeTrack[size] : sizeTrack.default;
+          var trackY = (thumbPx - trackPx) / 2;
           var fromX = Math.round((trackWidth * rangeValues[0]) / 100);
           var toX = Math.round((trackWidth * rangeValues[1]) / 100);
 
           var track = figma.createRectangle();
           track.name = "Track";
-          track.resize(trackWidth, sizeTrack[size]);
+          track.resize(trackWidth, trackPx);
           track.x = 0;
           track.y = trackY;
           track.cornerRadius = 999;
@@ -4375,7 +4436,7 @@ function buildRangeSliderComponentSet(varMap, page, font) {
 
           var bar = figma.createRectangle();
           bar.name = "Bar";
-          bar.resize(toX - fromX, sizeTrack[size]);
+          bar.resize(toX - fromX, trackPx);
           bar.x = fromX;
           bar.y = trackY;
           bar.cornerRadius = 999;
@@ -4390,8 +4451,8 @@ function buildRangeSliderComponentSet(varMap, page, font) {
 
           var thumbFrom = figma.createEllipse();
           thumbFrom.name = "ThumbFrom";
-          thumbFrom.resize(sizeThumb[size], sizeThumb[size]);
-          thumbFrom.x = fromX - Math.round(sizeThumb[size] / 2);
+          thumbFrom.resize(thumbPx, thumbPx);
+          thumbFrom.x = fromX - Math.round(thumbPx / 2);
           thumbFrom.y = 0;
           thumbFrom.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
           thumbFrom.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
@@ -4405,8 +4466,8 @@ function buildRangeSliderComponentSet(varMap, page, font) {
 
           var thumbTo = figma.createEllipse();
           thumbTo.name = "ThumbTo";
-          thumbTo.resize(sizeThumb[size], sizeThumb[size]);
-          thumbTo.x = toX - Math.round(sizeThumb[size] / 2);
+          thumbTo.resize(thumbPx, thumbPx);
+          thumbTo.x = toX - Math.round(thumbPx / 2);
           thumbTo.y = 0;
           thumbTo.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
           thumbTo.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
@@ -4438,7 +4499,7 @@ function buildRangeSliderComponentSet(varMap, page, font) {
               mark.name = "Mark-" + labels[mki];
               mark.resize(8, 8);
               mark.x = markX - 4;
-              mark.y = trackY + Math.round(sizeTrack[size] / 2) - 4;
+              mark.y = trackY + Math.round(trackPx / 2) - 4;
               mark.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.52, b: 0.56 } }];
               bindPaintVar(mark, "fills", 0, varMap[rangeSliderMarkColorPath(state)]);
               bindVar(mark, "width", varMap["rangeslider/mark-size"]);
@@ -4457,7 +4518,7 @@ function buildRangeSliderComponentSet(varMap, page, font) {
               bindVar(labelNode, "fontStyle", varMap["rangeslider/mark-label-font-weight"]);
               bindVar(labelNode, "lineHeight", varMap["rangeslider/mark-label-line-height-" + size]);
               labelNode.x = markX - 12;
-              labelNode.y = trackY + sizeTrack[size] + 10;
+              labelNode.y = trackY + trackPx + 10;
               comp.appendChild(labelNode);
             }
           }
@@ -4678,6 +4739,116 @@ async function buildAnchorComponentSet(varMap, page, font) {
       throw new Error("Anchor combine failed. First error: " + String(err) + " | Retry error: " + String(retryErr));
     }
   }
+}
+
+async function buildImageComponentSet(varMap, page, font) {
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var components = [];
+  var checkerImageHash = null;
+
+  try {
+    // Tiny embedded checkerboard tile used as image placeholder.
+    // Keep as raw bytes (not atob) so it works reliably in Figma plugin runtime.
+    var checkerPngBytes = new Uint8Array([
+      137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82,
+      0, 0, 0, 16, 0, 0, 0, 16, 8, 6, 0, 0, 0, 31, 243, 255,
+      97, 0, 0, 0, 40, 73, 68, 65, 84, 120, 218, 99, 248, 244, 249, 219,
+      127, 100, 124, 230, 194, 13, 20, 76, 72, 158, 97, 24, 24, 64, 170, 6,
+      116, 249, 225, 96, 192, 104, 58, 24, 77, 7, 64, 12, 0, 116, 134, 166,
+      174, 194, 155, 157, 69, 0, 0, 0, 0, 73, 69, 78, 68, 174, 66, 96, 130
+    ]);
+    checkerImageHash = figma.createImage(checkerPngBytes).hash;
+  } catch (checkerErr) {
+    progress("Image placeholder creation failed: " + String(checkerErr));
+  }
+
+  var defaultWidthBySize = {
+    default: 360,
+    xs: 120,
+    sm: 180,
+    md: 240,
+    lg: 360,
+    xl: 480,
+  };
+  var defaultHeightBySize = {
+    default: 220,
+    xs: 80,
+    sm: 120,
+    md: 160,
+    lg: 220,
+    xl: 280,
+  };
+
+  for (var si = 0; si < sizes.length; si++) {
+    var size = sizes[si];
+    var capSize = size === "default" ? "Default" : size.toUpperCase();
+    var widthVar = varMap["image/width-" + size] || varMap["image/width"];
+    var heightVar = varMap["image/height-" + size] || varMap["image/height"];
+    var baseW = defaultWidthBySize[size] || 360;
+    var baseH = defaultHeightBySize[size] || 220;
+
+    for (var ri = 0; ri < radii.length; ri++) {
+      var radius = radii[ri];
+      var capRadius = radius === "default" ? "Default" : radius.toUpperCase();
+      var radiusVar = varMap["image/radius-" + radius] || varMap["image/radius"];
+
+      var comp = figma.createComponent();
+      comp.name = "Size=" + capSize + ", Radius=" + capRadius;
+      comp.layoutMode = "NONE";
+      comp.clipsContent = true;
+      comp.resize(baseW, baseH);
+      comp.fills = [];
+      comp.strokes = [];
+      // Ensure variants do not overlap before combineAsVariants.
+      // Figma uses pre-combine positions to derive the variant matrix layout.
+      comp.x = si * 560;
+      comp.y = ri * 320;
+
+      var imageSurface = figma.createRectangle();
+      imageSurface.name = "Image Surface";
+      imageSurface.resize(baseW, baseH);
+      imageSurface.x = 0;
+      imageSurface.y = 0;
+      imageSurface.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+      if (checkerImageHash) {
+        imageSurface.fills = [{
+          type: "IMAGE",
+          imageHash: checkerImageHash,
+          scaleMode: "TILE",
+          scalingFactor: 1,
+        }];
+      } else {
+        // Fallback if image creation fails.
+        imageSurface.fills = [{ type: "SOLID", color: { r: 0.90, g: 0.91, b: 0.93 } }];
+      }
+      imageSurface.strokes = [];
+      imageSurface.cornerRadius = 8;
+
+      bindVar(comp, "width", widthVar);
+      bindVar(comp, "height", heightVar);
+      bindVar(imageSurface, "width", widthVar);
+      bindVar(imageSurface, "height", heightVar);
+
+      bindVar(comp, "topLeftRadius", radiusVar);
+      bindVar(comp, "topRightRadius", radiusVar);
+      bindVar(comp, "bottomLeftRadius", radiusVar);
+      bindVar(comp, "bottomRightRadius", radiusVar);
+      bindVar(imageSurface, "topLeftRadius", radiusVar);
+      bindVar(imageSurface, "topRightRadius", radiusVar);
+      bindVar(imageSurface, "bottomLeftRadius", radiusVar);
+      bindVar(imageSurface, "bottomRightRadius", radiusVar);
+
+      comp.appendChild(imageSurface);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+  }
+
+  progress("Created " + components.length + " image variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Image";
+  return componentSet;
 }
 
 function buildTitleComponentSet(varMap, page, font, sampleText) {
@@ -5289,8 +5460,9 @@ function buildRadioComponentSet(varMap, page, font) {
   var components = [];
 
   // Known radio sizes for layout
-  var sizeRadioSizes = { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 };
-  var sizeIconSizes = { xs: 6, sm: 8, md: 10, lg: 12, xl: 14 };
+  // Include `default` because this builder emits Default size variants.
+  var sizeRadioSizes = { default: 24, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 };
+  var sizeIconSizes = { default: 10, xs: 6, sm: 8, md: 10, lg: 12, xl: 14 };
   var gap = 16;
   var colGap = 16;
 
@@ -5324,8 +5496,8 @@ function buildRadioComponentSet(varMap, page, font) {
         for (var si = 0; si < sizes.length; si++) {
           var size = sizes[si];
           var capSize = size.toUpperCase();
-          var radioSize = sizeRadioSizes[size];
-          var iconSize = sizeIconSizes[size];
+          var radioSize = sizeRadioSizes[size] != null ? sizeRadioSizes[size] : sizeRadioSizes.default;
+          var iconSize = sizeIconSizes[size] != null ? sizeIconSizes[size] : sizeIconSizes.default;
 
           for (var sti = 0; sti < states.length; sti++) {
             var state = states[sti];
@@ -5527,7 +5699,8 @@ function radioLabelTextPath(state) {
 // ---------------------------------------------------------------------------
 
 async function buildChipComponentSet(varMap, page, font) {
-  var sizes = ["xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var variants = ["filled", "outline", "light"];
   var checkedStates = ["unchecked", "checked"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
@@ -5556,20 +5729,22 @@ async function buildChipComponentSet(varMap, page, font) {
   }
 
   // Known chip heights per size for grid spacing
-  var sizeHeights = { xs: 23, sm: 28, md: 32, lg: 36, xl: 40 };
-  var sizeIconSizes = { xs: 9, sm: 12, md: 14, lg: 16, xl: 18 };
+  var sizeHeights = { default: 32, xs: 23, sm: 28, md: 32, lg: 36, xl: 40 };
+  var sizeIconSizes = { default: 14, xs: 9, sm: 12, md: 14, lg: 16, xl: 18 };
   var gap = 16;
   var colGap = 16;
 
-  // Pre-calculate y offsets: rows = (size × state)
+  // Pre-calculate y offsets: rows = (radius × size × state)
   var rowYOffsets = [];
   var runningY = 0;
-  for (var rsi = 0; rsi < sizes.length; rsi++) {
-    for (var rsti = 0; rsti < states.length; rsti++) {
-      rowYOffsets.push(runningY);
-      var rowH = sizeHeights[sizes[rsi]];
-      if (rowH < 24) rowH = 24;
-      runningY += rowH + gap;
+  for (var rri = 0; rri < radii.length; rri++) {
+    for (var rsi = 0; rsi < sizes.length; rsi++) {
+      for (var rsti = 0; rsti < states.length; rsti++) {
+        rowYOffsets.push(runningY);
+        var rowH = sizeHeights[sizes[rsi]] != null ? sizeHeights[sizes[rsi]] : sizeHeights.default;
+        if (rowH < 24) rowH = 24;
+        runningY += rowH + gap;
+      }
     }
   }
 
@@ -5584,19 +5759,23 @@ async function buildChipComponentSet(varMap, page, font) {
       var capChecked = checkedState.charAt(0).toUpperCase() + checkedState.slice(1);
       var isChecked = (checkedState === "checked");
 
-      for (var si = 0; si < sizes.length; si++) {
-        var size = sizes[si];
-        var capSize = size.toUpperCase();
-        var chipHeight = sizeHeights[size];
-        var iconSize = sizeIconSizes[size];
+      for (var ri = 0; ri < radii.length; ri++) {
+        var radius = radii[ri];
+        var capRadius = radius === "default" ? "Default" : radius.toUpperCase();
 
-        for (var sti = 0; sti < states.length; sti++) {
-          var state = states[sti];
-          var capState = state.charAt(0).toUpperCase() + state.slice(1);
+        for (var si = 0; si < sizes.length; si++) {
+          var size = sizes[si];
+          var capSize = size === "default" ? "Default" : size.toUpperCase();
+          var chipHeight = sizeHeights[size] != null ? sizeHeights[size] : sizeHeights.default;
+          var iconSize = sizeIconSizes[size] != null ? sizeIconSizes[size] : sizeIconSizes.default;
 
-          var comp = figma.createComponent();
-          comp.name = "Variant=" + capVariant + ", Size=" + capSize +
-                      ", Checked=" + capChecked + ", State=" + capState;
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+            var comp = figma.createComponent();
+            comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", Radius=" + capRadius +
+                        ", Checked=" + capChecked + ", State=" + capState;
 
           // Root: horizontal auto-layout (pill shape)
           comp.layoutMode = "HORIZONTAL";
@@ -5608,56 +5787,62 @@ async function buildChipComponentSet(varMap, page, font) {
           comp.cornerRadius = 16;
 
           // Padding
-          var padding = isChecked ? 10 : 16;
-          comp.paddingLeft = padding;
-          comp.paddingRight = padding;
-          comp.paddingTop = 4;
-          comp.paddingBottom = 4;
+          var paddingX = isChecked ? 10 : 16;
+          var paddingY = 4;
+          comp.paddingLeft = paddingX;
+          comp.paddingRight = paddingX;
+          comp.paddingTop = paddingY;
+          comp.paddingBottom = paddingY;
           comp.itemSpacing = 6;
 
           // Bind dimensions
           bindVar(comp, "minHeight", varMap["chip/height-" + size]);
           if (isChecked) {
-            bindVar(comp, "paddingLeft", varMap["chip/checked-padding-" + size]);
-            bindVar(comp, "paddingRight", varMap["chip/checked-padding-" + size]);
+            bindVar(comp, "paddingLeft", varMap["chip/checked-padding-x-" + size] || varMap["chip/checked-padding-" + size]);
+            bindVar(comp, "paddingRight", varMap["chip/checked-padding-x-" + size] || varMap["chip/checked-padding-" + size]);
+            bindVar(comp, "paddingTop", varMap["chip/checked-padding-y-" + size] || varMap["chip/checked-padding-" + size]);
+            bindVar(comp, "paddingBottom", varMap["chip/checked-padding-y-" + size] || varMap["chip/checked-padding-" + size]);
           } else {
-            bindVar(comp, "paddingLeft", varMap["chip/padding-" + size]);
-            bindVar(comp, "paddingRight", varMap["chip/padding-" + size]);
+            bindVar(comp, "paddingLeft", varMap["chip/padding-x-" + size] || varMap["chip/padding-" + size]);
+            bindVar(comp, "paddingRight", varMap["chip/padding-x-" + size] || varMap["chip/padding-" + size]);
+            bindVar(comp, "paddingTop", varMap["chip/padding-y-" + size] || varMap["chip/padding-" + size]);
+            bindVar(comp, "paddingBottom", varMap["chip/padding-y-" + size] || varMap["chip/padding-" + size]);
           }
-          bindVar(comp, "topLeftRadius", varMap["chip/radius-" + size]);
-          bindVar(comp, "topRightRadius", varMap["chip/radius-" + size]);
-          bindVar(comp, "bottomLeftRadius", varMap["chip/radius-" + size]);
-          bindVar(comp, "bottomRightRadius", varMap["chip/radius-" + size]);
-          bindVar(comp, "itemSpacing", varMap["chip/spacing-" + size]);
+            var radiusPath = chipRadiusPath(varMap, variant, radius);
+            bindVar(comp, "topLeftRadius", varMap[radiusPath]);
+            bindVar(comp, "topRightRadius", varMap[radiusPath]);
+            bindVar(comp, "bottomLeftRadius", varMap[radiusPath]);
+            bindVar(comp, "bottomRightRadius", varMap[radiusPath]);
+            bindVar(comp, "itemSpacing", varMap["chip/spacing-" + size]);
 
           // Background fill
-          var bgPath = chipBgPath(variant, isChecked, state);
-          if (isChecked && variant === "filled") {
-            comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
-          } else if (isChecked && variant === "light") {
-            comp.fills = [{ type: "SOLID", color: { r: 0.92, g: 0.92, b: 0.95 } }];
-          } else {
-            comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-          }
-          bindPaintVar(comp, "fills", 0, varMap[bgPath]);
+            var bgPath = chipBgPath(varMap, variant, isChecked, state);
+            if (isChecked && variant === "filled") {
+              comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+            } else if (isChecked && variant === "light") {
+              comp.fills = [{ type: "SOLID", color: { r: 0.92, g: 0.92, b: 0.95 } }];
+            } else {
+              comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            }
+            bindPaintVar(comp, "fills", 0, varMap[bgPath]);
 
           // Border
-          var borderPath = chipBorderPath(state);
-          if (variant === "outline" || !isChecked) {
-            comp.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
-            comp.strokeWeight = 1.5;
-            comp.strokeAlign = "INSIDE";
-            bindPaintVar(comp, "strokes", 0, varMap[borderPath]);
-            bindVar(comp, "strokeWeight", varMap["chip/border-width"]);
-          } else if (variant === "filled" && isChecked) {
-            comp.strokes = [];
-          } else {
-            // light checked — no border
-            comp.strokes = [];
-          }
+            var borderPath = chipBorderPath(varMap, variant, isChecked, state);
+            if (variant === "outline" || !isChecked) {
+              comp.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+              comp.strokeWeight = 1.5;
+              comp.strokeAlign = "INSIDE";
+              bindPaintVar(comp, "strokes", 0, varMap[borderPath]);
+              bindVar(comp, "strokeWeight", varMap["chip/border-width"]);
+            } else if (variant === "filled" && isChecked) {
+              comp.strokes = [];
+            } else {
+              // light checked — no border
+              comp.strokes = [];
+            }
 
           // --- Check icon (only when checked) ---
-          if (isChecked && checkIconComp) {
+            if (isChecked && checkIconComp) {
             var checkInst = checkIconComp.createInstance();
             checkInst.name = "Icon";
             checkInst.resize(iconSize, iconSize);
@@ -5679,50 +5864,51 @@ async function buildChipComponentSet(varMap, page, font) {
               }
             }
 
-            comp.appendChild(checkInst);
-          }
+              comp.appendChild(checkInst);
+            }
 
           // --- Label text ---
-          var textNode = figma.createText();
-          textNode.name = "Label";
-          textNode.fontName = font;
-          textNode.characters = "Chip";
-          textNode.fontSize = 14;
+            var textNode = figma.createText();
+            textNode.name = "Label";
+            textNode.fontName = font;
+            textNode.characters = "Chip";
+            textNode.fontSize = 14;
 
-          var textColorPath = chipTextColorPath(variant, isChecked, state);
-          textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-          bindPaintVar(textNode, "fills", 0, varMap[textColorPath]);
-          bindVar(textNode, "fontSize", varMap["chip/font-size-" + size]);
-          bindVar(textNode, "fontFamily", varMap["chip/font-family"]);
-          bindVar(textNode, "fontStyle", varMap["chip/font-weight"]);
-          bindVar(textNode, "lineHeight", varMap["chip/line-height-" + size]);
-          comp.appendChild(textNode);
+            var textColorPath = chipTextColorPath(varMap, variant, isChecked, state);
+            textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+            bindPaintVar(textNode, "fills", 0, varMap[textColorPath]);
+            bindVar(textNode, "fontSize", varMap["chip/font-size-" + size]);
+            bindVar(textNode, "fontFamily", varMap["chip/font-family"]);
+            bindVar(textNode, "fontStyle", varMap["chip/font-weight"]);
+            bindVar(textNode, "lineHeight", varMap["chip/line-height-" + size]);
+            comp.appendChild(textNode);
 
           // Focus ring
-          if (state === "focus") {
-            comp.effects = [{
-              type: "DROP_SHADOW",
-              color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
-              offset: { x: 0, y: 0 },
-              radius: 0,
-              spread: 3,
-              visible: true,
-              blendMode: "NORMAL"
-            }];
-          }
+            if (state === "focus") {
+              comp.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
 
           // Disabled opacity
-          if (state === "disabled") {
-            comp.opacity = 0.6;
-          }
+            if (state === "disabled") {
+              comp.opacity = 0.6;
+            }
 
           // Grid placement
-          var colIndex = vi * checkedStates.length + chi;
-          var rowIndex = (si * states.length) + sti;
-          comp.x = colIndex * colWidth;
-          comp.y = rowYOffsets[rowIndex];
-          page.appendChild(comp);
-          components.push(comp);
+            var colIndex = vi * checkedStates.length + chi;
+            var rowIndex = ((ri * sizes.length + si) * states.length) + sti;
+            comp.x = colIndex * colWidth;
+            comp.y = rowYOffsets[rowIndex];
+            page.appendChild(comp);
+            components.push(comp);
+          }
         }
       }
     }
@@ -5735,11 +5921,16 @@ async function buildChipComponentSet(varMap, page, font) {
 }
 
 // Helper: build figmaPath for chip background
-function chipBgPath(variant, isChecked, state) {
+function chipBgPath(varMap, variant, isChecked, state) {
   if (!isChecked) {
-    var base = "chip/background";
-    if (state === "default") return base;
-    return base + "-" + state;
+    var resolvedState = state || "default";
+    var variantBase = "chip/" + variant + "-background";
+    var variantState = resolvedState === "default" ? variantBase : variantBase + "-" + resolvedState;
+    if (varMap && varMap[variantState]) return variantState;
+    if (varMap && varMap[variantBase]) return variantBase;
+    var sharedBase = "chip/background";
+    if (resolvedState === "default") return sharedBase;
+    return sharedBase + "-" + resolvedState;
   }
   // checked — variant-specific
   var prefix = "chip/" + variant + "-background-checked";
@@ -5748,17 +5939,57 @@ function chipBgPath(variant, isChecked, state) {
 }
 
 // Helper: build figmaPath for chip border
-function chipBorderPath(state) {
-  if (state === "default") return "chip/border";
-  return "chip/border-" + state;
+function chipBorderPath(varMap, variant, isChecked, state) {
+  var resolvedState = state || "default";
+  if (!isChecked) {
+    var variantBasePath = "chip/" + variant + "-border";
+    var variantStatePath = resolvedState === "default" ? variantBasePath : variantBasePath + "-" + resolvedState;
+    if (varMap && varMap[variantStatePath]) return variantStatePath;
+    if (varMap && varMap[variantBasePath]) return variantBasePath;
+    if (resolvedState === "default") return "chip/border";
+    return "chip/border-" + resolvedState;
+  }
+  if (isChecked) {
+    var variantCheckedBasePath = "chip/" + variant + "-border-checked";
+    var variantCheckedStatePath = resolvedState === "default" ? variantCheckedBasePath : variantCheckedBasePath + "-" + resolvedState;
+    if (varMap && varMap[variantCheckedStatePath]) return variantCheckedStatePath;
+    if (varMap && varMap[variantCheckedBasePath]) return variantCheckedBasePath;
+    var checkedStatePath = resolvedState === "default" ? "chip/checked-border" : "chip/checked-border-" + resolvedState;
+    if (varMap && varMap[checkedStatePath]) return checkedStatePath;
+    if (varMap && varMap["chip/checked-border"]) return "chip/checked-border";
+  }
+  if (resolvedState === "default") return "chip/border";
+  return "chip/border-" + resolvedState;
+}
+
+function chipRadiusPath(varMap, variant, radius) {
+  var resolvedRadius = radius || "default";
+  if (resolvedRadius === "default") {
+    var variantPath = "chip/" + variant + "-radius";
+    if (varMap && varMap[variantPath]) return variantPath;
+  }
+  return "chip/radius-" + resolvedRadius;
 }
 
 // Helper: build figmaPath for chip text color
-function chipTextColorPath(variant, isChecked, state) {
-  if (state === "disabled") return "chip/text-disabled";
-  if (!isChecked) return "chip/text";
-  // Checked — variant-specific text
-  return "chip/" + variant + "-text-checked";
+function chipTextColorPath(varMap, variant, isChecked, state) {
+  var resolvedState = state || "default";
+  var uncheckedStatePath = resolvedState === "default" ? "chip/text" : "chip/text-" + resolvedState;
+  if (!isChecked) {
+    var variantBasePath = "chip/" + variant + "-text";
+    var variantStatePath = resolvedState === "default" ? variantBasePath : variantBasePath + "-" + resolvedState;
+    if (varMap && varMap[variantStatePath]) return variantStatePath;
+    if (varMap && varMap[variantBasePath]) return variantBasePath;
+    if (varMap && varMap[uncheckedStatePath]) return uncheckedStatePath;
+    return "chip/text";
+  }
+  // Checked — variant-specific text (stateful when available)
+  var checkedBasePath = "chip/" + variant + "-text-checked";
+  var checkedStatePath = resolvedState === "default" ? checkedBasePath : checkedBasePath + "-" + resolvedState;
+  if (varMap && varMap[checkedStatePath]) return checkedStatePath;
+  if (varMap && varMap[checkedBasePath]) return checkedBasePath;
+  if (varMap && varMap[uncheckedStatePath]) return uncheckedStatePath;
+  return "chip/text";
 }
 
 // Helper: build figmaPath for chip icon color
