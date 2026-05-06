@@ -8,6 +8,7 @@ export default function CardPreview({
   variant = "default",
   size = "default",
   radius = "default",
+  interactiveState = "default",
   withBorder = true,
   withShadow = false,
   showSection = true,
@@ -16,10 +17,19 @@ export default function CardPreview({
 }) {
   const tokens = COMPONENT_TOKENS.card;
   const variantKey = String(variant || "default").toLowerCase();
+  const stateSuffix = interactiveState && interactiveState !== "default" ? `-${interactiveState}` : "";
   const tokenKey = (slot) =>
-    tokens[`card-${variantKey}-${slot}`]
-      ? `card-${variantKey}-${slot}`
-      : (tokens[`card-default-${slot}`] ? `card-default-${slot}` : `card-${slot}`);
+    tokens[`card-${variantKey}-${slot}${stateSuffix}`]
+      ? `card-${variantKey}-${slot}${stateSuffix}`
+      : tokens[`card-${variantKey}-${slot}`]
+        ? `card-${variantKey}-${slot}`
+        : tokens[`card-default-${slot}${stateSuffix}`]
+          ? `card-default-${slot}${stateSuffix}`
+          : tokens[`card-default-${slot}`]
+            ? `card-default-${slot}`
+            : tokens[`card-${slot}${stateSuffix}`]
+              ? `card-${slot}${stateSuffix}`
+              : `card-${slot}`;
 
   const backgroundToken = tokenKey("background");
   const borderToken = tokenKey("border");
@@ -59,6 +69,17 @@ export default function CardPreview({
     withShadow && shadowBlur != null && shadowOffsetY != null
       ? `0 ${shadowOffsetY}px ${shadowBlur}px rgba(0, 0, 0, ${(shadowAlpha ?? 18) / 100})`
       : "none";
+  const isDisabled = interactiveState === "disabled";
+  const isHovered = interactiveState === "hover";
+  const isPressed = interactiveState === "pressed";
+  const isFocused = interactiveState === "focus";
+  const stateTransform = isPressed ? "translateY(1px)" : isHovered ? "translateY(-1px)" : "none";
+  const baseShadow = shadow !== "none" ? `${shadow}` : "";
+  const hoverShadow = isHovered && shadowBlur != null && shadowOffsetY != null
+    ? `0 ${Math.max(1, shadowOffsetY + 1)}px ${Math.max(2, shadowBlur + 6)}px rgba(0, 0, 0, ${Math.min(0.35, ((shadowAlpha ?? 18) + 8) / 100)})`
+    : "";
+  const focusRing = isFocused ? "0 0 0 2px rgba(34, 139, 230, 0.35)" : "";
+  const computedShadow = [baseShadow, hoverShadow, focusRing].filter(Boolean).join(", ") || "none";
 
   return (
     <Card
@@ -69,7 +90,12 @@ export default function CardPreview({
         borderColor: withBorder ? borderColor : "transparent",
         borderWidth: withBorder ? borderWidth : 0,
         borderRadius: cardRadius,
-        boxShadow: shadow,
+        boxShadow: computedShadow,
+        transform: stateTransform,
+        transition: "transform 120ms ease, box-shadow 120ms ease",
+        cursor: isDisabled ? "not-allowed" : "pointer",
+        opacity: isDisabled ? 0.6 : 1,
+        pointerEvents: isDisabled ? "none" : "auto",
       }}
       padding={cardPadding}
       radius={cardRadius}

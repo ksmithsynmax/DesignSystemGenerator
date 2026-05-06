@@ -6,6 +6,7 @@ import PreviewMatrix from "../shared/PreviewMatrix";
 export const CARD_SIZE_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const CARD_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const CARD_VARIANTS = ["default", "dark", "outlined", "brand", "transparent"];
+export const CARD_INTERACTIVE_STATES = ["default", "hover", "focus", "pressed", "disabled"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -66,6 +67,7 @@ export function CardPreviewContent({
   withBorder,
   withShadow,
   showSection,
+  interactiveState,
   title,
   description,
 }) {
@@ -88,6 +90,7 @@ export function CardPreviewContent({
           withBorder={withBorder}
           withShadow={withShadow}
           showSection={showSection}
+          interactiveState={interactiveState}
           title={title}
           description={description}
         />
@@ -108,6 +111,7 @@ export function CardPreviewContent({
             withBorder={row.withBorder}
             withShadow={row.withShadow}
             showSection={showSection}
+            interactiveState={interactiveState}
             title="Card title"
             description="Card content preview."
           />
@@ -130,11 +134,14 @@ export function CardPropertiesPanel({
   setWithShadow,
   showSection,
   setShowSection,
+  interactiveState,
+  setInteractiveState,
   title,
   setTitle,
   description,
   setDescription,
   forcedVariant,
+  forcedState,
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
@@ -164,6 +171,13 @@ export function CardPropertiesPanel({
         value={showSection ? "on" : "off"}
         onChange={(v) => setShowSection(v === "on")}
         options={["off", "on"]}
+      />
+      <PropertyRow
+        label="State"
+        value={interactiveState}
+        onChange={setInteractiveState}
+        options={CARD_INTERACTIVE_STATES}
+        disabled={Boolean(forcedState)}
       />
       <div>
         <SectionLabel mb={6}>Title</SectionLabel>

@@ -468,6 +468,7 @@ export default function App() {
   const [activeCardWithBorder, setActiveCardWithBorder] = useState(true);
   const [activeCardWithShadow, setActiveCardWithShadow] = useState(false);
   const [activeCardShowSection, setActiveCardShowSection] = useState(true);
+  const [activeCardState, setActiveCardState] = useState("default");
   const [activeCardTitle, setActiveCardTitle] = useState("PlanetScope vessel");
   const [activeCardDescription, setActiveCardDescription] = useState(
     "Detected vessel metadata and imagery details from latest satellite capture."
@@ -713,6 +714,7 @@ export default function App() {
       setActiveCardWithBorder(true);
       setActiveCardWithShadow(false);
       setActiveCardShowSection(true);
+      setActiveCardState("default");
       setActiveCardTitle("PlanetScope vessel");
       setActiveCardDescription("Detected vessel metadata and imagery details from latest satellite capture.");
     } else if (newComp === "loader") {
@@ -1020,6 +1022,8 @@ export default function App() {
             ? forcedState || activeRadioState
           : activeComponent === "chip"
             ? forcedState || activeChipState
+          : activeComponent === "card"
+            ? forcedState || activeCardState
           : activeComponent === "textinput"
             ? forcedState || activeTextInputState
           : activeComponent === "select"
@@ -1177,6 +1181,23 @@ export default function App() {
         return !hasCheckedCounterpart(baseToken, tokenStateSuffix);
       }
       return true;
+    }
+
+    if (activeComponent === "card") {
+      const targetState = effectiveComponentState || "default";
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      if (tokenState !== targetState) {
+        const canUseDefaultFallback =
+          tokenState === "default" &&
+          targetState !== "default" &&
+          !Boolean(colorTokens[`${token}-${targetState}`]);
+        if (!canUseDefaultFallback) return false;
+      }
+      const cardVariants = ["default", "dark", "outlined", "brand", "transparent"];
+      if (!cardVariants.includes(variantSegment)) return true;
+      return variantSegment === activeVariant;
     }
 
     if (activeComponent === "badge") {
@@ -2066,6 +2087,7 @@ export default function App() {
                   withBorder={activeCardWithBorder}
                   withShadow={activeCardWithShadow}
                   showSection={activeCardShowSection}
+                  interactiveState={forcedState || activeCardState}
                   title={activeCardTitle}
                   description={activeCardDescription}
                 />
@@ -2497,11 +2519,14 @@ export default function App() {
                   setWithShadow={setActiveCardWithShadow}
                   showSection={activeCardShowSection}
                   setShowSection={setActiveCardShowSection}
+                  interactiveState={forcedState || activeCardState}
+                  setInteractiveState={setActiveCardState}
                   title={activeCardTitle}
                   setTitle={setActiveCardTitle}
                   description={activeCardDescription}
                   setDescription={setActiveCardDescription}
                   forcedVariant={forcedVariant}
+                  forcedState={forcedState}
                 />
               )}
               {activeComponent === "loader" && (

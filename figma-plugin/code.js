@@ -2316,7 +2316,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                   };
                 })(templateVariantName),
                 false,
-                lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null
+                lowerSetName === "card"
+                  ? { itemsPerRow: 3 }
+                  : (lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null)
               );
               templateVariantSection.appendChild(templateVariantStatesPanel);
             }
@@ -2555,7 +2557,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           } else {
             addInstancesRow(templateStatesSlot, "States", templateOrderedStates, function (stateName) {
               return makeTemplateInstance({ State: stateName });
-            }, false, lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null);
+            }, false, lowerSetName === "card"
+              ? { itemsPerRow: 3 }
+              : (lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null));
           }
         } else if (!hasStates) {
           removeSectionOrSlot(templatedDoc, slug, "states");
@@ -3066,7 +3070,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 };
               })(variantName),
               false,
-              lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null
+              lowerSetName === "card"
+                ? { itemsPerRow: 3 }
+                : (lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null)
             );
             variantSection.appendChild(variantStatesPanel);
           }
@@ -3321,7 +3327,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         } else {
           addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
               return makeInstance({ State: stateName });
-          }, false, lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null);
+          }, false, lowerSetName === "card"
+            ? { itemsPerRow: 3 }
+            : (lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null));
         }
       }
 
@@ -8752,6 +8760,7 @@ function buildCardComponentSet(varMap, page, font, options) {
   var radii = useCompactMatrix
     ? ["default"]
     : ["default", "xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "pressed", "disabled"];
   var borderModes = ["on", "off"];
   var shadowModes = ["off", "on"];
   var sectionModes = ["on", "off"];
@@ -8775,10 +8784,13 @@ function buildCardComponentSet(varMap, page, font, options) {
           var withBorder = borderModes[bi] === "on";
           for (var shi = 0; shi < shadowModes.length; shi++) {
             var withShadow = shadowModes[shi] === "on";
-            for (var seci = 0; seci < sectionModes.length; seci++) {
-              var withSection = sectionModes[seci] === "on";
-              var variantSupportsSection = variant === "default" || variant === "dark";
-              if (withSection && !variantSupportsSection) continue;
+            for (var sti = 0; sti < states.length; sti++) {
+              var state = states[sti];
+              var capState = state.charAt(0).toUpperCase() + state.slice(1);
+              for (var seci = 0; seci < sectionModes.length; seci++) {
+                var withSection = sectionModes[seci] === "on";
+                var variantSupportsSection = variant === "default" || variant === "dark";
+                if (withSection && !variantSupportsSection) continue;
             var comp = figma.createComponent();
             comp.name =
               "Variant=" + capVariant +
@@ -8787,7 +8799,8 @@ function buildCardComponentSet(varMap, page, font, options) {
               ", Radius=" + capRadius +
               ", Border=" + (withBorder ? "On" : "Off") +
               ", Shadow=" + (withShadow ? "On" : "Off") +
-              ", Section=" + (withSection ? "On" : "Off");
+              ", Section=" + (withSection ? "On" : "Off") +
+              ", State=" + capState;
 
             comp.layoutMode = "VERTICAL";
             comp.primaryAxisSizingMode = "AUTO";
@@ -8797,11 +8810,11 @@ function buildCardComponentSet(varMap, page, font, options) {
             comp.resize(320, 180);
             comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
             comp.clipsContent = true;
-            var backgroundVar = varMap["card/" + variant + "-background"] || varMap["card/default-background"] || varMap["card/background"];
-            var borderVar = varMap["card/" + variant + "-border"] || varMap["card/default-border"] || varMap["card/border"];
-            var titleVar = varMap["card/" + variant + "-title"] || varMap["card/default-title"] || varMap["card/title"];
-            var descriptionVar = varMap["card/" + variant + "-description"] || varMap["card/default-description"] || varMap["card/description"];
-            var sectionBackgroundVar = varMap["card/" + variant + "-section-background"] || varMap["card/default-section-background"] || varMap["card/section-background"];
+            var backgroundVar = cardColorVar(varMap, variant, "background", state);
+            var borderVar = cardColorVar(varMap, variant, "border", state);
+            var titleVar = cardColorVar(varMap, variant, "title", state);
+            var descriptionVar = cardColorVar(varMap, variant, "description", state);
+            var sectionBackgroundVar = cardColorVar(varMap, variant, "section-background", state);
 
             if (withSection) {
               // Section-on layout: keep outer shell transparent so media + body reads as two blocks.
@@ -8944,11 +8957,12 @@ function buildCardComponentSet(varMap, page, font, options) {
               bi * shadowModes.length * sectionModes.length +
               shi * sectionModes.length +
               seci;
-            var rowIndex = si;
+            var rowIndex = si * states.length + sti;
             comp.x = colIndex * colWidth;
             comp.y = rowIndex * rowHeight;
             page.appendChild(comp);
             components.push(comp);
+              }
             }
           }
         }
@@ -8960,6 +8974,23 @@ function buildCardComponentSet(varMap, page, font, options) {
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Card";
   return componentSet;
+}
+
+function cardColorVar(varMap, variant, slot, state) {
+  var resolvedState = state || "default";
+  var variantStatePath = resolvedState === "default"
+    ? "card/" + variant + "-" + slot
+    : "card/" + variant + "-" + slot + "-" + resolvedState;
+  if (varMap[variantStatePath]) return varMap[variantStatePath];
+  var variantBasePath = "card/" + variant + "-" + slot;
+  if (varMap[variantBasePath]) return varMap[variantBasePath];
+  var defaultStatePath = resolvedState === "default"
+    ? "card/default-" + slot
+    : "card/default-" + slot + "-" + resolvedState;
+  if (varMap[defaultStatePath]) return varMap[defaultStatePath];
+  var defaultBasePath = "card/default-" + slot;
+  if (varMap[defaultBasePath]) return varMap[defaultBasePath];
+  return varMap["card/" + slot] || null;
 }
 
 // ---------------------------------------------------------------------------
