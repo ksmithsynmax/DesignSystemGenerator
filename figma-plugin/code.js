@@ -2111,6 +2111,24 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateStatesSlot = getTemplateSlot(templatedDoc, slug, "states");
       var templateLeftSlot = getTemplateSlot(templatedDoc, slug, "icons-left");
       var templateRightSlot = getTemplateSlot(templatedDoc, slug, "icons-right");
+      var templateBothSlot = getTemplateSlot(templatedDoc, slug, "icons-both");
+      if (hasIcons && !templateBothSlot) {
+        var templateBothIconsBlock = createStack("icons-both-block", 8);
+        appendText(templateBothIconsBlock, titleFont, "Both Icons", 18, DOC_COLORS.panelHeading, "Both Icons Heading", "title");
+        templateBothSlot = createPanel("slot:" + slug + ":icons-both", 10);
+        templateBothSlot.resize(1192, templateBothSlot.height);
+        templateBothIconsBlock.appendChild(templateBothSlot);
+        var insertedAfterRight = false;
+        if (templateRightSlot && templateRightSlot.parent && templateRightSlot.parent.parent === templatedDoc) {
+          var templateRightBlock = templateRightSlot.parent;
+          var rightIndex = templatedDoc.children.indexOf(templateRightBlock);
+          if (rightIndex >= 0) {
+            templatedDoc.insertChild(rightIndex + 1, templateBothIconsBlock);
+            insertedAfterRight = true;
+          }
+        }
+        if (!insertedAfterRight) templatedDoc.appendChild(templateBothIconsBlock);
+      }
 
       var templateVariantKey = getPropKey(variantProps, variantPropName);
       var templateStateKey = getPropKey(variantProps, "State");
@@ -2636,6 +2654,27 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           removeSectionOrSlot(templatedDoc, slug, "icons-right");
         }
 
+        if (
+          hasIcons &&
+          templateBothSlot &&
+          templateLeftIconKey &&
+          templateRightIconKey &&
+          templateIconLabels.length > 0 &&
+          templateLeftOn != null &&
+          templateRightOn != null
+        ) {
+          clearChildren(templateBothSlot);
+          addInstancesRow(templateBothSlot, "Both Icons", templateIconLabels, function (sizeName) {
+            var patch = {};
+            if (templateSizeKey) patch.Size = sizeName;
+            patch[templateLeftIconKey] = templateLeftOn;
+            patch[templateRightIconKey] = templateRightOn;
+            return makeTemplateInstance(patch);
+          }, false);
+        } else if (!hasIcons) {
+          removeSectionOrSlot(templatedDoc, slug, "icons-both");
+        }
+
         // Notification has no Variant/Size/State axes in the template flow; fill Color + Radius explicitly.
         if (lowerSetName === "notification" && templateBaseComponent) {
           var notifTplColorKey = getPropKey(variantProps, "Color");
@@ -2844,6 +2883,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
     var leftSlot = null;
     var rightSlot = null;
+    var bothSlot = null;
     if (hasIcons) {
       doc.appendChild(createSectionHeader("With Icons", "Examples with optional icon placements.", DOC_COLORS.panelBody));
       var leftIconsBlock = createStack("icons-left-block", 8);
@@ -2859,6 +2899,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       rightSlot.resize(1192, rightSlot.height);
       rightIconsBlock.appendChild(rightSlot);
       doc.appendChild(rightIconsBlock);
+
+      var bothIconsBlock = createStack("icons-both-block", 8);
+      appendText(bothIconsBlock, titleFont, "Both Icons", 18, DOC_COLORS.panelHeading, "Both Icons Heading", "title");
+      bothSlot = createPanel("slot:" + slug + ":icons-both", 10);
+      bothSlot.resize(1192, bothSlot.height);
+      bothIconsBlock.appendChild(bothSlot);
+      doc.appendChild(bothIconsBlock);
     }
 
     if (set.type === "COMPONENT_SET" || set.type === "COMPONENT") {
@@ -3208,6 +3255,24 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         }, false);
       }
 
+      if (
+        bothSlot &&
+        leftIconKey &&
+        rightIconKey &&
+        iconLabels.length > 0 &&
+        leftOn != null &&
+        rightOn != null
+      ) {
+        clearChildren(bothSlot);
+        addInstancesRow(bothSlot, "Both Icons", iconLabels, function (sizeName) {
+          var patch = {};
+          if (sizeKey) patch.Size = sizeName;
+          patch[leftIconKey] = leftOn;
+          patch[rightIconKey] = rightOn;
+          return makeInstance(patch);
+        }, false);
+      }
+
       if (statesSlot && states.length > 0) {
         clearChildren(statesSlot);
         if (lowerSetName === "switch" || lowerSetName === "checkbox" || lowerSetName === "radio") {
@@ -3519,11 +3584,23 @@ async function cleanupExistingComponents(page, requestedSet) {
     var children = p.children;
     for (var i = children.length - 1; i >= 0; i--) {
       var child = children[i];
+      var childNormalizedName = normalizeComponentKey(child.name);
       if (child.type === "COMPONENT_SET") {
         var componentKey = resolveManagedComponentKeyFromName(child.name);
         if (componentKey && (!requestedSet || requestedSet[componentKey])) {
           child.remove();
+          continue;
         }
+      }
+      // Legacy cleanup: older Tabs exports could leave a stray top-level component/set named
+      // "Disabled" in Assets. It should not be published as its own component.
+      if (
+        (child.type === "COMPONENT_SET" || child.type === "COMPONENT") &&
+        childNormalizedName === "disabled" &&
+        (!requestedSet || requestedSet.tabs)
+      ) {
+        child.remove();
+        continue;
       }
       // Also clean up standalone components from failed previous runs
       if (child.type === "COMPONENT" && (
@@ -9262,6 +9339,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
+    var visualVariant = tabsVisualVariant(variant);
     var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
 
     for (var oi = 0; oi < orientations.length; oi++) {
@@ -9310,7 +9388,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               list.paddingTop = 0;
               list.paddingBottom = 0;
               list.fills = variant === "default" ? [] : [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-              list.strokes = variant === "pills" ? [] : [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+              list.strokes = visualVariant === "pills" ? [] : [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
               list.strokeAlign = "INSIDE";
               list.clipsContent = false;
               var radiusVar = rad === "default"
@@ -9320,7 +9398,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               if (variant !== "default") {
                 bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
               }
-              if (variant !== "pills") {
+              if (visualVariant !== "pills") {
                 bindPaintVar(list, "strokes", 0, varMap["tabs/" + variant + "-list-border"]);
               }
               if (variant === "default") {
@@ -9333,7 +9411,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 } else {
                   bindVar(list, "strokeRightWeight", varMap["tabs/list-border-width"]);
                 }
-              } else if (variant === "pills") {
+              } else if (visualVariant === "pills") {
                 list.strokeWeight = 0;
               } else {
                 bindVar(list, "strokeWeight", varMap["tabs/list-border-width"]);
@@ -9453,12 +9531,12 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                     : varMap["tabs/tab-border-width"];
                   bindVar(tab, "strokeWeight", tabBorderWidthVar);
                   bindPaintVar(tab, "strokes", 0, varMap[tabBorderPath]);
-                  if (variant === "pills" && orientation === "horizontal" && visualState === "active") {
+                  if (visualVariant === "pills" && orientation === "horizontal" && visualState === "active") {
                     tab.strokeBottomWeight = 0;
                   }
-                  if (variant === "pills" && orientation === "horizontal" && ti > 0) {
+                  if (visualVariant === "pills" && orientation === "horizontal" && ti > 0) {
                     tab.strokeLeftWeight = 0;
-                  } else if (variant === "pills" && orientation === "vertical" && ti > 0) {
+                  } else if (visualVariant === "pills" && orientation === "vertical" && ti > 0) {
                     tab.strokeTopWeight = 0;
                   }
                 }
@@ -9622,6 +9700,12 @@ function tabsTabColorPath(variant, property, state) {
   var base = "tabs/" + variant + "-tab-" + property;
   if (state === "default") return base;
   return base + "-" + state;
+}
+
+function tabsVisualVariant(variant) {
+  if (variant === "outlined") return "pills";
+  if (variant === "pills") return "outlined";
+  return variant;
 }
 
 async function findTabsIconComponents() {

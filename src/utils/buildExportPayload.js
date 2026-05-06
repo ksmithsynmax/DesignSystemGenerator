@@ -376,6 +376,25 @@ export function buildExportPayload(brands, options) {
       });
     });
 
+    // Tabs variant swap: keep variant names, swap outlined/pills values.
+    // This lets "Outlined" use pill visuals while binding to tabs/outlined-* vars (and vice versa).
+    const componentVars = out[brandId].components;
+    const componentKeys = Object.keys(componentVars);
+    const swapSuffixes = new Set();
+    componentKeys.forEach((path) => {
+      if (path.startsWith("tabs/outlined-")) swapSuffixes.add(path.slice("tabs/outlined-".length));
+      if (path.startsWith("tabs/pills-")) swapSuffixes.add(path.slice("tabs/pills-".length));
+    });
+    swapSuffixes.forEach((suffix) => {
+      const outlinedPath = `tabs/outlined-${suffix}`;
+      const pillsPath = `tabs/pills-${suffix}`;
+      const outlinedDef = componentVars[outlinedPath];
+      const pillsDef = componentVars[pillsPath];
+      if (!outlinedDef || !pillsDef) return;
+      componentVars[outlinedPath] = pillsDef;
+      componentVars[pillsPath] = outlinedDef;
+    });
+
     // Serializable multi-stop gradients for Figma paint styles (plugin); not used for COLOR variables.
     const gradientExports = {};
     const gradientSource =

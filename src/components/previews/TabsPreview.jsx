@@ -25,6 +25,12 @@ function weightToCss(weight, isActive) {
   return 500;
 }
 
+function resolveTabsStyleVariant(variant) {
+  if (variant === "outlined") return "pills";
+  if (variant === "pills") return "outlined";
+  return variant;
+}
+
 export default function TabsPreview({
   brands,
   brandId,
@@ -40,9 +46,10 @@ export default function TabsPreview({
   const [activeTab, setActiveTab] = useState("details");
   const currentTab = interactive ? activeTab : "details";
   const tokens = COMPONENT_TOKENS.tabs;
-  const prefix = `tabs-${variant}`;
-  const isDefaultVariant = variant === "default";
-  const isPillsVariant = variant === "pills";
+  const styleVariant = resolveTabsStyleVariant(variant);
+  const prefix = `tabs-${styleVariant}`;
+  const isDefaultVariant = styleVariant === "default";
+  const isPillsVariant = styleVariant === "pills";
 
   const listBg = isDefaultVariant ? "transparent" : getColor(brands, brandId, `${prefix}-list-background`, tokens);
   const listBorder = getColor(brands, brandId, `${prefix}-list-border`, tokens);

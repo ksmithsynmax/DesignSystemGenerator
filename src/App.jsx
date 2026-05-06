@@ -962,6 +962,10 @@ export default function App() {
 
   // Parse forced state/checked/variant from the active token card
   const INTERACTIVE_STATES = ["active", "hover", "focus", "pressed", "disabled", "error", "visited"];
+  const mapTabsTokenVariant = (variantName) =>
+    variantName === "outlined" ? "pills" : variantName === "pills" ? "outlined" : variantName;
+  const fromTabsTokenVariant = (variantName) =>
+    variantName === "outlined" ? "pills" : variantName === "pills" ? "outlined" : variantName;
   let forcedState = null;
   let forcedChecked = null;
   let forcedIndeterminate = false;
@@ -998,10 +1002,12 @@ export default function App() {
         select: ["default", "filled"],
       };
       if (knownVariants[activeComponent]?.includes(variantSegment)) {
-        forcedVariant = variantSegment;
+        forcedVariant = activeComponent === "tabs" ? fromTabsTokenVariant(variantSegment) : variantSegment;
       }
     }
   }
+
+  const activeTabsTokenVariant = mapTabsTokenVariant(activeVariant);
 
   const effectiveComponentState =
     activeComponent === "button"
@@ -1288,7 +1294,11 @@ export default function App() {
       || activeComponent === "alert"
     ) {
       if (!variants.includes(variantSegment)) return true;
-      if (variantSegment !== activeVariant) return false;
+      if (activeComponent === "tabs") {
+        if (variantSegment !== activeTabsTokenVariant) return false;
+      } else if (variantSegment !== activeVariant) {
+        return false;
+      }
       const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
         ? parts[parts.length - 1]
         : "default";
@@ -1316,16 +1326,16 @@ export default function App() {
     }
     if (token === "tabs-radius") return activeVariant !== "default" && activeTabsRadius !== "default";
     const radiusMatch = token.match(/^tabs-(default|outlined|pills)-radius-default$/);
-    if (radiusMatch) return radiusMatch[1] === activeVariant;
+    if (radiusMatch) return radiusMatch[1] === activeTabsTokenVariant;
     const listPaddingMatch = token.match(/^tabs-(default|outlined|pills)-list-padding$/);
-    if (listPaddingMatch) return listPaddingMatch[1] === activeVariant;
+    if (listPaddingMatch) return listPaddingMatch[1] === activeTabsTokenVariant;
     const tabPadXMatch = token.match(/^tabs-(default|outlined|pills)-tab-padding-x$/);
-    if (tabPadXMatch) return tabPadXMatch[1] === activeVariant;
+    if (tabPadXMatch) return tabPadXMatch[1] === activeTabsTokenVariant;
     const tabPadYMatch = token.match(/^tabs-(default|outlined|pills)-tab-padding-y$/);
-    if (tabPadYMatch) return tabPadYMatch[1] === activeVariant;
+    if (tabPadYMatch) return tabPadYMatch[1] === activeTabsTokenVariant;
     const match = token.match(/^tabs-(default|outlined|pills)-list-gap$/);
     if (!match) return true;
-    return match[1] === activeVariant;
+    return match[1] === activeTabsTokenVariant;
   });
 
   useEffect(() => {
@@ -1346,10 +1356,12 @@ export default function App() {
     };
     const variants = variantsByComponent[activeComponent];
     if (!variants) return;
-    if (variants.includes(variantSegment) && variantSegment !== activeVariant) {
+    const expectedVariantSegment =
+      activeComponent === "tabs" ? activeTabsTokenVariant : activeVariant;
+    if (variants.includes(variantSegment) && variantSegment !== expectedVariantSegment) {
       setActiveColorToken(null);
     }
-  }, [activeComponent, activeColorToken, activeVariant]);
+  }, [activeComponent, activeColorToken, activeVariant, activeTabsTokenVariant]);
 
   useEffect(() => {
     if (!activeDimensionToken) return;
@@ -1394,10 +1406,10 @@ export default function App() {
       /^tabs-(default|outlined|pills)-(list-gap|list-padding|tab-padding-x|tab-padding-y|radius-default)$/,
     );
     if (!match) return;
-    if (match[1] !== activeVariant) {
+    if (match[1] !== activeTabsTokenVariant) {
       setActiveDimensionToken(null);
     }
-  }, [activeBadgeRadius, activeChipRadius, activeComponent, activeDimensionToken, activeVariant, activeTabsRadius, dimensionTokens]);
+  }, [activeBadgeRadius, activeChipRadius, activeComponent, activeDimensionToken, activeVariant, activeTabsRadius, dimensionTokens, activeTabsTokenVariant]);
 
   const tabStyle = (t) => ({
     background: activeTab === t ? "#25262B" : "transparent",
