@@ -2149,6 +2149,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateLeftSlot = getTemplateSlot(templatedDoc, slug, "icons-left");
       var templateRightSlot = getTemplateSlot(templatedDoc, slug, "icons-right");
       var templateBothSlot = getTemplateSlot(templatedDoc, slug, "icons-both");
+      var templateOverflowDefaultSlot = null;
+      var templateOverflowOutlinedSlot = null;
       if (hasIcons && !templateBothSlot) {
         var templateBothIconsBlock = createStack("icons-both-block", 8);
         appendText(templateBothIconsBlock, titleFont, "Both Icons", 18, DOC_COLORS.panelHeading, "Both Icons Heading", "title");
@@ -2166,6 +2168,22 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         }
         if (!insertedAfterRight) templatedDoc.appendChild(templateBothIconsBlock);
       }
+      if (lowerSetName === "tabs") {
+        templatedDoc.appendChild(createSectionHeader("Overflow Controls", "Arrow and menu controls used for overflow tabs.", DOC_COLORS.subtitle));
+        var templateOverflowDefaultBlock = createStack("overflow-default-block", 8);
+        appendText(templateOverflowDefaultBlock, titleFont, "Default", 18, DOC_COLORS.panelHeading, "Overflow Default Heading", "title");
+        templateOverflowDefaultSlot = createPanel("slot:" + slug + ":overflow-default", 10);
+        templateOverflowDefaultSlot.resize(1192, templateOverflowDefaultSlot.height);
+        templateOverflowDefaultBlock.appendChild(templateOverflowDefaultSlot);
+        templatedDoc.appendChild(templateOverflowDefaultBlock);
+
+        var templateOverflowOutlinedBlock = createStack("overflow-outlined-block", 8);
+        appendText(templateOverflowOutlinedBlock, titleFont, "Outlined", 18, DOC_COLORS.panelHeading, "Overflow Outlined Heading", "title");
+        templateOverflowOutlinedSlot = createPanel("slot:" + slug + ":overflow-outlined", 10);
+        templateOverflowOutlinedSlot.resize(1192, templateOverflowOutlinedSlot.height);
+        templateOverflowOutlinedBlock.appendChild(templateOverflowOutlinedSlot);
+        templatedDoc.appendChild(templateOverflowOutlinedBlock);
+      }
 
       var templateVariantKey = getPropKey(variantProps, variantPropName);
       var templateStateKey = getPropKey(variantProps, "State");
@@ -2175,6 +2193,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateCheckedKey = getPropKey(variantProps, "Checked");
       var templateLeftIconKey = getPropKey(variantProps, "LeftIcon");
       var templateRightIconKey = getPropKey(variantProps, "RightIcon");
+      var templateLeftArrowKey = getPropKey(variantProps, "LeftArrow");
+      var templateRightArrowKey = getPropKey(variantProps, "RightArrow");
+      var templateMenuKey = getPropKey(variantProps, "Menu");
 
       var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Oval", "Bars", "Dots"];
       var templateVariantLimit = lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3);
@@ -2244,12 +2265,21 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       var templateLeftValues = templateLeftIconKey ? getPropValues(variantProps, templateLeftIconKey) : [];
       var templateRightValues = templateRightIconKey ? getPropValues(variantProps, templateRightIconKey) : [];
+      var templateLeftArrowValues = templateLeftArrowKey ? getPropValues(variantProps, templateLeftArrowKey) : [];
+      var templateRightArrowValues = templateRightArrowKey ? getPropValues(variantProps, templateRightArrowKey) : [];
+      var templateMenuValues = templateMenuKey ? getPropValues(variantProps, templateMenuKey) : [];
       var templateSectionValues = templateSectionKey ? getPropValues(variantProps, templateSectionKey) : [];
       var templateCheckedValues = templateCheckedKey ? getPropValues(variantProps, templateCheckedKey) : [];
       var templateLeftOn = templateLeftValues.indexOf("On") >= 0 ? "On" : (templateLeftValues.indexOf("True") >= 0 ? "True" : (templateLeftValues[0] || null));
       var templateLeftOff = templateLeftValues.indexOf("Off") >= 0 ? "Off" : (templateLeftValues.indexOf("False") >= 0 ? "False" : (templateLeftValues[0] || null));
       var templateRightOn = templateRightValues.indexOf("On") >= 0 ? "On" : (templateRightValues.indexOf("True") >= 0 ? "True" : (templateRightValues[0] || null));
       var templateRightOff = templateRightValues.indexOf("Off") >= 0 ? "Off" : (templateRightValues.indexOf("False") >= 0 ? "False" : (templateRightValues[0] || null));
+      var templateLeftArrowOn = templateLeftArrowValues.indexOf("On") >= 0 ? "On" : (templateLeftArrowValues.indexOf("True") >= 0 ? "True" : (templateLeftArrowValues[0] || null));
+      var templateLeftArrowOff = templateLeftArrowValues.indexOf("Off") >= 0 ? "Off" : (templateLeftArrowValues.indexOf("False") >= 0 ? "False" : (templateLeftArrowValues[0] || null));
+      var templateRightArrowOn = templateRightArrowValues.indexOf("On") >= 0 ? "On" : (templateRightArrowValues.indexOf("True") >= 0 ? "True" : (templateRightArrowValues[0] || null));
+      var templateRightArrowOff = templateRightArrowValues.indexOf("Off") >= 0 ? "Off" : (templateRightArrowValues.indexOf("False") >= 0 ? "False" : (templateRightArrowValues[0] || null));
+      var templateMenuOn = templateMenuValues.indexOf("On") >= 0 ? "On" : (templateMenuValues.indexOf("True") >= 0 ? "True" : (templateMenuValues[0] || null));
+      var templateMenuOff = templateMenuValues.indexOf("Off") >= 0 ? "Off" : (templateMenuValues.indexOf("False") >= 0 ? "False" : (templateMenuValues[0] || null));
       var templateSectionOff = templateSectionValues.indexOf("Off") >= 0
         ? "Off"
         : (templateSectionValues.indexOf("False") >= 0 ? "False" : (templateSectionValues[0] || null));
@@ -2287,6 +2317,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (templateCheckedKey && templateCheckedOff != null) props[templateCheckedKey] = templateCheckedOff;
           if (templateLeftIconKey && templateLeftOff != null) props[templateLeftIconKey] = templateLeftOff;
           if (templateRightIconKey && templateRightOff != null) props[templateRightIconKey] = templateRightOff;
+          if (templateLeftArrowKey && templateLeftArrowOff != null) props[templateLeftArrowKey] = templateLeftArrowOff;
+          if (templateRightArrowKey && templateRightArrowOff != null) props[templateRightArrowKey] = templateRightArrowOff;
+          if (templateMenuKey && templateMenuOff != null) props[templateMenuKey] = templateMenuOff;
           var patchKeys = Object.keys(propPatch || {});
           for (var p = 0; p < patchKeys.length; p++) {
             var userKey = patchKeys[p];
@@ -2373,7 +2406,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 false,
                 lowerSetName === "card"
                   ? { itemsPerRow: 3 }
-                  : (lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null)
+                  : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null)
               );
               templateVariantSection.appendChild(templateVariantStatesPanel);
             }
@@ -2614,7 +2647,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               return makeTemplateInstance({ State: stateName });
             }, false, lowerSetName === "card"
               ? { itemsPerRow: 3 }
-              : (lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null));
+              : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null));
           }
         } else if (!hasStates) {
           removeSectionOrSlot(templatedDoc, slug, "states");
@@ -2689,6 +2722,45 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           }, false);
         } else if (!hasIcons) {
           removeSectionOrSlot(templatedDoc, slug, "icons-right");
+        }
+
+        if (lowerSetName === "tabs" && (templateOverflowDefaultSlot || templateOverflowOutlinedSlot)) {
+          if (templateOverflowDefaultSlot) clearChildren(templateOverflowDefaultSlot);
+          if (templateOverflowOutlinedSlot) clearChildren(templateOverflowOutlinedSlot);
+          var templateOverflowDefaultVariant = null;
+          var templateOverflowOutlinedVariant = null;
+          for (var tovi = 0; tovi < templateOrderedVariants.length; tovi++) {
+            var vLabel = String(templateOrderedVariants[tovi] || "").toLowerCase();
+            if (vLabel === "default" && templateOverflowDefaultVariant == null) templateOverflowDefaultVariant = templateOrderedVariants[tovi];
+            if (vLabel === "outlined" && templateOverflowOutlinedVariant == null) templateOverflowOutlinedVariant = templateOrderedVariants[tovi];
+          }
+          if (templateOverflowDefaultVariant == null && templateDefaultVariant != null) templateOverflowDefaultVariant = templateDefaultVariant;
+          if (templateOverflowOutlinedVariant == null) templateOverflowOutlinedVariant = templateOverflowDefaultVariant;
+          function makeOverflowTemplatePatch(variantName) {
+            var patch = {};
+            if (templateVariantKey && variantName != null) patch[variantPropName] = variantName;
+            if (templateRadiusKey && templateDefaultRadius != null) patch.Radius = templateDefaultRadius;
+            if (templateLeftArrowKey && templateLeftArrowOn != null) patch[templateLeftArrowKey] = templateLeftArrowOn;
+            if (templateRightArrowKey && templateRightArrowOn != null) patch[templateRightArrowKey] = templateRightArrowOn;
+            if (
+              templateMenuKey &&
+              templateMenuOn != null &&
+              String(variantName || "").toLowerCase() === "outlined"
+            ) {
+              patch[templateMenuKey] = templateMenuOn;
+            }
+            return patch;
+          }
+          if (templateOverflowDefaultSlot && templateOverflowDefaultVariant != null) {
+            addInstancesRow(templateOverflowDefaultSlot, "Overflow Controls", [templateOverflowDefaultVariant], function () {
+              return makeTemplateInstance(makeOverflowTemplatePatch(templateOverflowDefaultVariant));
+            }, false);
+          }
+          if (templateOverflowOutlinedSlot && templateOverflowOutlinedVariant != null) {
+            addInstancesRow(templateOverflowOutlinedSlot, "Overflow Controls", [templateOverflowOutlinedVariant], function () {
+              return makeTemplateInstance(makeOverflowTemplatePatch(templateOverflowOutlinedVariant));
+            }, false);
+          }
         }
 
         if (
@@ -2921,6 +2993,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var leftSlot = null;
     var rightSlot = null;
     var bothSlot = null;
+    var overflowDefaultSlot = null;
+    var overflowOutlinedSlot = null;
     if (hasIcons) {
       doc.appendChild(createSectionHeader("With Icons", "Examples with optional icon placements.", DOC_COLORS.panelBody));
       var leftIconsBlock = createStack("icons-left-block", 8);
@@ -2944,6 +3018,22 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       bothIconsBlock.appendChild(bothSlot);
       doc.appendChild(bothIconsBlock);
     }
+    if (lowerSetName === "tabs") {
+      doc.appendChild(createSectionHeader("Overflow Controls", "Arrow and menu controls used for overflow tabs.", DOC_COLORS.subtitle));
+      var overflowDefaultBlock = createStack("overflow-default-block", 8);
+      appendText(overflowDefaultBlock, titleFont, "Default", 18, DOC_COLORS.panelHeading, "Overflow Default Heading", "title");
+      overflowDefaultSlot = createPanel("slot:" + slug + ":overflow-default", 10);
+      overflowDefaultSlot.resize(1192, overflowDefaultSlot.height);
+      overflowDefaultBlock.appendChild(overflowDefaultSlot);
+      doc.appendChild(overflowDefaultBlock);
+
+      var overflowOutlinedBlock = createStack("overflow-outlined-block", 8);
+      appendText(overflowOutlinedBlock, titleFont, "Outlined", 18, DOC_COLORS.panelHeading, "Overflow Outlined Heading", "title");
+      overflowOutlinedSlot = createPanel("slot:" + slug + ":overflow-outlined", 10);
+      overflowOutlinedSlot.resize(1192, overflowOutlinedSlot.height);
+      overflowOutlinedBlock.appendChild(overflowOutlinedSlot);
+      doc.appendChild(overflowOutlinedBlock);
+    }
 
     if (set.type === "COMPONENT_SET" || set.type === "COMPONENT") {
       var baseComponent = resolveBaseComponent(set);
@@ -2963,6 +3053,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var checkedKey = getPropKey(variantProps, "Checked");
       var leftIconKey = getPropKey(variantProps, "LeftIcon");
       var rightIconKey = getPropKey(variantProps, "RightIcon");
+      var leftArrowKey = getPropKey(variantProps, "LeftArrow");
+      var rightArrowKey = getPropKey(variantProps, "RightArrow");
+      var menuKey = getPropKey(variantProps, "Menu");
       var colorKey = getPropKey(variantProps, "Color");
 
       var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills"];
@@ -3032,12 +3125,21 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       var leftValues = leftIconKey ? getPropValues(variantProps, leftIconKey) : [];
       var rightValues = rightIconKey ? getPropValues(variantProps, rightIconKey) : [];
+      var leftArrowValues = leftArrowKey ? getPropValues(variantProps, leftArrowKey) : [];
+      var rightArrowValues = rightArrowKey ? getPropValues(variantProps, rightArrowKey) : [];
+      var menuValues = menuKey ? getPropValues(variantProps, menuKey) : [];
       var sectionValues = sectionKey ? getPropValues(variantProps, sectionKey) : [];
       var checkedValues = checkedKey ? getPropValues(variantProps, checkedKey) : [];
       var leftOn = leftValues.indexOf("On") >= 0 ? "On" : (leftValues.indexOf("True") >= 0 ? "True" : (leftValues[0] || null));
       var leftOff = leftValues.indexOf("Off") >= 0 ? "Off" : (leftValues.indexOf("False") >= 0 ? "False" : (leftValues[0] || null));
       var rightOn = rightValues.indexOf("On") >= 0 ? "On" : (rightValues.indexOf("True") >= 0 ? "True" : (rightValues[0] || null));
       var rightOff = rightValues.indexOf("Off") >= 0 ? "Off" : (rightValues.indexOf("False") >= 0 ? "False" : (rightValues[0] || null));
+      var leftArrowOn = leftArrowValues.indexOf("On") >= 0 ? "On" : (leftArrowValues.indexOf("True") >= 0 ? "True" : (leftArrowValues[0] || null));
+      var leftArrowOff = leftArrowValues.indexOf("Off") >= 0 ? "Off" : (leftArrowValues.indexOf("False") >= 0 ? "False" : (leftArrowValues[0] || null));
+      var rightArrowOn = rightArrowValues.indexOf("On") >= 0 ? "On" : (rightArrowValues.indexOf("True") >= 0 ? "True" : (rightArrowValues[0] || null));
+      var rightArrowOff = rightArrowValues.indexOf("Off") >= 0 ? "Off" : (rightArrowValues.indexOf("False") >= 0 ? "False" : (rightArrowValues[0] || null));
+      var menuOn = menuValues.indexOf("On") >= 0 ? "On" : (menuValues.indexOf("True") >= 0 ? "True" : (menuValues[0] || null));
+      var menuOff = menuValues.indexOf("Off") >= 0 ? "Off" : (menuValues.indexOf("False") >= 0 ? "False" : (menuValues[0] || null));
       var sectionOff = sectionValues.indexOf("Off") >= 0
         ? "Off"
         : (sectionValues.indexOf("False") >= 0 ? "False" : (sectionValues[0] || null));
@@ -3073,6 +3175,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         if (checkedKey && checkedOff != null) props[checkedKey] = checkedOff;
         if (leftIconKey && leftOff != null) props[leftIconKey] = leftOff;
         if (rightIconKey && rightOff != null) props[rightIconKey] = rightOff;
+        if (leftArrowKey && leftArrowOff != null) props[leftArrowKey] = leftArrowOff;
+        if (rightArrowKey && rightArrowOff != null) props[rightArrowKey] = rightArrowOff;
+        if (menuKey && menuOff != null) props[menuKey] = menuOff;
         var patchKeys = Object.keys(propPatch || {});
         for (var p = 0; p < patchKeys.length; p++) {
           var userKey = patchKeys[p];
@@ -3156,7 +3261,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               false,
               lowerSetName === "card"
                 ? { itemsPerRow: 3 }
-                : (lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null)
+                : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null)
             );
             variantSection.appendChild(variantStatesPanel);
           }
@@ -3290,6 +3395,45 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (leftIconKey && leftOff != null) patch[leftIconKey] = leftOff;
           return makeInstance(patch);
         }, false);
+      }
+
+      if (lowerSetName === "tabs" && (overflowDefaultSlot || overflowOutlinedSlot)) {
+        if (overflowDefaultSlot) clearChildren(overflowDefaultSlot);
+        if (overflowOutlinedSlot) clearChildren(overflowOutlinedSlot);
+        var overflowDefaultVariant = null;
+        var overflowOutlinedVariant = null;
+        for (var ovi = 0; ovi < orderedVariants.length; ovi++) {
+          var overflowVariantLabel = String(orderedVariants[ovi] || "").toLowerCase();
+          if (overflowVariantLabel === "default" && overflowDefaultVariant == null) overflowDefaultVariant = orderedVariants[ovi];
+          if (overflowVariantLabel === "outlined" && overflowOutlinedVariant == null) overflowOutlinedVariant = orderedVariants[ovi];
+        }
+        if (overflowDefaultVariant == null && defaultVariant != null) overflowDefaultVariant = defaultVariant;
+        if (overflowOutlinedVariant == null) overflowOutlinedVariant = overflowDefaultVariant;
+        function makeOverflowPatch(variantName) {
+          var patch = {};
+          if (variantKey && variantName != null) patch[variantPropName] = variantName;
+          if (radiusKey && defaultRadius != null) patch.Radius = defaultRadius;
+          if (leftArrowKey && leftArrowOn != null) patch[leftArrowKey] = leftArrowOn;
+          if (rightArrowKey && rightArrowOn != null) patch[rightArrowKey] = rightArrowOn;
+          if (
+            menuKey &&
+            menuOn != null &&
+            String(variantName || "").toLowerCase() === "outlined"
+          ) {
+            patch[menuKey] = menuOn;
+          }
+          return patch;
+        }
+        if (overflowDefaultSlot && overflowDefaultVariant != null) {
+          addInstancesRow(overflowDefaultSlot, "Overflow Controls", [overflowDefaultVariant], function () {
+            return makeInstance(makeOverflowPatch(overflowDefaultVariant));
+          }, false);
+        }
+        if (overflowOutlinedSlot && overflowOutlinedVariant != null) {
+          addInstancesRow(overflowOutlinedSlot, "Overflow Controls", [overflowOutlinedVariant], function () {
+            return makeInstance(makeOverflowPatch(overflowOutlinedVariant));
+          }, false);
+        }
       }
 
       if (
@@ -3431,7 +3575,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               return makeInstance({ State: stateName });
           }, false, lowerSetName === "card"
             ? { itemsPerRow: 3 }
-            : (lowerSetName === "tabs" ? { rowItemSpacing: 20 } : null));
+            : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null));
         }
       }
 
@@ -9424,6 +9568,10 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               for (var ri = 0; ri < radiiForVariant.length; ri++) {
                 var rad = radiiForVariant[ri];
                 var capRadius = rad === "default" ? "Default" : rad.toUpperCase();
+                var overflowControlsAllowed = rad === "default";
+                var effectiveShowLeftArrow = showLeftArrow && overflowControlsAllowed;
+                var effectiveShowRightArrow = showRightArrow && overflowControlsAllowed;
+                var effectiveShowMenu = showMenu && overflowControlsAllowed;
                 for (var si = 0; si < states.length; si++) {
                   var state = states[si];
                   var capState = state.charAt(0).toUpperCase() + state.slice(1);
@@ -9745,7 +9893,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               }
 
               var rootNode = list;
-              if (orientation === "horizontal" && (showLeftArrow || showRightArrow || showMenu)) {
+              if (orientation === "horizontal" && (effectiveShowLeftArrow || effectiveShowRightArrow || effectiveShowMenu)) {
                 var arrowsRow = figma.createFrame();
                 arrowsRow.name = "TabsWithArrows";
                 arrowsRow.layoutMode = "HORIZONTAL";
@@ -9760,7 +9908,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 try { arrowsRow.layoutSizingHorizontal = "HUG"; } catch (_tabsArrowsRowHugWidthErr) {}
                 try { arrowsRow.layoutSizingVertical = "HUG"; } catch (_tabsArrowsRowHugHeightErr) {}
 
-                if (showLeftArrow) {
+                if (effectiveShowLeftArrow) {
                   arrowsRow.appendChild(
                     createTabsOverflowControl({
                       kind: "left-arrow",
@@ -9789,7 +9937,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   viewport.appendChild(list);
 
                   var fadeHeight = Math.max(1, Math.round(list.height || 52));
-                  if (showLeftArrow) {
+                  if (effectiveShowLeftArrow) {
                     var leftFade = createTabsFadeCap({
                       side: "left",
                       variant: variant,
@@ -9802,7 +9950,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                     leftFade.x = 0;
                     leftFade.y = 0;
                   }
-                  if (showRightArrow || showMenu) {
+                  if (effectiveShowRightArrow || effectiveShowMenu) {
                     var rightFade = createTabsFadeCap({
                       side: "right",
                       variant: variant,
@@ -9819,7 +9967,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 }
 
                 arrowsRow.appendChild(centerNode);
-                if (showRightArrow) {
+                if (effectiveShowRightArrow) {
                   arrowsRow.appendChild(
                     createTabsOverflowControl({
                       kind: "right-arrow",
@@ -9830,7 +9978,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                     })
                   );
                 }
-                if (showMenu) {
+                if (effectiveShowMenu) {
                   arrowsRow.appendChild(
                     createTabsOverflowControl({
                       kind: "menu",
