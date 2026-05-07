@@ -990,6 +990,39 @@ function resolveManagedComponentKeyFromName(name) {
   return null;
 }
 
+function isLegacyTabsDisabledArtifact(node) {
+  if (!node || (node.type !== "COMPONENT" && node.type !== "COMPONENT_SET")) return false;
+  var normalized = normalizeComponentKey(node.name);
+  if (!normalized) return false;
+  var nameLooksLikeDisabledTabs =
+    normalized === "disabled" ||
+    normalized === "tabsdisabled" ||
+    normalized === "disabledtabs" ||
+    normalized.indexOf("tabsdisabled") === 0 ||
+    normalized.indexOf("disabledtabs") === 0;
+  if (!nameLooksLikeDisabledTabs) return false;
+  // Guard against removing unrelated components named "Disabled":
+  // require tabs-like structure/content.
+  try {
+    var hasTabsLikeLayer = false;
+    var hasTabText = false;
+    var desc = typeof node.findAll === "function"
+      ? node.findAll(function () { return true; })
+      : [];
+    for (var i = 0; i < desc.length; i++) {
+      var d = desc[i];
+      if (!hasTabsLikeLayer && typeof d.name === "string" && (d.name === "List" || d.name.indexOf("Tab/") === 0)) {
+        hasTabsLikeLayer = true;
+      }
+      if (!hasTabText && d.type === "TEXT" && typeof d.characters === "string" && d.characters.indexOf("Tab") >= 0) {
+        hasTabText = true;
+      }
+      if (hasTabsLikeLayer && hasTabText) return true;
+    }
+  } catch (_legacyTabsScanErr) {}
+  return false;
+}
+
 async function buildComponents(varMap, componentsToBuild, buildOptions, collectionsCtx) {
   var page = figma.currentPage;
   if (page && page.name === "Component Documentation") {
@@ -1194,6 +1227,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var tabsSet = await buildSet("Tabs", function () {
     return buildTabsComponentSet(varMap, page, font, tabsVariants);
   });
+  var tabsItemSet = await buildSet("Tabs Item", function () {
+    return buildTabsItemComponentSet(varMap, page, font, tabsVariants);
+  });
   var anchorSet = await buildSet("Anchor", function () {
     return buildAnchorComponentSet(varMap, page, font);
   });
@@ -1235,6 +1271,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     cardSet,
     actionIconSet,
     tabsSet,
+    tabsItemSet,
     anchorSet,
     titleSet,
     textSet,
@@ -3592,13 +3629,8 @@ async function cleanupExistingComponents(page, requestedSet) {
           continue;
         }
       }
-      // Legacy cleanup: older Tabs exports could leave a stray top-level component/set named
-      // "Disabled" in Assets. It should not be published as its own component.
-      if (
-        (child.type === "COMPONENT_SET" || child.type === "COMPONENT") &&
-        childNormalizedName === "disabled" &&
-        (!requestedSet || requestedSet.tabs)
-      ) {
+      // Legacy cleanup: older Tabs exports could leave stray top-level "Disabled" assets.
+      if (isLegacyTabsDisabledArtifact(child)) {
         child.remove();
         continue;
       }
@@ -9323,6 +9355,9 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
   var orientations = ["horizontal", "vertical"];
   var leftIconModes = ["off", "on"];
   var rightIconModes = ["off", "on"];
+  var leftArrowModes = ["off", "on"];
+  var rightArrowModes = ["off", "on"];
+  var menuModes = ["off", "on"];
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "disabled"];
   var components = [];
@@ -9336,6 +9371,9 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
   if (!iconComponents.image) progress("[Tabs] Warning: Image icon component not found on icons page");
   if (!iconComponents.message) progress("[Tabs] Warning: Message icon component not found on icons page");
   if (!iconComponents.settings) progress("[Tabs] Warning: Settings icon component not found on icons page");
+  if (!iconComponents.chevronLeft) progress("[Tabs] Warning: Left arrow icon component not found on icons page");
+  if (!iconComponents.chevronRight) progress("[Tabs] Warning: Right arrow icon component not found on icons page");
+  if (!iconComponents.menu) progress("[Tabs] Warning: Menu icon component not found on icons page");
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
@@ -9356,30 +9394,60 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
           var showRightIcon = rightIconMode === "on";
           var capRightIcon = showRightIcon ? "On" : "Off";
 
-          // Default tabs do not visually use corner radius, so avoid redundant radius variants.
-          var radiiForVariant = variant === "default" ? ["default"] : radii;
-          for (var ri = 0; ri < radiiForVariant.length; ri++) {
-            var rad = radiiForVariant[ri];
-            var capRadius = rad === "default" ? "Default" : rad.toUpperCase();
-            for (var si = 0; si < states.length; si++) {
-              var state = states[si];
-              var capState = state.charAt(0).toUpperCase() + state.slice(1);
+          var supportsArrowControls =
+            orientation === "horizontal" && (variant === "default" || variant === "outlined");
+          var leftArrowModesForVariant = supportsArrowControls
+            ? leftArrowModes
+            : ["off"];
+          var rightArrowModesForVariant = supportsArrowControls
+            ? rightArrowModes
+            : ["off"];
+          for (var lai = 0; lai < leftArrowModesForVariant.length; lai++) {
+            var leftArrowMode = leftArrowModesForVariant[lai];
+            var showLeftArrow = leftArrowMode === "on";
+            var capLeftArrow = showLeftArrow ? "On" : "Off";
+            for (var rai = 0; rai < rightArrowModesForVariant.length; rai++) {
+              var rightArrowMode = rightArrowModesForVariant[rai];
+              var showRightArrow = rightArrowMode === "on";
+              var capRightArrow = showRightArrow ? "On" : "Off";
+              var menuModesForVariant =
+                orientation === "horizontal" && variant === "outlined"
+                  ? menuModes
+                  : ["off"];
+              for (var mi = 0; mi < menuModesForVariant.length; mi++) {
+                var menuMode = menuModesForVariant[mi];
+                var showMenu = menuMode === "on";
+                var capMenu = showMenu ? "On" : "Off";
 
-              var comp = figma.createComponent();
-              comp.name = "Variant=" + capVariant + ", Orientation=" + capOrientation +
-                          ", LeftIcon=" + capLeftIcon + ", RightIcon=" + capRightIcon +
-                          ", Radius=" + capRadius + ", State=" + capState;
+              // Default tabs do not visually use corner radius, so avoid redundant radius variants.
+              var radiiForVariant = variant === "default" ? ["default"] : radii;
+              for (var ri = 0; ri < radiiForVariant.length; ri++) {
+                var rad = radiiForVariant[ri];
+                var capRadius = rad === "default" ? "Default" : rad.toUpperCase();
+                for (var si = 0; si < states.length; si++) {
+                  var state = states[si];
+                  var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+                  var comp = figma.createComponent();
+                  comp.name = "Variant=" + capVariant + ", Orientation=" + capOrientation +
+                              ", LeftIcon=" + capLeftIcon + ", RightIcon=" + capRightIcon +
+                              ", LeftArrow=" + capLeftArrow + ", RightArrow=" + capRightArrow +
+                              ", Menu=" + capMenu + ", Radius=" + capRadius + ", State=" + capState;
               comp.layoutMode = "VERTICAL";
               comp.primaryAxisSizingMode = "AUTO";
               comp.counterAxisSizingMode = "AUTO";
               comp.itemSpacing = 0;
               comp.fills = [];
+              comp.clipsContent = false;
+              try { comp.layoutSizingHorizontal = "HUG"; } catch (_tabsCompHugWidthErr) {}
+              try { comp.layoutSizingVertical = "HUG"; } catch (_tabsCompHugHeightErr) {}
 
               var list = figma.createFrame();
               list.name = "List";
               list.layoutMode = orientation === "horizontal" ? "HORIZONTAL" : "VERTICAL";
               list.primaryAxisSizingMode = "AUTO";
               list.counterAxisSizingMode = "AUTO";
+              list.layoutPositioning = "AUTO";
               list.primaryAxisAlignItems = "MIN";
               list.counterAxisAlignItems = "MIN";
               list.itemSpacing = 8;
@@ -9387,17 +9455,17 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               list.paddingRight = 0;
               list.paddingTop = 0;
               list.paddingBottom = 0;
-              list.fills = variant === "default" ? [] : [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              list.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
               list.strokes = visualVariant === "pills" ? [] : [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
               list.strokeAlign = "INSIDE";
               list.clipsContent = false;
+              try { list.layoutSizingHorizontal = "HUG"; } catch (_tabsListHugWidthErr) {}
+              try { list.layoutSizingVertical = "HUG"; } catch (_tabsListHugHeightErr) {}
               var radiusVar = rad === "default"
                 ? varMap["tabs/" + variant + "-radius-default"]
                 : varMap["tabs/radius-" + rad];
 
-              if (variant !== "default") {
-                bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
-              }
+              bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
               if (visualVariant !== "pills") {
                 bindPaintVar(list, "strokes", 0, varMap["tabs/" + variant + "-list-border"]);
               }
@@ -9447,6 +9515,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 tab.layoutMode = "HORIZONTAL";
                 tab.primaryAxisSizingMode = "AUTO";
                 tab.counterAxisSizingMode = "AUTO";
+                tab.layoutPositioning = "AUTO";
                 tab.primaryAxisAlignItems = "CENTER";
                 tab.counterAxisAlignItems = "CENTER";
                 tab.paddingLeft = 12;
@@ -9457,6 +9526,8 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 tab.strokes = variant === "default" ? [] : [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
                 tab.strokeAlign = "INSIDE";
                 tab.clipsContent = false;
+                try { tab.layoutSizingHorizontal = "HUG"; } catch (_tabsTabHugWidthErr) {}
+                try { tab.layoutSizingVertical = "HUG"; } catch (_tabsTabHugHeightErr) {}
                 var tabContent = tab;
 
                 if (variant === "default") {
@@ -9474,6 +9545,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   tabContent.layoutMode = "HORIZONTAL";
                   tabContent.primaryAxisSizingMode = "AUTO";
                   tabContent.counterAxisSizingMode = "AUTO";
+                  tabContent.layoutPositioning = "AUTO";
                   tabContent.primaryAxisAlignItems = "CENTER";
                   tabContent.counterAxisAlignItems = "CENTER";
                   tabContent.paddingLeft = 12;
@@ -9483,6 +9555,8 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   tabContent.fills = [];
                   tabContent.strokes = [];
                   tabContent.clipsContent = false;
+                  try { tabContent.layoutSizingHorizontal = "HUG"; } catch (_tabsContentHugWidthErr) {}
+                  try { tabContent.layoutSizingVertical = "HUG"; } catch (_tabsContentHugHeightErr) {}
 
                   bindVar(tabContent, "paddingLeft", varMap["tabs/" + variant + "-tab-padding-x"]);
                   bindVar(tabContent, "paddingRight", varMap["tabs/" + variant + "-tab-padding-x"]);
@@ -9531,6 +9605,19 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                     : varMap["tabs/tab-border-width"];
                   bindVar(tab, "strokeWeight", tabBorderWidthVar);
                   bindPaintVar(tab, "strokes", 0, varMap[tabBorderPath]);
+                  if (variant === "outlined" && orientation === "horizontal") {
+                    tab.strokeTopWeight = 1;
+                    bindVar(tab, "strokeTopWeight", tabBorderWidthVar);
+                    tab.strokeBottomWeight = visualState === "active" ? 0 : 1;
+                    if (visualState !== "active") {
+                      bindVar(tab, "strokeBottomWeight", tabBorderWidthVar);
+                    }
+                    tab.strokeLeftWeight = 0;
+                    tab.strokeRightWeight = ti === (tabDefs.length - 1) ? 0 : 1;
+                    if (ti !== (tabDefs.length - 1)) {
+                      bindVar(tab, "strokeRightWeight", tabBorderWidthVar);
+                    }
+                  }
                   if (visualVariant === "pills" && orientation === "horizontal" && visualState === "active") {
                     tab.strokeBottomWeight = 0;
                   }
@@ -9546,6 +9633,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   if (iconComp) {
                     var iconInst = iconComp.createInstance();
                     iconInst.name = "LeftIcon";
+                    iconInst.layoutPositioning = "AUTO";
                     iconInst.resize(16, 16);
                     bindVar(iconInst, "width", varMap["tabs/icon-size"]);
                     bindVar(iconInst, "height", varMap["tabs/icon-size"]);
@@ -9568,6 +9656,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
 
                 var labelNode = figma.createText();
                 labelNode.name = "Label";
+                labelNode.layoutPositioning = "AUTO";
                 labelNode.fontName = font;
                 labelNode.characters = tabDef.label;
                 labelNode.fontSize = 14;
@@ -9584,6 +9673,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   if (closeComp) {
                     var closeInst = closeComp.createInstance();
                     closeInst.name = "RightIcon";
+                    closeInst.layoutPositioning = "AUTO";
                     closeInst.resize(16, 16);
                     bindVar(closeInst, "width", varMap["tabs/icon-size"]);
                     bindVar(closeInst, "height", varMap["tabs/icon-size"]);
@@ -9610,6 +9700,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 if (variant === "default" && tabDef.active && (visualState === "active" || visualState === "hover" || visualState === "disabled")) {
                   var indicator = figma.createRectangle();
                   indicator.name = "ActiveIndicator";
+                  indicator.layoutPositioning = "AUTO";
                   indicator.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
                   indicator.strokes = [];
                   bindPaintVar(indicator, "fills", 0, varMap[tabBorderPath]);
@@ -9653,10 +9744,115 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 list.appendChild(tab);
               }
 
-              comp.appendChild(list);
+              var rootNode = list;
+              if (orientation === "horizontal" && (showLeftArrow || showRightArrow || showMenu)) {
+                var arrowsRow = figma.createFrame();
+                arrowsRow.name = "TabsWithArrows";
+                arrowsRow.layoutMode = "HORIZONTAL";
+                arrowsRow.primaryAxisSizingMode = "AUTO";
+                arrowsRow.counterAxisSizingMode = "AUTO";
+                arrowsRow.primaryAxisAlignItems = "MIN";
+                arrowsRow.counterAxisAlignItems = "MIN";
+                arrowsRow.itemSpacing = 0;
+                arrowsRow.fills = [];
+                arrowsRow.strokes = [];
+                arrowsRow.clipsContent = false;
+                try { arrowsRow.layoutSizingHorizontal = "HUG"; } catch (_tabsArrowsRowHugWidthErr) {}
+                try { arrowsRow.layoutSizingVertical = "HUG"; } catch (_tabsArrowsRowHugHeightErr) {}
+
+                if (showLeftArrow) {
+                  arrowsRow.appendChild(
+                    createTabsOverflowControl({
+                      kind: "left-arrow",
+                      variant: variant,
+                      state: state,
+                      iconComponents: iconComponents,
+                      varMap: varMap,
+                    })
+                  );
+                }
+                var centerNode = list;
+                if (variant === "outlined") {
+                  var viewport = figma.createFrame();
+                  viewport.name = "OverflowViewport";
+                  viewport.layoutMode = "HORIZONTAL";
+                  viewport.primaryAxisSizingMode = "AUTO";
+                  viewport.counterAxisSizingMode = "AUTO";
+                  viewport.primaryAxisAlignItems = "MIN";
+                  viewport.counterAxisAlignItems = "MIN";
+                  viewport.itemSpacing = 0;
+                  viewport.fills = [];
+                  viewport.strokes = [];
+                  viewport.clipsContent = true;
+                  try { viewport.layoutSizingHorizontal = "HUG"; } catch (_tabsViewportHugWidthErr) {}
+                  try { viewport.layoutSizingVertical = "HUG"; } catch (_tabsViewportHugHeightErr) {}
+                  viewport.appendChild(list);
+
+                  var fadeHeight = Math.max(1, Math.round(list.height || 52));
+                  if (showLeftArrow) {
+                    var leftFade = createTabsFadeCap({
+                      side: "left",
+                      variant: variant,
+                      state: state,
+                      height: fadeHeight,
+                      varMap: varMap,
+                    });
+                    viewport.appendChild(leftFade);
+                    leftFade.layoutPositioning = "ABSOLUTE";
+                    leftFade.x = 0;
+                    leftFade.y = 0;
+                  }
+                  if (showRightArrow || showMenu) {
+                    var rightFade = createTabsFadeCap({
+                      side: "right",
+                      variant: variant,
+                      state: state,
+                      height: fadeHeight,
+                      varMap: varMap,
+                    });
+                    viewport.appendChild(rightFade);
+                    rightFade.layoutPositioning = "ABSOLUTE";
+                    rightFade.x = Math.max(0, Math.round(list.width || 0) - Math.round(rightFade.width || 32));
+                    rightFade.y = 0;
+                  }
+                  centerNode = viewport;
+                }
+
+                arrowsRow.appendChild(centerNode);
+                if (showRightArrow) {
+                  arrowsRow.appendChild(
+                    createTabsOverflowControl({
+                      kind: "right-arrow",
+                      variant: variant,
+                      state: state,
+                      iconComponents: iconComponents,
+                      varMap: varMap,
+                    })
+                  );
+                }
+                if (showMenu) {
+                  arrowsRow.appendChild(
+                    createTabsOverflowControl({
+                      kind: "menu",
+                      side: "left",
+                      variant: variant,
+                      state: state,
+                      iconComponents: iconComponents,
+                      varMap: varMap,
+                    })
+                  );
+                }
+                rootNode = arrowsRow;
+              }
+
+              comp.appendChild(rootNode);
 
               page.appendChild(comp);
-              var colIndex = (((vi * orientations.length + oi) * leftIconModes.length + li) * rightIconModes.length) + rmi;
+              var colIndex =
+                ((((((vi * orientations.length + oi) * leftIconModes.length + li) * rightIconModes.length + rmi)
+                  * leftArrowModes.length + lai)
+                  * rightArrowModes.length + rai)
+                  * menuModes.length + mi);
               var rowIndex = ri * states.length + si;
               var renderedWidth = Math.ceil(nodeRenderedWidth(comp));
               var renderedHeight = Math.ceil(nodeRenderedHeight(comp));
@@ -9665,11 +9861,14 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               placements.push({ comp: comp, colIndex: colIndex, rowIndex: rowIndex });
               components.push(comp);
             }
+            }
           }
         }
       }
     }
   }
+  }
+}
 
   // Place variants using measured dimensions so larger token values do not overlap.
   var colOffsets = [];
@@ -9696,6 +9895,308 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
   return componentSet;
 }
 
+async function buildTabsItemComponentSet(varMap, page, font, selectedVariants) {
+  validateTabsVariables(varMap);
+
+  var variants = (selectedVariants && selectedVariants.length > 0)
+    ? selectedVariants.slice()
+    : ["default", "outlined", "pills"];
+  var orientations = ["horizontal", "vertical"];
+  var leftIconModes = ["off", "on"];
+  var rightIconModes = ["off", "on"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "active", "hover", "focus", "disabled"];
+  var components = [];
+
+  var gap = 24;
+  var placements = [];
+  var colWidths = [];
+  var rowHeights = [];
+
+  var iconComponents = await findTabsIconComponents();
+  if (!iconComponents.image) progress("[Tabs Item] Warning: Image icon component not found on icons page");
+  if (!iconComponents.close) progress("[Tabs Item] Warning: Close icon component not found on icons page");
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+
+    for (var oi = 0; oi < orientations.length; oi++) {
+      var orientation = orientations[oi];
+      var capOrientation = orientation.charAt(0).toUpperCase() + orientation.slice(1);
+
+      for (var li = 0; li < leftIconModes.length; li++) {
+        var leftIconMode = leftIconModes[li];
+        var showLeftIcon = leftIconMode === "on";
+        var capLeftIcon = showLeftIcon ? "On" : "Off";
+
+        for (var rmi = 0; rmi < rightIconModes.length; rmi++) {
+          var rightIconMode = rightIconModes[rmi];
+          var showRightIcon = rightIconMode === "on";
+          var capRightIcon = showRightIcon ? "On" : "Off";
+
+          var radiiForVariant = variant === "default" ? ["default"] : radii;
+          for (var ri = 0; ri < radiiForVariant.length; ri++) {
+            var rad = radiiForVariant[ri];
+            var capRadius = rad === "default" ? "Default" : rad.toUpperCase();
+            for (var si = 0; si < states.length; si++) {
+              var state = states[si];
+              var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+              var comp = figma.createComponent();
+              comp.name =
+                "Variant=" + capVariant +
+                ", Orientation=" + capOrientation +
+                ", LeftIcon=" + capLeftIcon +
+                ", RightIcon=" + capRightIcon +
+                ", Radius=" + capRadius +
+                ", State=" + capState;
+              comp.layoutMode = "HORIZONTAL";
+              comp.primaryAxisSizingMode = "AUTO";
+              comp.counterAxisSizingMode = "AUTO";
+              comp.layoutPositioning = "AUTO";
+              comp.primaryAxisAlignItems = "CENTER";
+              comp.counterAxisAlignItems = "CENTER";
+              comp.paddingLeft = 12;
+              comp.paddingRight = 12;
+              comp.paddingTop = 8;
+              comp.paddingBottom = 8;
+              comp.fills = variant === "default" ? [] : [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              comp.strokes = variant === "default" ? [] : [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+              comp.strokeAlign = "INSIDE";
+              comp.clipsContent = false;
+              try { comp.layoutSizingHorizontal = "HUG"; } catch (_tabsItemCompHugWidthErr) {}
+              try { comp.layoutSizingVertical = "HUG"; } catch (_tabsItemCompHugHeightErr) {}
+
+              var radiusVar = rad === "default"
+                ? varMap["tabs/" + variant + "-radius-default"]
+                : varMap["tabs/radius-" + rad];
+
+              var tabContent = comp;
+              if (variant === "default") {
+                comp.layoutMode = orientation === "horizontal" ? "VERTICAL" : "HORIZONTAL";
+                comp.primaryAxisAlignItems = "MIN";
+                comp.counterAxisAlignItems = "MIN";
+                comp.itemSpacing = 0;
+                comp.paddingLeft = 0;
+                comp.paddingRight = 0;
+                comp.paddingTop = 0;
+                comp.paddingBottom = 0;
+
+                tabContent = figma.createFrame();
+                tabContent.name = "Content";
+                tabContent.layoutMode = "HORIZONTAL";
+                tabContent.primaryAxisSizingMode = "AUTO";
+                tabContent.counterAxisSizingMode = "AUTO";
+                tabContent.layoutPositioning = "AUTO";
+                tabContent.primaryAxisAlignItems = "CENTER";
+                tabContent.counterAxisAlignItems = "CENTER";
+                tabContent.paddingLeft = 12;
+                tabContent.paddingRight = 12;
+                tabContent.paddingTop = 8;
+                tabContent.paddingBottom = 8;
+                tabContent.fills = [];
+                tabContent.strokes = [];
+                tabContent.clipsContent = false;
+                try { tabContent.layoutSizingHorizontal = "HUG"; } catch (_tabsItemContentHugWidthErr) {}
+                try { tabContent.layoutSizingVertical = "HUG"; } catch (_tabsItemContentHugHeightErr) {}
+
+                bindVar(tabContent, "paddingLeft", varMap["tabs/" + variant + "-tab-padding-x"]);
+                bindVar(tabContent, "paddingRight", varMap["tabs/" + variant + "-tab-padding-x"]);
+                bindVar(tabContent, "paddingTop", varMap["tabs/" + variant + "-tab-padding-y"]);
+                bindVar(tabContent, "paddingBottom", varMap["tabs/" + variant + "-tab-padding-y"]);
+
+                comp.appendChild(tabContent);
+              } else {
+                bindVar(comp, "paddingLeft", varMap["tabs/" + variant + "-tab-padding-x"]);
+                bindVar(comp, "paddingRight", varMap["tabs/" + variant + "-tab-padding-x"]);
+                bindVar(comp, "paddingTop", varMap["tabs/" + variant + "-tab-padding-y"]);
+                bindVar(comp, "paddingBottom", varMap["tabs/" + variant + "-tab-padding-y"]);
+              }
+
+              if (variant !== "default") {
+                bindVar(comp, "topLeftRadius", radiusVar);
+                bindVar(comp, "topRightRadius", radiusVar);
+                bindVar(comp, "bottomLeftRadius", radiusVar);
+                bindVar(comp, "bottomRightRadius", radiusVar);
+              }
+
+              var visualState = state === "focus" ? "active" : state;
+              var tabBgPath = tabsTabColorPath(variant, "background", visualState);
+              var tabTextPath = tabsTabColorPath(variant, "text", visualState);
+              var tabBorderPath = tabsTabColorPath(variant, "border", visualState);
+              var tabBorderWidthActiveVar =
+                varMap["tabs/" + variant + "-tab-border-width-active"] ||
+                varMap["tabs/tab-border-width-active"];
+
+              if (variant !== "default") {
+                bindPaintVar(comp, "fills", 0, varMap[tabBgPath]);
+              } else if (visualState === "active") {
+                tabContent.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(tabContent, "fills", 0, varMap[tabBgPath]);
+              }
+
+              if (variant !== "default") {
+                var tabBorderWidthVar = visualState === "active"
+                  ? tabBorderWidthActiveVar
+                  : varMap["tabs/tab-border-width"];
+                bindVar(comp, "strokeWeight", tabBorderWidthVar);
+                bindPaintVar(comp, "strokes", 0, varMap[tabBorderPath]);
+              }
+
+              if (showLeftIcon) {
+                var iconComp = iconComponents.image || iconComponents.message || iconComponents.settings || null;
+                if (iconComp) {
+                  var iconInst = iconComp.createInstance();
+                  iconInst.name = "LeftIcon";
+                  iconInst.layoutPositioning = "AUTO";
+                  iconInst.resize(16, 16);
+                  bindVar(iconInst, "width", varMap["tabs/icon-size"]);
+                  bindVar(iconInst, "height", varMap["tabs/icon-size"]);
+
+                  var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
+                  for (var vci = 0; vci < vectors.length; vci++) {
+                    bindVar(vectors[vci], "strokeWeight", varMap["tabs/icon-stroke-width"]);
+                    if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
+                      vectors[vci].strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                      bindPaintVar(vectors[vci], "strokes", 0, varMap[tabTextPath]);
+                    }
+                    if (vectors[vci].fills && vectors[vci].fills.length > 0) {
+                      vectors[vci].fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                      bindPaintVar(vectors[vci], "fills", 0, varMap[tabTextPath]);
+                    }
+                  }
+                  tabContent.appendChild(iconInst);
+                }
+              }
+
+              var labelNode = figma.createText();
+              labelNode.name = "Label";
+              labelNode.layoutPositioning = "AUTO";
+              labelNode.fontName = font;
+              labelNode.characters = "Tab";
+              labelNode.fontSize = 14;
+              labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              bindVar(labelNode, "fontSize", varMap["tabs/font-size"]);
+              bindVar(labelNode, "fontFamily", varMap["tabs/font-family"]);
+              bindVar(labelNode, "fontStyle", varMap["tabs/font-weight"]);
+              bindVar(labelNode, "lineHeight", varMap["tabs/line-height"]);
+              bindPaintVar(labelNode, "fills", 0, varMap[tabTextPath]);
+              tabContent.appendChild(labelNode);
+
+              if (showRightIcon) {
+                var closeComp = iconComponents.close || iconComponents.settings || iconComponents.message || null;
+                if (closeComp) {
+                  var closeInst = closeComp.createInstance();
+                  closeInst.name = "RightIcon";
+                  closeInst.layoutPositioning = "AUTO";
+                  closeInst.resize(16, 16);
+                  bindVar(closeInst, "width", varMap["tabs/icon-size"]);
+                  bindVar(closeInst, "height", varMap["tabs/icon-size"]);
+                  var closeVectors = closeInst.findAll(function(n) { return n.type === "VECTOR"; });
+                  for (var cvi = 0; cvi < closeVectors.length; cvi++) {
+                    bindVar(closeVectors[cvi], "strokeWeight", varMap["tabs/icon-stroke-width"]);
+                    if (closeVectors[cvi].strokes && closeVectors[cvi].strokes.length > 0) {
+                      closeVectors[cvi].strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                      bindPaintVar(closeVectors[cvi], "strokes", 0, varMap[tabTextPath]);
+                    }
+                    if (closeVectors[cvi].fills && closeVectors[cvi].fills.length > 0) {
+                      closeVectors[cvi].fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                      bindPaintVar(closeVectors[cvi], "fills", 0, varMap[tabTextPath]);
+                    }
+                  }
+                  tabContent.appendChild(closeInst);
+                }
+              }
+
+              if (showLeftIcon || showRightIcon) {
+                bindVar(tabContent, "itemSpacing", varMap["tabs/icon-gap"]);
+              }
+
+              if (variant === "default" && visualState === "active") {
+                var indicator = figma.createRectangle();
+                indicator.name = "ActiveIndicator";
+                indicator.layoutPositioning = "AUTO";
+                indicator.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                indicator.strokes = [];
+                bindPaintVar(indicator, "fills", 0, varMap[tabBorderPath]);
+                indicator.resize(1, 1);
+                indicator.layoutAlign = "STRETCH";
+                if (orientation === "horizontal") {
+                  bindVar(indicator, "height", tabBorderWidthActiveVar);
+                } else {
+                  bindVar(indicator, "width", tabBorderWidthActiveVar);
+                }
+                comp.appendChild(indicator);
+              }
+
+              if (state === "focus") {
+                var focusRing = figma.createRectangle();
+                focusRing.name = "FocusRing";
+                focusRing.fills = [];
+                focusRing.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.9 } }];
+                focusRing.strokeAlign = "INSIDE";
+                focusRing.strokeWeight = 2;
+                bindPaintVar(focusRing, "strokes", 0, varMap["tabs/focus-ring"]);
+                bindVar(focusRing, "strokeWeight", tabBorderWidthActiveVar);
+
+                if (variant !== "default") {
+                  bindVar(focusRing, "topLeftRadius", radiusVar);
+                  bindVar(focusRing, "topRightRadius", radiusVar);
+                  bindVar(focusRing, "bottomLeftRadius", radiusVar);
+                  bindVar(focusRing, "bottomRightRadius", radiusVar);
+                }
+
+                comp.appendChild(focusRing);
+                focusRing.layoutPositioning = "ABSOLUTE";
+                focusRing.x = 0;
+                focusRing.y = 0;
+                try {
+                  focusRing.resize(comp.width, comp.height);
+                } catch (_tabsItemFocusResizeErr) {}
+                focusRing.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+              }
+
+              page.appendChild(comp);
+              var colIndex = (((vi * orientations.length + oi) * leftIconModes.length + li) * rightIconModes.length) + rmi;
+              var rowIndex = ri * states.length + si;
+              var renderedWidth = Math.ceil(nodeRenderedWidth(comp));
+              var renderedHeight = Math.ceil(nodeRenderedHeight(comp));
+              colWidths[colIndex] = Math.max(colWidths[colIndex] || 0, renderedWidth);
+              rowHeights[rowIndex] = Math.max(rowHeights[rowIndex] || 0, renderedHeight);
+              placements.push({ comp: comp, colIndex: colIndex, rowIndex: rowIndex });
+              components.push(comp);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  var colOffsets = [];
+  var rowOffsets = [];
+  var xCursor = 0;
+  for (var c = 0; c < colWidths.length; c++) {
+    colOffsets[c] = xCursor;
+    xCursor += (colWidths[c] || 0) + gap;
+  }
+  var yCursor = 0;
+  for (var r = 0; r < rowHeights.length; r++) {
+    rowOffsets[r] = yCursor;
+    yCursor += (rowHeights[r] || 0) + gap;
+  }
+  for (var pi = 0; pi < placements.length; pi++) {
+    var placement = placements[pi];
+    placement.comp.x = colOffsets[placement.colIndex] || 0;
+    placement.comp.y = rowOffsets[placement.rowIndex] || 0;
+  }
+
+  progress("Created " + components.length + " tabs item variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Tabs Item";
+  return componentSet;
+}
+
 function tabsTabColorPath(variant, property, state) {
   var base = "tabs/" + variant + "-tab-" + property;
   if (state === "default") return base;
@@ -9708,8 +10209,265 @@ function tabsVisualVariant(variant) {
   return variant;
 }
 
+function createTabsOverflowControl(options) {
+  var kind = (options && options.kind) || "left-arrow";
+  var side = kind === "left-arrow" ? "left" : "right";
+  var variant = (options && options.variant) || "default";
+  var state = (options && options.state) || "default";
+  var iconComponents = (options && options.iconComponents) || {};
+  var varMap = (options && options.varMap) || {};
+
+  var control = figma.createFrame();
+  control.name = kind === "menu"
+    ? "MenuControl"
+    : (side === "left" ? "LeftArrowControl" : "RightArrowControl");
+  control.layoutMode = "HORIZONTAL";
+  control.primaryAxisSizingMode = "AUTO";
+  control.counterAxisSizingMode = "AUTO";
+  control.primaryAxisAlignItems = "CENTER";
+  control.counterAxisAlignItems = "CENTER";
+  control.paddingLeft = variant === "outlined" ? 16 : 4;
+  control.paddingRight = variant === "outlined" ? 16 : 4;
+  control.paddingTop = variant === "outlined" ? 18 : 11;
+  control.paddingBottom = variant === "outlined" ? 18 : 11;
+  control.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+  control.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+  control.strokeAlign = "INSIDE";
+  control.clipsContent = false;
+  try { control.layoutSizingHorizontal = "HUG"; } catch (_tabsArrowControlHugWidthErr) {}
+  try { control.layoutSizingVertical = "HUG"; } catch (_tabsArrowControlHugHeightErr) {}
+
+  var textPath = tabsOverflowColorPath(variant, "text", state);
+  var controlFillPath = tabsOverflowColorPath(variant, "background", state);
+  var controlBorderPath = tabsOverflowColorPath(variant, "border", state);
+  bindPaintVar(control, "fills", 0, varMap[controlFillPath]);
+  bindPaintVar(control, "strokes", 0, varMap[controlBorderPath]);
+  if (variant === "default") {
+    control.strokeTopWeight = 0;
+    control.strokeLeftWeight = 0;
+    control.strokeBottomWeight = 0;
+    control.strokeRightWeight = 0;
+    bindVar(control, "strokeBottomWeight", varMap["tabs/list-border-width"]);
+  } else {
+    control.strokeTopWeight = 1;
+    control.strokeBottomWeight = 1;
+    control.strokeLeftWeight = 1;
+    control.strokeRightWeight = 1;
+    bindVar(control, "strokeTopWeight", varMap["tabs/tab-border-width"]);
+    bindVar(control, "strokeBottomWeight", varMap["tabs/tab-border-width"]);
+    bindVar(control, "strokeLeftWeight", varMap["tabs/tab-border-width"]);
+    bindVar(control, "strokeRightWeight", varMap["tabs/tab-border-width"]);
+    if (kind === "left-arrow") {
+      // LeftArrowControl keeps full border in outlined overflow.
+    } else if (kind === "right-arrow") {
+      // RightArrowControl has no right border in outlined overflow.
+      control.strokeRightWeight = 0;
+    } else if (kind === "menu") {
+      // Menu keeps the full border from strokeWeight.
+    }
+  }
+
+  var iconSource = null;
+  if (kind === "menu") {
+    iconSource = iconComponents.menu || iconComponents.settings || iconComponents.close || null;
+  } else if (side === "left") {
+    iconSource = iconComponents.chevronLeft || iconComponents.message || iconComponents.settings || null;
+  } else {
+    iconSource = iconComponents.chevronRight || iconComponents.close || iconComponents.settings || null;
+  }
+  if (iconSource) {
+    var arrowInst = iconSource.createInstance();
+    arrowInst.name = kind === "menu"
+      ? "MenuIcon"
+      : (side === "left" ? "LeftArrowIcon" : "RightArrowIcon");
+    arrowInst.layoutPositioning = "AUTO";
+    try { arrowInst.resize(16, 16); } catch (_tabsArrowResizeErr) {}
+    bindVar(arrowInst, "width", varMap["tabs/icon-size"]);
+    bindVar(arrowInst, "height", varMap["tabs/icon-size"]);
+    var arrowVectors = arrowInst.findAll(function (n) { return n.type === "VECTOR"; });
+    for (var avi = 0; avi < arrowVectors.length; avi++) {
+      bindVar(arrowVectors[avi], "strokeWeight", varMap["tabs/icon-stroke-width"]);
+      if (arrowVectors[avi].strokes && arrowVectors[avi].strokes.length > 0) {
+        arrowVectors[avi].strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+        bindPaintVar(arrowVectors[avi], "strokes", 0, varMap[textPath]);
+      }
+      if (arrowVectors[avi].fills && arrowVectors[avi].fills.length > 0) {
+        arrowVectors[avi].fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+        bindPaintVar(arrowVectors[avi], "fills", 0, varMap[textPath]);
+      }
+    }
+    control.appendChild(arrowInst);
+  }
+
+  return control;
+}
+
+function createTabsFadeCap(options) {
+  var side = options && options.side === "left" ? "left" : "right";
+  var variant = (options && options.variant) || "outlined";
+  var state = (options && options.state) || "default";
+  var varMap = (options && options.varMap) || {};
+  var height = Math.max(1, Number((options && options.height) || 52));
+  var backgroundPath = tabsOverflowColorPath(variant, "background", state);
+  var baseRgb = state === "disabled"
+    ? { r: 166 / 255, g: 171 / 255, b: 183 / 255 } // #A6ABB7 per approved disabled fade spec
+    : resolveVariableSolidRgb(
+        varMap[backgroundPath],
+        { r: 0.141, g: 0.149, b: 0.235 },
+        { preferLightest: false }
+      );
+
+  var cap = figma.createRectangle();
+  cap.name = side === "left" ? "LeftFadeCap" : "RightFadeCap";
+  cap.resize(32, height);
+  cap.fills = [{
+    type: "GRADIENT_LINEAR",
+    gradientTransform: side === "left"
+      ? [[1, 0, 0], [0, 1, 0]]
+      : [[-1, 0, 1], [0, 1, 0]],
+    gradientStops: [
+      { position: 0, color: { r: baseRgb.r, g: baseRgb.g, b: baseRgb.b, a: 1 } },
+      { position: 0.890625, color: { r: baseRgb.r, g: baseRgb.g, b: baseRgb.b, a: 0.6 } },
+      { position: 1, color: { r: baseRgb.r, g: baseRgb.g, b: baseRgb.b, a: 0 } },
+    ],
+  }];
+  cap.strokes = [{ type: "SOLID", color: { r: 0.224, g: 0.235, b: 0.337 } }];
+  cap.strokeAlign = "INSIDE";
+  cap.strokeTopWeight = 1;
+  cap.strokeBottomWeight = 1;
+  cap.strokeLeftWeight = 0;
+  cap.strokeRightWeight = 0;
+  bindPaintVar(cap, "strokes", 0, varMap[tabsOverflowColorPath(variant, "border", state)]);
+  bindVar(cap, "strokeTopWeight", varMap["tabs/tab-border-width"]);
+  bindVar(cap, "strokeBottomWeight", varMap["tabs/tab-border-width"]);
+  return cap;
+}
+
+function tabsOverflowColorPath(variant, slot, state) {
+  var normalizedVariant = variant || "default";
+  var normalizedState = state || "default";
+  if (slot === "background") {
+    if (normalizedVariant === "default") return "tabs/default-list-background";
+    if (normalizedState === "disabled") return "tabs/" + normalizedVariant + "-tab-background-disabled";
+    return "tabs/" + normalizedVariant + "-tab-background";
+  }
+  if (slot === "border") {
+    if (normalizedVariant === "default") {
+      if (normalizedState === "disabled") return "tabs/default-tab-border-disabled";
+      return "tabs/default-list-border";
+    }
+    if (normalizedState === "disabled") return "tabs/" + normalizedVariant + "-tab-border-disabled";
+    return "tabs/" + normalizedVariant + "-tab-border";
+  }
+  if (slot === "text") {
+    if (normalizedState === "disabled") return "tabs/" + normalizedVariant + "-tab-text-disabled";
+    return "tabs/" + normalizedVariant + "-tab-text";
+  }
+  return "tabs/" + normalizedVariant + "-tab-" + slot;
+}
+
+function resolveVariableSolidRgb(variable, fallbackRgb, options) {
+  var fallback = fallbackRgb || { r: 0, g: 0, b: 0 };
+  var preferLightest = Boolean(options && options.preferLightest);
+  if (preferLightest && variable && variable.valuesByMode) {
+    var lightest = null;
+    var modeIdsAll = Object.keys(variable.valuesByMode);
+    var rootCollection = null;
+    try { rootCollection = figma.variables.getVariableCollectionById(variable.variableCollectionId); } catch (_rootCollectionErr) {}
+    for (var mi = 0; mi < modeIdsAll.length; mi++) {
+      var modeNameHint = null;
+      if (rootCollection && rootCollection.modes) {
+        for (var rmi = 0; rmi < rootCollection.modes.length; rmi++) {
+          if (rootCollection.modes[rmi].modeId === modeIdsAll[mi]) {
+            modeNameHint = rootCollection.modes[rmi].name;
+            break;
+          }
+        }
+      }
+      var rgbCandidate = resolveVariableSolidRgbForMode(variable, modeIdsAll[mi], 0, modeNameHint);
+      if (!rgbCandidate) continue;
+      var lum = rgbCandidate.r * 0.2126 + rgbCandidate.g * 0.7152 + rgbCandidate.b * 0.0722;
+      if (!lightest || lum > lightest.lum) lightest = { rgb: rgbCandidate, lum: lum };
+    }
+    if (lightest) return lightest.rgb;
+  }
+  var current = variable || null;
+  for (var depth = 0; depth < 4; depth++) {
+    if (!current || !current.valuesByMode) break;
+    var modeIds = Object.keys(current.valuesByMode);
+    if (!modeIds.length) break;
+    var preferredModeId = modeIds[0];
+    try {
+      var collection = figma.variables.getVariableCollectionById(current.variableCollectionId);
+      if (collection && collection.modes && collection.modes.length > 0) {
+        for (var mi = 0; mi < collection.modes.length; mi++) {
+          var modeName = String(collection.modes[mi].name || "").toLowerCase();
+          if (modeName.indexOf("light") >= 0 && current.valuesByMode[collection.modes[mi].modeId] != null) {
+            preferredModeId = collection.modes[mi].modeId;
+            break;
+          }
+        }
+      }
+    } catch (_resolveModeErr) {}
+    var value = current.valuesByMode[preferredModeId];
+    if (!value) break;
+    if (typeof value.r === "number" && typeof value.g === "number" && typeof value.b === "number") {
+      return { r: value.r, g: value.g, b: value.b };
+    }
+    if (value.type === "VARIABLE_ALIAS" && value.id) {
+      try {
+        current = figma.variables.getVariableById(value.id);
+        continue;
+      } catch (_aliasResolveErr) {
+        break;
+      }
+    }
+    break;
+  }
+  return fallback;
+}
+
+function resolveVariableSolidRgbForMode(variable, modeId, depth) {
+  if (!variable || !variable.valuesByMode || depth > 4) return null;
+  var modeNameHint = arguments.length > 3 ? arguments[3] : null;
+  var value = variable.valuesByMode[modeId];
+  if (value == null && modeNameHint) {
+    try {
+      var collection = figma.variables.getVariableCollectionById(variable.variableCollectionId);
+      if (collection && collection.modes) {
+        for (var cmi = 0; cmi < collection.modes.length; cmi++) {
+          var candidateName = String(collection.modes[cmi].name || "").toLowerCase();
+          if (candidateName === String(modeNameHint || "").toLowerCase()) {
+            value = variable.valuesByMode[collection.modes[cmi].modeId];
+            if (value != null) break;
+          }
+        }
+      }
+    } catch (_modeNameResolveErr) {}
+  }
+  if (value == null) {
+    var modeIds = Object.keys(variable.valuesByMode);
+    if (!modeIds.length) return null;
+    value = variable.valuesByMode[modeIds[0]];
+  }
+  if (!value) return null;
+  if (typeof value.r === "number" && typeof value.g === "number" && typeof value.b === "number") {
+    return { r: value.r, g: value.g, b: value.b };
+  }
+  if (value.type === "VARIABLE_ALIAS" && value.id) {
+    try {
+      var aliased = figma.variables.getVariableById(value.id);
+      if (!aliased) return null;
+      return resolveVariableSolidRgbForMode(aliased, modeId, depth + 1, modeNameHint);
+    } catch (_aliasResolveErr) {
+      return null;
+    }
+  }
+  return null;
+}
+
 async function findTabsIconComponents() {
-  var result = { image: null, message: null, settings: null, close: null };
+  var result = { image: null, message: null, settings: null, close: null, chevronLeft: null, chevronRight: null, menu: null };
   var iconCandidates = [];
   var iconsPage = null;
 
@@ -9755,6 +10513,15 @@ async function findTabsIconComponents() {
     if (!result.close && (name.indexOf("close") >= 0 || name.indexOf("x") >= 0 || name.indexOf("cancel") >= 0)) {
       result.close = iconCandidates[j];
     }
+    if (!result.chevronLeft && (name.indexOf("chevronleft") >= 0 || name.indexOf("arrowleft") >= 0 || name.indexOf("left") >= 0)) {
+      result.chevronLeft = iconCandidates[j];
+    }
+    if (!result.chevronRight && (name.indexOf("chevronright") >= 0 || name.indexOf("arrowright") >= 0 || name.indexOf("right") >= 0)) {
+      result.chevronRight = iconCandidates[j];
+    }
+    if (!result.menu && (name.indexOf("menu") >= 0 || name.indexOf("hamburger") >= 0 || name.indexOf("menu03") >= 0 || name.indexOf("more") >= 0)) {
+      result.menu = iconCandidates[j];
+    }
   }
 
   // Fallback: if naming does not match expected keywords, use first 3 components so LeftIcon=On always renders.
@@ -9767,11 +10534,17 @@ async function findTabsIconComponents() {
     if (!result.settings) result.settings = sorted[2];
     if (!result.close) result.close = sorted[3] || sorted[2];
   }
+  if (!result.chevronLeft) result.chevronLeft = result.image || result.message || result.settings || null;
+  if (!result.chevronRight) result.chevronRight = result.close || result.settings || result.message || null;
+  if (!result.menu) result.menu = result.settings || result.close || result.message || null;
 
   if (result.image) progress("[Tabs] LeftIcon image source: " + result.image.name);
   if (result.message) progress("[Tabs] LeftIcon message source: " + result.message.name);
   if (result.settings) progress("[Tabs] LeftIcon settings source: " + result.settings.name);
   if (result.close) progress("[Tabs] RightIcon close source: " + result.close.name);
+  if (result.chevronLeft) progress("[Tabs] LeftArrow source: " + result.chevronLeft.name);
+  if (result.chevronRight) progress("[Tabs] RightArrow source: " + result.chevronRight.name);
+  if (result.menu) progress("[Tabs] Menu source: " + result.menu.name);
 
   return result;
 }
@@ -9798,9 +10571,7 @@ function validateTabsVariables(varMap) {
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
     required.push("tabs/" + variant + "-radius-default");
-    if (variant !== "default") {
-      required.push("tabs/" + variant + "-list-background");
-    }
+    required.push("tabs/" + variant + "-list-background");
     required.push("tabs/" + variant + "-list-padding");
     required.push("tabs/" + variant + "-list-gap");
     required.push("tabs/" + variant + "-tab-padding-x");

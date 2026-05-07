@@ -51,7 +51,7 @@ export default function TabsPreview({
   const isDefaultVariant = styleVariant === "default";
   const isPillsVariant = styleVariant === "pills";
 
-  const listBg = isDefaultVariant ? "transparent" : getColor(brands, brandId, `${prefix}-list-background`, tokens);
+  const listBg = getColor(brands, brandId, `${prefix}-list-background`, tokens);
   const listBorder = getColor(brands, brandId, `${prefix}-list-border`, tokens);
   const tabBg = isDefaultVariant ? "transparent" : getColor(brands, brandId, `${prefix}-tab-background`, tokens);
   const tabBgHover = isDefaultVariant ? "transparent" : getColor(brands, brandId, `${prefix}-tab-background-hover`, tokens);
@@ -137,7 +137,7 @@ export default function TabsPreview({
     flexDirection: orientation === "vertical" ? "column" : "row",
     alignItems: "stretch",
     gap: `${listGap}px`,
-    backgroundColor: isDefaultVariant ? "transparent" : listBg,
+    backgroundColor: listBg,
     borderBottom:
       !isPillsVariant && orientation === "horizontal"
         ? `${listBorderWidth}px solid ${listBorder}`
