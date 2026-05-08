@@ -1341,7 +1341,12 @@ export default function App() {
       const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
         ? parts[parts.length - 1]
         : "default";
-      return tokenState === (effectiveComponentState || "default");
+      const targetState = effectiveComponentState || "default";
+      if (tokenState === targetState) return true;
+      if (activeComponent === "accordion" && tokenState === "default") {
+        return !Boolean(colorTokens[`${token}-${targetState}`]);
+      }
+      return false;
     }
 
     // Keep shared component tokens and only active variant tokens.

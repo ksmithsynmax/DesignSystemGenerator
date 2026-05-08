@@ -23,13 +23,13 @@ export default function AccordionPreview({
   const headerBorder = resolveColor(brands, brandId, tokens[key("header-border")]?.semantic, "light", key("header-border"));
   const headerText = resolveColor(brands, brandId, tokens[key("header-text")]?.semantic, "light", key("header-text"));
   const headerIcon = resolveColor(brands, brandId, tokens[key("header-icon")]?.semantic, "light", key("header-icon"));
-  const panelBackground = resolveColor(brands, brandId, tokens["accordion-panel-background"]?.semantic, "light", "accordion-panel-background");
-  const panelBorder = resolveColor(brands, brandId, tokens["accordion-panel-border"]?.semantic, "light", "accordion-panel-border");
-  const contentText = resolveColor(brands, brandId, tokens["accordion-content-text"]?.semantic, "light", "accordion-content-text");
+  const panelBackground = resolveColor(brands, brandId, tokens[key("panel-background")]?.semantic, "light", key("panel-background"));
+  const panelBorder = resolveColor(brands, brandId, tokens[key("panel-border")]?.semantic, "light", key("panel-border"));
+  const contentText = resolveColor(brands, brandId, tokens[key("content-text")]?.semantic, "light", key("content-text"));
   const focusRing = resolveColor(brands, brandId, tokens["accordion-focus-ring"]?.semantic, "light", "accordion-focus-ring");
 
   const borderWidth = resolveDimension(brands, brandId, "accordion-border-width") ?? 1;
-  const radius = resolveDimension(brands, brandId, "accordion-radius", "default") ?? 8;
+  const radius = resolveDimension(brands, brandId, `accordion-${variant}-radius`) ?? 8;
   const headerPaddingX = resolveDimension(brands, brandId, "accordion-header-padding-x") ?? 16;
   const headerPaddingY = resolveDimension(brands, brandId, "accordion-header-padding-y") ?? 12;
   const panelPaddingX = resolveDimension(brands, brandId, "accordion-panel-padding-x") ?? 16;
@@ -48,17 +48,23 @@ export default function AccordionPreview({
 
   const topRadius = position === "middle" || position === "last" ? 0 : radius;
   const bottomRadius = position === "middle" || position === "first" ? 0 : radius;
-  const disableBottomBorder = expanded && (position === "single" || position === "last");
+  const isDisabled = state === "disabled";
+  const isExpanded = isDisabled ? false : expanded;
+  const disableBottomBorder = isExpanded && (position === "single" || position === "last");
+  const defaultBottomOnly = variant === "default";
 
   return (
     <div
       style={{
         width: 520,
-        border: `${borderWidth}px solid ${headerBorder}`,
+        borderTop: defaultBottomOnly ? "none" : `${borderWidth}px solid ${headerBorder}`,
+        borderRight: defaultBottomOnly ? "none" : `${borderWidth}px solid ${headerBorder}`,
+        borderBottom: `${borderWidth}px solid ${headerBorder}`,
+        borderLeft: defaultBottomOnly ? "none" : `${borderWidth}px solid ${headerBorder}`,
         borderTopLeftRadius: topRadius,
         borderTopRightRadius: topRadius,
-        borderBottomLeftRadius: expanded ? 0 : bottomRadius,
-        borderBottomRightRadius: expanded ? 0 : bottomRadius,
+        borderBottomLeftRadius: isExpanded ? 0 : bottomRadius,
+        borderBottomRightRadius: isExpanded ? 0 : bottomRadius,
         overflow: "hidden",
         boxShadow: state === "focus" ? `0 0 0 2px ${focusRing}40` : "none",
         opacity: state === "disabled" ? 0.75 : 1,
@@ -72,7 +78,11 @@ export default function AccordionPreview({
           gap,
           padding: `${headerPaddingY}px ${headerPaddingX}px`,
           background: headerBackground,
-          borderBottom: expanded ? `${borderWidth}px solid ${panelBorder}` : disableBottomBorder ? "none" : `${borderWidth}px solid ${headerBorder}`,
+          borderBottom: isExpanded
+            ? `${borderWidth}px solid ${panelBorder}`
+            : defaultBottomOnly || disableBottomBorder
+              ? "none"
+              : `${borderWidth}px solid ${headerBorder}`,
         }}
       >
         <span
@@ -92,13 +102,13 @@ export default function AccordionPreview({
           strokeWidth={iconStrokeWidth}
           style={{
             color: headerIcon,
-            transform: expanded ? "rotate(180deg)" : "rotate(0deg)",
+            transform: isExpanded ? "rotate(180deg)" : "rotate(0deg)",
             transition: "transform 120ms ease",
             flexShrink: 0,
           }}
         />
       </div>
-      {expanded && (
+      {isExpanded && (
         <div
           style={{
             padding: `${panelPaddingY}px ${panelPaddingX}px`,

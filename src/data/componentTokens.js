@@ -340,10 +340,16 @@ export const COMPONENT_TOKENS = {
     "accordion-filled-header-border-focus": { type: "COLOR", semantic: "interactive-primary", figmaPath: "accordion/filled-header-border-focus" },
     "accordion-filled-header-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "accordion/filled-header-border-disabled" },
 
-    // ── SHARED COLOR TOKEN ──
-    "accordion-panel-background": { type: "COLOR", semantic: "surface-default", figmaPath: "accordion/panel-background" },
-    "accordion-panel-border": { type: "COLOR", semantic: "border-default", figmaPath: "accordion/panel-border" },
-    "accordion-content-text": { type: "COLOR", semantic: "text-subtle", figmaPath: "accordion/content-text" },
+    // ── PANEL/CONTENT COLORS BY VARIANT ──
+    "accordion-default-panel-background": { type: "COLOR", semantic: "surface-default", figmaPath: "accordion/default-panel-background" },
+    "accordion-default-panel-border": { type: "COLOR", semantic: "border-default", figmaPath: "accordion/default-panel-border" },
+    "accordion-default-content-text": { type: "COLOR", semantic: "text-subtle", figmaPath: "accordion/default-content-text" },
+    "accordion-contained-panel-background": { type: "COLOR", semantic: "surface-default", figmaPath: "accordion/contained-panel-background" },
+    "accordion-contained-panel-border": { type: "COLOR", semantic: "border-default", figmaPath: "accordion/contained-panel-border" },
+    "accordion-contained-content-text": { type: "COLOR", semantic: "text-subtle", figmaPath: "accordion/contained-content-text" },
+    "accordion-filled-panel-background": { type: "COLOR", semantic: "surface-default", figmaPath: "accordion/filled-panel-background" },
+    "accordion-filled-panel-border": { type: "COLOR", semantic: "border-default", figmaPath: "accordion/filled-panel-border" },
+    "accordion-filled-content-text": { type: "COLOR", semantic: "text-subtle", figmaPath: "accordion/filled-content-text" },
     "accordion-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "accordion/focus-ring" },
 
     // ── FLOAT TOKENS ──
@@ -353,7 +359,9 @@ export const COMPONENT_TOKENS = {
     "accordion-panel-padding-y": { type: "FLOAT", unit: "px", value: 12, figmaPath: "accordion/panel-padding-y" },
     "accordion-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "accordion/gap" },
     "accordion-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "accordion/border-width" },
-    "accordion-radius": { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 24 }, figmaPath: "accordion/radius" },
+    "accordion-default-radius": { type: "FLOAT", unit: "px", value: 4, figmaPath: "accordion/default-radius" },
+    "accordion-contained-radius": { type: "FLOAT", unit: "px", value: 4, figmaPath: "accordion/contained-radius" },
+    "accordion-filled-radius": { type: "FLOAT", unit: "px", value: 4, figmaPath: "accordion/filled-radius" },
     "accordion-icon-size": { type: "FLOAT", unit: "px", value: 20, figmaPath: "accordion/icon-size" },
     "accordion-icon-stroke-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "accordion/icon-stroke-width" },
     "accordion-label-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "accordion/label-font-size" },

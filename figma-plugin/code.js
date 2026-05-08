@@ -975,7 +975,7 @@ function resolveManagedComponentKeyFromName(name) {
     "button", "switch", "slider", "rangeslider", "checkbox", "radio",
     "chip", "notification", "alert", "modal", "tooltip", "loader",
     "pill", "badge", "textinput", "select", "card", "actionicon",
-    "tabs", "accordion", "anchor", "title", "text", "image"
+    "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image"
   ];
   // Longest keys first so e.g. "textinput" matches before the "text" prefix rule.
   var sorted = managedKeys.slice().sort(function (a, b) {
@@ -1095,6 +1095,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     }
     if (requestedSet.notification) {
       requestedSet.loader = true;
+    }
+    if (requestedSet.accordion) {
+      requestedSet.accordionitem = true;
     }
     progress("Building selected components: " + Object.keys(requestedSet).join(", "));
   } else {
@@ -1227,8 +1230,11 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var tabsSet = await buildSet("Tabs", function () {
     return buildTabsComponentSet(varMap, page, font, tabsVariants);
   });
-  var accordionItemSet = await buildSet("Accordion", function () {
+  var accordionItemSet = await buildSet("Accordion Item", function () {
     return buildAccordionItemComponentSet(varMap, page, font);
+  });
+  var accordionSet = await buildSet("Accordion", function () {
+    return buildAccordionComponentSet(varMap, page, font, accordionItemSet);
   });
   var tabsItemSet = await buildSet("Tabs Item", function () {
     return buildTabsItemComponentSet(varMap, page, font, tabsVariants);
@@ -1274,6 +1280,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     cardSet,
     actionIconSet,
     tabsSet,
+    accordionSet,
     accordionItemSet,
     tabsItemSet,
     anchorSet,
@@ -1359,6 +1366,13 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     docsSourceSets = collectManagedComponentSetsFromPage(page, requestedSet);
     progress("Docs fallback set scan found " + docsSourceSets.length + " component sets.");
   }
+  // Docs should focus on public components. Keep Accordion Item generated,
+  // but hide it from docs for now. Uncomment to bring it back.
+  docsSourceSets = (docsSourceSets || []).filter(function (set) {
+    var setName = String(set && set.name ? set.name : "").toLowerCase();
+    return setName !== "accordion item";
+    // return true; // Re-enable Accordion Item docs.
+  });
 
   try {
     await buildUsageDocsPage(docsSourceSets, font);
@@ -9506,45 +9520,52 @@ function capTokenValue(value) {
   return normalized.charAt(0).toUpperCase() + normalized.slice(1);
 }
 
-function applyAccordionPositionRadii(node, varMap, position) {
+function accordionRadiusPath(variant) {
+  return "accordion/" + String(variant || "default") + "-radius";
+}
+
+function applyAccordionPositionRadii(node, varMap, variant, position) {
   var pos = String(position || "single").toLowerCase();
   var topOn = pos === "single" || pos === "first";
   var bottomOn = pos === "single" || pos === "last";
+  var radiusPath = accordionRadiusPath(variant);
   node.topLeftRadius = topOn ? 4 : 0;
   node.topRightRadius = topOn ? 4 : 0;
   node.bottomLeftRadius = bottomOn ? 4 : 0;
   node.bottomRightRadius = bottomOn ? 4 : 0;
-  bindVar(node, "topLeftRadius", topOn ? varMap["accordion/radius-default"] : null);
-  bindVar(node, "topRightRadius", topOn ? varMap["accordion/radius-default"] : null);
-  bindVar(node, "bottomLeftRadius", bottomOn ? varMap["accordion/radius-default"] : null);
-  bindVar(node, "bottomRightRadius", bottomOn ? varMap["accordion/radius-default"] : null);
+  bindVar(node, "topLeftRadius", topOn ? varMap[radiusPath] : null);
+  bindVar(node, "topRightRadius", topOn ? varMap[radiusPath] : null);
+  bindVar(node, "bottomLeftRadius", bottomOn ? varMap[radiusPath] : null);
+  bindVar(node, "bottomRightRadius", bottomOn ? varMap[radiusPath] : null);
 }
 
-function applyAccordionHeaderRadii(node, varMap, position, expanded) {
+function applyAccordionHeaderRadii(node, varMap, variant, position, expanded) {
   var pos = String(position || "single").toLowerCase();
   var topOn = pos === "single" || pos === "first";
   var bottomOn = !expanded && (pos === "single" || pos === "last");
+  var radiusPath = accordionRadiusPath(variant);
   node.topLeftRadius = topOn ? 4 : 0;
   node.topRightRadius = topOn ? 4 : 0;
   node.bottomLeftRadius = bottomOn ? 4 : 0;
   node.bottomRightRadius = bottomOn ? 4 : 0;
-  bindVar(node, "topLeftRadius", topOn ? varMap["accordion/radius-default"] : null);
-  bindVar(node, "topRightRadius", topOn ? varMap["accordion/radius-default"] : null);
-  bindVar(node, "bottomLeftRadius", bottomOn ? varMap["accordion/radius-default"] : null);
-  bindVar(node, "bottomRightRadius", bottomOn ? varMap["accordion/radius-default"] : null);
+  bindVar(node, "topLeftRadius", topOn ? varMap[radiusPath] : null);
+  bindVar(node, "topRightRadius", topOn ? varMap[radiusPath] : null);
+  bindVar(node, "bottomLeftRadius", bottomOn ? varMap[radiusPath] : null);
+  bindVar(node, "bottomRightRadius", bottomOn ? varMap[radiusPath] : null);
 }
 
-function applyAccordionPanelRadii(node, varMap, position, expanded) {
+function applyAccordionPanelRadii(node, varMap, variant, position, expanded) {
   var pos = String(position || "single").toLowerCase();
   var bottomOn = expanded && (pos === "single" || pos === "last");
+  var radiusPath = accordionRadiusPath(variant);
   node.topLeftRadius = 0;
   node.topRightRadius = 0;
   node.bottomLeftRadius = bottomOn ? 4 : 0;
   node.bottomRightRadius = bottomOn ? 4 : 0;
   bindVar(node, "topLeftRadius", null);
   bindVar(node, "topRightRadius", null);
-  bindVar(node, "bottomLeftRadius", bottomOn ? varMap["accordion/radius-default"] : null);
-  bindVar(node, "bottomRightRadius", bottomOn ? varMap["accordion/radius-default"] : null);
+  bindVar(node, "bottomLeftRadius", bottomOn ? varMap[radiusPath] : null);
+  bindVar(node, "bottomRightRadius", bottomOn ? varMap[radiusPath] : null);
 }
 
 function createAccordionChevron(varMap, colorPath) {
@@ -9620,6 +9641,130 @@ async function findAccordionChevronIconComponent() {
   return resolved;
 }
 
+function setAccordionInstanceProps(instance, propPatch) {
+  if (!instance || typeof instance.setProperties !== "function") return;
+  var meta = instance.componentProperties || {};
+  var keys = Object.keys(meta);
+  if (!keys.length) return;
+  var props = {};
+  var patchKeys = Object.keys(propPatch || {});
+  for (var pi = 0; pi < patchKeys.length; pi++) {
+    var propName = patchKeys[pi];
+    var propValue = propPatch[propName];
+    if (propValue == null) continue;
+    var resolvedKey = null;
+    for (var ki = 0; ki < keys.length; ki++) {
+      var baseName = String(keys[ki]).split("#")[0];
+      if (baseName === propName || baseName.toLowerCase() === String(propName).toLowerCase()) {
+        resolvedKey = keys[ki];
+        break;
+      }
+    }
+    if (resolvedKey) props[resolvedKey] = propValue;
+  }
+  if (Object.keys(props).length > 0) {
+    try { instance.setProperties(props); } catch (_accordionInstancePropsErr) {}
+  }
+}
+
+function findAccordionSlotHost(instance) {
+  if (!instance || typeof instance.findAll !== "function") return null;
+  var slots = [];
+  try {
+    slots = instance.findAll(function (n) {
+      return (n.type === "SLOT" || n.type === "FRAME") && n.name === "AccordionContent";
+    });
+  } catch (_accordionFindSlotErr) {
+    slots = [];
+  }
+  return slots.length > 0 ? slots[0] : null;
+}
+
+function buildAccordionComponentSet(varMap, page, font, accordionItemSet) {
+  var itemComponent = null;
+  if (accordionItemSet && accordionItemSet.type === "COMPONENT_SET" && accordionItemSet.children && accordionItemSet.children.length > 0) {
+    itemComponent = accordionItemSet.children[0];
+  } else if (accordionItemSet && accordionItemSet.type === "COMPONENT") {
+    itemComponent = accordionItemSet;
+  }
+  if (!itemComponent) {
+    progress("[Accordion] Accordion Item set missing; skipping Accordion component set.");
+    return null;
+  }
+
+  var variants = ["default", "contained", "filled"];
+  var rows = [
+    { position: "first", expanded: "off" },
+    { position: "middle", expanded: "on" },
+    { position: "middle", expanded: "off" },
+    { position: "last", expanded: "off" }
+  ];
+  var components = [];
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var comp = figma.createComponent();
+    comp.name = "Variant=" + capTokenValue(variant);
+    comp.layoutMode = "VERTICAL";
+    comp.primaryAxisSizingMode = "AUTO";
+    comp.counterAxisSizingMode = "FIXED";
+    comp.itemSpacing = 0;
+    comp.fills = [];
+    comp.strokes = [];
+    comp.resizeWithoutConstraints(468, 195);
+
+    for (var ri = 0; ri < rows.length; ri++) {
+      var row = rows[ri];
+      var item = itemComponent.createInstance();
+      setAccordionInstanceProps(item, {
+        Variant: capTokenValue(variant),
+        Position: capTokenValue(row.position),
+        State: "Default",
+        Expanded: row.expanded === "on" ? "On" : "Off"
+      });
+      comp.appendChild(item);
+      try { item.layoutAlign = "STRETCH"; } catch (_accordionCompItemAlignErr) {}
+      try { item.layoutSizingHorizontal = "FILL"; } catch (_accordionCompItemFillErr) {}
+
+      if (row.expanded === "on") {
+        var slotHost = findAccordionSlotHost(item);
+        if (slotHost) {
+          try {
+            for (var ci = slotHost.children.length - 1; ci >= 0; ci--) {
+              slotHost.children[ci].remove();
+            }
+          } catch (_accordionCompSlotClearErr) {}
+          var contentText = figma.createText();
+          contentText.name = "Content";
+          contentText.fontName = font;
+          contentText.characters = "Expand each section to view more details and relevant information. Everything you need, neatly tucked away until you need it.";
+          contentText.textAutoResize = "HEIGHT";
+          contentText.resizeWithoutConstraints(444, contentText.height);
+          contentText.fontSize = 14;
+          contentText.fills = [{ type: "SOLID", color: { r: 0.78, g: 0.79, b: 0.83 } }];
+          bindPaintVar(contentText, "fills", 0, varMap["accordion/" + variant + "-content-text"]);
+          bindVar(contentText, "fontSize", varMap["accordion/content-font-size"]);
+          bindVar(contentText, "fontFamily", varMap["accordion/content-font-family"]);
+          bindVar(contentText, "fontStyle", varMap["accordion/content-font-weight"]);
+          bindVar(contentText, "lineHeight", varMap["accordion/content-line-height"]);
+          slotHost.appendChild(contentText);
+          try { contentText.layoutAlign = "STRETCH"; } catch (_accordionCompTextAlignErr) {}
+          try { contentText.layoutSizingHorizontal = "FILL"; } catch (_accordionCompTextFillErr) {}
+        }
+      }
+    }
+
+    comp.x = vi * 560;
+    comp.y = 0;
+    page.appendChild(comp);
+    components.push(comp);
+  }
+
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Accordion";
+  return componentSet;
+}
+
 async function buildAccordionItemComponentSet(varMap, page, font) {
   var variants = ["default", "contained", "filled"];
   var positions = ["single", "first", "middle", "last"];
@@ -9642,9 +9787,13 @@ async function buildAccordionItemComponentSet(varMap, page, font) {
         var capState = capTokenValue(state);
         for (var ei = 0; ei < expandedModes.length; ei++) {
           var expandedMode = expandedModes[ei];
+          if (state === "disabled" && expandedMode === "on") continue;
           var expanded = expandedMode === "on";
           var capExpanded = expanded ? "On" : "Off";
+          var isDefaultVariant = variant === "default";
           var removeHeaderTopBorder = position === "middle" || position === "last";
+          var headerTopWeight = isDefaultVariant || removeHeaderTopBorder ? 0 : 1;
+          var headerSideWeight = isDefaultVariant ? 0 : 1;
 
           var comp = figma.createComponent();
           comp.name =
@@ -9670,10 +9819,10 @@ async function buildAccordionItemComponentSet(varMap, page, font) {
           headerRow.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.15, b: 0.24 } }];
           headerRow.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
           headerRow.strokeAlign = "INSIDE";
-          headerRow.strokeTopWeight = removeHeaderTopBorder ? 0 : 1;
-          headerRow.strokeRightWeight = 1;
+          headerRow.strokeTopWeight = headerTopWeight;
+          headerRow.strokeRightWeight = headerSideWeight;
           headerRow.strokeBottomWeight = 1;
-          headerRow.strokeLeftWeight = 1;
+          headerRow.strokeLeftWeight = headerSideWeight;
           headerRow.paddingLeft = 12;
           headerRow.paddingRight = 12;
           headerRow.paddingTop = 8;
@@ -9683,15 +9832,15 @@ async function buildAccordionItemComponentSet(varMap, page, font) {
           headerRow.clipsContent = true;
           bindPaintVar(headerRow, "fills", 0, varMap[accordionColorPath(variant, "header-background", state)]);
           bindPaintVar(headerRow, "strokes", 0, varMap[accordionColorPath(variant, "header-border", state)]);
-          bindVar(headerRow, "strokeTopWeight", removeHeaderTopBorder ? null : varMap["accordion/border-width"]);
-          bindVar(headerRow, "strokeRightWeight", varMap["accordion/border-width"]);
+          bindVar(headerRow, "strokeTopWeight", headerTopWeight ? varMap["accordion/border-width"] : null);
+          bindVar(headerRow, "strokeRightWeight", headerSideWeight ? varMap["accordion/border-width"] : null);
           bindVar(headerRow, "strokeBottomWeight", varMap["accordion/border-width"]);
-          bindVar(headerRow, "strokeLeftWeight", varMap["accordion/border-width"]);
+          bindVar(headerRow, "strokeLeftWeight", headerSideWeight ? varMap["accordion/border-width"] : null);
           bindVar(headerRow, "paddingLeft", varMap["accordion/header-padding-x"]);
           bindVar(headerRow, "paddingRight", varMap["accordion/header-padding-x"]);
           bindVar(headerRow, "paddingTop", varMap["accordion/header-padding-y"]);
           bindVar(headerRow, "paddingBottom", varMap["accordion/header-padding-y"]);
-          applyAccordionHeaderRadii(headerRow, varMap, position, expanded);
+          applyAccordionHeaderRadii(headerRow, varMap, variant, position, expanded);
           comp.appendChild(headerRow);
 
           var label = figma.createText();
@@ -9747,19 +9896,19 @@ async function buildAccordionItemComponentSet(varMap, page, font) {
             panel.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
             panel.strokeAlign = "INSIDE";
             panel.strokeTopWeight = 0;
-            panel.strokeRightWeight = 1;
+            panel.strokeRightWeight = isDefaultVariant ? 0 : 1;
             panel.strokeBottomWeight = 1;
-            panel.strokeLeftWeight = 1;
-            bindPaintVar(panel, "fills", 0, varMap["accordion/panel-background"]);
-            bindPaintVar(panel, "strokes", 0, varMap["accordion/panel-border"]);
-            bindVar(panel, "strokeRightWeight", varMap["accordion/border-width"]);
+            panel.strokeLeftWeight = isDefaultVariant ? 0 : 1;
+            bindPaintVar(panel, "fills", 0, varMap["accordion/" + variant + "-panel-background"]);
+            bindPaintVar(panel, "strokes", 0, varMap["accordion/" + variant + "-panel-border"]);
+            bindVar(panel, "strokeRightWeight", isDefaultVariant ? null : varMap["accordion/border-width"]);
             bindVar(panel, "strokeBottomWeight", varMap["accordion/border-width"]);
-            bindVar(panel, "strokeLeftWeight", varMap["accordion/border-width"]);
+            bindVar(panel, "strokeLeftWeight", isDefaultVariant ? null : varMap["accordion/border-width"]);
             bindVar(panel, "paddingLeft", varMap["accordion/panel-padding-x"]);
             bindVar(panel, "paddingRight", varMap["accordion/panel-padding-x"]);
             bindVar(panel, "paddingTop", varMap["accordion/panel-padding-y"]);
             bindVar(panel, "paddingBottom", varMap["accordion/panel-padding-y"]);
-            applyAccordionPanelRadii(panel, varMap, position, expanded);
+            applyAccordionPanelRadii(panel, varMap, variant, position, expanded);
             panel.clipsContent = true;
             comp.appendChild(panel);
             try { panel.layoutAlign = "STRETCH"; } catch (_accordionPanelStretchErr) {}
@@ -9823,7 +9972,7 @@ function buildAccordionContentTextComponentSet(varMap, page, font) {
     comp.paddingTop = 12;
     comp.paddingBottom = 12;
     comp.fills = [{ type: "SOLID", color: { r: 0.98, g: 0.99, b: 1 } }];
-    bindPaintVar(comp, "fills", 0, varMap["accordion/panel-background"]);
+    bindPaintVar(comp, "fills", 0, varMap["accordion/default-panel-background"]);
     bindVar(comp, "paddingLeft", varMap["accordion/panel-padding-x"]);
     bindVar(comp, "paddingRight", varMap["accordion/panel-padding-x"]);
     bindVar(comp, "paddingTop", varMap["accordion/panel-padding-y"]);
@@ -9835,7 +9984,7 @@ function buildAccordionContentTextComponentSet(varMap, page, font) {
     text.characters = "Text content slot. Use for paragraph details.";
     text.fontSize = 14;
     text.fills = [{ type: "SOLID", color: { r: 0.31, g: 0.35, b: 0.4 } }];
-    bindPaintVar(text, "fills", 0, varMap["accordion/content-text"]);
+    bindPaintVar(text, "fills", 0, varMap["accordion/default-content-text"]);
     bindVar(text, "fontSize", varMap["accordion/content-font-size"]);
     bindVar(text, "fontFamily", varMap["accordion/content-font-family"]);
     bindVar(text, "fontStyle", varMap["accordion/content-font-weight"]);
@@ -9870,7 +10019,7 @@ function buildAccordionContentDataGridComponentSet(varMap, page, font) {
     comp.paddingBottom = 12;
     comp.itemSpacing = 8;
     comp.fills = [{ type: "SOLID", color: { r: 0.98, g: 0.99, b: 1 } }];
-    bindPaintVar(comp, "fills", 0, varMap["accordion/panel-background"]);
+    bindPaintVar(comp, "fills", 0, varMap["accordion/default-panel-background"]);
 
     var headers = figma.createText();
     headers.name = "Headers";
@@ -9878,7 +10027,7 @@ function buildAccordionContentDataGridComponentSet(varMap, page, font) {
     headers.characters = "Name           Value          Status";
     headers.fontSize = 13;
     headers.fills = [{ type: "SOLID", color: { r: 0.31, g: 0.35, b: 0.4 } }];
-    bindPaintVar(headers, "fills", 0, varMap["accordion/content-text"]);
+    bindPaintVar(headers, "fills", 0, varMap["accordion/default-content-text"]);
     bindVar(headers, "fontFamily", varMap["accordion/content-font-family"]);
     comp.appendChild(headers);
 
@@ -9888,7 +10037,7 @@ function buildAccordionContentDataGridComponentSet(varMap, page, font) {
     row1.characters = "Bandwidth      120ms          Healthy";
     row1.fontSize = 14;
     row1.fills = [{ type: "SOLID", color: { r: 0.31, g: 0.35, b: 0.4 } }];
-    bindPaintVar(row1, "fills", 0, varMap["accordion/content-text"]);
+    bindPaintVar(row1, "fills", 0, varMap["accordion/default-content-text"]);
     bindVar(row1, "fontSize", varMap["accordion/content-font-size"]);
     bindVar(row1, "fontFamily", varMap["accordion/content-font-family"]);
     bindVar(row1, "fontStyle", varMap["accordion/content-font-weight"]);
@@ -9901,7 +10050,7 @@ function buildAccordionContentDataGridComponentSet(varMap, page, font) {
     row2.characters = "Latency        32ms           Healthy";
     row2.fontSize = 14;
     row2.fills = [{ type: "SOLID", color: { r: 0.31, g: 0.35, b: 0.4 } }];
-    bindPaintVar(row2, "fills", 0, varMap["accordion/content-text"]);
+    bindPaintVar(row2, "fills", 0, varMap["accordion/default-content-text"]);
     bindVar(row2, "fontSize", varMap["accordion/content-font-size"]);
     bindVar(row2, "fontFamily", varMap["accordion/content-font-family"]);
     bindVar(row2, "fontStyle", varMap["accordion/content-font-weight"]);
