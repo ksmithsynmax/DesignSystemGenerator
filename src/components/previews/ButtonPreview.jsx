@@ -27,6 +27,7 @@ export default function ButtonPreview({
   brands,
   brandId,
   variant,
+  color = "primary",
   size,
   state,
   previewTheme = "light",
@@ -37,14 +38,20 @@ export default function ButtonPreview({
   fillGradientCss = null,
 }) {
   const tokens = COMPONENT_TOKENS.button;
-  const prefix = `button-${variant}`;
-  const suffix = state ? `-${state}` : "";
+  const colorSegment = color === "error" ? "-error" : "";
+  const tokenKey = (property, stateKey) => {
+    const maybeState = stateKey && stateKey !== "default" ? `-${stateKey}` : "";
+    const preferred = `button-${variant}${colorSegment}-${property}${maybeState}`;
+    if (tokens[preferred]) return preferred;
+    const fallback = `button-${variant}-${property}${maybeState}`;
+    return tokens[fallback] ? fallback : preferred;
+  };
   const isFocus = state === "focus";
   const isDisabled = state === "disabled";
 
-  const bgKey = suffix && tokens[`${prefix}-background${suffix}`] ? `${prefix}-background${suffix}` : `${prefix}-background`;
-  const textKey = suffix && tokens[`${prefix}-text${suffix}`] ? `${prefix}-text${suffix}` : `${prefix}-text`;
-  const borderKey = suffix && tokens[`${prefix}-border${suffix}`] ? `${prefix}-border${suffix}` : `${prefix}-border`;
+  const bgKey = tokenKey("background", state);
+  const textKey = tokenKey("text", state);
+  const borderKey = tokenKey("border", state);
 
   const brand = brands[brandId];
   const bgOverride =
@@ -57,7 +64,7 @@ export default function ButtonPreview({
   const bg = resolveColor(brands, brandId, tokens[bgKey]?.semantic, previewTheme, bgKey);
   const bgHover = state
     ? bg
-    : resolveColor(brands, brandId, tokens[`${prefix}-background-hover`]?.semantic, previewTheme, `${prefix}-background-hover`);
+    : resolveColor(brands, brandId, tokens[tokenKey("background", "hover")]?.semantic, previewTheme, tokenKey("background", "hover"));
   const text = resolveColor(brands, brandId, tokens[textKey]?.semantic, previewTheme, textKey);
   const border = resolveColor(brands, brandId, tokens[borderKey]?.semantic, previewTheme, borderKey);
 
@@ -103,12 +110,15 @@ export default function ButtonPreview({
   const focusStyles = isFocus
     ? focusRingStyle === "attached"
       ? {
-          boxShadow: `0 0 0 1px rgba(255,255,255,0.65), 0 0 0 4px ${focusRing || "#228BE6"}`,
+          boxShadow:
+            variant === "ghost"
+              ? `0 0 0 1px rgba(255,255,255,0.35), 0 0 0 2px ${focusRing || "#228BE6"}`
+              : `0 0 0 1px rgba(255,255,255,0.65), 0 0 0 4px ${focusRing || "#228BE6"}`,
           borderRadius: `${borderRadius || 8}px`,
         }
       : {
-          outline: `${focusRingWidth || 2}px solid ${focusRing || "#228BE6"}`,
-          outlineOffset: `${focusRingSpacing || 3}px`,
+          outline: `${variant === "ghost" ? 1 : (focusRingWidth || 2)}px solid ${focusRing || "#228BE6"}`,
+          outlineOffset: `${variant === "ghost" ? 1 : (focusRingSpacing || 3)}px`,
           borderRadius: `${focusRingRadius || 11}px`,
         }
     : null;

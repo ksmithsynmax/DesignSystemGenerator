@@ -308,6 +308,7 @@ export default function App() {
   const [activeColorToken, setActiveColorToken] = useState(null);
   const [activeDimensionToken, setActiveDimensionToken] = useState(null);
   const [activeButtonState, setActiveButtonState] = useState("default");
+  const [activeButtonColor, setActiveButtonColor] = useState("primary");
   const [activeButtonLeftIcon, setActiveButtonLeftIcon] = useState(false);
   const [activeButtonRightIcon, setActiveButtonRightIcon] = useState(false);
   const [activeButtonFocusRingStyle, setActiveButtonFocusRingStyle] = useState("offset");
@@ -596,6 +597,7 @@ export default function App() {
       setActiveSize(buttonDefault);
       setActiveVariant("filled");
       setActiveButtonState("default");
+      setActiveButtonColor("primary");
       setActiveButtonLeftIcon(false);
       setActiveButtonRightIcon(false);
     } else if (newComp === "actionicon") {
@@ -1002,6 +1004,7 @@ export default function App() {
   let forcedChecked = null;
   let forcedIndeterminate = false;
   let forcedVariant = null;
+  let forcedButtonColor = null;
 
   if (activeColorToken) {
     const parts = activeColorToken.split("-");
@@ -1037,6 +1040,9 @@ export default function App() {
       if (knownVariants[activeComponent]?.includes(variantSegment)) {
         forcedVariant = activeComponent === "tabs" ? fromTabsTokenVariant(variantSegment) : variantSegment;
       }
+    }
+    if (activeComponent === "button") {
+      forcedButtonColor = parts[2] === "error" ? "error" : "primary";
     }
   }
 
@@ -1321,8 +1327,19 @@ export default function App() {
       }
       return true;
     }
+    if (activeComponent === "button") {
+      if (token === "button-focus-ring") return true;
+      if (!variants.includes(variantSegment)) return true;
+      if (variantSegment !== (forcedVariant || activeVariant)) return false;
+      const tokenColor = parts[2] === "error" ? "error" : "primary";
+      const selectedColor = forcedButtonColor || activeButtonColor;
+      if (tokenColor !== selectedColor) return false;
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      return tokenState === (effectiveComponentState || "default");
+    }
     if (
-      activeComponent === "button" ||
       activeComponent === "actionicon" ||
       activeComponent === "tabs" ||
       activeComponent === "accordion" ||
@@ -1863,6 +1880,7 @@ export default function App() {
                   brands={brands}
                   activeBrand={activeBrand}
                   activeVariant={forcedVariant || activeVariant}
+                  activeColor={forcedButtonColor || activeButtonColor}
                   activeSize={activeSize}
                   previewTheme={previewTheme}
                   selectedState={forcedState || activeButtonState}
@@ -2231,6 +2249,8 @@ export default function App() {
                 <ButtonPropertiesPanel
                   activeVariant={forcedVariant || activeVariant}
                   setActiveVariant={setActiveVariant}
+                  activeColor={forcedButtonColor || activeButtonColor}
+                  setActiveColor={setActiveButtonColor}
                   activeSize={activeSize}
                   setActiveSize={setActiveSize}
                   sizeKeys={sizeKeys}

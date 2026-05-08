@@ -2267,14 +2267,23 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateColorKey = getPropKey(variantProps, "Color");
       var templateColorValues = templateColorKey ? getPropValues(variantProps, "Color") : [];
       var templateDefaultColor = null;
+      var templatePrimaryColor = null;
+      var templateErrorColor = null;
       if (templateColorValues.length > 0) {
         for (var tci = 0; tci < templateColorValues.length; tci++) {
-          if (String(templateColorValues[tci]).toLowerCase() === "default") {
+          var lowerTemplateColor = String(templateColorValues[tci]).toLowerCase();
+          if (lowerTemplateColor === "default") {
             templateDefaultColor = templateColorValues[tci];
-            break;
+          }
+          if (lowerTemplateColor === "primary") {
+            templatePrimaryColor = templateColorValues[tci];
+          }
+          if (lowerTemplateColor === "error") {
+            templateErrorColor = templateColorValues[tci];
           }
         }
         if (templateDefaultColor == null) templateDefaultColor = templateColorValues[0];
+        if (templatePrimaryColor == null) templatePrimaryColor = templateDefaultColor;
       }
 
       var templateBadgeSemanticColors = (lowerSetName === "badge" && templateColorKey && templateColorValues.length > 0)
@@ -2363,6 +2372,78 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           var templateVariantStateValues = templateOrderedStates.length > 0 ? templateOrderedStates : [null];
           for (var tv = 0; tv < templateOrderedVariants.length; tv++) {
             var templateVariantName = templateOrderedVariants[tv];
+
+            if (lowerSetName === "button" && templateColorKey && templatePrimaryColor) {
+              (function (vName, stateValues) {
+                function appendButtonColorVariantBlock(colorLabel, colorValue) {
+                  var colorVariantBlock = createStack(
+                    "variant-block-" + normalizeName(vName) + "-" + normalizeName(colorLabel),
+                    8
+                  );
+                  var colorVariantHeader = createStack(
+                    "variant-header-" + normalizeName(vName) + "-" + normalizeName(colorLabel),
+                    6
+                  );
+                  appendText(
+                    colorVariantHeader,
+                    titleFont,
+                    String(vName) + " - " + String(colorLabel),
+                    18,
+                    DOC_COLORS.panelHeading,
+                    "Variant Heading",
+                    "title"
+                  );
+                  appendText(
+                    colorVariantHeader,
+                    bodyFont,
+                    getVariantDescription(setName, vName),
+                    12,
+                    DOC_COLORS.panelBody,
+                    "Variant Description"
+                  );
+                  colorVariantBlock.appendChild(colorVariantHeader);
+
+                  var colorVariantSection = createPanel(
+                    "variant-section-" + normalizeName(vName) + "-" + normalizeName(colorLabel),
+                    10
+                  );
+                  colorVariantSection.counterAxisSizingMode = "FIXED";
+                  colorVariantSection.resize(1192, colorVariantSection.height);
+
+                  var colorVariantStatesPanel = createStack(
+                    "variant-states-" + normalizeName(vName) + "-" + normalizeName(colorLabel),
+                    10
+                  );
+                  colorVariantStatesPanel.paddingLeft = 12;
+                  colorVariantStatesPanel.paddingRight = 12;
+                  colorVariantStatesPanel.paddingTop = 12;
+                  colorVariantStatesPanel.paddingBottom = 12;
+                  addInstancesRow(
+                    colorVariantStatesPanel,
+                    "States",
+                    stateValues,
+                    function (stateName) {
+                      var patch = {};
+                      patch[variantPropName] = vName;
+                      patch.Color = colorValue;
+                      if (stateName != null) patch.State = stateName;
+                      return makeTemplateInstance(patch);
+                    },
+                    false
+                  );
+                  colorVariantSection.appendChild(colorVariantStatesPanel);
+                  colorVariantBlock.appendChild(colorVariantSection);
+                  templateVariantsSlot.appendChild(colorVariantBlock);
+                }
+
+                appendButtonColorVariantBlock("Primary", templatePrimaryColor);
+                if (templateErrorColor) {
+                  appendButtonColorVariantBlock("Danger", templateErrorColor);
+                }
+              })(templateVariantName, templateVariantStateValues);
+              continue;
+            }
+
             var templateVariantBlock = createStack("variant-block-" + normalizeName(templateVariantName), 8);
             var templateVariantHeader = createStack("variant-header-" + normalizeName(templateVariantName), 6);
             appendText(templateVariantHeader, titleFont, String(templateVariantName), 18, DOC_COLORS.panelHeading, "Variant Heading", "title");
@@ -2406,26 +2487,61 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               templateVariantStatesPanel.paddingRight = 12;
               templateVariantStatesPanel.paddingTop = 12;
               templateVariantStatesPanel.paddingBottom = 12;
-              addInstancesRow(
-                templateVariantStatesPanel,
-                "States",
-                templateVariantStateValues,
-                (function (vName) {
-                  return function (stateName) {
-                    var patch = {};
-                    patch[variantPropName] = vName;
-                    if (stateName != null) patch.State = stateName;
-                    if ((lowerSetName === "checkbox" || lowerSetName === "radio") && templateCheckedOnValue != null) {
-                      patch.Checked = templateCheckedOnValue;
-                    }
-                    return makeTemplateInstance(patch);
-                  };
-                })(templateVariantName),
-                false,
-                lowerSetName === "card"
-                  ? { itemsPerRow: 3 }
-                  : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null)
-              );
+              if (lowerSetName === "button" && templateColorKey && templatePrimaryColor) {
+                addInstancesRow(
+                  templateVariantStatesPanel,
+                  "Primary",
+                  templateVariantStateValues,
+                  (function (vName, cName) {
+                    return function (stateName) {
+                      var patch = {};
+                      patch[variantPropName] = vName;
+                      patch.Color = cName;
+                      if (stateName != null) patch.State = stateName;
+                      return makeTemplateInstance(patch);
+                    };
+                  })(templateVariantName, templatePrimaryColor),
+                  false
+                );
+                if (templateErrorColor) {
+                  addInstancesRow(
+                    templateVariantStatesPanel,
+                    "Error",
+                    templateVariantStateValues,
+                    (function (vName, cName) {
+                      return function (stateName) {
+                        var patch = {};
+                        patch[variantPropName] = vName;
+                        patch.Color = cName;
+                        if (stateName != null) patch.State = stateName;
+                        return makeTemplateInstance(patch);
+                      };
+                    })(templateVariantName, templateErrorColor),
+                    false
+                  );
+                }
+              } else {
+                addInstancesRow(
+                  templateVariantStatesPanel,
+                  "States",
+                  templateVariantStateValues,
+                  (function (vName) {
+                    return function (stateName) {
+                      var patch = {};
+                      patch[variantPropName] = vName;
+                      if (stateName != null) patch.State = stateName;
+                      if ((lowerSetName === "checkbox" || lowerSetName === "radio") && templateCheckedOnValue != null) {
+                        patch.Checked = templateCheckedOnValue;
+                      }
+                      return makeTemplateInstance(patch);
+                    };
+                  })(templateVariantName),
+                  false,
+                  lowerSetName === "card"
+                    ? { itemsPerRow: 3 }
+                    : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null)
+                );
+              }
               templateVariantSection.appendChild(templateVariantStatesPanel);
             }
 
@@ -3127,14 +3243,23 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       var colorValuesAll = colorKey ? getPropValues(variantProps, "Color") : [];
       var defaultColor = null;
+      var primaryColor = null;
+      var errorColor = null;
       if (colorValuesAll.length > 0) {
         for (var cci = 0; cci < colorValuesAll.length; cci++) {
-          if (String(colorValuesAll[cci]).toLowerCase() === "default") {
+          var lowerColorName = String(colorValuesAll[cci]).toLowerCase();
+          if (lowerColorName === "default") {
             defaultColor = colorValuesAll[cci];
-            break;
+          }
+          if (lowerColorName === "primary") {
+            primaryColor = colorValuesAll[cci];
+          }
+          if (lowerColorName === "error") {
+            errorColor = colorValuesAll[cci];
           }
         }
         if (defaultColor == null) defaultColor = colorValuesAll[0];
+        if (primaryColor == null) primaryColor = defaultColor;
       }
 
       var badgeDocSemanticColors = (lowerSetName === "badge" && colorKey && colorValuesAll.length > 0)
@@ -3218,6 +3343,78 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         var variantStateValues = orderedStates.length > 0 ? orderedStates : [null];
         for (var v = 0; v < orderedVariants.length; v++) {
           var variantName = orderedVariants[v];
+
+          if (lowerSetName === "button" && colorKey && primaryColor) {
+            (function (vName, stateValues) {
+              function appendButtonColorVariantBlock(colorLabel, colorValue) {
+                var colorVariantBlock = createStack(
+                  "variant-block-" + normalizeName(vName) + "-" + normalizeName(colorLabel),
+                  8
+                );
+                var colorVariantHeader = createStack(
+                  "variant-header-" + normalizeName(vName) + "-" + normalizeName(colorLabel),
+                  6
+                );
+                appendText(
+                  colorVariantHeader,
+                  titleFont,
+                  String(vName) + " - " + String(colorLabel),
+                  18,
+                  DOC_COLORS.panelHeading,
+                  "Variant Heading",
+                  "title"
+                );
+                appendText(
+                  colorVariantHeader,
+                  bodyFont,
+                  getVariantDescription(setName, vName),
+                  12,
+                  DOC_COLORS.panelBody,
+                  "Variant Description"
+                );
+                colorVariantBlock.appendChild(colorVariantHeader);
+
+                var colorVariantSection = createPanel(
+                  "variant-section-" + normalizeName(vName) + "-" + normalizeName(colorLabel),
+                  10
+                );
+                colorVariantSection.counterAxisSizingMode = "FIXED";
+                colorVariantSection.resize(1192, colorVariantSection.height);
+
+                var colorVariantStatesPanel = createStack(
+                  "variant-states-" + normalizeName(vName) + "-" + normalizeName(colorLabel),
+                  10
+                );
+                colorVariantStatesPanel.paddingLeft = 12;
+                colorVariantStatesPanel.paddingRight = 12;
+                colorVariantStatesPanel.paddingTop = 12;
+                colorVariantStatesPanel.paddingBottom = 12;
+                addInstancesRow(
+                  colorVariantStatesPanel,
+                  "States",
+                  stateValues,
+                  function (stateName) {
+                    var patch = {};
+                    patch[variantPropName] = vName;
+                    patch.Color = colorValue;
+                    if (stateName != null) patch.State = stateName;
+                    return makeInstance(patch);
+                  },
+                  false
+                );
+                colorVariantSection.appendChild(colorVariantStatesPanel);
+                colorVariantBlock.appendChild(colorVariantSection);
+                variantsSlot.appendChild(colorVariantBlock);
+              }
+
+              appendButtonColorVariantBlock("Primary", primaryColor);
+              if (errorColor) {
+                appendButtonColorVariantBlock("Danger", errorColor);
+              }
+            })(variantName, variantStateValues);
+            continue;
+          }
+
           var variantBlock = createStack("variant-block-" + normalizeName(variantName), 8);
           var variantHeader = createStack("variant-header-" + normalizeName(variantName), 6);
           appendText(variantHeader, titleFont, String(variantName), 18, DOC_COLORS.panelHeading, "Variant Heading", "title");
@@ -3261,26 +3458,61 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             variantStatesPanel.paddingRight = 12;
             variantStatesPanel.paddingTop = 12;
             variantStatesPanel.paddingBottom = 12;
-            addInstancesRow(
-              variantStatesPanel,
-              "States",
-              variantStateValues,
-              (function (vName) {
-                return function (stateName) {
-                  var patch = {};
-                  patch[variantPropName] = vName;
-                  if (stateName != null) patch.State = stateName;
-                  if ((lowerSetName === "checkbox" || lowerSetName === "radio") && checkedOnValue != null) {
-                    patch.Checked = checkedOnValue;
-                  }
-                  return makeInstance(patch);
-                };
-              })(variantName),
-              false,
-              lowerSetName === "card"
-                ? { itemsPerRow: 3 }
-                : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null)
-            );
+            if (lowerSetName === "button" && colorKey && primaryColor) {
+              addInstancesRow(
+                variantStatesPanel,
+                "Primary",
+                variantStateValues,
+                (function (vName, cName) {
+                  return function (stateName) {
+                    var patch = {};
+                    patch[variantPropName] = vName;
+                    patch.Color = cName;
+                    if (stateName != null) patch.State = stateName;
+                    return makeInstance(patch);
+                  };
+                })(variantName, primaryColor),
+                false
+              );
+              if (errorColor) {
+                addInstancesRow(
+                  variantStatesPanel,
+                  "Error",
+                  variantStateValues,
+                  (function (vName, cName) {
+                    return function (stateName) {
+                      var patch = {};
+                      patch[variantPropName] = vName;
+                      patch.Color = cName;
+                      if (stateName != null) patch.State = stateName;
+                      return makeInstance(patch);
+                    };
+                  })(variantName, errorColor),
+                  false
+                );
+              }
+            } else {
+              addInstancesRow(
+                variantStatesPanel,
+                "States",
+                variantStateValues,
+                (function (vName) {
+                  return function (stateName) {
+                    var patch = {};
+                    patch[variantPropName] = vName;
+                    if (stateName != null) patch.State = stateName;
+                    if ((lowerSetName === "checkbox" || lowerSetName === "radio") && checkedOnValue != null) {
+                      patch.Checked = checkedOnValue;
+                    }
+                    return makeInstance(patch);
+                  };
+                })(variantName),
+                false,
+                lowerSetName === "card"
+                  ? { itemsPerRow: 3 }
+                  : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null)
+              );
+            }
             variantSection.appendChild(variantStatesPanel);
           }
 
@@ -3892,6 +4124,7 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
   var variants = (selectedVariants && selectedVariants.length > 0)
     ? selectedVariants.slice()
     : ["filled", "outlined", "ghost"];
+  var colors = ["primary", "error"];
   var sizes = ["default", "xxs", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
   var leftIconModes = ["off", "on"];
@@ -3923,32 +4156,37 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
     var capVariant = variant === "ghost" ? "Transparent" : (variant.charAt(0).toUpperCase() + variant.slice(1));
+    for (var ci = 0; ci < colors.length; ci++) {
+      var color = colors[ci];
+      var capColor = color.charAt(0).toUpperCase() + color.slice(1);
 
-    for (var si = 0; si < sizes.length; si++) {
-      var size = sizes[si];
-      var capSize = size === "default" ? "Default" : size.toUpperCase();
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
 
-      for (var li = 0; li < leftIconModes.length; li++) {
-        var leftMode = leftIconModes[li];
-        var hasLeftIcon = leftMode === "on";
-        var capLeftIcon = hasLeftIcon ? "On" : "Off";
+        for (var li = 0; li < leftIconModes.length; li++) {
+          var leftMode = leftIconModes[li];
+          var hasLeftIcon = leftMode === "on";
+          var capLeftIcon = hasLeftIcon ? "On" : "Off";
 
-        for (var ri = 0; ri < rightIconModes.length; ri++) {
-          var rightMode = rightIconModes[ri];
-          var hasRightIcon = rightMode === "on";
-          var capRightIcon = hasRightIcon ? "On" : "Off";
+          for (var ri = 0; ri < rightIconModes.length; ri++) {
+            var rightMode = rightIconModes[ri];
+            var hasRightIcon = rightMode === "on";
+            var capRightIcon = hasRightIcon ? "On" : "Off";
 
-          for (var sti = 0; sti < states.length; sti++) {
-            var state = states[sti];
-            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+            for (var sti = 0; sti < states.length; sti++) {
+              var state = states[sti];
+              var capState = state.charAt(0).toUpperCase() + state.slice(1);
+              var isGhostVariant = variant === "ghost";
 
-            var comp = figma.createComponent();
-            comp.name =
-              "Variant=" + capVariant +
-              ", Size=" + capSize +
-              ", LeftIcon=" + capLeftIcon +
-              ", RightIcon=" + capRightIcon +
-              ", State=" + capState;
+              var comp = figma.createComponent();
+              comp.name =
+                "Variant=" + capVariant +
+                ", Color=" + capColor +
+                ", Size=" + capSize +
+                ", LeftIcon=" + capLeftIcon +
+                ", RightIcon=" + capRightIcon +
+                ", State=" + capState;
 
             // Auto-layout: horizontal, center-aligned
             comp.layoutMode = "HORIZONTAL";
@@ -3963,21 +4201,33 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
             if (state === "focus" && focusRingStyle !== "attached") {
               // Focus wrapper: configurable outer ring with spacing around the real button surface.
               comp.itemSpacing = 0;
-              comp.paddingLeft = 3;
-              comp.paddingRight = 3;
-              comp.paddingTop = 3;
-              comp.paddingBottom = 3;
+              comp.paddingLeft = isGhostVariant ? 1 : 3;
+              comp.paddingRight = isGhostVariant ? 1 : 3;
+              comp.paddingTop = isGhostVariant ? 1 : 3;
+              comp.paddingBottom = isGhostVariant ? 1 : 3;
               comp.fills = [];
-              comp.strokes = [{ type: "SOLID", color: { r: 0.17, g: 0.63, b: 0.98 } }];
+              comp.strokes = [{
+                type: "SOLID",
+                color: { r: 0.17, g: 0.63, b: 0.98 },
+                opacity: isGhostVariant ? 0.65 : 1
+              }];
               comp.strokeAlign = "OUTSIDE";
-              comp.strokeWeight = 2;
+              comp.strokeWeight = isGhostVariant ? 1 : 2;
               comp.cornerRadius = 11;
               bindPaintVar(comp, "strokes", 0, varMap["button/focus-ring"]);
-              bindVar(comp, "strokeWeight", varMap["button/focus-ring-width"]);
-              bindVar(comp, "paddingLeft", varMap["button/focus-ring-spacing"]);
-              bindVar(comp, "paddingRight", varMap["button/focus-ring-spacing"]);
-              bindVar(comp, "paddingTop", varMap["button/focus-ring-spacing"]);
-              bindVar(comp, "paddingBottom", varMap["button/focus-ring-spacing"]);
+              if (isGhostVariant) {
+                bindVar(comp, "strokeWeight", null);
+                bindVar(comp, "paddingLeft", null);
+                bindVar(comp, "paddingRight", null);
+                bindVar(comp, "paddingTop", null);
+                bindVar(comp, "paddingBottom", null);
+              } else {
+                bindVar(comp, "strokeWeight", varMap["button/focus-ring-width"]);
+                bindVar(comp, "paddingLeft", varMap["button/focus-ring-spacing"]);
+                bindVar(comp, "paddingRight", varMap["button/focus-ring-spacing"]);
+                bindVar(comp, "paddingTop", varMap["button/focus-ring-spacing"]);
+                bindVar(comp, "paddingBottom", varMap["button/focus-ring-spacing"]);
+              }
               bindVar(comp, "topLeftRadius", varMap["button/focus-ring-radius"]);
               bindVar(comp, "topRightRadius", varMap["button/focus-ring-radius"]);
               bindVar(comp, "bottomLeftRadius", varMap["button/focus-ring-radius"]);
@@ -4005,9 +4255,9 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
             // --- Color variable paths for this state ---
             // Attached focus keeps the base button visual and only adds ring treatment.
             var colorState = (state === "focus" && focusRingStyle === "attached") ? "default" : state;
-            var bgPath = btnColorPath(variant, "background", colorState);
-            var textPath = btnColorPath(variant, "text", colorState);
-            var borderPath = btnColorPath(variant, "border", colorState);
+            var bgPath = btnColorPath(variant, color, "background", colorState);
+            var textPath = btnColorPath(variant, color, "text", colorState);
+            var borderPath = btnColorPath(variant, color, "border", colorState);
 
             // Background fill — COLOR variable (gradient tokens resolve to first-stop in payload).
             var bgVar = varMap[bgPath];
@@ -4096,15 +4346,23 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
               var attachedHalo = figma.createRectangle();
               attachedHalo.name = "FocusHalo";
               attachedHalo.fills = [];
-              attachedHalo.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.9 }, opacity: 0.4 }];
+              attachedHalo.strokes = [{
+                type: "SOLID",
+                color: { r: 0.2, g: 0.53, b: 0.9 },
+                opacity: isGhostVariant ? 0.3 : 0.4
+              }];
               attachedHalo.strokeAlign = "OUTSIDE";
-              attachedHalo.strokeWeight = 3;
+              attachedHalo.strokeWeight = isGhostVariant ? 2 : 3;
               attachedHalo.cornerRadius = 8;
               try {
                 attachedHalo.resize(buttonNode.width, buttonNode.height);
               } catch (resizeErr) {}
               bindPaintVar(attachedHalo, "strokes", 0, varMap["button/focus-ring"]);
-              bindVar(attachedHalo, "strokeWeight", varMap["button/focus-ring-width"]);
+              if (isGhostVariant) {
+                bindVar(attachedHalo, "strokeWeight", null);
+              } else {
+                bindVar(attachedHalo, "strokeWeight", varMap["button/focus-ring-width"]);
+              }
               bindVar(attachedHalo, "topLeftRadius", varMap["button/border-radius"]);
               bindVar(attachedHalo, "topRightRadius", varMap["button/border-radius"]);
               bindVar(attachedHalo, "bottomLeftRadius", varMap["button/border-radius"]);
@@ -4121,12 +4379,14 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
             // Disabled visuals come from disabled tokens; avoid extra opacity wash.
 
             // Grid layout: columns = variants × icon modes, rows = size groups × states
-            var colIndex = ((vi * leftIconModes.length + li) * rightIconModes.length) + ri;
+            var variantColorIndex = vi * colors.length + ci;
+            var colIndex = ((variantColorIndex * leftIconModes.length + li) * rightIconModes.length) + ri;
             var rowIndex = (si * states.length) + sti;
             comp.x = colIndex * colWidth;
             comp.y = rowYOffsets[rowIndex];
             page.appendChild(comp);
             components.push(comp);
+            }
           }
         }
       }
@@ -4140,12 +4400,14 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
 }
 
 // Build the figmaPath for a button color token given variant, property, and state
-function btnColorPath(variant, property, state) {
+function btnColorPath(variant, color, property, state) {
   var resolvedVariant = variant === "ghost" ? "transparent" : variant;
+  var isError = color === "error";
+  var colorSegment = isError ? "-error" : "";
   if (state === "default") {
-    return "button/" + resolvedVariant + "-" + property;
+    return "button/" + resolvedVariant + colorSegment + "-" + property;
   }
-  return "button/" + resolvedVariant + "-" + property + "-" + state;
+  return "button/" + resolvedVariant + colorSegment + "-" + property + "-" + state;
 }
 
 async function findButtonIconComponents() {

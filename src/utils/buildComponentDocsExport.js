@@ -16,6 +16,11 @@ const INTERACTIVE_STATES = [
 
 const EXTRA_FIGMA_PROPERTIES = {
   button: [
+    {
+      name: "Color",
+      values: ["Primary", "Error"],
+      notes: "Semantic intent. `Error` is the danger/destructive button style.",
+    },
     { name: "Label", values: ["Any text"], notes: "Visible button label." },
     { name: "LeftIcon", values: ["ChevronLeft"], notes: "Icon glyph for left slot." },
     { name: "ShowLeftIcon", values: ["False", "True"], notes: "Left icon visibility toggle." },
@@ -230,6 +235,13 @@ export function buildComponentDocsExport(brands) {
       lines.push("");
       lines.push("- Left icon support via `LeftIcon` + `ShowLeftIcon`.");
       lines.push("- Right icon support via `RightIcon` + `ShowRightIcon`.");
+      lines.push("");
+
+      lines.push("### Danger / Error Buttons");
+      lines.push("");
+      lines.push("- Use `Color=Error` for destructive actions (delete, remove, irreversible operations).");
+      lines.push("- Keep `Color=Primary` for standard actions.");
+      lines.push("- `Error` in tokens is the same semantic intent as danger/destructive styling.");
       lines.push("");
     }
 
