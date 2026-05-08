@@ -22,6 +22,7 @@ const BUILDABLE_COMPONENTS = [
   "card",
   "actionicon",
   "tabs",
+  "accordion",
   "anchor",
   "title",
   "text",

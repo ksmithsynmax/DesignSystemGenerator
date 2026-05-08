@@ -95,6 +95,10 @@ import {
   CardPropertiesPanel,
 } from "./components/panels/CardPreviewPanel";
 import {
+  AccordionPreviewContent,
+  AccordionPropertiesPanel,
+} from "./components/panels/AccordionPreviewPanel";
+import {
   SliderPreviewContent,
   SliderPropertiesPanel,
 } from "./components/panels/SliderPreviewPanel";
@@ -131,6 +135,7 @@ const VARIANTS_BY_COMPONENT = {
   button: ["filled", "outlined", "ghost"],
   actionicon: ["default", "filled", "light", "outlined", "transparent"],
   tabs: ["default", "outlined", "pills"],
+  accordion: ["default", "contained", "filled"],
   checkbox: ["filled", "outlined"],
   chip: ["filled", "light", "outline"],
   badge: ["default", "filled", "light", "outline"],
@@ -263,6 +268,8 @@ export default function App() {
     textinput: "TextInput",
     rangeslider: "RangeSlider",
     multiselect: "MultiSelect",
+    "accordion-item": "Accordion Item",
+    "accordion-content": "Accordion Content",
   };
   const getComponentLabel = (name) =>
     COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
@@ -384,6 +391,13 @@ export default function App() {
   const [activeTabsShowLeftIcon, setActiveTabsShowLeftIcon] = useState(false);
   const [activeTabsShowRightIcon, setActiveTabsShowRightIcon] = useState(false);
   const [activeTabsState, setActiveTabsState] = useState("default");
+  const [accordionNavExpanded, setAccordionNavExpanded] = useState(true);
+  const [activeAccordionNavItem, setActiveAccordionNavItem] = useState("accordion");
+  const [activeAccordionVariant, setActiveAccordionVariant] = useState("default");
+  const [activeAccordionPosition, setActiveAccordionPosition] = useState("single");
+  const [activeAccordionState, setActiveAccordionState] = useState("default");
+  const [activeAccordionExpanded, setActiveAccordionExpanded] = useState(true);
+  const [activeAccordionLabel, setActiveAccordionLabel] = useState("What is included?");
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
   const [activeSwitchChecked, setActiveSwitchChecked] = useState(false);
   const [activeSwitchState, setActiveSwitchState] = useState("default");
@@ -575,6 +589,7 @@ export default function App() {
   // Sync active size when component changes
   const handleComponentChange = useCallback((newComp) => {
     setActiveComponent(newComp);
+    if (newComp !== "accordion") setActiveAccordionNavItem("accordion");
     setActiveColorToken(null);
     setActiveDimensionToken(null);
     if (newComp === "button") {
@@ -596,6 +611,12 @@ export default function App() {
       setActiveTabsShowRightIcon(false);
       setActiveTabsState("default");
       setActiveVariant("default");
+    } else if (newComp === "accordion") {
+      setActiveAccordionVariant("default");
+      setActiveAccordionPosition("single");
+      setActiveAccordionState("default");
+      setActiveAccordionExpanded(true);
+      setActiveAccordionLabel("What is included?");
     } else if (newComp === "switch") {
       setActiveSwitchSize(switchDefault);
       setActiveSwitchChecked(false);
@@ -744,6 +765,17 @@ export default function App() {
       setActiveImageFit("cover");
     }
   }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, anchorDefault, textDefault, defaultBrandColor]);
+
+  const handleAccordionNavSelect = useCallback((item) => {
+    setAccordionNavExpanded(true);
+    setActiveAccordionNavItem(item);
+    if (activeComponent !== "accordion") {
+      handleComponentChange("accordion");
+      return;
+    }
+    setActiveColorToken(null);
+    setActiveDimensionToken(null);
+  }, [activeComponent, handleComponentChange]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -986,12 +1018,13 @@ export default function App() {
       forcedIndeterminate = true;
     }
 
-    if (["button", "actionicon", "tabs", "checkbox", "chip", "badge", "alert", "radio", "textinput", "select", "card"].includes(activeComponent)) {
+    if (["button", "actionicon", "tabs", "accordion", "checkbox", "chip", "badge", "alert", "radio", "textinput", "select", "card"].includes(activeComponent)) {
       const variantSegment = parts[1];
       const knownVariants = {
         button: ["filled", "outlined", "ghost"],
         actionicon: ["default", "filled", "light", "outlined", "transparent"],
         tabs: ["default", "outlined", "pills"],
+        accordion: ["default", "contained", "filled"],
         checkbox: ["filled", "outlined"],
         chip: ["filled", "light", "outline"],
         badge: ["default", "filled", "light", "outline"],
@@ -1016,6 +1049,8 @@ export default function App() {
         ? forcedState || activeActionIconState
         : activeComponent === "tabs"
           ? forcedState || activeTabsState
+        : activeComponent === "accordion"
+          ? forcedState || activeAccordionState
         : activeComponent === "switch"
           ? forcedState || activeSwitchState
           : activeComponent === "slider"
@@ -1227,6 +1262,7 @@ export default function App() {
       button: ["filled", "outlined", "ghost"],
       actionicon: ["default", "filled", "light", "outlined", "transparent"],
       tabs: ["default", "outlined", "pills"],
+      accordion: ["default", "contained", "filled"],
       checkbox: ["filled", "outlined"],
       radio: ["filled", "outline"],
       chip: ["filled", "light", "outline"],
@@ -1289,6 +1325,7 @@ export default function App() {
       activeComponent === "button" ||
       activeComponent === "actionicon" ||
       activeComponent === "tabs" ||
+      activeComponent === "accordion" ||
       activeComponent === "textinput"
       || activeComponent === "select"
       || activeComponent === "alert"
@@ -1296,6 +1333,8 @@ export default function App() {
       if (!variants.includes(variantSegment)) return true;
       if (activeComponent === "tabs") {
         if (variantSegment !== activeTabsTokenVariant) return false;
+      } else if (activeComponent === "accordion") {
+        if (variantSegment !== activeAccordionVariant) return false;
       } else if (variantSegment !== activeVariant) {
         return false;
       }
@@ -1357,11 +1396,15 @@ export default function App() {
     const variants = variantsByComponent[activeComponent];
     if (!variants) return;
     const expectedVariantSegment =
-      activeComponent === "tabs" ? activeTabsTokenVariant : activeVariant;
+      activeComponent === "tabs"
+        ? activeTabsTokenVariant
+        : activeComponent === "accordion"
+          ? activeAccordionVariant
+          : activeVariant;
     if (variants.includes(variantSegment) && variantSegment !== expectedVariantSegment) {
       setActiveColorToken(null);
     }
-  }, [activeComponent, activeColorToken, activeVariant, activeTabsTokenVariant]);
+  }, [activeAccordionVariant, activeComponent, activeColorToken, activeVariant, activeTabsTokenVariant]);
 
   useEffect(() => {
     if (!activeDimensionToken) return;
@@ -1858,6 +1901,18 @@ export default function App() {
                   showRightIcon={activeTabsShowRightIcon}
                 />
               )}
+              {activeComponent === "accordion" && (
+                <AccordionPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={activeAccordionVariant}
+                  activePosition={activeAccordionPosition}
+                  selectedState={forcedState || activeAccordionState}
+                  expanded={activeAccordionExpanded}
+                  activeColorToken={activeColorToken}
+                  label={activeAccordionLabel}
+                />
+              )}
 
               {activeComponent === "switch" && (
                 <SwitchPreviewContent
@@ -2231,6 +2286,21 @@ export default function App() {
                   setBuildVariants={setBuildTabsVariants}
                 />
               )}
+              {activeComponent === "accordion" && (
+                <AccordionPropertiesPanel
+                  activeVariant={activeAccordionVariant}
+                  setActiveVariant={setActiveAccordionVariant}
+                  activePosition={activeAccordionPosition}
+                  setActivePosition={setActiveAccordionPosition}
+                  selectedState={forcedState || activeAccordionState}
+                  setSelectedState={setActiveAccordionState}
+                  expanded={activeAccordionExpanded}
+                  setExpanded={setActiveAccordionExpanded}
+                  label={activeAccordionLabel}
+                  setLabel={setActiveAccordionLabel}
+                  forcedState={forcedState}
+                />
+              )}
               {activeComponent === "switch" && (
                 <SwitchPropertiesPanel
                   activeSwitchSize={activeSwitchSize}
@@ -2593,7 +2663,7 @@ export default function App() {
                   setFit={setActiveImageFit}
                 />
               )}
-              {!["button", "actionicon", "tabs", "switch", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "card", "loader", "pill", "badge", "image"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "card", "loader", "pill", "badge", "image"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>
@@ -2614,35 +2684,104 @@ export default function App() {
               Components
             </div>
             <div>
-              {COMPONENT_NAMES.map((name) => (
-                <button
-                  key={name}
-                  onClick={() => handleComponentChange(name)}
-                  style={{
-                    display: "block",
-                    width: "100%",
-                    textAlign: "left",
-                    background: activeComponent === name ? "#25262B" : "transparent",
-                    border: "none",
-                    borderRadius: 6,
-                    padding: "8px 12px",
-                    boxSizing: "border-box",
-                    fontSize: 13,
-                    fontWeight: activeComponent === name ? 600 : 400,
-                    color: activeComponent === name ? "#E9ECEF" : "#909296",
-                    cursor: "pointer",
-                    marginBottom: 2,
-                  }}
-                  onMouseEnter={(e) => {
-                    if (activeComponent !== name) e.currentTarget.style.background = "#2C2E33";
-                  }}
-                  onMouseLeave={(e) => {
-                    if (activeComponent !== name) e.currentTarget.style.background = "transparent";
-                  }}
-                >
-                  {getComponentLabel(name)}
-                </button>
-              ))}
+              {COMPONENT_NAMES.map((name) => {
+                if (name === "accordion") {
+                  const isGroupActive = activeComponent === "accordion";
+                  const accordionItems = ["accordion", "accordion-item", "accordion-content"];
+                  return (
+                    <div key="accordion-group" style={{ marginBottom: 4 }}>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAccordionNavExpanded((prev) => !prev);
+                          if (activeComponent !== "accordion") {
+                            handleAccordionNavSelect("accordion");
+                          }
+                        }}
+                        style={{
+                          display: "block",
+                          width: "100%",
+                          textAlign: "left",
+                          background: isGroupActive ? "#25262B" : "transparent",
+                          border: "none",
+                          borderRadius: 6,
+                          padding: "8px 12px",
+                          boxSizing: "border-box",
+                          fontSize: 13,
+                          fontWeight: isGroupActive ? 600 : 400,
+                          color: isGroupActive ? "#E9ECEF" : "#909296",
+                          cursor: "pointer",
+                          marginBottom: 2,
+                        }}
+                      >
+                        <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                          <span>{getComponentLabel("accordion")}</span>
+                          <span style={{ fontSize: 11, color: "#868E96" }}>{accordionNavExpanded ? "▾" : "▸"}</span>
+                        </span>
+                      </button>
+                      {accordionNavExpanded && (
+                        <div style={{ display: "grid", gap: 2, paddingLeft: 10 }}>
+                          {accordionItems.map((item) => {
+                            const isSelected = activeComponent === "accordion" && activeAccordionNavItem === item;
+                            return (
+                              <button
+                                key={item}
+                                type="button"
+                                onClick={() => handleAccordionNavSelect(item)}
+                                style={{
+                                  display: "block",
+                                  width: "100%",
+                                  textAlign: "left",
+                                  background: isSelected ? "#2C2E33" : "transparent",
+                                  border: "none",
+                                  borderRadius: 6,
+                                  padding: "7px 12px",
+                                  boxSizing: "border-box",
+                                  fontSize: 12,
+                                  fontWeight: isSelected ? 600 : 400,
+                                  color: isSelected ? "#E9ECEF" : "#909296",
+                                  cursor: "pointer",
+                                }}
+                              >
+                                {item === "accordion" ? "Accordion (Full)" : getComponentLabel(item)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                }
+                return (
+                  <button
+                    key={name}
+                    onClick={() => handleComponentChange(name)}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      textAlign: "left",
+                      background: activeComponent === name ? "#25262B" : "transparent",
+                      border: "none",
+                      borderRadius: 6,
+                      padding: "8px 12px",
+                      boxSizing: "border-box",
+                      fontSize: 13,
+                      fontWeight: activeComponent === name ? 600 : 400,
+                      color: activeComponent === name ? "#E9ECEF" : "#909296",
+                      cursor: "pointer",
+                      marginBottom: 2,
+                    }}
+                    onMouseEnter={(e) => {
+                      if (activeComponent !== name) e.currentTarget.style.background = "#2C2E33";
+                    }}
+                    onMouseLeave={(e) => {
+                      if (activeComponent !== name) e.currentTarget.style.background = "transparent";
+                    }}
+                  >
+                    {getComponentLabel(name)}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>

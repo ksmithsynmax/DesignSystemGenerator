@@ -975,7 +975,7 @@ function resolveManagedComponentKeyFromName(name) {
     "button", "switch", "slider", "rangeslider", "checkbox", "radio",
     "chip", "notification", "alert", "modal", "tooltip", "loader",
     "pill", "badge", "textinput", "select", "card", "actionicon",
-    "tabs", "anchor", "title", "text", "image"
+    "tabs", "accordion", "anchor", "title", "text", "image"
   ];
   // Longest keys first so e.g. "textinput" matches before the "text" prefix rule.
   var sorted = managedKeys.slice().sort(function (a, b) {
@@ -1227,6 +1227,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var tabsSet = await buildSet("Tabs", function () {
     return buildTabsComponentSet(varMap, page, font, tabsVariants);
   });
+  var accordionItemSet = await buildSet("Accordion", function () {
+    return buildAccordionItemComponentSet(varMap, page, font);
+  });
   var tabsItemSet = await buildSet("Tabs Item", function () {
     return buildTabsItemComponentSet(varMap, page, font, tabsVariants);
   });
@@ -1271,6 +1274,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     cardSet,
     actionIconSet,
     tabsSet,
+    accordionItemSet,
     tabsItemSet,
     anchorSet,
     titleSet,
@@ -9484,6 +9488,435 @@ function actionIconColorPath(variant, property, state) {
   var base = "actionicon/" + variant + "-" + property;
   if (state === "default") return base;
   return base + "-" + state;
+}
+
+// ---------------------------------------------------------------------------
+// Accordion
+// ---------------------------------------------------------------------------
+
+function accordionColorPath(variant, property, state) {
+  var base = "accordion/" + variant + "-" + property;
+  if (!state || state === "default") return base;
+  return base + "-" + state;
+}
+
+function capTokenValue(value) {
+  var normalized = String(value || "");
+  if (!normalized) return "";
+  return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+}
+
+function applyAccordionPositionRadii(node, varMap, position) {
+  var pos = String(position || "single").toLowerCase();
+  var topOn = pos === "single" || pos === "first";
+  var bottomOn = pos === "single" || pos === "last";
+  node.topLeftRadius = topOn ? 4 : 0;
+  node.topRightRadius = topOn ? 4 : 0;
+  node.bottomLeftRadius = bottomOn ? 4 : 0;
+  node.bottomRightRadius = bottomOn ? 4 : 0;
+  bindVar(node, "topLeftRadius", topOn ? varMap["accordion/radius-default"] : null);
+  bindVar(node, "topRightRadius", topOn ? varMap["accordion/radius-default"] : null);
+  bindVar(node, "bottomLeftRadius", bottomOn ? varMap["accordion/radius-default"] : null);
+  bindVar(node, "bottomRightRadius", bottomOn ? varMap["accordion/radius-default"] : null);
+}
+
+function applyAccordionHeaderRadii(node, varMap, position, expanded) {
+  var pos = String(position || "single").toLowerCase();
+  var topOn = pos === "single" || pos === "first";
+  var bottomOn = !expanded && (pos === "single" || pos === "last");
+  node.topLeftRadius = topOn ? 4 : 0;
+  node.topRightRadius = topOn ? 4 : 0;
+  node.bottomLeftRadius = bottomOn ? 4 : 0;
+  node.bottomRightRadius = bottomOn ? 4 : 0;
+  bindVar(node, "topLeftRadius", topOn ? varMap["accordion/radius-default"] : null);
+  bindVar(node, "topRightRadius", topOn ? varMap["accordion/radius-default"] : null);
+  bindVar(node, "bottomLeftRadius", bottomOn ? varMap["accordion/radius-default"] : null);
+  bindVar(node, "bottomRightRadius", bottomOn ? varMap["accordion/radius-default"] : null);
+}
+
+function applyAccordionPanelRadii(node, varMap, position, expanded) {
+  var pos = String(position || "single").toLowerCase();
+  var bottomOn = expanded && (pos === "single" || pos === "last");
+  node.topLeftRadius = 0;
+  node.topRightRadius = 0;
+  node.bottomLeftRadius = bottomOn ? 4 : 0;
+  node.bottomRightRadius = bottomOn ? 4 : 0;
+  bindVar(node, "topLeftRadius", null);
+  bindVar(node, "topRightRadius", null);
+  bindVar(node, "bottomLeftRadius", bottomOn ? varMap["accordion/radius-default"] : null);
+  bindVar(node, "bottomRightRadius", bottomOn ? varMap["accordion/radius-default"] : null);
+}
+
+function createAccordionChevron(varMap, colorPath) {
+  var icon = figma.createFrame();
+  icon.name = "Chevron";
+  icon.layoutMode = "NONE";
+  icon.resizeWithoutConstraints(20, 20);
+  icon.fills = [];
+  icon.strokes = [];
+
+  var chevron = figma.createVector();
+  chevron.name = "Chevron Path";
+  chevron.resizeWithoutConstraints(10, 6);
+  chevron.x = 5;
+  chevron.y = 7;
+  chevron.fills = [];
+  chevron.strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+  chevron.strokeWeight = 1.8;
+  chevron.strokeCap = "ROUND";
+  chevron.strokeJoin = "ROUND";
+  chevron.vectorPaths = [{ windingRule: "NONE", data: "M 1 1 L 5 5 L 9 1" }];
+  bindPaintVar(chevron, "strokes", 0, varMap[colorPath]);
+  bindVar(chevron, "strokeWeight", varMap["accordion/icon-stroke-width"]);
+  icon.appendChild(chevron);
+  return icon;
+}
+
+async function findAccordionChevronIconComponent() {
+  var iconCandidates = [];
+  var iconsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var page = figma.root.children[pi];
+    if (page.type !== "PAGE") continue;
+    await page.loadAsync();
+    if (!iconsPage && page.name && page.name.toLowerCase() === "icons") {
+      iconsPage = page;
+    }
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function(n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") iconCandidates.push(setChildren[ci]);
+      }
+    }
+  }
+
+  var down = null;
+  var fallback = null;
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var name = String(iconCandidates[j].name || "").toLowerCase();
+    if (!fallback) fallback = iconCandidates[j];
+    if (!down && (
+      name.indexOf("chevrondown") >= 0 ||
+      name.indexOf("arrowdown") >= 0 ||
+      name.indexOf("down") >= 0
+    )) {
+      down = iconCandidates[j];
+      break;
+    }
+  }
+
+  var resolved = down || fallback || null;
+  if (resolved) progress("[Accordion] Chevron source: " + resolved.name);
+  return resolved;
+}
+
+async function buildAccordionItemComponentSet(varMap, page, font) {
+  var variants = ["default", "contained", "filled"];
+  var positions = ["single", "first", "middle", "last"];
+  var states = ["default", "hover", "focus", "disabled"];
+  var expandedModes = ["off", "on"];
+  var components = [];
+  var colWidth = 520;
+  var rowHeight = 120;
+  var gap = 22;
+  var chevronIconComp = await findAccordionChevronIconComponent();
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = capTokenValue(variant);
+    for (var pi = 0; pi < positions.length; pi++) {
+      var position = positions[pi];
+      var capPosition = capTokenValue(position);
+      for (var si = 0; si < states.length; si++) {
+        var state = states[si];
+        var capState = capTokenValue(state);
+        for (var ei = 0; ei < expandedModes.length; ei++) {
+          var expandedMode = expandedModes[ei];
+          var expanded = expandedMode === "on";
+          var capExpanded = expanded ? "On" : "Off";
+          var removeHeaderTopBorder = position === "middle" || position === "last";
+
+          var comp = figma.createComponent();
+          comp.name =
+            "Variant=" + capVariant +
+            ", Position=" + capPosition +
+            ", State=" + capState +
+            ", Expanded=" + capExpanded;
+          comp.layoutMode = "VERTICAL";
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "FIXED";
+          comp.resizeWithoutConstraints(468, expanded ? 87 : 36);
+          comp.itemSpacing = 0;
+          comp.fills = [];
+          comp.strokes = [];
+
+          var headerRow = figma.createFrame();
+          headerRow.name = "AccordionItem";
+          headerRow.layoutMode = "HORIZONTAL";
+          headerRow.primaryAxisSizingMode = "FIXED";
+          headerRow.counterAxisSizingMode = "AUTO";
+          try { headerRow.layoutSizingHorizontal = "FILL"; } catch (_accordionHeaderFillErr) {}
+          headerRow.resizeWithoutConstraints(468, 36);
+          headerRow.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.15, b: 0.24 } }];
+          headerRow.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
+          headerRow.strokeAlign = "INSIDE";
+          headerRow.strokeTopWeight = removeHeaderTopBorder ? 0 : 1;
+          headerRow.strokeRightWeight = 1;
+          headerRow.strokeBottomWeight = 1;
+          headerRow.strokeLeftWeight = 1;
+          headerRow.paddingLeft = 12;
+          headerRow.paddingRight = 12;
+          headerRow.paddingTop = 8;
+          headerRow.paddingBottom = 8;
+          headerRow.primaryAxisAlignItems = "SPACE_BETWEEN";
+          headerRow.counterAxisAlignItems = "CENTER";
+          headerRow.clipsContent = true;
+          bindPaintVar(headerRow, "fills", 0, varMap[accordionColorPath(variant, "header-background", state)]);
+          bindPaintVar(headerRow, "strokes", 0, varMap[accordionColorPath(variant, "header-border", state)]);
+          bindVar(headerRow, "strokeTopWeight", removeHeaderTopBorder ? null : varMap["accordion/border-width"]);
+          bindVar(headerRow, "strokeRightWeight", varMap["accordion/border-width"]);
+          bindVar(headerRow, "strokeBottomWeight", varMap["accordion/border-width"]);
+          bindVar(headerRow, "strokeLeftWeight", varMap["accordion/border-width"]);
+          bindVar(headerRow, "paddingLeft", varMap["accordion/header-padding-x"]);
+          bindVar(headerRow, "paddingRight", varMap["accordion/header-padding-x"]);
+          bindVar(headerRow, "paddingTop", varMap["accordion/header-padding-y"]);
+          bindVar(headerRow, "paddingBottom", varMap["accordion/header-padding-y"]);
+          applyAccordionHeaderRadii(headerRow, varMap, position, expanded);
+          comp.appendChild(headerRow);
+
+          var label = figma.createText();
+          label.name = "Label";
+          label.fontName = font;
+          label.characters = "Title";
+          label.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          label.fontSize = 14;
+          bindPaintVar(label, "fills", 0, varMap[accordionColorPath(variant, "header-text", state)]);
+          bindVar(label, "fontSize", varMap["accordion/label-font-size"]);
+          bindVar(label, "fontFamily", varMap["accordion/label-font-family"]);
+          bindVar(label, "fontStyle", varMap["accordion/label-font-weight"]);
+          bindVar(label, "lineHeight", varMap["accordion/label-line-height"]);
+          headerRow.appendChild(label);
+
+          var icon = null;
+          if (chevronIconComp) {
+            icon = chevronIconComp.createInstance();
+            icon.name = "Chevron";
+            try { icon.layoutPositioning = "AUTO"; } catch (_accordionChevronPositionErr) {}
+            icon.resize(20, 20);
+            bindVar(icon, "width", varMap["accordion/icon-size"]);
+            bindVar(icon, "height", varMap["accordion/icon-size"]);
+            var iconVectors = icon.findAll(function(n) { return n.type === "VECTOR"; });
+            for (var iv = 0; iv < iconVectors.length; iv++) {
+              bindVar(iconVectors[iv], "strokeWeight", varMap["accordion/icon-stroke-width"]);
+              if (iconVectors[iv].strokes && iconVectors[iv].strokes.length > 0) {
+                iconVectors[iv].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(iconVectors[iv], "strokes", 0, varMap[accordionColorPath(variant, "header-icon", state)]);
+              }
+              if (iconVectors[iv].fills && iconVectors[iv].fills.length > 0) {
+                iconVectors[iv].fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(iconVectors[iv], "fills", 0, varMap[accordionColorPath(variant, "header-icon", state)]);
+              }
+            }
+          } else {
+            icon = createAccordionChevron(varMap, accordionColorPath(variant, "header-icon", state));
+          }
+          headerRow.appendChild(icon);
+
+          if (expanded) {
+            var panel = figma.createFrame();
+            panel.name = "Panel";
+            panel.layoutMode = "VERTICAL";
+            panel.primaryAxisSizingMode = "AUTO";
+            panel.counterAxisSizingMode = "FIXED";
+            panel.itemSpacing = 0;
+            panel.paddingLeft = 12;
+            panel.paddingRight = 12;
+            panel.paddingTop = 12;
+            panel.paddingBottom = 12;
+            panel.fills = [{ type: "SOLID", color: { r: 0.09, g: 0.1, b: 0.15 } }];
+            panel.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
+            panel.strokeAlign = "INSIDE";
+            panel.strokeTopWeight = 0;
+            panel.strokeRightWeight = 1;
+            panel.strokeBottomWeight = 1;
+            panel.strokeLeftWeight = 1;
+            bindPaintVar(panel, "fills", 0, varMap["accordion/panel-background"]);
+            bindPaintVar(panel, "strokes", 0, varMap["accordion/panel-border"]);
+            bindVar(panel, "strokeRightWeight", varMap["accordion/border-width"]);
+            bindVar(panel, "strokeBottomWeight", varMap["accordion/border-width"]);
+            bindVar(panel, "strokeLeftWeight", varMap["accordion/border-width"]);
+            bindVar(panel, "paddingLeft", varMap["accordion/panel-padding-x"]);
+            bindVar(panel, "paddingRight", varMap["accordion/panel-padding-x"]);
+            bindVar(panel, "paddingTop", varMap["accordion/panel-padding-y"]);
+            bindVar(panel, "paddingBottom", varMap["accordion/panel-padding-y"]);
+            applyAccordionPanelRadii(panel, varMap, position, expanded);
+            panel.clipsContent = true;
+            comp.appendChild(panel);
+            try { panel.layoutAlign = "STRETCH"; } catch (_accordionPanelStretchErr) {}
+            try { panel.layoutSizingHorizontal = "FILL"; } catch (_accordionPanelFillErr) {}
+            panel.resizeWithoutConstraints(468, 51);
+
+            var slotHost = null;
+            if (typeof comp.createSlot === "function") {
+              slotHost = comp.createSlot();
+            } else {
+              slotHost = figma.createFrame();
+            }
+            slotHost.name = "AccordionContent";
+            slotHost.layoutMode = "VERTICAL";
+            slotHost.primaryAxisSizingMode = "AUTO";
+            slotHost.counterAxisSizingMode = "FIXED";
+            slotHost.itemSpacing = 0;
+            slotHost.paddingLeft = 0;
+            slotHost.paddingRight = 0;
+            slotHost.paddingTop = 0;
+            slotHost.paddingBottom = 0;
+            slotHost.fills = [];
+            slotHost.strokes = [];
+            slotHost.resizeWithoutConstraints(444, 27);
+            panel.appendChild(slotHost);
+            try { slotHost.layoutPositioning = "AUTO"; } catch (_accordionSlotHostPositionErr) {}
+            try { slotHost.layoutAlign = "STRETCH"; } catch (_accordionSlotHostAlignErr) {}
+            try { slotHost.layoutSizingHorizontal = "FILL"; } catch (_accordionSlotHostFillErr) {}
+          }
+
+          var colIndex = vi * positions.length + pi;
+          var rowIndex = si * expandedModes.length + ei;
+          comp.x = colIndex * (colWidth + gap);
+          comp.y = rowIndex * (rowHeight + gap);
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " accordion item variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Accordion Item";
+  return componentSet;
+}
+
+function buildAccordionContentTextComponentSet(varMap, page, font) {
+  var states = ["default", "disabled"];
+  var components = [];
+  for (var si = 0; si < states.length; si++) {
+    var state = states[si];
+    var comp = figma.createComponent();
+    comp.name = "State=" + capTokenValue(state);
+    comp.layoutMode = "VERTICAL";
+    comp.primaryAxisSizingMode = "AUTO";
+    comp.counterAxisSizingMode = "FIXED";
+    comp.resizeWithoutConstraints(320, 80);
+    comp.paddingLeft = 16;
+    comp.paddingRight = 16;
+    comp.paddingTop = 12;
+    comp.paddingBottom = 12;
+    comp.fills = [{ type: "SOLID", color: { r: 0.98, g: 0.99, b: 1 } }];
+    bindPaintVar(comp, "fills", 0, varMap["accordion/panel-background"]);
+    bindVar(comp, "paddingLeft", varMap["accordion/panel-padding-x"]);
+    bindVar(comp, "paddingRight", varMap["accordion/panel-padding-x"]);
+    bindVar(comp, "paddingTop", varMap["accordion/panel-padding-y"]);
+    bindVar(comp, "paddingBottom", varMap["accordion/panel-padding-y"]);
+
+    var text = figma.createText();
+    text.name = "Content";
+    text.fontName = font;
+    text.characters = "Text content slot. Use for paragraph details.";
+    text.fontSize = 14;
+    text.fills = [{ type: "SOLID", color: { r: 0.31, g: 0.35, b: 0.4 } }];
+    bindPaintVar(text, "fills", 0, varMap["accordion/content-text"]);
+    bindVar(text, "fontSize", varMap["accordion/content-font-size"]);
+    bindVar(text, "fontFamily", varMap["accordion/content-font-family"]);
+    bindVar(text, "fontStyle", varMap["accordion/content-font-weight"]);
+    bindVar(text, "lineHeight", varMap["accordion/content-line-height"]);
+    comp.appendChild(text);
+    if (state === "disabled") comp.opacity = 0.65;
+
+    comp.x = si * 380;
+    comp.y = 0;
+    page.appendChild(comp);
+    components.push(comp);
+  }
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Accordion Content / Text";
+  return componentSet;
+}
+
+function buildAccordionContentDataGridComponentSet(varMap, page, font) {
+  var states = ["default", "disabled"];
+  var components = [];
+  for (var si = 0; si < states.length; si++) {
+    var state = states[si];
+    var comp = figma.createComponent();
+    comp.name = "State=" + capTokenValue(state);
+    comp.layoutMode = "VERTICAL";
+    comp.primaryAxisSizingMode = "AUTO";
+    comp.counterAxisSizingMode = "FIXED";
+    comp.resizeWithoutConstraints(320, 124);
+    comp.paddingLeft = 16;
+    comp.paddingRight = 16;
+    comp.paddingTop = 12;
+    comp.paddingBottom = 12;
+    comp.itemSpacing = 8;
+    comp.fills = [{ type: "SOLID", color: { r: 0.98, g: 0.99, b: 1 } }];
+    bindPaintVar(comp, "fills", 0, varMap["accordion/panel-background"]);
+
+    var headers = figma.createText();
+    headers.name = "Headers";
+    headers.fontName = font;
+    headers.characters = "Name           Value          Status";
+    headers.fontSize = 13;
+    headers.fills = [{ type: "SOLID", color: { r: 0.31, g: 0.35, b: 0.4 } }];
+    bindPaintVar(headers, "fills", 0, varMap["accordion/content-text"]);
+    bindVar(headers, "fontFamily", varMap["accordion/content-font-family"]);
+    comp.appendChild(headers);
+
+    var row1 = figma.createText();
+    row1.name = "Row 1";
+    row1.fontName = font;
+    row1.characters = "Bandwidth      120ms          Healthy";
+    row1.fontSize = 14;
+    row1.fills = [{ type: "SOLID", color: { r: 0.31, g: 0.35, b: 0.4 } }];
+    bindPaintVar(row1, "fills", 0, varMap["accordion/content-text"]);
+    bindVar(row1, "fontSize", varMap["accordion/content-font-size"]);
+    bindVar(row1, "fontFamily", varMap["accordion/content-font-family"]);
+    bindVar(row1, "fontStyle", varMap["accordion/content-font-weight"]);
+    bindVar(row1, "lineHeight", varMap["accordion/content-line-height"]);
+    comp.appendChild(row1);
+
+    var row2 = figma.createText();
+    row2.name = "Row 2";
+    row2.fontName = font;
+    row2.characters = "Latency        32ms           Healthy";
+    row2.fontSize = 14;
+    row2.fills = [{ type: "SOLID", color: { r: 0.31, g: 0.35, b: 0.4 } }];
+    bindPaintVar(row2, "fills", 0, varMap["accordion/content-text"]);
+    bindVar(row2, "fontSize", varMap["accordion/content-font-size"]);
+    bindVar(row2, "fontFamily", varMap["accordion/content-font-family"]);
+    bindVar(row2, "fontStyle", varMap["accordion/content-font-weight"]);
+    bindVar(row2, "lineHeight", varMap["accordion/content-line-height"]);
+    comp.appendChild(row2);
+
+    if (state === "disabled") comp.opacity = 0.65;
+    comp.x = si * 380;
+    comp.y = 180;
+    page.appendChild(comp);
+    components.push(comp);
+  }
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Accordion Content / DataGrid";
+  return componentSet;
 }
 
 // ---------------------------------------------------------------------------

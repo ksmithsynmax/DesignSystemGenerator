@@ -32,6 +32,11 @@ const EXTRA_FIGMA_PROPERTIES = {
     { name: "LeftIcon", values: ["Off", "On"], notes: "Left icon visibility." },
     { name: "RightIcon", values: ["Off", "On"], notes: "Right icon visibility." },
   ],
+  accordion: [
+    { name: "Position", values: ["Single", "First", "Middle", "Last"], notes: "Visual grouping position in an accordion stack." },
+    { name: "Expanded", values: ["Off", "On"], notes: "Panel visibility state for docs and Figma variants." },
+    { name: "Label", values: ["Any text"], notes: "Accordion trigger label text." },
+  ],
   checkbox: [
     { name: "Checked", values: ["Unchecked", "Checked", "Indeterminate"], notes: "Selection state visual." },
   ],
