@@ -1059,6 +1059,8 @@ export const COMPONENT_TOKENS = {
     "notification-radius": { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "notification/radius" },
     "notification-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "notification/padding-x" },
     "notification-padding-y": { type: "FLOAT", unit: "px", value: 10, figmaPath: "notification/padding-y" },
+    "notification-icon-stroke-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "notification/icon-stroke-width" },
+    "notification-close-stroke-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "notification/close-stroke-width" },
     "notification-title-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "notification/title-font-size" },
     "notification-title-font-family": { type: "STRING", value: "Inter", figmaPath: "notification/title-font-family" },
     "notification-title-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "notification/title-font-weight" },

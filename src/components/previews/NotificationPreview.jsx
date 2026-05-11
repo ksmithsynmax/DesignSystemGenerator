@@ -116,9 +116,21 @@ export default function NotificationPreview({
   const descriptionFontFamily = resolveDimension(brands, brandId, "notification-description-font-family");
   const descriptionFontWeight = resolveDimension(brands, brandId, "notification-description-font-weight");
   const descriptionLineHeight = resolveDimension(brands, brandId, "notification-description-line-height");
+  const iconStrokeWidth = resolveDimension(brands, brandId, "notification-icon-stroke-width");
+  const closeStrokeWidth = resolveDimension(brands, brandId, "notification-close-stroke-width");
+
+  const iconStrokeWidthNum = Number(iconStrokeWidth);
+  const closeStrokeWidthNum = Number(closeStrokeWidth);
+  const iconStrokeWidthSafe = Number.isFinite(iconStrokeWidthNum) ? iconStrokeWidthNum : 2;
+  const closeStrokeWidthSafe = Number.isFinite(closeStrokeWidthNum) ? closeStrokeWidthNum : 2;
 
   const iconNode = withIcon ? (
-    <MessageNotificationCircleIcon width={16} height={16} style={{ color: iconColor }} />
+    <MessageNotificationCircleIcon
+      width={16}
+      height={16}
+      strokeWidth={iconStrokeWidthSafe}
+      style={{ color: iconColor }}
+    />
   ) : null;
 
   const effectiveWithAccent = Boolean(withAccent) && !loading;
@@ -195,6 +207,9 @@ export default function NotificationPreview({
         },
         closeButton: {
           color: closeColor,
+          "& svg": {
+            strokeWidth: closeStrokeWidthSafe,
+          },
         },
         icon: {
           color: iconColor,

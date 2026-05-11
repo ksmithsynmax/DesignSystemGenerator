@@ -13,14 +13,14 @@ const VARIANT_MAP = {
   transparent: "transparent",
 };
 
-function getIcon(iconName, iconSize, color) {
+function getIcon(iconName, iconSize, color, strokeWidth) {
   if (iconName === "check") {
-    return <CheckIcon width={iconSize} height={iconSize} style={{ color }} />;
+    return <CheckIcon width={iconSize} height={iconSize} strokeWidth={strokeWidth} style={{ color }} />;
   }
   if (iconName === "minus") {
-    return <MinusIcon width={iconSize} height={iconSize} style={{ color }} />;
+    return <MinusIcon width={iconSize} height={iconSize} strokeWidth={strokeWidth} style={{ color }} />;
   }
-  return <ChevronRightIcon width={iconSize} height={iconSize} style={{ color }} />;
+  return <ChevronRightIcon width={iconSize} height={iconSize} strokeWidth={strokeWidth} style={{ color }} />;
 }
 
 export default function ActionIconPreview({
@@ -76,6 +76,12 @@ export default function ActionIconPreview({
     brandId,
     "actionicon-icon-size",
     resolveSizeKey("actionicon-icon-size", size, resolvedActionIconSize)
+  );
+  const iconStrokeWidth = resolveDimension(
+    brands,
+    brandId,
+    "actionicon-icon-stroke-width",
+    resolveSizeKey("actionicon-icon-stroke-width", size, resolvedActionIconSize)
   );
   const borderWidth = resolveDimension(brands, brandId, "actionicon-border-width");
   const focusRingWidth = resolveDimension(
@@ -145,7 +151,7 @@ export default function ActionIconPreview({
         },
       }}
     >
-      {getIcon(iconName, iconSize, iconColor)}
+      {getIcon(iconName, iconSize, iconColor, iconStrokeWidth)}
     </ActionIcon>
   );
 }

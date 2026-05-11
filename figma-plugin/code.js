@@ -2924,6 +2924,53 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           var notifTplColorVals = notifTplColorKey ? getPropValues(variantProps, "Color") : [];
           var notifTplRadiusKey = getPropKey(variantProps, "Radius");
           var notifTplRadiusVals = notifTplRadiusKey ? getPropValues(variantProps, "Radius") : [];
+          var notifTplBorderKey = getPropKey(variantProps, "Border") ? "Border" : (getPropKey(variantProps, "WithBorder") ? "WithBorder" : null);
+          var notifTplCloseKey = getPropKey(variantProps, "Close") ? "Close" : (getPropKey(variantProps, "WithCloseButton") ? "WithCloseButton" : null);
+          var notifTplIconKey = getPropKey(variantProps, "Icon") ? "Icon" : (getPropKey(variantProps, "WithIcon") ? "WithIcon" : null);
+          var notifTplLoadingKey = getPropKey(variantProps, "Loading") ? "Loading" : null;
+          var notifTplAccentKey = getPropKey(variantProps, "Accent") ? "Accent" : null;
+          var notifTplBorderVals = notifTplBorderKey ? getPropValues(variantProps, notifTplBorderKey) : [];
+          var notifTplCloseVals = notifTplCloseKey ? getPropValues(variantProps, notifTplCloseKey) : [];
+          var notifTplIconVals = notifTplIconKey ? getPropValues(variantProps, notifTplIconKey) : [];
+          var notifTplLoadingVals = notifTplLoadingKey ? getPropValues(variantProps, notifTplLoadingKey) : [];
+          var notifTplAccentVals = notifTplAccentKey ? getPropValues(variantProps, notifTplAccentKey) : [];
+          function notifTplToggleOn(values) {
+            if (!values || !values.length) return null;
+            for (var i = 0; i < values.length; i++) {
+              var v = String(values[i] || "").toLowerCase();
+              if (v === "on" || v === "true") return values[i];
+            }
+            return values[0];
+          }
+          function notifTplToggleOff(values) {
+            if (!values || !values.length) return null;
+            for (var i = 0; i < values.length; i++) {
+              var v = String(values[i] || "").toLowerCase();
+              if (v === "off" || v === "false") return values[i];
+            }
+            return values[0];
+          }
+          var notifTplColorDefault = null;
+          if (notifTplColorVals.length > 0) {
+            for (var ntci = 0; ntci < notifTplColorVals.length; ntci++) {
+              if (String(notifTplColorVals[ntci] || "").toLowerCase() === "primary") {
+                notifTplColorDefault = notifTplColorVals[ntci];
+                break;
+              }
+            }
+            if (notifTplColorDefault == null) notifTplColorDefault = notifTplColorVals[0];
+          }
+          var notifTplRadiusDefault = pickDefaultSizeValue(notifTplRadiusVals);
+          var notifTplBorderOn = notifTplToggleOn(notifTplBorderVals);
+          var notifTplBorderOff = notifTplToggleOff(notifTplBorderVals);
+          var notifTplCloseOn = notifTplToggleOn(notifTplCloseVals);
+          var notifTplCloseOff = notifTplToggleOff(notifTplCloseVals);
+          var notifTplIconOn = notifTplToggleOn(notifTplIconVals);
+          var notifTplIconOff = notifTplToggleOff(notifTplIconVals);
+          var notifTplLoadingOn = notifTplToggleOn(notifTplLoadingVals);
+          var notifTplLoadingOff = notifTplToggleOff(notifTplLoadingVals);
+          var notifTplAccentOn = notifTplToggleOn(notifTplAccentVals);
+          var notifTplAccentOff = notifTplToggleOff(notifTplAccentVals);
           var notifTplPanel = getTemplateSlot(templatedDoc, slug, "variants") || getTemplateSlot(templatedDoc, slug, "size");
           if (!notifTplPanel) {
             templatedDoc.appendChild(createSectionHeader("Examples", "Semantic colors and radius scale.", DOC_COLORS.subtitle));
@@ -2947,6 +2994,114 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               false,
               { itemsPerRow: 3 }
             );
+          }
+          var notifTplHasToggles =
+            notifTplBorderVals.length > 1 ||
+            notifTplCloseVals.length > 1 ||
+            notifTplIconVals.length > 1 ||
+            notifTplLoadingVals.length > 1 ||
+            notifTplAccentVals.length > 1;
+          if (notifTplHasToggles) {
+            function makeNotifTplBasePatch() {
+              var patch = {};
+              if (notifTplColorDefault != null) patch.Color = notifTplColorDefault;
+              if (notifTplRadiusDefault != null) patch.Radius = notifTplRadiusDefault;
+              if (notifTplBorderKey && notifTplBorderOff != null) patch[notifTplBorderKey] = notifTplBorderOff;
+              if (notifTplCloseKey && notifTplCloseOff != null) patch[notifTplCloseKey] = notifTplCloseOff;
+              if (notifTplIconKey && notifTplIconOff != null) patch[notifTplIconKey] = notifTplIconOff;
+              if (notifTplLoadingKey && notifTplLoadingOff != null) patch[notifTplLoadingKey] = notifTplLoadingOff;
+              if (notifTplAccentKey && notifTplAccentOff != null) patch[notifTplAccentKey] = notifTplAccentOff;
+              return patch;
+            }
+            function appendNotifTplOptionCard(cardName, cardSubtitle, labels, patchForLabel, itemsPerRow) {
+              if (!labels || !labels.length) return;
+              var block = createStack("notification-template-option-block-" + normalizeName(cardName), 8);
+              appendText(block, titleFont, cardName, 18, DOC_COLORS.panelHeading, "Notification Option Heading", "title");
+              appendText(block, bodyFont, cardSubtitle, 12, DOC_COLORS.panelBody, "Notification Option Subtitle");
+              var panel = createPanel("notification-template-option-card-" + normalizeName(cardName), 10);
+              panel.resize(1192, panel.height);
+              block.appendChild(panel);
+              notifTplPanel.appendChild(block);
+              addInstancesRow(
+                panel,
+                cardName,
+                labels,
+                function (label) { return makeTemplateInstance(patchForLabel(label)); },
+                false,
+                itemsPerRow ? { itemsPerRow: itemsPerRow } : null
+              );
+            }
+            var notifTplOrderedColors = notifTplColorVals.length > 0
+              ? pickOrdered(notifTplColorVals, ["Primary", "Dark", "Error", "Warning", "Success"])
+              : [];
+            if (notifTplBorderVals.length > 1 && notifTplBorderKey && notifTplOrderedColors.length > 0) {
+              appendNotifTplOptionCard(
+                "Border",
+                "Bordered notifications across semantic colors.",
+                notifTplOrderedColors,
+                function (colorName) {
+                  var patch = makeNotifTplBasePatch();
+                  patch.Color = colorName;
+                  if (notifTplBorderOn != null) patch[notifTplBorderKey] = notifTplBorderOn;
+                  if (notifTplAccentKey && notifTplAccentOn != null) patch[notifTplAccentKey] = notifTplAccentOn;
+                  return patch;
+                },
+                3
+              );
+            }
+            if (notifTplCloseVals.length > 1 && notifTplCloseKey && notifTplColorDefault != null) {
+              appendNotifTplOptionCard(
+                "Close",
+                "Primary notification with close control enabled.",
+                [notifTplColorDefault],
+                function () {
+                  var patch = makeNotifTplBasePatch();
+                  if (notifTplCloseOn != null) patch[notifTplCloseKey] = notifTplCloseOn;
+                  return patch;
+                },
+                1
+              );
+            }
+            if (notifTplIconVals.length > 1 && notifTplIconKey && notifTplColorDefault != null) {
+              appendNotifTplOptionCard(
+                "Icon",
+                "Primary notification with leading icon enabled.",
+                [notifTplColorDefault],
+                function () {
+                  var patch = makeNotifTplBasePatch();
+                  if (notifTplIconOn != null) patch[notifTplIconKey] = notifTplIconOn;
+                  return patch;
+                },
+                1
+              );
+            }
+            if (notifTplLoadingVals.length > 1 && notifTplLoadingKey && notifTplColorDefault != null) {
+              appendNotifTplOptionCard(
+                "Loader",
+                "Primary notification with loading state enabled.",
+                [notifTplColorDefault],
+                function () {
+                  var patch = makeNotifTplBasePatch();
+                  if (notifTplLoadingOn != null) patch[notifTplLoadingKey] = notifTplLoadingOn;
+                  return patch;
+                },
+                1
+              );
+            }
+            if (notifTplAccentVals.length > 1 && notifTplAccentKey && notifTplColorDefault != null) {
+              appendNotifTplOptionCard(
+                "No Accent",
+                "Primary notification with accent bar disabled.",
+                [notifTplColorDefault],
+                function () {
+                  var patch = makeNotifTplBasePatch();
+                  if (notifTplAccentOff != null) patch[notifTplAccentKey] = notifTplAccentOff;
+                  if (notifTplLoadingKey && notifTplLoadingOff != null) patch[notifTplLoadingKey] = notifTplLoadingOff;
+                  return patch;
+                },
+                1
+              );
+            }
           }
           if (notifTplRadiusVals.length > 1) {
             var notifTplRadiusPanel = createPanel("notification-template-radius-row", 10);
@@ -3854,6 +4009,53 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       if (lowerSetName === "notification" && baseComponent) {
         var notifProgColors = colorKey ? getPropValues(variantProps, "Color") : [];
         var notifProgRadii = radiusKey ? getPropValues(variantProps, "Radius") : [];
+        var notifProgBorderKey = getPropKey(variantProps, "Border") ? "Border" : (getPropKey(variantProps, "WithBorder") ? "WithBorder" : null);
+        var notifProgCloseKey = getPropKey(variantProps, "Close") ? "Close" : (getPropKey(variantProps, "WithCloseButton") ? "WithCloseButton" : null);
+        var notifProgIconKey = getPropKey(variantProps, "Icon") ? "Icon" : (getPropKey(variantProps, "WithIcon") ? "WithIcon" : null);
+        var notifProgLoadingKey = getPropKey(variantProps, "Loading") ? "Loading" : null;
+        var notifProgAccentKey = getPropKey(variantProps, "Accent") ? "Accent" : null;
+        var notifProgBorderVals = notifProgBorderKey ? getPropValues(variantProps, notifProgBorderKey) : [];
+        var notifProgCloseVals = notifProgCloseKey ? getPropValues(variantProps, notifProgCloseKey) : [];
+        var notifProgIconVals = notifProgIconKey ? getPropValues(variantProps, notifProgIconKey) : [];
+        var notifProgLoadingVals = notifProgLoadingKey ? getPropValues(variantProps, notifProgLoadingKey) : [];
+        var notifProgAccentVals = notifProgAccentKey ? getPropValues(variantProps, notifProgAccentKey) : [];
+        function notifProgToggleOn(values) {
+          if (!values || !values.length) return null;
+          for (var i = 0; i < values.length; i++) {
+            var v = String(values[i] || "").toLowerCase();
+            if (v === "on" || v === "true") return values[i];
+          }
+          return values[0];
+        }
+        function notifProgToggleOff(values) {
+          if (!values || !values.length) return null;
+          for (var i = 0; i < values.length; i++) {
+            var v = String(values[i] || "").toLowerCase();
+            if (v === "off" || v === "false") return values[i];
+          }
+          return values[0];
+        }
+        var notifProgDefaultColor = null;
+        if (notifProgColors.length > 0) {
+          for (var npci = 0; npci < notifProgColors.length; npci++) {
+            if (String(notifProgColors[npci] || "").toLowerCase() === "primary") {
+              notifProgDefaultColor = notifProgColors[npci];
+              break;
+            }
+          }
+          if (notifProgDefaultColor == null) notifProgDefaultColor = notifProgColors[0];
+        }
+        var notifProgDefaultRadius = pickDefaultSizeValue(notifProgRadii);
+        var notifProgBorderOn = notifProgToggleOn(notifProgBorderVals);
+        var notifProgBorderOff = notifProgToggleOff(notifProgBorderVals);
+        var notifProgCloseOn = notifProgToggleOn(notifProgCloseVals);
+        var notifProgCloseOff = notifProgToggleOff(notifProgCloseVals);
+        var notifProgIconOn = notifProgToggleOn(notifProgIconVals);
+        var notifProgIconOff = notifProgToggleOff(notifProgIconVals);
+        var notifProgLoadingOn = notifProgToggleOn(notifProgLoadingVals);
+        var notifProgLoadingOff = notifProgToggleOff(notifProgLoadingVals);
+        var notifProgAccentOn = notifProgToggleOn(notifProgAccentVals);
+        var notifProgAccentOff = notifProgToggleOff(notifProgAccentVals);
         if (notifProgColors.length > 0) {
           doc.appendChild(createSectionHeader("Colors", "Semantic tones for accent, border, and indicators.", DOC_COLORS.subtitle));
           var notifProgColorPanel = createPanel("notification-programmatic-colors", 10);
@@ -3869,6 +4071,115 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             false,
             { itemsPerRow: 3 }
           );
+        }
+        var notifProgHasToggles =
+          notifProgBorderVals.length > 1 ||
+          notifProgCloseVals.length > 1 ||
+          notifProgIconVals.length > 1 ||
+          notifProgLoadingVals.length > 1 ||
+          notifProgAccentVals.length > 1;
+        if (notifProgHasToggles) {
+          doc.appendChild(createSectionHeader("Variants", "Curated notification configurations for common use cases.", DOC_COLORS.subtitle));
+          function makeNotifProgBasePatch() {
+            var patch = {};
+            if (notifProgDefaultColor != null) patch.Color = notifProgDefaultColor;
+            if (notifProgDefaultRadius != null) patch.Radius = notifProgDefaultRadius;
+            if (notifProgBorderKey && notifProgBorderOff != null) patch[notifProgBorderKey] = notifProgBorderOff;
+            if (notifProgCloseKey && notifProgCloseOff != null) patch[notifProgCloseKey] = notifProgCloseOff;
+            if (notifProgIconKey && notifProgIconOff != null) patch[notifProgIconKey] = notifProgIconOff;
+            if (notifProgLoadingKey && notifProgLoadingOff != null) patch[notifProgLoadingKey] = notifProgLoadingOff;
+            if (notifProgAccentKey && notifProgAccentOff != null) patch[notifProgAccentKey] = notifProgAccentOff;
+            return patch;
+          }
+          function appendNotifProgOptionCard(cardName, cardSubtitle, labels, patchForLabel, itemsPerRow) {
+            if (!labels || !labels.length) return;
+            var block = createStack("notification-programmatic-option-block-" + normalizeName(cardName), 8);
+            appendText(block, titleFont, cardName, 18, DOC_COLORS.panelHeading, "Notification Option Heading", "title");
+            appendText(block, bodyFont, cardSubtitle, 12, DOC_COLORS.panelBody, "Notification Option Subtitle");
+            var panel = createPanel("notification-programmatic-option-card-" + normalizeName(cardName), 10);
+            panel.resize(1192, panel.height);
+            block.appendChild(panel);
+            doc.appendChild(block);
+            addInstancesRow(
+              panel,
+              cardName,
+              labels,
+              function (label) { return makeInstance(patchForLabel(label)); },
+              false,
+              itemsPerRow ? { itemsPerRow: itemsPerRow } : null
+            );
+          }
+          var notifProgOrderedColors = notifProgColors.length > 0
+            ? pickOrdered(notifProgColors, ["Primary", "Dark", "Error", "Warning", "Success"])
+            : [];
+          if (notifProgBorderVals.length > 1 && notifProgBorderKey && notifProgOrderedColors.length > 0) {
+            appendNotifProgOptionCard(
+              "Border",
+              "Bordered notifications across semantic colors.",
+              notifProgOrderedColors,
+              function (colorName) {
+                var patch = makeNotifProgBasePatch();
+                patch.Color = colorName;
+                if (notifProgBorderOn != null) patch[notifProgBorderKey] = notifProgBorderOn;
+                if (notifProgAccentKey && notifProgAccentOn != null) patch[notifProgAccentKey] = notifProgAccentOn;
+                return patch;
+              },
+              3
+            );
+          }
+          if (notifProgCloseVals.length > 1 && notifProgCloseKey && notifProgDefaultColor != null) {
+            appendNotifProgOptionCard(
+              "Close",
+              "Primary notification with close control enabled.",
+              [notifProgDefaultColor],
+              function () {
+                var patch = makeNotifProgBasePatch();
+                if (notifProgCloseOn != null) patch[notifProgCloseKey] = notifProgCloseOn;
+                return patch;
+              },
+              1
+            );
+          }
+          if (notifProgIconVals.length > 1 && notifProgIconKey && notifProgDefaultColor != null) {
+            appendNotifProgOptionCard(
+              "Icon",
+              "Primary notification with leading icon enabled.",
+              [notifProgDefaultColor],
+              function () {
+                var patch = makeNotifProgBasePatch();
+                if (notifProgIconOn != null) patch[notifProgIconKey] = notifProgIconOn;
+                return patch;
+              },
+              1
+            );
+          }
+          if (notifProgLoadingVals.length > 1 && notifProgLoadingKey && notifProgDefaultColor != null) {
+            appendNotifProgOptionCard(
+              "Loader",
+              "Primary notification with loading state enabled.",
+              [notifProgDefaultColor],
+              function () {
+                var patch = makeNotifProgBasePatch();
+                if (notifProgLoadingOn != null) patch[notifProgLoadingKey] = notifProgLoadingOn;
+                return patch;
+              },
+              1
+            );
+          }
+          if (notifProgAccentVals.length > 1 && notifProgAccentKey && notifProgDefaultColor != null) {
+            appendNotifProgOptionCard(
+              "No Accent",
+              "Primary notification with accent bar disabled.",
+              [notifProgDefaultColor],
+              function () {
+                var patch = makeNotifProgBasePatch();
+                if (notifProgAccentOff != null) patch[notifProgAccentKey] = notifProgAccentOff;
+                if (notifProgLoadingKey && notifProgLoadingOff != null) patch[notifProgLoadingKey] = notifProgLoadingOff;
+                return patch;
+              },
+              1
+            );
+          }
         }
         if (notifProgRadii.length > 1) {
           doc.appendChild(createSectionHeader("Radius", "Corner radius scale.", DOC_COLORS.subtitle));
@@ -6552,17 +6863,23 @@ function bindNotificationIconTokenVectors(iconInst, varMap) {
 
 function bindNotificationGraphicNodesToIconToken(root, varMap) {
   if (!root || !varMap) return;
-  bindNotificationGraphicNodesToPaintVar(root, varMap["notification/icon"]);
+  bindNotificationGraphicNodesToPaintVar(
+    root,
+    varMap["notification/icon"],
+    varMap["notification/icon-stroke-width"]
+  );
 }
 
 /** Binds vector/ellipse strokes + fills on a close icon instance to `notification/close` (tone-aware). */
 function bindNotificationCloseIconGraphicNodes(root, varMap, colorTone) {
   if (!root || !varMap) return;
   var paintVar = notificationResolvedVar(varMap, "close", colorTone) || varMap["notification/icon"];
-  if (paintVar) bindNotificationGraphicNodesToPaintVar(root, paintVar);
+  if (paintVar) {
+    bindNotificationGraphicNodesToPaintVar(root, paintVar, varMap["notification/close-stroke-width"]);
+  }
 }
 
-function bindNotificationGraphicNodesToPaintVar(root, paintVar) {
+function bindNotificationGraphicNodesToPaintVar(root, paintVar, strokeWidthVar) {
   if (!root || !paintVar) return;
   var base = { r: 0.2, g: 0.53, b: 0.87 };
   var nodes = root.findAll(function(n) {
@@ -6573,6 +6890,7 @@ function bindNotificationGraphicNodesToPaintVar(root, paintVar) {
     if (v.strokes && v.strokes.length > 0) {
       v.strokes = [{ type: "SOLID", color: base }];
       bindPaintVar(v, "strokes", 0, paintVar);
+      if (strokeWidthVar) bindVar(v, "strokeWeight", strokeWidthVar);
     }
     if (v.fills && v.fills.length > 0) {
       v.fills = [{ type: "SOLID", color: base }];
@@ -6779,7 +7097,8 @@ async function buildNotificationComponentSet(varMap, page, font, loaderSet, reso
       if (!withClose) return;
       var notifW = 360;
       var closeIconW = 16;
-      var closePadRight = 8;
+      var closePadRight = resolveCompFloat("notification/padding-x", 12);
+      var closeTop = resolveCompFloat("notification/padding-y", 10);
       var closeX = notifW - closeIconW - closePadRight;
       var closeComp = notificationIcons.close;
       if (closeComp && closeComp.type === "COMPONENT") {
@@ -6790,7 +7109,7 @@ async function buildNotificationComponentSet(varMap, page, font, loaderSet, reso
         } catch (_eCloseResize) {}
         bindNotificationCloseIconGraphicNodes(closeInst, varMap, colorTone);
         closeInst.x = closeX;
-        closeInst.y = 12;
+        closeInst.y = closeTop;
         comp.appendChild(closeInst);
       } else {
         var closeNode = figma.createText();
@@ -6802,7 +7121,7 @@ async function buildNotificationComponentSet(varMap, page, font, loaderSet, reso
         var nCloseFallback = notificationResolvedVar(varMap, "close", colorTone);
         if (nCloseFallback) bindPaintVar(closeNode, "fills", 0, nCloseFallback);
         closeNode.x = closeX;
-        closeNode.y = 12;
+        closeNode.y = closeTop;
         comp.appendChild(closeNode);
       }
     }
