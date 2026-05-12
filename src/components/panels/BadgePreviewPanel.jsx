@@ -82,6 +82,7 @@ export function BadgePreviewContent({
   circle,
   fullWidth,
   text,
+  previewTheme,
 }) {
   return (
     <div>
@@ -96,6 +97,7 @@ export function BadgePreviewContent({
           circle={circle}
           fullWidth={fullWidth}
           text={text}
+          previewTheme={previewTheme}
         />
       </PreviewStage>
 
@@ -115,6 +117,7 @@ export function BadgePreviewContent({
             circle={false}
             fullWidth={false}
             text="Badge"
+            previewTheme={previewTheme}
           />
         )}
       />

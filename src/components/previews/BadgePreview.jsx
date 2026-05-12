@@ -33,16 +33,21 @@ export default function BadgePreview({
   circle = false,
   fullWidth = false,
   text = "Badge",
+  /** Match surrounding preview: "light" | "dark" — drives semantic color resolution. */
+  previewTheme = "light",
+  /** Label casing; default matches standalone badge preview. */
+  textTransform = "uppercase",
 }) {
   const tokens = COMPONENT_TOKENS.badge;
   const brand = brands[brandId] || {};
+  const colorTheme = previewTheme === "dark" ? "dark" : "light";
   const effectiveTone =
     variant === "filled" || variant === "outline" ? tone : "default";
   const { bg: bgKey, text: textKey, border: borderKey } = badgeColorTokenKeys(variant, effectiveTone);
 
-  const background = resolveColor(brands, brandId, tokens[bgKey]?.semantic, "light", bgKey);
-  const color = resolveColor(brands, brandId, tokens[textKey]?.semantic, "light", textKey);
-  const borderColor = resolveColor(brands, brandId, tokens[borderKey]?.semantic, "light", borderKey);
+  const background = resolveColor(brands, brandId, tokens[bgKey]?.semantic, colorTheme, bgKey);
+  const color = resolveColor(brands, brandId, tokens[textKey]?.semantic, colorTheme, textKey);
+  const borderColor = resolveColor(brands, brandId, tokens[borderKey]?.semantic, colorTheme, borderKey);
 
   const resolveSizedToken = (tokenName, sizeKey) => {
     const tokenDef = tokens[tokenName];
@@ -104,7 +109,7 @@ export default function BadgePreview({
           alignItems: "center",
           justifyContent: "center",
           boxSizing: "border-box",
-          textTransform: "uppercase",
+          textTransform,
         }}
         styles={{
           root: {

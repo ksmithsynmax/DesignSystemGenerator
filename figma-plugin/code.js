@@ -974,8 +974,11 @@ function resolveManagedComponentKeyFromName(name) {
   var managedKeys = [
     "button", "switch", "slider", "rangeslider", "checkbox", "radio",
     "chip", "notification", "alert", "modal", "tooltip", "loader",
+    "progress",
+    "avatar",
     "pill", "badge", "textinput", "select", "card", "actionicon",
-    "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image"
+    "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image",
+    "table"
   ];
   // Longest keys first so e.g. "textinput" matches before the "text" prefix rule.
   var sorted = managedKeys.slice().sort(function (a, b) {
@@ -1099,6 +1102,12 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     if (requestedSet.accordion) {
       requestedSet.accordionitem = true;
     }
+    if (requestedSet.table) {
+      requestedSet.badge = true;
+      requestedSet.progress = true;
+      requestedSet.text = true;
+      requestedSet.avatar = true;
+    }
     progress("Building selected components: " + Object.keys(requestedSet).join(", "));
   } else {
     progress("Building all components.");
@@ -1195,6 +1204,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var loaderSet = await buildSet("Loader", function () {
     return buildLoaderComponentSet(varMap, page, font, resolvedComponentFloat);
   });
+  var progressSet = await buildSet("Progress", function () {
+    return buildProgressComponentSet(varMap, page, font, resolvedComponentFloat);
+  });
   var notificationSet = await buildSet("Notification", function () {
     return buildNotificationComponentSet(varMap, page, font, loaderSet, resolvedComponentFloat);
   });
@@ -1251,6 +1263,27 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var imageSet = await buildSet("Image", function () {
     return buildImageComponentSet(varMap, page, font);
   });
+  var avatarSet = await buildSet("Avatar", function () {
+    return buildAvatarComponentSet(varMap, page, font);
+  });
+  var tableBuildResult = await buildSet("Table", async function () {
+    return await buildTableComponentSet(varMap, page, font, {
+      badgeSet: badgeSet,
+      progressSet: progressSet,
+      textSet: textSet,
+      avatarSet: avatarSet,
+    });
+  });
+  var tableFlatten = [];
+  if (tableBuildResult) {
+    if (Array.isArray(tableBuildResult)) {
+      for (var tfi = 0; tfi < tableBuildResult.length; tfi++) {
+        if (tableBuildResult[tfi]) tableFlatten.push(tableBuildResult[tfi]);
+      }
+    } else {
+      tableFlatten.push(tableBuildResult);
+    }
+  }
   var modalSet = await buildSet("Modal", function () {
     return buildModalComponentSet(varMap, page, font, {
       buttonSet: buttonSet,
@@ -1269,6 +1302,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     radioSet,
     chipSet,
     loaderSet,
+    progressSet,
     notificationSet,
     alertSet,
     modalSet,
@@ -1287,7 +1321,8 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     titleSet,
     textSet,
     imageSet,
-  ];
+    avatarSet,
+  ].concat(tableFlatten);
   var validSets = generatedSets.filter(function (set) { return Boolean(set); });
   try {
     var clearModeCollections = await figma.variables.getLocalVariableCollectionsAsync();
@@ -1369,6 +1404,13 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   // Docs should focus on public components. Keep Accordion Item generated,
   // but hide it from docs for now. Uncomment to bring it back.
   docsSourceSets = (docsSourceSets || []).filter(function (set) {
+    if (!set) return false;
+    if (set.type === "COMPONENT") {
+      var cn = normalizeComponentKey(set.name);
+      if (cn === "table" || cn === "tableheader" || cn === "tablebody") return true;
+      return false;
+    }
+    if (set.type !== "COMPONENT_SET") return false;
     var setName = String(set && set.name ? set.name : "").toLowerCase();
     return setName !== "accordion item";
     // return true; // Re-enable Accordion Item docs.
@@ -1403,7 +1445,15 @@ function collectManagedComponentSetsFromPage(page, requestedSet) {
   var sets = [];
   for (var i = 0; i < page.children.length; i++) {
     var node = page.children[i];
-    if (!node || node.type !== "COMPONENT_SET") continue;
+    if (!node) continue;
+    if (node.type === "COMPONENT") {
+      var cn2 = normalizeComponentKey(node.name);
+      if ((cn2 === "table" || cn2 === "tableheader" || cn2 === "tablebody") && (!requestedSet || requestedSet.table)) {
+        sets.push(node);
+      }
+      continue;
+    }
+    if (node.type !== "COMPONENT_SET") continue;
     var key = resolveManagedComponentKeyFromName(node.name);
     if (!key) continue;
     if (requestedSet && !requestedSet[key]) continue;
@@ -4334,6 +4384,26 @@ async function cleanupExistingComponents(page, requestedSet) {
           continue;
         }
       }
+      // Single-component exports (e.g. TableHeader with boolean props, not a variant set).
+      if (child.type === "COMPONENT") {
+        var singleKey = resolveManagedComponentKeyFromName(child.name);
+        var singleNorm = normalizeComponentKey(child.name);
+        if (
+          singleKey === "table" &&
+          (singleNorm === "table" || singleNorm === "tableheader" || singleNorm === "tablebody") &&
+          (!requestedSet || requestedSet.table)
+        ) {
+          child.remove();
+          continue;
+        }
+      }
+      // Legacy: old table shipped as a FRAME named "Table — library".
+      if (child.type === "FRAME" && normalizeComponentKey(child.name) === "tablelibrary") {
+        if (!requestedSet || requestedSet.table) {
+          child.remove();
+          continue;
+        }
+      }
       // Legacy cleanup: older Tabs exports could leave stray top-level "Disabled" assets.
       if (isLegacyTabsDisabledArtifact(child)) {
         child.remove();
@@ -5701,6 +5771,1643 @@ async function buildImageComponentSet(varMap, page, font) {
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Image";
   return componentSet;
+}
+
+function buildAvatarComponentSet(varMap, page, font) {
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var components = [];
+  var colWidth = 100;
+  var rowHeight = 100;
+  var gap = 16;
+  var defaultSizeByKey = { default: 40, xs: 24, sm: 32, md: 40, lg: 48, xl: 56 };
+
+  for (var si = 0; si < sizes.length; si++) {
+    var size = sizes[si];
+    var capSize = size === "default" ? "Default" : size.toUpperCase();
+    var baseS = defaultSizeByKey[size] || 40;
+
+    for (var ri = 0; ri < radii.length; ri++) {
+      var radiusKey = radii[ri];
+      var capRadius = radiusKey === "default" ? "Default" : radiusKey.toUpperCase();
+
+      var comp = figma.createComponent();
+      comp.name = "Size=" + capSize + ", Radius=" + capRadius;
+      comp.layoutMode = "VERTICAL";
+      comp.primaryAxisSizingMode = "AUTO";
+      comp.counterAxisSizingMode = "AUTO";
+      comp.primaryAxisAlignItems = "CENTER";
+      comp.counterAxisAlignItems = "CENTER";
+      comp.itemSpacing = 0;
+      comp.fills = [];
+      comp.strokes = [];
+
+      var shell = figma.createFrame();
+      shell.name = "Face";
+      shell.layoutMode = "HORIZONTAL";
+      shell.primaryAxisSizingMode = "FIXED";
+      shell.counterAxisSizingMode = "FIXED";
+      shell.primaryAxisAlignItems = "CENTER";
+      shell.counterAxisAlignItems = "CENTER";
+      shell.resize(baseS, baseS);
+      shell.fills = [{ type: "SOLID", color: { r: 0.88, g: 0.9, b: 0.94 } }];
+      shell.strokes = [{ type: "SOLID", color: { r: 0.75, g: 0.78, b: 0.84 } }];
+      shell.strokeWeight = 1;
+      bindVar(shell, "strokeWeight", varMap["avatar/border-width"]);
+      shell.strokeAlign = "INSIDE";
+      shell.itemSpacing = 0;
+      shell.paddingTop = 0;
+      shell.paddingBottom = 0;
+      shell.paddingLeft = 0;
+      shell.paddingRight = 0;
+
+      bindPaintVar(shell, "fills", 0, varMap["avatar/background"]);
+      bindPaintVar(shell, "strokes", 0, varMap["avatar/border"]);
+      bindVar(shell, "width", varMap["avatar/size-" + size]);
+      bindVar(shell, "height", varMap["avatar/size-" + size]);
+      bindVar(shell, "topLeftRadius", varMap["avatar/radius-" + radiusKey]);
+      bindVar(shell, "topRightRadius", varMap["avatar/radius-" + radiusKey]);
+      bindVar(shell, "bottomLeftRadius", varMap["avatar/radius-" + radiusKey]);
+      bindVar(shell, "bottomRightRadius", varMap["avatar/radius-" + radiusKey]);
+
+      var initials = figma.createText();
+      initials.name = "Initials";
+      initials.fontName = font;
+      initials.characters = "AC";
+      initials.textAlignHorizontal = "CENTER";
+      initials.fontSize = 14;
+      initials.fills = [{ type: "SOLID", color: { r: 0.12, g: 0.12, b: 0.14 } }];
+      bindPaintVar(initials, "fills", 0, varMap["avatar/text"]);
+      bindVar(initials, "fontSize", varMap["avatar/font-size-" + size]);
+      bindVar(initials, "fontFamily", varMap["avatar/font-family"]);
+      bindVar(initials, "fontStyle", varMap["avatar/font-weight"]);
+
+      shell.appendChild(initials);
+      comp.appendChild(shell);
+
+      comp.x = ri * (colWidth + gap);
+      comp.y = si * (rowHeight + gap);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+  }
+
+  progress("Created " + components.length + " avatar variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Avatar";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
+// Table — TableHeader (Show sort + sort INSTANCE_SWAP) + TableBody COMPONENT_SET
+// with Variant = Badge | Progress | Text | Flag | Icon | Avatar (nested component instances; no slots).
+// ---------------------------------------------------------------------------
+
+async function findTableSortIconSources() {
+  var iconCandidates = [];
+  var iconsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var p = figma.root.children[pi];
+    if (p.type !== "PAGE") continue;
+    await p.loadAsync();
+    if (!iconsPage && p.name && p.name.toLowerCase() === "icons") iconsPage = p;
+  }
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function (n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var sc = nodes[i].children || [];
+      for (var ci = 0; ci < sc.length; ci++) {
+        if (sc[ci].type === "COMPONENT") iconCandidates.push(sc[ci]);
+      }
+    }
+  }
+
+  function normName(n) {
+    return String(n || "")
+      .toLowerCase()
+      .replace(/[\s_\-\/]+/g, "");
+  }
+
+  function sortIconScore(c) {
+    var n = normName(c.name);
+    if (!n) return 0;
+    if (n.indexOf("switchvertical") >= 0) return 100;
+    if (n.indexOf("switch") >= 0 && n.indexOf("vertical") >= 0) return 99;
+    if (n.indexOf("arrowswitch") >= 0) return 98;
+    if (n.indexOf("sort") >= 0 && (n.indexOf("vertical") >= 0 || n.indexOf("both") >= 0)) return 95;
+    if (n.indexOf("selector") >= 0 || n.indexOf("unfold") >= 0) return 88;
+    if (n.indexOf("chevron") >= 0 && n.indexOf("up") >= 0 && n.indexOf("down") >= 0) return 82;
+    if (n.indexOf("arrow") >= 0 && n.indexOf("up") >= 0 && n.indexOf("down") >= 0) return 80;
+    if (n.indexOf("sort") >= 0) return 55;
+    if (n.indexOf("chevron") >= 0 && (n.indexOf("expand") >= 0 || n.indexOf("double") >= 0)) return 40;
+    return 0;
+  }
+
+  var defaultIcon = null;
+  var best = 0;
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var s = sortIconScore(iconCandidates[j]);
+    if (s > best) {
+      best = s;
+      defaultIcon = iconCandidates[j];
+    }
+  }
+  if (!defaultIcon && iconCandidates.length > 0) {
+    var sorted = iconCandidates.slice().sort(function (a, b) {
+      return String(a.name).localeCompare(String(b.name));
+    });
+    defaultIcon = sorted[0];
+  }
+
+  if (defaultIcon) progress("[TableHeader] Sort icon default: " + defaultIcon.name);
+  else progress("[TableHeader] Warning: no icon components found; using vector fallback for sort.");
+
+  return { defaultIcon: defaultIcon, candidates: iconCandidates };
+}
+
+/** Normalize variant name strings for case/spacing-insensitive substring checks. */
+function tableNormToken(s) {
+  return String(s || "")
+    .toLowerCase()
+    .replace(/\s*,\s*/g, ",")
+    .replace(/\s+/g, "");
+}
+
+/**
+ * Prefer the live COMPONENT_SET from `buildComponents`, but if Table is built alone
+ * (or refs are stale), find "Badge" / "Progress" / "Text" on the current page.
+ */
+function tableResolveComponentSetFromPage(preferred, pageNode, setName) {
+  if (preferred && preferred.type === "COMPONENT_SET") return preferred;
+  if (!pageNode) return null;
+  var want = String(setName || "").toLowerCase().trim();
+  try {
+    var found = pageNode.findAll(function (n) {
+      return n.type === "COMPONENT_SET" && String(n.name || "").toLowerCase().trim() === want;
+    });
+    return found && found.length ? found[0] : null;
+  } catch (_eFa) {
+    return null;
+  }
+}
+
+/** First COMPONENT child in a set matching all fragments (case-insensitive). */
+function tableFindComponentByNameParts(componentSet, nameParts) {
+  if (!componentSet || componentSet.type !== "COMPONENT_SET") return null;
+  var reqs = [];
+  for (var ri = 0; ri < nameParts.length; ri++) {
+    reqs.push(tableNormToken(nameParts[ri]));
+  }
+  var ch = componentSet.children || [];
+  for (var i = 0; i < ch.length; i++) {
+    if (ch[i].type !== "COMPONENT") continue;
+    var nm = tableNormToken(ch[i].name);
+    var ok = true;
+    for (var pj = 0; pj < reqs.length; pj++) {
+      if (!reqs[pj]) continue;
+      if (nm.indexOf(reqs[pj]) < 0) {
+        ok = false;
+        break;
+      }
+    }
+    if (ok) return ch[i];
+  }
+  return null;
+}
+
+function tableFirstComponentChild(componentSet) {
+  if (!componentSet || componentSet.type !== "COMPONENT_SET") return null;
+  var ch = componentSet.children || [];
+  for (var fi = 0; fi < ch.length; fi++) {
+    if (ch[fi].type === "COMPONENT") return ch[fi];
+  }
+  return null;
+}
+
+/** Best Outline + Error badge; prefers XS + XL radius + Circle=Off. */
+function tablePickBestBadge(componentSet) {
+  if (!componentSet || componentSet.type !== "COMPONENT_SET") return null;
+  var outline = tableNormToken("Variant=Outline");
+  var errCol = tableNormToken("Color=Error");
+  var ch = componentSet.children || [];
+  var best = null;
+  var bestScore = -1;
+  for (var bi = 0; bi < ch.length; bi++) {
+    if (ch[bi].type !== "COMPONENT") continue;
+    var nm = tableNormToken(ch[bi].name);
+    if (nm.indexOf(outline) < 0 || nm.indexOf(errCol) < 0) continue;
+    var score = 100;
+    if (nm.indexOf(tableNormToken("Size=XS")) >= 0) score += 30;
+    if (nm.indexOf(tableNormToken("Radius=XL")) >= 0) score += 20;
+    if (nm.indexOf(tableNormToken("Circle=Off")) >= 0) score += 10;
+    if (score > bestScore) {
+      bestScore = score;
+      best = ch[bi];
+    }
+  }
+  return best;
+}
+
+/** Prefer Size=SM + Radius=Default; else any SM row; else first variant. */
+function tablePickBestProgress(componentSet) {
+  if (!componentSet || componentSet.type !== "COMPONENT_SET") return null;
+  var ch = componentSet.children || [];
+  var best = null;
+  var bestScore = -1;
+  for (var pi = 0; pi < ch.length; pi++) {
+    if (ch[pi].type !== "COMPONENT") continue;
+    var nm = tableNormToken(ch[pi].name);
+    var hasSm = nm.indexOf("size=sm") >= 0;
+    var hasDefRad = nm.indexOf("radius=default") >= 0;
+    var score = 0;
+    if (hasSm && hasDefRad) score = 100;
+    else if (hasSm) score = 60;
+    else if (hasDefRad && nm.indexOf("size=default") >= 0) score = 40;
+    if (score > bestScore) {
+      bestScore = score;
+      best = ch[pi];
+    }
+  }
+  if (best && bestScore >= 60) return best;
+  return tableFirstComponentChild(componentSet);
+}
+
+/** Germany flag chip (~21×16) for TableBody Flag variant (no raster assets). */
+function tableMakeGermanyFlagFrame() {
+  var wrap = figma.createFrame();
+  wrap.name = "de";
+  wrap.layoutMode = "NONE";
+  wrap.clipsContent = true;
+  wrap.resize(21.333, 16);
+  wrap.fills = [];
+  var bandH = 16 / 3;
+  var palette = [
+    { r: 0, g: 0, b: 0 },
+    { r: 0.86, g: 0.08, b: 0.12 },
+    { r: 1, g: 0.8, b: 0.15 },
+  ];
+  for (var bi = 0; bi < 3; bi++) {
+    var rect = figma.createRectangle();
+    rect.resize(21.333, bandH);
+    rect.x = 0;
+    rect.y = bi * bandH;
+    rect.fills = [{ type: "SOLID", color: palette[bi] }];
+    rect.strokes = [];
+    wrap.appendChild(rect);
+  }
+  return wrap;
+}
+
+/**
+ * Find a default + candidate list of icon components for the TableBody Icon variant
+ * INSTANCE_SWAP. Prefers alert-triangle / warning / info, falls back to any icon component.
+ */
+async function findTableBodyIconSources() {
+  var iconsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var p = figma.root.children[pi];
+    if (p.type !== "PAGE") continue;
+    await p.loadAsync();
+    if (!iconsPage && p.name && p.name.toLowerCase() === "icons") iconsPage = p;
+  }
+  var searchScope = iconsPage || figma.root;
+  var nodes = [];
+  try {
+    nodes = searchScope.findAll(function (n) {
+      return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+    });
+  } catch (_eFa) {
+    nodes = [];
+  }
+  var candidates = [];
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      candidates.push(nodes[i]);
+    } else {
+      var children = nodes[i].children || [];
+      for (var ci = 0; ci < children.length; ci++) {
+        if (children[ci].type === "COMPONENT") candidates.push(children[ci]);
+      }
+    }
+  }
+
+  function score(c) {
+    var n = String(c.name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+    if (!n) return 0;
+    if (n.indexOf("alerttriangle") >= 0) return 100;
+    if (n.indexOf("alert") >= 0 && n.indexOf("triangle") >= 0) return 99;
+    if (n.indexOf("warning") >= 0) return 95;
+    if (n.indexOf("alertcircle") >= 0) return 90;
+    if (n.indexOf("infocircle") >= 0) return 80;
+    if (n.indexOf("info") >= 0) return 70;
+    if (n.indexOf("alert") >= 0) return 60;
+    return 0;
+  }
+
+  var best = null;
+  var bestScore = 0;
+  for (var j = 0; j < candidates.length; j++) {
+    var s = score(candidates[j]);
+    if (s > bestScore) {
+      bestScore = s;
+      best = candidates[j];
+    }
+  }
+  if (!best && candidates.length > 0) {
+    var sorted = candidates.slice().sort(function (a, b) {
+      return String(a.name).localeCompare(String(b.name));
+    });
+    best = sorted[0];
+  }
+
+  if (best) progress("[TableBody] Icon swap default: " + best.name);
+  else progress("[TableBody] Warning: no icon components found; using vector fallback for Icon variant.");
+
+  return { defaultIcon: best, candidates: candidates };
+}
+
+/**
+ * Find a default + candidate list of flag components for TableBody Flag variant
+ * INSTANCE_SWAP.
+ *
+ * Priority:
+ * 1) Components inside a COMPONENT_SET named exactly "Flag"
+ * 2) Components whose names include "flag"
+ * 3) Any component fallback
+ */
+async function findTableBodyFlagSources(pageNode) {
+  // 1) Hard-priority: component set named exactly Flag / Flags on current page.
+  try {
+    var scoped = (pageNode && pageNode.findAll)
+      ? pageNode.findAll(function (n) {
+          return n.type === "COMPONENT_SET";
+        })
+      : [];
+    for (var si = 0; si < scoped.length; si++) {
+      var setName = String(scoped[si].name || "").toLowerCase().trim();
+      if (setName === "flag" || setName === "flags") {
+        var setChildren = scoped[si].children || [];
+        var directCandidates = [];
+        for (var dci = 0; dci < setChildren.length; dci++) {
+          if (setChildren[dci].type === "COMPONENT") directCandidates.push(setChildren[dci]);
+        }
+        if (directCandidates.length > 0) {
+          var directDefault = directCandidates[0];
+          progress(
+            "[TableBody] Flag swap default: " +
+              directDefault.name +
+              " (from set '" +
+              scoped[si].name +
+              "', candidates: " +
+              String(directCandidates.length) +
+              ")"
+          );
+          return { defaultFlag: directDefault, candidates: directCandidates };
+        }
+      }
+    }
+  } catch (_eScoped) {}
+
+  // 2) Fallback: search entire local document for anything flag-like.
+  var searchScope = figma.root;
+  var nodes = [];
+  try {
+    nodes = searchScope.findAll(function (n) {
+      return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+    });
+  } catch (_eFa) {
+    nodes = [];
+  }
+  var candidates = [];
+  var explicitFlagSetChildren = [];
+  var nameMatchedFlagComponents = [];
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      candidates.push(nodes[i]);
+      var compNameNorm = String(nodes[i].name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+      if (compNameNorm.indexOf("flag") >= 0) nameMatchedFlagComponents.push(nodes[i]);
+    } else {
+      var children = nodes[i].children || [];
+      var setNameNorm = String(nodes[i].name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+      if (setNameNorm.indexOf("flag") >= 0) {
+        for (var sci = 0; sci < children.length; sci++) {
+          if (children[sci].type === "COMPONENT") explicitFlagSetChildren.push(children[sci]);
+        }
+      }
+      for (var ci = 0; ci < children.length; ci++) {
+        if (children[ci].type === "COMPONENT") candidates.push(children[ci]);
+      }
+    }
+  }
+
+  function score(c) {
+    var n = String(c.name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+    if (!n) return 0;
+    var s = 0;
+    if (n.indexOf("flag") >= 0) s += 100;
+    if (n === "de" || n.indexOf("germany") >= 0 || n.indexOf("deutschland") >= 0) s += 50;
+    if (n.indexOf("country") >= 0) s += 20;
+    return s;
+  }
+
+  var best = null;
+  var bestScore = 0;
+  if (explicitFlagSetChildren.length > 0) {
+    candidates = explicitFlagSetChildren.slice();
+    for (var esi = 0; esi < explicitFlagSetChildren.length; esi++) {
+      var es = score(explicitFlagSetChildren[esi]);
+      if (es > bestScore) {
+        bestScore = es;
+        best = explicitFlagSetChildren[esi];
+      }
+    }
+  } else if (nameMatchedFlagComponents.length > 0) {
+    candidates = nameMatchedFlagComponents.slice();
+    for (var nmi = 0; nmi < nameMatchedFlagComponents.length; nmi++) {
+      var ns = score(nameMatchedFlagComponents[nmi]);
+      if (ns > bestScore) {
+        bestScore = ns;
+        best = nameMatchedFlagComponents[nmi];
+      }
+    }
+  } else {
+    for (var j = 0; j < candidates.length; j++) {
+      var s = score(candidates[j]);
+      if (s > bestScore) {
+        bestScore = s;
+        best = candidates[j];
+      }
+    }
+  }
+  if (!best && candidates.length > 0) {
+    var sorted = candidates.slice().sort(function (a, b) {
+      return String(a.name).localeCompare(String(b.name));
+    });
+    best = sorted[0];
+  }
+
+  if (best) {
+    progress(
+      "[TableBody] Flag swap default: " +
+        best.name +
+        " (candidates: " +
+        String(candidates.length) +
+        ")"
+    );
+  } else {
+    progress("[TableBody] Warning: no flag components found (looked for set/component names containing 'flag').");
+  }
+
+  return { defaultFlag: best, candidates: candidates };
+}
+
+/** Outline warning triangle vector for fallback when no icon components exist. */
+function tableMakeWarningTriangleVector() {
+  var v = figma.createVector();
+  v.name = "alert-triangle";
+  v.resize(20, 20);
+  v.strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+  v.strokeWeight = 1.25;
+  v.strokeCap = "ROUND";
+  v.strokeJoin = "ROUND";
+  try {
+    v.vectorPaths = [
+      { windingRule: "NONZERO", data: "M 10 3.5 L 17.5 17 H 2.5 Z M 10 7.5 V 11 M 10 13.5 H 10.01" },
+    ];
+  } catch (_eTri) {
+    try {
+      v.remove();
+    } catch (_eRm) {}
+    return null;
+  }
+  return v;
+}
+
+async function tableTrySetTextOnInstance(inst, preferredNames, characters) {
+  if (!inst || inst.type !== "INSTANCE") return;
+  try {
+    await inst.loadAsync();
+  } catch (_eLd) {}
+  var texts = [];
+  try {
+    texts = inst.findAll(function (n) {
+      return n.type === "TEXT";
+    });
+  } catch (_eFa) {
+    texts = [];
+  }
+  var target = null;
+  for (var ti = 0; ti < texts.length; ti++) {
+    var nm = String(texts[ti].name || "");
+    for (var pi = 0; pi < preferredNames.length; pi++) {
+      if (nm === preferredNames[pi]) {
+        target = texts[ti];
+        break;
+      }
+    }
+    if (target) break;
+  }
+  if (!target && texts.length > 0) target = texts[0];
+  if (!target || typeof target.characters !== "string") return;
+  try {
+    await figma.loadFontAsync(target.fontName);
+  } catch (_eFont) {}
+  try {
+    target.characters = characters;
+  } catch (_eCh) {}
+}
+
+async function buildTableComponentSet(varMap, page, font, nestedSets) {
+  nestedSets = nestedSets || {};
+  var pad16 = 16;
+  var iconGapDefault = 4;
+  var sortSources = await findTableSortIconSources();
+  var sortDefaultComp = sortSources.defaultIcon;
+  var sortCandidateList = sortSources.candidates || [];
+  /** Figma steel/9 fallback #181926 */
+  var headerBgFallback = { r: 24 / 255, g: 25 / 255, b: 38 / 255 };
+
+  function bindTableHeaderPadding(node) {
+    if (varMap["table/header-padding-x"]) {
+      bindVar(node, "paddingLeft", varMap["table/header-padding-x"]);
+      bindVar(node, "paddingRight", varMap["table/header-padding-x"]);
+    } else {
+      node.paddingLeft = pad16;
+      node.paddingRight = pad16;
+    }
+    if (varMap["table/header-padding-y"]) {
+      bindVar(node, "paddingTop", varMap["table/header-padding-y"]);
+      bindVar(node, "paddingBottom", varMap["table/header-padding-y"]);
+    } else {
+      node.paddingTop = pad16;
+      node.paddingBottom = pad16;
+    }
+  }
+
+  function makeText(content, colorVar, opts) {
+    var t = figma.createText();
+    t.name = (opts && opts.name) || "text";
+    t.fontName = font;
+    t.characters = content;
+    t.fontSize = (opts && opts.fontSize) || 13;
+    t.textAutoResize = "WIDTH_AND_HEIGHT";
+    t.textAlignHorizontal = (opts && opts.align) || "LEFT";
+    t.fills = [{ type: "SOLID", color: { r: 0.92, g: 0.93, b: 0.95 } }];
+    if (colorVar) bindPaintVar(t, "fills", 0, colorVar);
+    if (opts && opts.useHeaderFont) {
+      try {
+        t.fontName = { family: font.family, style: "Semi Bold" };
+      } catch (_eFw) {}
+      if (varMap["table/header-font-family"]) bindVar(t, "fontFamily", varMap["table/header-font-family"]);
+      if (varMap["table/header-font-size"]) bindVar(t, "fontSize", varMap["table/header-font-size"]);
+      if (varMap["table/header-font-weight"]) bindVar(t, "fontStyle", varMap["table/header-font-weight"]);
+      if (varMap["table/header-line-height"]) bindVar(t, "lineHeight", varMap["table/header-line-height"]);
+      try {
+        t.letterSpacing = { value: 0, unit: "PERCENT" };
+      } catch (_eLs) {}
+    } else {
+      if (opts && opts.fontWeight === 600) {
+        try {
+          t.fontName = { family: font.family, style: "Semi Bold" };
+        } catch (_eFw2) {}
+      }
+      if (varMap["table/cell-font-size"] && (!opts || !opts.skipCellFont)) {
+        bindVar(t, "fontSize", varMap["table/cell-font-size"]);
+      }
+    }
+    return t;
+  }
+
+  function findTableBodyVariantComponent(bodySetNode, variantName) {
+    if (!bodySetNode || bodySetNode.type !== "COMPONENT_SET") return null;
+    var target = "variant=" + String(variantName || "").toLowerCase();
+    var children = bodySetNode.children || [];
+    for (var i = 0; i < children.length; i++) {
+      if (children[i].type !== "COMPONENT") continue;
+      var nm = String(children[i].name || "").toLowerCase();
+      if (nm.indexOf(target) >= 0) return children[i];
+    }
+    return null;
+  }
+
+  /** TableBody (Figma 774:1936): uniform inset `table/body-padding`, default 16. */
+  function bindTableBodyInset(node) {
+    var inset = 16;
+    if (varMap["table/body-padding"]) {
+      bindVar(node, "paddingLeft", varMap["table/body-padding"]);
+      bindVar(node, "paddingRight", varMap["table/body-padding"]);
+      bindVar(node, "paddingTop", varMap["table/body-padding"]);
+      bindVar(node, "paddingBottom", varMap["table/body-padding"]);
+    } else {
+      node.paddingLeft = inset;
+      node.paddingRight = inset;
+      node.paddingTop = inset;
+      node.paddingBottom = inset;
+    }
+  }
+
+  /** Minimal double-chevron sort icon (~16px); Figma shows white; table/sort-icon overrides when bound. */
+  function makeSortIcon() {
+    var v = figma.createVector();
+    v.name = "switch-vertical-01";
+    v.resize(16, 16);
+    v.strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+    v.strokeWeight = 1.25;
+    if (varMap["table/header-icon-stroke-width"]) bindVar(v, "strokeWeight", varMap["table/header-icon-stroke-width"]);
+    v.strokeCap = "ROUND";
+    v.strokeJoin = "ROUND";
+    if (varMap["table/header-text"]) bindPaintVar(v, "strokes", 0, varMap["table/header-text"]);
+    else if (varMap["table/sort-icon"]) bindPaintVar(v, "strokes", 0, varMap["table/sort-icon"]);
+    try {
+      v.vectorPaths = [
+        { windingRule: "NONZERO", data: "M 4 6 L 8 2 L 12 6 M 4 10 L 8 14 L 12 10" },
+      ];
+    } catch (_eVec) {
+      try {
+        v.remove();
+      } catch (_eRm) {}
+      return null;
+    }
+    return v;
+  }
+
+  var tableChromeDefaultW = 132;
+  var comp = figma.createComponent();
+  comp.name = "TableHeader";
+  comp.layoutMode = "HORIZONTAL";
+  comp.primaryAxisSizingMode = "FIXED";
+  comp.counterAxisSizingMode = "AUTO";
+  comp.primaryAxisAlignItems = "MIN";
+  comp.counterAxisAlignItems = "CENTER";
+  comp.itemSpacing = iconGapDefault;
+  if (varMap["table/header-icon-gap"]) bindVar(comp, "itemSpacing", varMap["table/header-icon-gap"]);
+  comp.clipsContent = true;
+  comp.fills = [{ type: "SOLID", color: headerBgFallback }];
+  comp.strokes = [];
+  if (varMap["table/header-background"]) bindPaintVar(comp, "fills", 0, varMap["table/header-background"]);
+  try {
+    comp.cornerRadius = 0;
+  } catch (_eHdrRad) {}
+  try {
+    comp.clipsContent = false;
+  } catch (_eClip) {}
+  bindTableHeaderPadding(comp);
+
+  comp.appendChild(
+    makeText("Header Title ", varMap["table/header-text"], {
+      name: "title",
+      fontSize: 12,
+      fontWeight: 600,
+      skipCellFont: true,
+      useHeaderFont: true,
+    })
+  );
+
+  var sortWrap = figma.createFrame();
+  sortWrap.name = "Sort icon slot";
+  sortWrap.layoutMode = "HORIZONTAL";
+  sortWrap.primaryAxisSizingMode = "FIXED";
+  sortWrap.counterAxisSizingMode = "FIXED";
+  sortWrap.resize(16, 16);
+  sortWrap.primaryAxisAlignItems = "CENTER";
+  sortWrap.counterAxisAlignItems = "CENTER";
+  sortWrap.fills = [];
+  sortWrap.clipsContent = false;
+
+  var iconInst = null;
+  if (sortDefaultComp) {
+    try {
+      iconInst = sortDefaultComp.createInstance();
+      iconInst.name = "Sort icon";
+      try {
+        iconInst.resize(16, 16);
+      } catch (_eSz) {}
+      var headerTextPath = varMap["table/header-text"];
+      var vectors = iconInst.findAll(function (n) {
+        return n.type === "VECTOR";
+      });
+      for (var vci = 0; vci < vectors.length; vci++) {
+        try {
+          bindVar(vectors[vci], "strokeWeight", varMap["table/header-icon-stroke-width"]);
+        } catch (_eSw) {}
+        if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
+          vectors[vci].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          if (headerTextPath) bindPaintVar(vectors[vci], "strokes", 0, headerTextPath);
+        }
+        if (vectors[vci].fills && vectors[vci].fills.length > 0) {
+          vectors[vci].fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          if (headerTextPath) bindPaintVar(vectors[vci], "fills", 0, headerTextPath);
+        }
+      }
+      sortWrap.appendChild(iconInst);
+    } catch (_eInst) {
+      iconInst = null;
+    }
+  }
+  if (!iconInst) {
+    var sortGlyph = makeSortIcon();
+    if (sortGlyph) sortWrap.appendChild(sortGlyph);
+  }
+
+  comp.appendChild(sortWrap);
+
+  try {
+    comp.resize(tableChromeDefaultW, Math.max(1, Math.ceil(comp.height || 1)));
+  } catch (_hdrW) {}
+
+  page.appendChild(comp);
+
+  try {
+    var sortVisProp = comp.addComponentProperty("Show sort", "BOOLEAN", true);
+    sortWrap.componentPropertyReferences = { visible: sortVisProp };
+  } catch (eProp) {
+    progress("TableHeader Show sort property: " + String(eProp));
+  }
+
+  if (iconInst && sortDefaultComp) {
+    var preferred = [];
+    var seen = {};
+    if (sortDefaultComp.key) {
+      seen[sortDefaultComp.key] = true;
+      preferred.push({ type: "COMPONENT", key: sortDefaultComp.key });
+    }
+    for (var pci = 0; pci < sortCandidateList.length && preferred.length < 24; pci++) {
+      var cnd = sortCandidateList[pci];
+      if (!cnd || cnd.type !== "COMPONENT") continue;
+      var k = cnd.key;
+      if (!k || seen[k]) continue;
+      seen[k] = true;
+      preferred.push({ type: "COMPONENT", key: k });
+    }
+    try {
+      var swapOpts = preferred.length > 0 ? { preferredValues: preferred } : undefined;
+      var swapPropName = comp.addComponentProperty("Sort icon", "INSTANCE_SWAP", sortDefaultComp, swapOpts);
+      iconInst.componentPropertyReferences = { mainComponent: swapPropName };
+    } catch (eSwap) {
+      progress("TableHeader Sort icon INSTANCE_SWAP (with preferred list): " + String(eSwap));
+      try {
+        var swapPropOnly = comp.addComponentProperty("Sort icon", "INSTANCE_SWAP", sortDefaultComp);
+        iconInst.componentPropertyReferences = { mainComponent: swapPropOnly };
+      } catch (eSwap2) {
+        progress("TableHeader Sort icon INSTANCE_SWAP: " + String(eSwap2));
+      }
+    }
+  }
+
+  var TABLE_BODY_BUILD = "tablebody-variant-set-nested-v4";
+  var bodyBgFallback = { r: 36 / 255, g: 38 / 255, b: 60 / 255 };
+  var badgeSet = tableResolveComponentSetFromPage(nestedSets.badgeSet, page, "Badge");
+  var progressSet = tableResolveComponentSetFromPage(nestedSets.progressSet, page, "Progress");
+  var textSet = tableResolveComponentSetFromPage(nestedSets.textSet, page, "Text");
+  var avatarSet = tableResolveComponentSetFromPage(nestedSets.avatarSet, page, "Avatar");
+  if (badgeSet) {
+    try {
+      await badgeSet.loadAsync();
+    } catch (_lb) {}
+  }
+  if (progressSet) {
+    try {
+      await progressSet.loadAsync();
+    } catch (_lp) {}
+  }
+  if (textSet) {
+    try {
+      await textSet.loadAsync();
+    } catch (_lt) {}
+  }
+  if (avatarSet) {
+    try {
+      await avatarSet.loadAsync();
+    } catch (_la) {}
+  }
+  if (badgeSet) {
+    progress(
+      "[TableBody] Resolved Badge set: " +
+        badgeSet.name +
+        " (" +
+        String((badgeSet.children && badgeSet.children.length) || 0) +
+        " variants)"
+    );
+  } else {
+    progress("[TableBody] Badge COMPONENT_SET missing — cannot nest Badge instance.");
+  }
+  if (progressSet) {
+    progress(
+      "[TableBody] Resolved Progress set: " +
+        progressSet.name +
+        " (" +
+        String((progressSet.children && progressSet.children.length) || 0) +
+        " variants)"
+    );
+  } else {
+    progress("[TableBody] Progress COMPONENT_SET missing — cannot nest Progress instance.");
+  }
+  if (avatarSet) {
+    progress(
+      "[TableBody] Resolved Avatar set: " +
+        avatarSet.name +
+        " (" +
+        String((avatarSet.children && avatarSet.children.length) || 0) +
+        " variants)"
+    );
+  } else {
+    progress("[TableBody] Avatar COMPONENT_SET missing — cannot nest Avatar instance.");
+  }
+  var iconSources = await findTableBodyIconSources();
+  var flagSources = await findTableBodyFlagSources(page);
+  var iconDefaultComp = iconSources.defaultIcon;
+  var iconCandidates = iconSources.candidates || [];
+  var flagDefaultComp = flagSources.defaultFlag;
+  var flagCandidates = flagSources.candidates || [];
+
+  function bindTableBodyBottomRule(node) {
+    try {
+      node.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
+      if (varMap["table/border"]) bindPaintVar(node, "strokes", 0, varMap["table/border"]);
+      node.strokeWeight = 1;
+      node.strokeTopWeight = 0;
+      node.strokeRightWeight = 0;
+      node.strokeLeftWeight = 0;
+      node.strokeBottomWeight = 1;
+    } catch (_eBr) {
+      try {
+        node.strokes = [];
+      } catch (_eS) {}
+    }
+  }
+
+  /**
+   * TableContentSlot per Figma dev export: HUG W, HUG H, items-start, overflow-clip, shrink-0.
+   * No FILL sizing — let nested instances dictate width so Badge / Progress / Text render at intrinsic size.
+   */
+  function appendTableContentSlot(parent) {
+    var slot = figma.createFrame();
+    slot.name = "TableContentSlot";
+    slot.layoutMode = "HORIZONTAL";
+    slot.primaryAxisSizingMode = "AUTO";
+    slot.counterAxisSizingMode = "AUTO";
+    slot.primaryAxisAlignItems = "MIN";
+    slot.counterAxisAlignItems = "MIN";
+    slot.clipsContent = true;
+    slot.itemSpacing = 0;
+    slot.fills = [];
+    slot.strokes = [];
+    try {
+      slot.paddingLeft = 0;
+      slot.paddingRight = 0;
+      slot.paddingTop = 0;
+      slot.paddingBottom = 0;
+    } catch (_slp) {}
+    parent.appendChild(slot);
+    try {
+      slot.layoutSizingHorizontal = "HUG";
+      slot.layoutSizingVertical = "HUG";
+    } catch (_sls) {}
+    return slot;
+  }
+
+  var tableBodyMinHeightDefault = 52;
+  var tableBodyBadgeFixedWidth = 62;
+
+  /**
+   * TableBody variant shell: HUG W, HUG H by default with a minimum height floor.
+   * Some variants opt into FIXED height via `fixedHeight`.
+   */
+  function createTableBodyVariantShell(capVariant, layoutOpts) {
+    layoutOpts = layoutOpts || {};
+    var bc = figma.createComponent();
+    bc.name = "Variant=" + capVariant;
+    bc.layoutMode = "HORIZONTAL";
+    bc.primaryAxisSizingMode = "AUTO";
+    bc.counterAxisSizingMode = "AUTO";
+    bc.primaryAxisAlignItems = layoutOpts.primaryAxisAlignItems || "MIN";
+    bc.counterAxisAlignItems = layoutOpts.counterAxisAlignItems || "CENTER";
+    bc.itemSpacing = typeof layoutOpts.itemSpacing === "number" ? layoutOpts.itemSpacing : 0;
+    bc.fills = [{ type: "SOLID", color: bodyBgFallback }];
+    if (varMap["table/body-background"]) bindPaintVar(bc, "fills", 0, varMap["table/body-background"]);
+    bc.strokes = [];
+    bindTableBodyBottomRule(bc);
+    try {
+      bc.cornerRadius = 0;
+    } catch (_bcr) {}
+    bc.clipsContent = false;
+    bindTableBodyInset(bc);
+    try {
+      bc.minHeight = tableBodyMinHeightDefault;
+    } catch (_bminh) {}
+    return bc;
+  }
+
+  function finalizeVariantSizing(bc, fixedHeight) {
+    if (typeof fixedHeight === "number") {
+      var resolvedFixedHeight = Math.max(tableBodyMinHeightDefault, fixedHeight);
+      try {
+        bc.counterAxisSizingMode = "FIXED";
+      } catch (_csm) {}
+      try {
+        bc.resize(Math.max(1, Math.ceil(bc.width || 1)), resolvedFixedHeight);
+      } catch (_r) {}
+    }
+  }
+
+  function enforceTableBadgeWidth(node) {
+    if (!node) return;
+    try {
+      node.primaryAxisAlignItems = "CENTER";
+      node.counterAxisAlignItems = "CENTER";
+    } catch (_bwAlign) {}
+    try {
+      node.minWidth = tableBodyBadgeFixedWidth;
+    } catch (_bwMin) {}
+    try {
+      node.layoutSizingHorizontal = "AUTO";
+    } catch (_bwSizing) {}
+    try {
+      if (node.width < tableBodyBadgeFixedWidth) {
+        node.resize(tableBodyBadgeFixedWidth, Math.max(1, Math.ceil(node.height || 1)));
+      }
+    } catch (_bwResize) {}
+  }
+
+  function centerBadgeLabelText(node) {
+    if (!node || typeof node.findAll !== "function") return;
+    var texts = [];
+    try {
+      texts = node.findAll(function (n) {
+        return n.type === "TEXT";
+      });
+    } catch (_bTxtFindErr) {
+      texts = [];
+    }
+    for (var ti = 0; ti < texts.length; ti++) {
+      try {
+        texts[ti].textAlignHorizontal = "CENTER";
+      } catch (_bTxtAlignErr) {}
+      try {
+        texts[ti].textAutoResize = "WIDTH_AND_HEIGHT";
+      } catch (_bTxtAutoErr) {}
+    }
+  }
+
+  function placeTableBodyVariant(bc, variantIndex) {
+    var rowGap = 16;
+    var rowHeight = 64;
+    bc.x = 0;
+    bc.y = variantIndex * (rowHeight + rowGap);
+  }
+
+  var badgeTemplate =
+    tableFindComponentByNameParts(badgeSet, ["Variant=Outline", "Color=Error", "Size=XS", "Radius=XL", "Circle=Off"]) ||
+    tableFindComponentByNameParts(badgeSet, ["Variant=Outline", "Color=Error", "Circle=Off"]) ||
+    tableFindComponentByNameParts(badgeSet, ["Variant=Outline", "Color=Error"]) ||
+    tablePickBestBadge(badgeSet) ||
+    tableFirstComponentChild(badgeSet);
+  var progressTemplate =
+    tableFindComponentByNameParts(progressSet, ["Size=SM", "Radius=Default"]) ||
+    tableFindComponentByNameParts(progressSet, ["Size=SM"]) ||
+    tablePickBestProgress(progressSet);
+  var textTemplate =
+    tableFindComponentByNameParts(textSet, ["Size=Default", "Weight=Regular", "Color=Default"]) ||
+    tableFindComponentByNameParts(textSet, ["Size=Default", "Weight=Regular"]) ||
+    tableFirstComponentChild(textSet);
+  var avatarTemplate =
+    tableFindComponentByNameParts(avatarSet, ["Size=SM", "Radius=Default"]) ||
+    tableFindComponentByNameParts(avatarSet, ["Size=Default", "Radius=Default"]) ||
+    tableFirstComponentChild(avatarSet);
+
+  if (!badgeTemplate) progress("[TableBody] Badge template unresolved — using plain text.");
+  else progress("[TableBody] Badge template: " + badgeTemplate.name);
+  if (!progressTemplate) progress("[TableBody] Progress template unresolved — using plain text.");
+  else progress("[TableBody] Progress template: " + progressTemplate.name);
+  if (!textTemplate) progress("[TableBody] Text template unresolved — using plain text.");
+  else progress("[TableBody] Text template: " + textTemplate.name);
+  if (!avatarTemplate) progress("[TableBody] Avatar template unresolved — using text fallback.");
+  else progress("[TableBody] Avatar template: " + avatarTemplate.name);
+
+  var bodyComponents = [];
+  var badgeCandidates = [];
+  if (badgeSet && badgeSet.type === "COMPONENT_SET" && badgeSet.children) {
+    for (var bci = 0; bci < badgeSet.children.length; bci++) {
+      if (badgeSet.children[bci].type === "COMPONENT") badgeCandidates.push(badgeSet.children[bci]);
+    }
+  }
+
+  // ── Badge variant ────────────────────────────────────────────────────────
+  var vBadge = createTableBodyVariantShell("Badge", { counterAxisAlignItems: "CENTER" });
+  var slotBadge = appendTableContentSlot(vBadge);
+  if (badgeTemplate) {
+    var badgeInst = badgeTemplate.createInstance();
+    badgeInst.name = "Badge";
+    try {
+      await badgeInst.loadAsync();
+    } catch (_bLd) {}
+    enforceTableBadgeWidth(badgeInst);
+    slotBadge.appendChild(badgeInst);
+    await tableTrySetTextOnInstance(badgeInst, ["Label"], "High");
+    centerBadgeLabelText(badgeInst);
+    // INSTANCE_SWAP for Badge so composed Table can pick warning/success/error rows.
+    if (badgeTemplate) {
+      var badgePreferred = [];
+      var seenBadge = {};
+      if (badgeTemplate.key) {
+        seenBadge[badgeTemplate.key] = true;
+        badgePreferred.push({ type: "COMPONENT", key: badgeTemplate.key });
+      }
+      for (var bpi = 0; bpi < badgeCandidates.length && badgePreferred.length < 64; bpi++) {
+        var bc = badgeCandidates[bpi];
+        if (!bc || bc.type !== "COMPONENT") continue;
+        var bk = bc.key;
+        if (!bk || seenBadge[bk]) continue;
+        seenBadge[bk] = true;
+        badgePreferred.push({ type: "COMPONENT", key: bk });
+      }
+      try {
+        var badgeSwapOpts = badgePreferred.length > 0 ? { preferredValues: badgePreferred } : undefined;
+        var badgeSwapPropName = vBadge.addComponentProperty("Badge", "INSTANCE_SWAP", badgeTemplate, badgeSwapOpts);
+        badgeInst.componentPropertyReferences = { mainComponent: badgeSwapPropName };
+      } catch (eBadgeSwap) {
+        progress("TableBody Badge INSTANCE_SWAP (with preferred list): " + String(eBadgeSwap));
+        try {
+          var badgeSwapPropOnly = vBadge.addComponentProperty("Badge", "INSTANCE_SWAP", badgeTemplate);
+          badgeInst.componentPropertyReferences = { mainComponent: badgeSwapPropOnly };
+        } catch (eBadgeSwap2) {
+          progress("TableBody Badge INSTANCE_SWAP: " + String(eBadgeSwap2));
+        }
+      }
+    }
+  } else {
+    var badgeFallback = figma.createFrame();
+    badgeFallback.name = "Badge";
+    badgeFallback.layoutMode = "HORIZONTAL";
+    badgeFallback.primaryAxisSizingMode = "FIXED";
+    badgeFallback.counterAxisSizingMode = "AUTO";
+    badgeFallback.primaryAxisAlignItems = "CENTER";
+    badgeFallback.counterAxisAlignItems = "CENTER";
+    badgeFallback.itemSpacing = 0;
+    badgeFallback.paddingLeft = 16;
+    badgeFallback.paddingRight = 16;
+    badgeFallback.paddingTop = 4;
+    badgeFallback.paddingBottom = 4;
+    badgeFallback.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0 }];
+    badgeFallback.strokes = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+    badgeFallback.strokeWeight = 1;
+    badgeFallback.strokeAlign = "INSIDE";
+    try { badgeFallback.cornerRadius = 32; } catch (_bfr) {}
+    var badgeFallbackLabel = makeText("High", varMap["table/priority-high"] || varMap["table/cell-text"], { fontSize: 12, fontWeight: 600 });
+    badgeFallback.appendChild(badgeFallbackLabel);
+    enforceTableBadgeWidth(badgeFallback);
+    slotBadge.appendChild(badgeFallback);
+  }
+  page.appendChild(vBadge);
+  finalizeVariantSizing(vBadge);
+  placeTableBodyVariant(vBadge, 0);
+  bodyComponents.push(vBadge);
+
+  // ── Progress variant ─────────────────────────────────────────────────────
+  var vProgress = createTableBodyVariantShell("Progress", { counterAxisAlignItems: "CENTER" });
+  var slotProgress = appendTableContentSlot(vProgress);
+  if (progressTemplate) {
+    var progressInst = progressTemplate.createInstance();
+    progressInst.name = "Progress";
+    try {
+      await progressInst.loadAsync();
+    } catch (_pLd) {}
+    slotProgress.appendChild(progressInst);
+  } else {
+    slotProgress.appendChild(makeText("60%", varMap["table/cell-text"], { fontSize: 12, fontWeight: 600 }));
+  }
+  page.appendChild(vProgress);
+  finalizeVariantSizing(vProgress, 52);
+  placeTableBodyVariant(vProgress, 1);
+  bodyComponents.push(vProgress);
+
+  // ── Text variant ─────────────────────────────────────────────────────────
+  var vText = createTableBodyVariantShell("Text", { counterAxisAlignItems: "CENTER" });
+  var slotText = appendTableContentSlot(vText);
+  if (textTemplate) {
+    var textInst = textTemplate.createInstance();
+    textInst.name = "Text";
+    try {
+      await textInst.loadAsync();
+    } catch (_tLd) {}
+    slotText.appendChild(textInst);
+    await tableTrySetTextOnInstance(textInst, ["text"], "Text goes here");
+  } else {
+    slotText.appendChild(makeText("Text goes here", varMap["table/cell-text"], { fontSize: 12 }));
+  }
+  page.appendChild(vText);
+  finalizeVariantSizing(vText, 52);
+  placeTableBodyVariant(vText, 2);
+  bodyComponents.push(vText);
+
+  // ── Flag variant: INSTANCE_SWAP flag + Text instance ─────────────────────
+  var vFlag = createTableBodyVariantShell("Flag", {
+    itemSpacing: 6,
+    counterAxisAlignItems: "CENTER",
+  });
+  var flagInst = null;
+  if (flagDefaultComp) {
+    try {
+      flagInst = flagDefaultComp.createInstance();
+      flagInst.name = "Flag";
+      try {
+        await flagInst.loadAsync();
+      } catch (_fLd) {}
+      try {
+        flagInst.resize(21.333, 16);
+      } catch (_fSz) {}
+      vFlag.appendChild(flagInst);
+    } catch (_fIns) {
+      flagInst = null;
+    }
+  }
+  // No legacy DE fallback here; if no flag instance resolves, keep the slot empty.
+  var slotFlag = appendTableContentSlot(vFlag);
+  if (textTemplate) {
+    var textInstFlag = textTemplate.createInstance();
+    textInstFlag.name = "Text";
+    try {
+      await textInstFlag.loadAsync();
+    } catch (_tfLd) {}
+    slotFlag.appendChild(textInstFlag);
+    await tableTrySetTextOnInstance(textInstFlag, ["text"], "Text goes here");
+  } else {
+    slotFlag.appendChild(makeText("Text goes here", varMap["table/cell-text"], { fontSize: 12 }));
+  }
+  page.appendChild(vFlag);
+  finalizeVariantSizing(vFlag, 52);
+  placeTableBodyVariant(vFlag, 3);
+
+  // INSTANCE_SWAP for the Flag variant only — must be added before combineAsVariants.
+  if (flagInst && flagDefaultComp) {
+    var flagPreferred = [];
+    var seenFlag = {};
+    if (flagDefaultComp.key) {
+      seenFlag[flagDefaultComp.key] = true;
+      flagPreferred.push({ type: "COMPONENT", key: flagDefaultComp.key });
+    }
+    for (var fpi = 0; fpi < flagCandidates.length && flagPreferred.length < 32; fpi++) {
+      var fcand = flagCandidates[fpi];
+      if (!fcand || fcand.type !== "COMPONENT") continue;
+      var fk = fcand.key;
+      if (!fk || seenFlag[fk]) continue;
+      seenFlag[fk] = true;
+      flagPreferred.push({ type: "COMPONENT", key: fk });
+    }
+    try {
+      var flagSwapOpts = flagPreferred.length > 0 ? { preferredValues: flagPreferred } : undefined;
+      var flagSwapPropName = vFlag.addComponentProperty("Flag", "INSTANCE_SWAP", flagDefaultComp, flagSwapOpts);
+      flagInst.componentPropertyReferences = { mainComponent: flagSwapPropName };
+    } catch (eFlagSwap) {
+      progress("TableBody Flag INSTANCE_SWAP (with preferred list): " + String(eFlagSwap));
+      try {
+        var flagSwapPropOnly = vFlag.addComponentProperty("Flag", "INSTANCE_SWAP", flagDefaultComp);
+        flagInst.componentPropertyReferences = { mainComponent: flagSwapPropOnly };
+      } catch (eFlagSwap2) {
+        progress("TableBody Flag INSTANCE_SWAP: " + String(eFlagSwap2));
+      }
+    }
+  }
+
+  bodyComponents.push(vFlag);
+
+  // ── Avatar variant: Avatar instance + Text instance ──────────────────────
+  var vAvatar = createTableBodyVariantShell("Avatar", {
+    itemSpacing: 8,
+    counterAxisAlignItems: "CENTER",
+  });
+  if (avatarTemplate) {
+    var avatarInst = avatarTemplate.createInstance();
+    avatarInst.name = "Avatar";
+    try {
+      await avatarInst.loadAsync();
+    } catch (_avLd) {}
+    vAvatar.appendChild(avatarInst);
+  } else {
+    vAvatar.appendChild(makeText("AC", varMap["table/cell-text"], { fontSize: 12, fontWeight: 600 }));
+  }
+  var slotAvatar = appendTableContentSlot(vAvatar);
+  if (textTemplate) {
+    var textInstAvatar = textTemplate.createInstance();
+    textInstAvatar.name = "Text";
+    try {
+      await textInstAvatar.loadAsync();
+    } catch (_taLd) {}
+    slotAvatar.appendChild(textInstAvatar);
+    await tableTrySetTextOnInstance(textInstAvatar, ["text"], "Text goes here");
+  } else {
+    slotAvatar.appendChild(makeText("Text goes here", varMap["table/cell-text"], { fontSize: 12 }));
+  }
+  page.appendChild(vAvatar);
+  finalizeVariantSizing(vAvatar, 52);
+  placeTableBodyVariant(vAvatar, 4);
+  bodyComponents.push(vAvatar);
+
+  // ── Icon variant: INSTANCE_SWAP icon + Text instance ─────────────────────
+  var vIcon = createTableBodyVariantShell("Icon", {
+    itemSpacing: 6,
+    counterAxisAlignItems: "CENTER",
+  });
+  var iconInst = null;
+  if (iconDefaultComp) {
+    try {
+      iconInst = iconDefaultComp.createInstance();
+      iconInst.name = "Icon";
+      try {
+        await iconInst.loadAsync();
+      } catch (_iLd) {}
+      try {
+        iconInst.resize(20, 20);
+      } catch (_iSz) {}
+      var iconStrokeVar = varMap["table/cell-text"];
+      var iconVectors = iconInst.findAll(function (n) {
+        return n.type === "VECTOR";
+      });
+      for (var ivi = 0; ivi < iconVectors.length; ivi++) {
+        var vec = iconVectors[ivi];
+        if (vec.strokes && vec.strokes.length > 0 && iconStrokeVar) {
+          bindPaintVar(vec, "strokes", 0, iconStrokeVar);
+        }
+        if (vec.fills && vec.fills.length > 0 && iconStrokeVar) {
+          bindPaintVar(vec, "fills", 0, iconStrokeVar);
+        }
+      }
+      vIcon.appendChild(iconInst);
+    } catch (_eIns) {
+      iconInst = null;
+    }
+  }
+  if (!iconInst) {
+    var warnVec = tableMakeWarningTriangleVector();
+    if (warnVec) {
+      if (varMap["table/cell-text"]) bindPaintVar(warnVec, "strokes", 0, varMap["table/cell-text"]);
+      vIcon.appendChild(warnVec);
+    }
+  }
+  var slotIcon = appendTableContentSlot(vIcon);
+  if (textTemplate) {
+    var textInstIcon = textTemplate.createInstance();
+    textInstIcon.name = "Text";
+    try {
+      await textInstIcon.loadAsync();
+    } catch (_tiLd) {}
+    slotIcon.appendChild(textInstIcon);
+    await tableTrySetTextOnInstance(textInstIcon, ["text"], "Text goes here");
+  } else {
+    slotIcon.appendChild(makeText("Text goes here", varMap["table/cell-text"], { fontSize: 12 }));
+  }
+  page.appendChild(vIcon);
+  finalizeVariantSizing(vIcon, 52);
+  placeTableBodyVariant(vIcon, 5);
+
+  // INSTANCE_SWAP for the Icon variant only — must be added before combineAsVariants.
+  if (iconInst && iconDefaultComp) {
+    var iconPreferred = [];
+    var seenIcon = {};
+    if (iconDefaultComp.key) {
+      seenIcon[iconDefaultComp.key] = true;
+      iconPreferred.push({ type: "COMPONENT", key: iconDefaultComp.key });
+    }
+    for (var ipi = 0; ipi < iconCandidates.length && iconPreferred.length < 32; ipi++) {
+      var cand = iconCandidates[ipi];
+      if (!cand || cand.type !== "COMPONENT") continue;
+      var ck = cand.key;
+      if (!ck || seenIcon[ck]) continue;
+      seenIcon[ck] = true;
+      iconPreferred.push({ type: "COMPONENT", key: ck });
+    }
+    try {
+      var iconSwapOpts = iconPreferred.length > 0 ? { preferredValues: iconPreferred } : undefined;
+      var iconSwapPropName = vIcon.addComponentProperty("Icon", "INSTANCE_SWAP", iconDefaultComp, iconSwapOpts);
+      iconInst.componentPropertyReferences = { mainComponent: iconSwapPropName };
+    } catch (eIconSwap) {
+      progress("TableBody Icon INSTANCE_SWAP (with preferred list): " + String(eIconSwap));
+      try {
+        var iconSwapPropOnly = vIcon.addComponentProperty("Icon", "INSTANCE_SWAP", iconDefaultComp);
+        iconInst.componentPropertyReferences = { mainComponent: iconSwapPropOnly };
+      } catch (eIconSwap2) {
+        progress("TableBody Icon INSTANCE_SWAP: " + String(eIconSwap2));
+      }
+    }
+  }
+
+  bodyComponents.push(vIcon);
+
+  var bodySet = null;
+  try {
+    bodySet = figma.combineAsVariants(bodyComponents, page);
+    bodySet.name = "TableBody";
+  } catch (eComb) {
+    progress("TableBody combineAsVariants failed: " + String(eComb));
+    if (bodyComponents[0]) bodySet = bodyComponents[0];
+  }
+  if (bodySet) {
+    try {
+      bodySet.setPluginData("dsTableBodyBuild", TABLE_BODY_BUILD);
+    } catch (_pd) {}
+  }
+
+  // Full composed table component so consumers can use a ready-made table,
+  // while still keeping TableHeader and TableBody building blocks available.
+  function tableSetInstanceProps(instance, propPatch) {
+    if (!instance || typeof instance.setProperties !== "function") return;
+    var meta = instance.componentProperties || {};
+    var keys = Object.keys(meta);
+    if (!keys.length) return;
+    var patchKeys = Object.keys(propPatch || {});
+    for (var pi = 0; pi < patchKeys.length; pi++) {
+      var propName = patchKeys[pi];
+      var propValue = propPatch[propName];
+      var resolvedKey = null;
+      for (var ki = 0; ki < keys.length; ki++) {
+        var baseName = String(keys[ki]).split("#")[0];
+        if (baseName === propName || baseName.toLowerCase() === String(propName).toLowerCase()) {
+          resolvedKey = keys[ki];
+          break;
+        }
+      }
+      if (!resolvedKey) continue;
+      var metaEntry = meta[resolvedKey] || {};
+      var isInstanceSwap = String(metaEntry.type || "").toUpperCase() === "INSTANCE_SWAP";
+      if (isInstanceSwap && propValue && typeof propValue === "object" && propValue.__instanceSwapTarget) {
+        var target = propValue.__instanceSwapTarget;
+        var swapAttempts = [];
+        if (target.key) swapAttempts.push(target.key);
+        if (target.id) swapAttempts.push(target.id);
+        if (target.name) swapAttempts.push(target.name);
+        for (var sai = 0; sai < swapAttempts.length; sai++) {
+          try {
+            var oneSwap = {};
+            oneSwap[resolvedKey] = swapAttempts[sai];
+            instance.setProperties(oneSwap);
+            break;
+          } catch (_tableInstSwapErr) {}
+        }
+      } else {
+        try {
+          var oneProp = {};
+          oneProp[resolvedKey] = propValue;
+          instance.setProperties(oneProp);
+        } catch (_tableInstPropsErr) {}
+      }
+    }
+  }
+
+  async function makeTableHeaderCell(label, width, showSort) {
+    var inst = null;
+    try {
+      inst = comp.createInstance();
+      inst.name = "TableHeader";
+      try { await inst.loadAsync(); } catch (_eLdHdr) {}
+      tableSetInstanceProps(inst, { "Show sort": showSort ? "true" : "false" });
+      try { await tableTrySetTextOnInstance(inst, ["title", "text"], label); } catch (_eHdrText) {}
+      try { inst.resize(width, Math.max(1, Math.ceil(inst.height || 1))); } catch (_eHdrSize) {}
+    } catch (_eHdrInst) {
+      inst = null;
+    }
+    return inst;
+  }
+
+  function tablePickFlagComponentForCountry(countryName) {
+    var candidates = flagCandidates || [];
+    if (!candidates.length) return flagDefaultComp || null;
+    var n = String(countryName || "").toLowerCase();
+    function scoreFlag(comp) {
+      var nm = String((comp && comp.name) || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+      if (!nm) return 0;
+      var score = 0;
+      if (n.indexOf("united kingdom") >= 0 || n === "uk" || n === "gb") {
+        if (nm.indexOf("unitedkingdom") >= 0 || nm === "uk" || nm === "gb" || nm.indexOf("greatbritain") >= 0) score += 120;
+      }
+      if (n.indexOf("united states") >= 0 || n === "us" || n === "usa") {
+        if (nm.indexOf("unitedstates") >= 0 || nm === "us" || nm === "usa" || nm.indexOf("america") >= 0) score += 120;
+      }
+      if (n.indexOf("japan") >= 0 || n === "jp") {
+        if (nm.indexOf("japan") >= 0 || nm === "jp") score += 120;
+      }
+      if (score === 0 && n.indexOf("united kingdom") >= 0 && nm.indexOf("kingdom") >= 0) score += 80;
+      if (score === 0 && n.indexOf("united states") >= 0 && nm.indexOf("states") >= 0) score += 80;
+      if (score === 0 && n.indexOf("japan") >= 0 && nm.indexOf("japan") >= 0) score += 80;
+      if (nm.indexOf("flag") >= 0) score += 5;
+      return score;
+    }
+    var best = null;
+    var bestScore = -1;
+    for (var i = 0; i < candidates.length; i++) {
+      var s = scoreFlag(candidates[i]);
+      if (s > bestScore) {
+        bestScore = s;
+        best = candidates[i];
+      }
+    }
+    if (best && bestScore > 0) return best;
+    return flagDefaultComp || best || null;
+  }
+
+  function tableSetFirstInstanceSwap(instance, targetComponent) {
+    if (!instance || typeof instance.setProperties !== "function" || !targetComponent) return false;
+    var meta = instance.componentProperties || {};
+    var keys = Object.keys(meta);
+    if (!keys.length) return false;
+    var targetKey = null;
+    for (var i = 0; i < keys.length; i++) {
+      var entry = meta[keys[i]] || {};
+      if (String(entry.type || "").toUpperCase() === "INSTANCE_SWAP") {
+        targetKey = keys[i];
+        break;
+      }
+    }
+    if (!targetKey) return false;
+
+    var attempts = [];
+    if (targetComponent.key) attempts.push(targetComponent.key);
+    if (targetComponent.id) attempts.push(targetComponent.id);
+    if (targetComponent.name) attempts.push(targetComponent.name);
+    for (var ai = 0; ai < attempts.length; ai++) {
+      try {
+        var patch = {};
+        patch[targetKey] = attempts[ai];
+        instance.setProperties(patch);
+        return true;
+      } catch (_swapTryErr) {}
+    }
+    return false;
+  }
+
+  function tablePickBadgeComponentForPriority(priorityText) {
+    var candidates = badgeCandidates || [];
+    if (!candidates.length) return badgeTemplate || null;
+    var p = String(priorityText || "").toLowerCase();
+    var targetColor = "error";
+    if (p.indexOf("medium") >= 0) targetColor = "warning";
+    else if (p.indexOf("low") >= 0) targetColor = "success";
+    function scoreBadge(comp) {
+      var nm = String((comp && comp.name) || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+      if (!nm) return 0;
+      var score = 0;
+      if (nm.indexOf("color=" + targetColor) >= 0) score += 150;
+      if (nm.indexOf(targetColor) >= 0) score += 80;
+      if (nm.indexOf("variant=outline") >= 0) score += 30;
+      if (nm.indexOf("circle=off") >= 0) score += 10;
+      return score;
+    }
+    var best = null;
+    var bestScore = -1;
+    for (var i = 0; i < candidates.length; i++) {
+      var s = scoreBadge(candidates[i]);
+      if (s > bestScore) {
+        bestScore = s;
+        best = candidates[i];
+      }
+    }
+    if (best && bestScore > 0) return best;
+    return badgeTemplate || best || null;
+  }
+
+  async function makeTableBodyCell(variantName, width, textOverride) {
+    if (!bodySet || bodySet.type !== "COMPONENT_SET") return null;
+    var variantComp = findTableBodyVariantComponent(bodySet, variantName);
+    if (!variantComp) variantComp = bodySet.children && bodySet.children.length ? bodySet.children[0] : null;
+    if (!variantComp) return null;
+    var inst = null;
+    try {
+      inst = variantComp.createInstance();
+      inst.name = "TableBody";
+      try { await inst.loadAsync(); } catch (_eLdBody) {}
+      if (String(variantName || "").toLowerCase() === "flag") {
+        var countryFlagComp = tablePickFlagComponentForCountry(textOverride);
+        if (countryFlagComp) {
+          var didSetFlag = tableSetFirstInstanceSwap(inst, countryFlagComp);
+          if (!didSetFlag) {
+            tableSetInstanceProps(inst, { "Flag": { __instanceSwapTarget: countryFlagComp } });
+          }
+        }
+      } else if (String(variantName || "").toLowerCase() === "badge") {
+        var priorityBadgeComp = tablePickBadgeComponentForPriority(textOverride);
+        if (priorityBadgeComp) {
+          var didSetBadge = tableSetFirstInstanceSwap(inst, priorityBadgeComp);
+          if (!didSetBadge) {
+            tableSetInstanceProps(inst, { "Badge": { __instanceSwapTarget: priorityBadgeComp } });
+          }
+        }
+      }
+      if (typeof textOverride === "string" && textOverride.length > 0) {
+        try { await tableTrySetTextOnInstance(inst, ["text", "Label", "Value"], textOverride); } catch (_eBodyText) {}
+      }
+      try { inst.resize(width, Math.max(1, Math.ceil(inst.height || 52))); } catch (_eBodySize) {}
+    } catch (_eBodyInst) {
+      inst = null;
+    }
+    return inst;
+  }
+
+  var tableComp = figma.createComponent();
+  tableComp.name = "Table";
+  tableComp.layoutMode = "VERTICAL";
+  tableComp.primaryAxisSizingMode = "AUTO";
+  tableComp.counterAxisSizingMode = "AUTO";
+  tableComp.primaryAxisAlignItems = "MIN";
+  tableComp.counterAxisAlignItems = "MIN";
+  tableComp.itemSpacing = 0;
+  tableComp.clipsContent = false;
+  tableComp.fills = [];
+  tableComp.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
+  tableComp.strokeWeight = 1;
+  tableComp.strokeAlign = "INSIDE";
+  if (varMap["table/border"]) bindPaintVar(tableComp, "strokes", 0, varMap["table/border"]);
+  try { tableComp.cornerRadius = 4; } catch (_eTableCorner) {}
+
+  var tableHeaderDefs = [
+    { label: "Vessel", width: 180, sort: true },
+    { label: "Reason Tag", width: 203, sort: false },
+    { label: "Flag", width: 163, sort: true },
+    { label: "MMSI", width: 98, sort: true },
+    { label: "Priority", width: 98, sort: true },
+    { label: "Confidence", width: 190, sort: true },
+    { label: "Status", width: 128, sort: true },
+  ];
+
+  var headerRow = figma.createFrame();
+  headerRow.name = "HeaderRow";
+  headerRow.layoutMode = "HORIZONTAL";
+  headerRow.primaryAxisSizingMode = "AUTO";
+  headerRow.counterAxisSizingMode = "AUTO";
+  headerRow.primaryAxisAlignItems = "MIN";
+  headerRow.counterAxisAlignItems = "MIN";
+  headerRow.itemSpacing = 0;
+  headerRow.fills = [];
+  headerRow.strokes = [];
+  for (var hdi = 0; hdi < tableHeaderDefs.length; hdi++) {
+    var hd = tableHeaderDefs[hdi];
+    var hInst = await makeTableHeaderCell(hd.label, hd.width, hd.sort);
+    if (hInst) headerRow.appendChild(hInst);
+  }
+  tableComp.appendChild(headerRow);
+
+  var tableRows = [
+    ["Astra Voyager", "AIS spoofing pattern", "United Kingdom", "636019287", "High", "60%", "Pending"],
+    ["Atlantic Horizon", "Sanctions-linked port call", "United States", "367823456", "Medium", "60%", "Investigating"],
+    ["North Star", "Identity mismatch", "Japan", "431002198", "Low", "60%", "Monitoring"],
+  ];
+
+  var bodyRowsWrap = figma.createFrame();
+  bodyRowsWrap.name = "BodyRows";
+  bodyRowsWrap.layoutMode = "VERTICAL";
+  bodyRowsWrap.primaryAxisSizingMode = "AUTO";
+  bodyRowsWrap.counterAxisSizingMode = "AUTO";
+  bodyRowsWrap.primaryAxisAlignItems = "MIN";
+  bodyRowsWrap.counterAxisAlignItems = "MIN";
+  bodyRowsWrap.itemSpacing = 0;
+  bodyRowsWrap.fills = [];
+  bodyRowsWrap.strokes = [];
+
+  for (var ri = 0; ri < tableRows.length; ri++) {
+    var row = tableRows[ri];
+    var rowFrame = figma.createFrame();
+    rowFrame.name = "Row " + String(ri + 1);
+    rowFrame.layoutMode = "HORIZONTAL";
+    rowFrame.primaryAxisSizingMode = "AUTO";
+    rowFrame.counterAxisSizingMode = "AUTO";
+    rowFrame.primaryAxisAlignItems = "MIN";
+    rowFrame.counterAxisAlignItems = "MIN";
+    rowFrame.itemSpacing = 0;
+    rowFrame.fills = [];
+    rowFrame.strokes = [];
+
+    var c1 = await makeTableBodyCell("Text", 180, row[0]);
+    var c2 = await makeTableBodyCell("Text", 203, row[1]);
+    var c3 = await makeTableBodyCell("Flag", 163, row[2]);
+    var c4 = await makeTableBodyCell("Text", 98, row[3]);
+    var c5 = await makeTableBodyCell("Badge", 98, row[4]);
+    var c6 = await makeTableBodyCell("Progress", 190, row[5]);
+    var c7 = await makeTableBodyCell("Icon", 128, row[6]);
+    if (c1) rowFrame.appendChild(c1);
+    if (c2) rowFrame.appendChild(c2);
+    if (c3) rowFrame.appendChild(c3);
+    if (c4) rowFrame.appendChild(c4);
+    if (c5) rowFrame.appendChild(c5);
+    if (c6) rowFrame.appendChild(c6);
+    if (c7) rowFrame.appendChild(c7);
+    bodyRowsWrap.appendChild(rowFrame);
+  }
+
+  tableComp.appendChild(bodyRowsWrap);
+  try {
+    tableComp.resize(1060, Math.max(1, Math.ceil(tableComp.height || 1)));
+  } catch (_tableResize) {}
+  page.appendChild(tableComp);
+
+  progress(
+    "Table: TableHeader (132px; INSTANCE_SWAP sort; Show sort). TableBody: COMPONENT_SET Variant=Badge|Progress|Text|Flag|Avatar|Icon [" +
+      TABLE_BODY_BUILD +
+      "] — nested Badge / Progress / Text / Avatar instances; Flag and Icon variants use INSTANCE_SWAP. Also exported composed Table component."
+  );
+  return [tableComp, comp, bodySet];
 }
 
 function buildTitleComponentSet(varMap, page, font, sampleText) {
@@ -8461,6 +10168,105 @@ function buildLoaderComponentSet(varMap, page, font, resolvedComponentFloat) {
   progress("Created " + components.length + " loader variants");
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Loader";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
+// Progress Component Set
+// ---------------------------------------------------------------------------
+
+function buildProgressComponentSet(varMap, page, font, resolvedComponentFloat) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var components = [];
+  var colWidth = 280;
+  var rowHeight = 56;
+  var gap = 20;
+
+  for (var si = 0; si < sizes.length; si++) {
+    var size = sizes[si];
+    var capSize = size === "default" ? "Default" : size.toUpperCase();
+    var tw = resolveCompFloat("progress/track-width-" + size, 160);
+    var th = resolveCompFloat("progress/height-" + size, 8);
+    var fillW = Math.max(2, Math.round(tw * 0.6));
+
+    for (var ri = 0; ri < radii.length; ri++) {
+      var radiusKey = radii[ri];
+      var capRadius = radiusKey === "default" ? "Default" : radiusKey.toUpperCase();
+
+      var comp = figma.createComponent();
+      comp.name = "Size=" + capSize + ", Radius=" + capRadius;
+      comp.layoutMode = "HORIZONTAL";
+      comp.primaryAxisSizingMode = "AUTO";
+      comp.counterAxisSizingMode = "AUTO";
+      comp.primaryAxisAlignItems = "CENTER";
+      comp.counterAxisAlignItems = "CENTER";
+      comp.itemSpacing = 8;
+      comp.fills = [];
+
+      bindVar(comp, "itemSpacing", varMap["progress/gap-" + size]);
+
+      var trackShell = figma.createFrame();
+      trackShell.name = "Track";
+      trackShell.layoutMode = "NONE";
+      trackShell.clipsContent = true;
+      trackShell.primaryAxisSizingMode = "FIXED";
+      trackShell.counterAxisSizingMode = "FIXED";
+      trackShell.layoutSizingHorizontal = "FIXED";
+      trackShell.layoutSizingVertical = "FIXED";
+      trackShell.resize(tw, th);
+      trackShell.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.87, b: 0.91 } }];
+      trackShell.strokes = [];
+      bindPaintVar(trackShell, "fills", 0, varMap["progress/track"]);
+      bindVar(trackShell, "width", varMap["progress/track-width-" + size]);
+      bindVar(trackShell, "height", varMap["progress/height-" + size]);
+      bindVar(trackShell, "topLeftRadius", varMap["progress/radius-" + radiusKey]);
+      bindVar(trackShell, "topRightRadius", varMap["progress/radius-" + radiusKey]);
+      bindVar(trackShell, "bottomLeftRadius", varMap["progress/radius-" + radiusKey]);
+      bindVar(trackShell, "bottomRightRadius", varMap["progress/radius-" + radiusKey]);
+
+      var fillRect = figma.createRectangle();
+      fillRect.name = "Fill";
+      fillRect.resize(fillW, th);
+      fillRect.x = 0;
+      fillRect.y = 0;
+      fillRect.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+      fillRect.strokes = [];
+      bindPaintVar(fillRect, "fills", 0, varMap["progress/fill"]);
+      bindVar(fillRect, "topLeftRadius", varMap["progress/radius-" + radiusKey]);
+      bindVar(fillRect, "topRightRadius", varMap["progress/radius-" + radiusKey]);
+      bindVar(fillRect, "bottomLeftRadius", varMap["progress/radius-" + radiusKey]);
+      bindVar(fillRect, "bottomRightRadius", varMap["progress/radius-" + radiusKey]);
+      trackShell.appendChild(fillRect);
+
+      var label = figma.createText();
+      label.name = "Value";
+      label.fontName = font;
+      label.characters = "60%";
+      label.fontSize = 13;
+      label.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.12 } }];
+      bindPaintVar(label, "fills", 0, varMap["progress/label"]);
+      bindVar(label, "fontSize", varMap["progress/font-size-" + size]);
+
+      comp.appendChild(trackShell);
+      comp.appendChild(label);
+
+      comp.x = ri * (colWidth + gap);
+      comp.y = si * (rowHeight + gap);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+  }
+
+  progress("Created " + components.length + " progress variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Progress";
   return componentSet;
 }
 

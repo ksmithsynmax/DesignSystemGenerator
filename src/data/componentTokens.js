@@ -1111,6 +1111,43 @@ export const COMPONENT_TOKENS = {
     },
   },
 
+  /** Linear progress (standalone; table cells can use the same tokens or `table/progress-*`). */
+  progress: {
+    "progress-track": { type: "COLOR", semantic: "surface-secondary", figmaPath: "progress/track" },
+    "progress-fill": { type: "COLOR", semantic: "interactive-primary", figmaPath: "progress/fill" },
+    "progress-label": { type: "COLOR", semantic: "text-default", figmaPath: "progress/label" },
+    "progress-height": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 8, xs: 4, sm: 6, md: 8, lg: 10, xl: 12 },
+      figmaPath: "progress/height",
+    },
+    "progress-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 4, xs: 2, sm: 3, md: 4, lg: 6, xl: 8 },
+      figmaPath: "progress/radius",
+    },
+    "progress-track-width": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 160, xs: 96, sm: 120, md: 160, lg: 200, xl: 240 },
+      figmaPath: "progress/track-width",
+    },
+    "progress-font-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 13, xs: 11, sm: 12, md: 13, lg: 14, xl: 15 },
+      figmaPath: "progress/font-size",
+    },
+    "progress-gap": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 8, xs: 4, sm: 6, md: 8, lg: 10, xl: 12 },
+      figmaPath: "progress/gap",
+    },
+  },
+
   pill: {
     // ── COLOR TOKENS ──
     "pill-background": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "pill/background" },
@@ -1461,6 +1498,34 @@ export const COMPONENT_TOKENS = {
     },
   },
 
+  /** User avatar (image and/or initials); Mantine `Avatar` maps to size, radius, and filled surface. */
+  avatar: {
+    "avatar-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "avatar/background" },
+    "avatar-border": { type: "COLOR", semantic: "border-default", figmaPath: "avatar/border" },
+    "avatar-text": { type: "COLOR", semantic: "text-default", figmaPath: "avatar/text" },
+    "avatar-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "avatar/border-width" },
+    "avatar-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 40, xs: 24, sm: 32, md: 40, lg: 48, xl: 56 },
+      figmaPath: "avatar/size",
+    },
+    "avatar-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 999, xs: 12, sm: 16, md: 20, lg: 24, xl: 28 },
+      figmaPath: "avatar/radius",
+    },
+    "avatar-font-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 16, xs: 10, sm: 13, md: 16, lg: 18, xl: 22 },
+      figmaPath: "avatar/font-size",
+    },
+    "avatar-font-family": { type: "STRING", value: "Inter", figmaPath: "avatar/font-family" },
+    "avatar-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "avatar/font-weight" },
+  },
+
   anchor: {
     // ── COLOR TOKENS ──
     "anchor-color":          { type: "COLOR", semantic: "interactive-primary",       figmaPath: "anchor/color" },
@@ -1542,6 +1607,49 @@ export const COMPONENT_TOKENS = {
     "text-font-weight-semibold": { type: "STRING", value: "Semi Bold", figmaPath: "text/font-weight-semibold" },
     "text-font-weight-bold": { type: "STRING", value: "Bold", figmaPath: "text/font-weight-bold" },
   },
+
+  /** Default data table (dense variant later). */
+  table: {
+    "table-background": { type: "COLOR", semantic: "surface-default", figmaPath: "table/background" },
+    /** TableBody wrapper fill (Figma steel/8 — matches `surface-secondary` on steel scales). */
+    "table-body-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "table/body-background" },
+    /** Uniform inset on the TableBody component (Figma dev: 16px all sides). */
+    "table-body-padding": { type: "FLOAT", unit: "px", value: 16, figmaPath: "table/body-padding" },
+    "table-header-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "table/header-background" },
+    "table-border": { type: "COLOR", semantic: "border-default", figmaPath: "table/border" },
+    "table-row-divider": { type: "COLOR", semantic: "border-default", figmaPath: "table/row-divider" },
+    "table-header-text": { type: "COLOR", semantic: "text-default", figmaPath: "table/header-text" },
+    "table-cell-text": { type: "COLOR", semantic: "text-default", figmaPath: "table/cell-text" },
+    "table-cell-secondary": { type: "COLOR", semantic: "text-subtle", figmaPath: "table/cell-secondary" },
+    "table-row-hover": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "table/row-hover" },
+    "table-progress-track": { type: "COLOR", semantic: "surface-secondary", figmaPath: "table/progress-track" },
+    "table-progress-fill": { type: "COLOR", semantic: "interactive-primary", figmaPath: "table/progress-fill" },
+    "table-sort-icon": { type: "COLOR", semantic: "text-subtle", figmaPath: "table/sort-icon" },
+    "table-priority-high": { type: "COLOR", semantic: "feedback-error", figmaPath: "table/priority-high" },
+    "table-priority-medium": { type: "COLOR", semantic: "feedback-warning", figmaPath: "table/priority-medium" },
+    "table-priority-low": { type: "COLOR", semantic: "feedback-success", figmaPath: "table/priority-low" },
+    "table-status-pending": { type: "COLOR", semantic: "feedback-warning", figmaPath: "table/status-pending" },
+    "table-status-complete": { type: "COLOR", semantic: "feedback-success", figmaPath: "table/status-complete" },
+    "table-status-queued": { type: "COLOR", semantic: "interactive-primary", figmaPath: "table/status-queued" },
+    "table-checkbox-border": { type: "COLOR", semantic: "border-default", figmaPath: "table/checkbox-border" },
+    "table-checkbox-fill": { type: "COLOR", semantic: "interactive-primary", figmaPath: "table/checkbox-fill" },
+    "table-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "table/padding-x" },
+    "table-padding-y": { type: "FLOAT", unit: "px", value: 12, figmaPath: "table/padding-y" },
+    "table-header-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "table/header-padding-x" },
+    "table-header-padding-y": { type: "FLOAT", unit: "px", value: 16, figmaPath: "table/header-padding-y" },
+    /** Horizontal gap between header label and sort icon (Figma auto-layout item spacing). */
+    "table-header-icon-gap": { type: "FLOAT", unit: "px", value: 4, figmaPath: "table/header-icon-gap" },
+    /** Stroke width for the table header sort icon (swapped instance vectors + vector fallback). */
+    "table-header-icon-stroke-width": { type: "FLOAT", unit: "px", value: 1.25, figmaPath: "table/header-icon-stroke-width" },
+    "table-cell-font-size": { type: "FLOAT", unit: "px", value: 13, figmaPath: "table/cell-font-size" },
+    "table-cell-font-family": { type: "STRING", value: "Inter", figmaPath: "table/cell-font-family" },
+    "table-cell-font-weight": { type: "STRING", value: "Regular", figmaPath: "table/cell-font-weight" },
+    "table-cell-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "table/cell-line-height" },
+    "table-header-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "table/header-font-size" },
+    "table-header-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "table/header-font-weight" },
+    "table-header-font-family": { type: "STRING", value: "Inter", figmaPath: "table/header-font-family" },
+    "table-header-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "table/header-line-height" },
+  },
 };
 
 const PLACEHOLDER_COMPONENTS = [
@@ -1579,11 +1687,14 @@ export const COMPONENT_SIZE_KEYS = {
   notification: ["default", "xs", "sm", "md", "lg", "xl"],
   tooltip: [],
   loader: ["default", "xs", "sm", "md", "lg", "xl"],
+  progress: ["default", "xs", "sm", "md", "lg", "xl"],
   pill: ["default", "xs", "sm", "md", "lg", "xl"],
   badge: ["default", "xs", "sm", "md", "lg", "xl"],
   alert: ["xs", "sm", "md", "lg", "xl"],
+  table: [],
   modal: ["default", "xs", "sm", "md", "lg", "xl"],
   image: ["default", "xs", "sm", "md", "lg", "xl"],
+  avatar: ["default", "xs", "sm", "md", "lg", "xl"],
   anchor: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["default", "xs", "sm", "md", "lg", "xl"],
   select: ["xs", "sm", "md", "lg", "xl"],

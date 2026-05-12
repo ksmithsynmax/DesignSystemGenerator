@@ -19,6 +19,7 @@ import {
 import {
   resolveColor,
   getComponentDefaultSize,
+  getDefaultSizeKey,
   mergeLightSemanticsForBrand,
   mergeDarkSemanticsForBrand,
 } from "./utils/resolveToken";
@@ -66,6 +67,10 @@ import {
   LoaderPreviewContent,
   LoaderPropertiesPanel,
 } from "./components/panels/LoaderPreviewPanel";
+import {
+  ProgressPreviewContent,
+  ProgressPropertiesPanel,
+} from "./components/panels/ProgressPreviewPanel";
 import {
   PillPreviewContent,
   PillPropertiesPanel,
@@ -126,6 +131,11 @@ import {
   ImagePreviewContent,
   ImagePropertiesPanel,
 } from "./components/panels/ImagePreviewPanel";
+import {
+  AvatarPreviewContent,
+  AvatarPropertiesPanel,
+} from "./components/panels/AvatarPreviewPanel";
+import { TablePreviewContent, TablePropertiesPanel } from "./components/panels/TablePreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { buildComponentDocsExport } from "./utils/buildComponentDocsExport";
@@ -145,6 +155,9 @@ const VARIANTS_BY_COMPONENT = {
   radio: ["filled", "outline"],
   textinput: ["default", "filled"],
   select: ["default", "filled"],
+  table: ["default"],
+  progress: ["default"],
+  avatar: ["filled"],
 };
 
 const APP_STORAGE_KEY = "design-system-generator:v1";
@@ -381,6 +394,18 @@ export default function App() {
   const imageDefault = getComponentDefaultSize(brands, activeBrand, "image") || "default";
   const anchorDefault = getComponentDefaultSize(brands, activeBrand, "anchor") || "md";
   const textDefault = getComponentDefaultSize(brands, activeBrand, "text") || "md";
+  const progressHeightDefault =
+    getDefaultSizeKey(brands, activeBrand, "progress-height") ||
+    getComponentDefaultSize(brands, activeBrand, "progress") ||
+    "md";
+  const progressRadiusDefault =
+    getDefaultSizeKey(brands, activeBrand, "progress-radius") || "md";
+  const avatarSizeDefault =
+    getDefaultSizeKey(brands, activeBrand, "avatar-size") ||
+    getComponentDefaultSize(brands, activeBrand, "avatar") ||
+    "md";
+  const avatarRadiusDefault =
+    getDefaultSizeKey(brands, activeBrand, "avatar-radius") || "md";
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
   const [activeActionIconSize, setActiveActionIconSize] = useState(actionIconDefault);
@@ -449,6 +474,15 @@ export default function App() {
   const [activeTooltipWithArrow, setActiveTooltipWithArrow] = useState(true);
   const [activeLoaderSize, setActiveLoaderSize] = useState("default");
   const [activeLoaderType, setActiveLoaderType] = useState("oval");
+  const [activeProgressSize, setActiveProgressSize] = useState(progressHeightDefault);
+  const [activeProgressRadius, setActiveProgressRadius] = useState(progressRadiusDefault);
+  const [activeProgressValue, setActiveProgressValue] = useState(60);
+  const [activeProgressShowLabel, setActiveProgressShowLabel] = useState(true);
+  const [activeAvatarSize, setActiveAvatarSize] = useState(avatarSizeDefault);
+  const [activeAvatarRadius, setActiveAvatarRadius] = useState(avatarRadiusDefault);
+  const [activeAvatarName, setActiveAvatarName] = useState("Alex Carter");
+  const [activeAvatarSrc, setActiveAvatarSrc] = useState("https://picsum.photos/id/64/256/256");
+  const [activeAvatarUsePhoto, setActiveAvatarUsePhoto] = useState(false);
   const [activePillSize, setActivePillSize] = useState(pillDefault);
   const [activePillWithRemoveButton, setActivePillWithRemoveButton] = useState(false);
   const [activePillText, setActivePillText] = useState("React");
@@ -499,6 +533,7 @@ export default function App() {
   const [activeNotificationDescription, setActiveNotificationDescription] = useState(
     "You are now obligated to give a star to Mantine project on GitHub"
   );
+  const [activeTableShowRowHover, setActiveTableShowRowHover] = useState(true);
   const [activeAlertRadius, setActiveAlertRadius] = useState("md");
   const [activeAlertColor, setActiveAlertColor] = useState(defaultBrandColor);
   const [activeAlertWithCloseButton, setActiveAlertWithCloseButton] = useState(false);
@@ -572,6 +607,20 @@ export default function App() {
     setActiveCardSize(caDef);
     setActiveCardRadius(caDef);
     setActiveLoaderSize("default");
+    const prHDef =
+      getDefaultSizeKey(brands, newBrand, "progress-height") ||
+      getComponentDefaultSize(brands, newBrand, "progress") ||
+      "md";
+    const prRDef = getDefaultSizeKey(brands, newBrand, "progress-radius") || "md";
+    setActiveProgressSize(prHDef);
+    setActiveProgressRadius(prRDef);
+    const avSDef =
+      getDefaultSizeKey(brands, newBrand, "avatar-size") ||
+      getComponentDefaultSize(brands, newBrand, "avatar") ||
+      "md";
+    const avRDef = getDefaultSizeKey(brands, newBrand, "avatar-radius") || "md";
+    setActiveAvatarSize(avSDef);
+    setActiveAvatarRadius(avRDef);
     setActivePillSize(piDef);
     setActiveBadgeSize(baDef);
     setActiveBadgeRadius(baDef);
@@ -743,6 +792,19 @@ export default function App() {
     } else if (newComp === "loader") {
       setActiveLoaderSize("default");
       setActiveLoaderType("oval");
+    } else if (newComp === "progress") {
+      setActiveVariant("default");
+      setActiveProgressSize(progressHeightDefault);
+      setActiveProgressRadius(progressRadiusDefault);
+      setActiveProgressValue(60);
+      setActiveProgressShowLabel(true);
+    } else if (newComp === "avatar") {
+      setActiveVariant("filled");
+      setActiveAvatarSize(avatarSizeDefault);
+      setActiveAvatarRadius(avatarRadiusDefault);
+      setActiveAvatarName("Alex Carter");
+      setActiveAvatarSrc("https://picsum.photos/id/64/256/256");
+      setActiveAvatarUsePhoto(false);
     } else if (newComp === "pill") {
       setActivePillSize(pillDefault);
       setActivePillWithRemoveButton(false);
@@ -765,8 +827,11 @@ export default function App() {
       setActiveImageSize(imageDefault);
       setActiveImageRadius(imageDefault);
       setActiveImageFit("cover");
+    } else if (newComp === "table") {
+      setActiveVariant("default");
+      setActiveTableShowRowHover(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, anchorDefault, textDefault, defaultBrandColor]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
 
   const handleAccordionNavSelect = useCallback((item) => {
     setAccordionNavExpanded(true);
@@ -1437,6 +1502,22 @@ export default function App() {
       }
       return;
     }
+    if (activeComponent === "progress") {
+      const progressRadiusMatch = activeDimensionToken.match(
+        /^progress-radius-(default|xs|sm|md|lg|xl)$/,
+      );
+      if (progressRadiusMatch && progressRadiusMatch[1] !== activeProgressRadius) {
+        setActiveProgressRadius(progressRadiusMatch[1]);
+      }
+      return;
+    }
+    if (activeComponent === "avatar") {
+      const avatarRadiusMatch = activeDimensionToken.match(/^avatar-radius-(default|xs|sm|md|lg|xl)$/);
+      if (avatarRadiusMatch && avatarRadiusMatch[1] !== activeAvatarRadius) {
+        setActiveAvatarRadius(avatarRadiusMatch[1]);
+      }
+      return;
+    }
     if (activeComponent === "chip") {
       const chipVariantRadiusMatch = activeDimensionToken.match(/^chip-(filled|outline|light)-radius$/);
       if (chipVariantRadiusMatch) {
@@ -1474,7 +1555,7 @@ export default function App() {
     if (match[1] !== activeTabsTokenVariant) {
       setActiveDimensionToken(null);
     }
-  }, [activeBadgeRadius, activeChipRadius, activeComponent, activeDimensionToken, activeVariant, activeTabsRadius, dimensionTokens, activeTabsTokenVariant]);
+  }, [activeBadgeRadius, activeProgressRadius, activeAvatarRadius, activeChipRadius, activeComponent, activeDimensionToken, activeVariant, activeTabsRadius, dimensionTokens, activeTabsTokenVariant]);
 
   const tabStyle = (t) => ({
     background: activeTab === t ? "#25262B" : "transparent",
@@ -1503,6 +1584,8 @@ export default function App() {
     select: activeSelectSize,
     card: activeCardSize,
     loader: activeLoaderSize,
+    progress: activeProgressSize,
+    avatar: activeAvatarSize,
     pill: activePillSize,
     badge: activeBadgeSize,
     modal: activeModalSize,
@@ -1522,6 +1605,12 @@ export default function App() {
     }
     if (activeComponent === "badge" && tokenName === "badge-radius") {
       return activeBadgeRadius;
+    }
+    if (activeComponent === "progress" && tokenName === "progress-radius") {
+      return activeProgressRadius;
+    }
+    if (activeComponent === "avatar" && tokenName === "avatar-radius") {
+      return activeAvatarRadius;
     }
     if (activeComponent === "select" && tokenName === "select-radius") {
       return activeSelectRadius;
@@ -2191,6 +2280,18 @@ export default function App() {
                   type={activeLoaderType}
                 />
               )}
+              {activeComponent === "progress" && (
+                <ProgressPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  size={activeProgressSize}
+                  radiusSize={activeProgressRadius}
+                  value={activeProgressValue}
+                  showLabel={activeProgressShowLabel}
+                />
+              )}
               {activeComponent === "pill" && (
                 <PillPreviewContent
                   brands={brands}
@@ -2213,6 +2314,7 @@ export default function App() {
                   circle={activeBadgeCircle}
                   fullWidth={activeBadgeFullWidth}
                   text={activeBadgeText}
+                  previewTheme={previewTheme}
                 />
               )}
               {activeComponent === "image" && (
@@ -2225,6 +2327,28 @@ export default function App() {
                   size={activeImageSize}
                   radius={activeImageRadius}
                   fit={activeImageFit}
+                />
+              )}
+              {activeComponent === "avatar" && (
+                <AvatarPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  size={activeAvatarSize}
+                  radiusSize={activeAvatarRadius}
+                  name={activeAvatarName}
+                  src={activeAvatarSrc}
+                  usePhoto={activeAvatarUsePhoto}
+                />
+              )}
+              {activeComponent === "table" && (
+                <TablePreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  showRowHover={activeTableShowRowHover}
                 />
               )}
             </div>
@@ -2644,6 +2768,18 @@ export default function App() {
                   setType={setActiveLoaderType}
                 />
               )}
+              {activeComponent === "progress" && (
+                <ProgressPropertiesPanel
+                  size={activeProgressSize}
+                  setSize={setActiveProgressSize}
+                  radius={activeProgressRadius}
+                  setRadius={setActiveProgressRadius}
+                  value={activeProgressValue}
+                  setValue={setActiveProgressValue}
+                  showLabel={activeProgressShowLabel}
+                  setShowLabel={setActiveProgressShowLabel}
+                />
+              )}
               {activeComponent === "pill" && (
                 <PillPropertiesPanel
                   size={activePillSize}
@@ -2688,7 +2824,27 @@ export default function App() {
                   setFit={setActiveImageFit}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "card", "loader", "pill", "badge", "image"].includes(activeComponent) && (
+              {activeComponent === "avatar" && (
+                <AvatarPropertiesPanel
+                  size={activeAvatarSize}
+                  setSize={setActiveAvatarSize}
+                  radius={activeAvatarRadius}
+                  setRadius={setActiveAvatarRadius}
+                  name={activeAvatarName}
+                  setName={setActiveAvatarName}
+                  src={activeAvatarSrc}
+                  setSrc={setActiveAvatarSrc}
+                  usePhoto={activeAvatarUsePhoto}
+                  setUsePhoto={setActiveAvatarUsePhoto}
+                />
+              )}
+              {activeComponent === "table" && (
+                <TablePropertiesPanel
+                  showRowHover={activeTableShowRowHover}
+                  setShowRowHover={setActiveTableShowRowHover}
+                />
+              )}
+              {!["button", "actionicon", "tabs", "accordion", "switch", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "card", "loader", "progress", "pill", "badge", "image", "avatar", "table"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

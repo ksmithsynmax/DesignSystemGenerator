@@ -15,6 +15,7 @@ const BUILDABLE_COMPONENTS = [
   "modal",
   "tooltip",
   "loader",
+  "progress",
   "pill",
   "badge",
   "textinput",
@@ -27,6 +28,8 @@ const BUILDABLE_COMPONENTS = [
   "title",
   "text",
   "image",
+  "avatar",
+  "table",
 ];
 
 const COMPONENT_LABELS = {
