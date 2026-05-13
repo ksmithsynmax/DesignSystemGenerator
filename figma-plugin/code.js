@@ -874,6 +874,7 @@ async function syncTokens(payload) {
     componentPayload: payload[syncBrands[0]] && payload[syncBrands[0]].components ? payload[syncBrands[0]].components : null,
   });
   var componentFailures = (componentBuild && componentBuild.failures) ? componentBuild.failures : [];
+  var docsSummary = (componentBuild && componentBuild.docs) ? componentBuild.docs : null;
 
   var doneMsg = "Sync complete! " + totalCreated + " vars, " + totalAliases + " aliases, " + syncModes.length + " modes, components built.";
   if (syncModes.length < modeEntries.length) {
@@ -881,6 +882,13 @@ async function syncTokens(payload) {
   }
   if (componentFailures.length > 0) {
     doneMsg += " Component build failures: " + componentFailures.join(" | ");
+  }
+  if (docsSummary) {
+    doneMsg += " Docs: " + String(docsSummary.created || 0) + " created";
+    if (Number(docsSummary.skipped || 0) > 0) {
+      doneMsg += ", " + String(docsSummary.skipped) + " skipped";
+    }
+    doneMsg += ".";
   }
   progress(doneMsg);
   figma.ui.postMessage({ type: "sync-complete", success: true, message: doneMsg });
@@ -1081,7 +1089,10 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
         buildAllSentinel = true;
         break;
       }
-      normalizedRequested[normalizedKey] = true;
+      // Canonicalize aliases/subcomponent labels to the managed root key.
+      // Example: "tableheader"/"tablebody" should still build the "table" set.
+      var managedKey = resolveManagedComponentKeyFromName(normalizedKey);
+      normalizedRequested[managedKey || normalizedKey] = true;
       hasSelection = true;
     }
     if (!buildAllSentinel && hasSelection) {
@@ -1101,6 +1112,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     }
     if (requestedSet.accordion) {
       requestedSet.accordionitem = true;
+    }
+    if (requestedSet.tabs) {
+      requestedSet.tabsitem = true;
     }
     if (requestedSet.table) {
       requestedSet.badge = true;
@@ -1313,10 +1327,10 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     selectSet,
     cardSet,
     actionIconSet,
-    tabsSet,
-    accordionSet,
-    accordionItemSet,
     tabsItemSet,
+    accordionItemSet,
+    accordionSet,
+    tabsSet,
     anchorSet,
     titleSet,
     textSet,
@@ -1402,7 +1416,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     progress("Docs fallback set scan found " + docsSourceSets.length + " component sets.");
   }
   // Docs should focus on public components. Keep Accordion Item generated,
-  // but hide it from docs for now. Uncomment to bring it back.
+  // and include subcomponents like TableHeader/TableBody and Accordion Item.
   docsSourceSets = (docsSourceSets || []).filter(function (set) {
     if (!set) return false;
     if (set.type === "COMPONENT") {
@@ -1411,16 +1425,16 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
       return false;
     }
     if (set.type !== "COMPONENT_SET") return false;
-    var setName = String(set && set.name ? set.name : "").toLowerCase();
-    return setName !== "accordion item";
-    // return true; // Re-enable Accordion Item docs.
+    return true;
   });
 
   try {
-    await buildUsageDocsPage(docsSourceSets, font);
+    var docsBuildSummary = await buildUsageDocsPage(docsSourceSets, font);
+    if (!docsBuildSummary) docsBuildSummary = { created: 0, skipped: 0 };
   } catch (docsErr) {
     buildFailures.push("Usage docs: " + String(docsErr));
     progress("Failed to build usage docs: " + String(docsErr));
+    docsBuildSummary = { created: 0, skipped: (docsSourceSets && docsSourceSets.length) ? docsSourceSets.length : 0 };
   }
 
   // Scroll viewport to show all component sets
@@ -1437,7 +1451,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   }
 
   progress("Components created.");
-  return { failures: buildFailures };
+  return { failures: buildFailures, docs: docsBuildSummary || { created: 0, skipped: 0 } };
 }
 
 function collectManagedComponentSetsFromPage(page, requestedSet) {
@@ -1465,7 +1479,7 @@ function collectManagedComponentSetsFromPage(page, requestedSet) {
 async function buildUsageDocsPage(componentSets, titleFont) {
   if (!componentSets || componentSets.length === 0) {
     progress("Usage docs skipped: no component sets available.");
-    return;
+    return { created: 0, skipped: 0 };
   }
 
   var DOC_COLORS = {
@@ -2161,6 +2175,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var setName = set.name || ("Component " + (si + 1));
     var slug = normalizeName(setName);
     var lowerSetName = String(setName || "").toLowerCase();
+    var normalizedSetName = normalizeComponentKey(setName);
     var stackSizeRows = lowerSetName === "title" || lowerSetName === "text" || lowerSetName === "modal";
     var variantProps = set.variantGroupProperties || {};
     var variants = getPropValues(variantProps, "Variant");
@@ -2266,7 +2281,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateMenuKey = getPropKey(variantProps, "Menu");
 
       var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Oval", "Bars", "Dots"];
-      var templateVariantLimit = lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3);
+      var templateVariantLimit = lowerSetName === "tablebody"
+        ? Math.max(6, variants.length)
+        : (lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3));
       var templateOrderedVariants = pickOrdered(variants, templateVariantOrder).slice(0, templateVariantLimit);
       var templateOrderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
       var templateOrderedSizesAll = pickOrdered(sizes, ["Default", "Label", "Caption", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 8);
@@ -2589,7 +2606,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                   false,
                   lowerSetName === "card"
                     ? { itemsPerRow: 3 }
-                    : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null)
+                    : (lowerSetName === "tabs"
+                        ? { itemsPerRow: 2, rowItemSpacing: 20 }
+                        : (normalizedSetName === "accordionitem"
+                            ? { itemsPerRow: 1, rowItemSpacing: 12 }
+                            : null))
                 );
               }
               templateVariantSection.appendChild(templateVariantStatesPanel);
@@ -2831,10 +2852,33 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               return makeTemplateInstance({ State: stateName });
             }, false, lowerSetName === "card"
               ? { itemsPerRow: 3 }
-              : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null));
+              : (lowerSetName === "tabs"
+                  ? { itemsPerRow: 2, rowItemSpacing: 20 }
+                  : (normalizedSetName === "accordionitem"
+                      ? { itemsPerRow: 1, rowItemSpacing: 12 }
+                      : null)));
           }
         } else if (!hasStates) {
           removeSectionOrSlot(templatedDoc, slug, "states");
+        }
+
+        // Progress does not expose radius as a standalone axis in the default template flow,
+        // so render an explicit radius strip when Radius values are available.
+        if (lowerSetName === "progress" && templateRadiusKey && templateOrderedRadiiAll.length > 1) {
+          templatedDoc.appendChild(createSectionHeader("Radius", "Corner radius scale.", DOC_COLORS.subtitle));
+          var progressTplRadiusPanel = createPanel("progress-template-radius", 10);
+          progressTplRadiusPanel.resize(1192, progressTplRadiusPanel.height);
+          templatedDoc.appendChild(progressTplRadiusPanel);
+          addInstancesRow(
+            progressTplRadiusPanel,
+            "Radius",
+            templateOrderedRadiiAll,
+            function (rName) {
+              return makeTemplateInstance({ Radius: rName });
+            },
+            false,
+            { itemsPerRow: 3 }
+          );
         }
 
         if (lowerSetName === "text") {
@@ -2966,6 +3010,48 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           }, false);
         } else if (!hasIcons) {
           removeSectionOrSlot(templatedDoc, slug, "icons-both");
+        }
+
+        // Components without Variant/Size/State/Icon axes (e.g. TableHeader) still need
+        // a concrete preview instance in docs.
+        if (
+          !hasVariants &&
+          !hasSizes &&
+          !hasStates &&
+          !hasIcons &&
+          lowerSetName !== "notification" &&
+          lowerSetName !== "tooltip" &&
+          lowerSetName !== "text"
+        ) {
+          var templateSingleExampleSlot = getTemplateSlot(templatedDoc, slug, "example");
+          if (!templateSingleExampleSlot) {
+            templatedDoc.appendChild(createSectionHeader("Example", "Default component preview.", DOC_COLORS.subtitle));
+            templateSingleExampleSlot = createPanel("slot:" + slug + ":example", 10);
+            templateSingleExampleSlot.resize(1192, templateSingleExampleSlot.height);
+            templatedDoc.appendChild(templateSingleExampleSlot);
+          } else {
+            clearChildren(templateSingleExampleSlot);
+          }
+          function createSingleExampleInstance() {
+            try {
+              return makeTemplateInstance({});
+            } catch (singleExampleErr) {
+              progress("Docs single example creation failed (" + lowerSetName + "): " + String(singleExampleErr));
+              try {
+                if (set && set.type === "COMPONENT") {
+                  return set.createInstance();
+                }
+              } catch (_singleExampleFallbackErr) {}
+              return null;
+            }
+          }
+          addInstancesRow(
+            templateSingleExampleSlot,
+            "Example",
+            [""],
+            function () { return createSingleExampleInstance(); },
+            false
+          );
         }
 
         // Notification has no Variant/Size/State axes in the template flow; fill Color + Radius explicitly.
@@ -3242,6 +3328,39 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             );
           }
         }
+      } else {
+        progress("Docs template base component unresolved for " + setName + " (" + String(set && set.type) + ")");
+        if (!hasVariants && !hasSizes && !hasStates && !hasIcons) {
+          var unresolvedExampleSlot = getTemplateSlot(templatedDoc, slug, "example");
+          if (!unresolvedExampleSlot) {
+            templatedDoc.appendChild(createSectionHeader("Example", "Default component preview.", DOC_COLORS.subtitle));
+            unresolvedExampleSlot = createPanel("slot:" + slug + ":example", 10);
+            unresolvedExampleSlot.resize(1192, unresolvedExampleSlot.height);
+            templatedDoc.appendChild(unresolvedExampleSlot);
+          } else {
+            clearChildren(unresolvedExampleSlot);
+          }
+          function createDirectExampleInstance() {
+            try {
+              if (set && set.type === "COMPONENT") return set.createInstance();
+              if (set && set.type === "COMPONENT_SET" && set.children && set.children.length > 0) {
+                for (var sii = 0; sii < set.children.length; sii++) {
+                  if (set.children[sii] && set.children[sii].type === "COMPONENT") {
+                    return set.children[sii].createInstance();
+                  }
+                }
+              }
+            } catch (_directExampleErr) {}
+            return null;
+          }
+          addInstancesRow(
+            unresolvedExampleSlot,
+            "Example",
+            [""],
+            function () { return createDirectExampleInstance(); },
+            false
+          );
+        }
       }
 
       clearExplicitModesInSubtree(templatedDoc);
@@ -3398,7 +3517,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var colorKey = getPropKey(variantProps, "Color");
 
       var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills"];
-      var variantLimit = lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3);
+      var variantLimit = lowerSetName === "tablebody"
+        ? Math.max(6, variants.length)
+        : (lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3));
       var orderedVariants = pickOrdered(variants, variantOrder).slice(0, variantLimit);
       var orderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
       var orderedSizesAll = pickOrdered(sizes, ["Default", "Label", "Caption", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 8);
@@ -3713,9 +3834,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                   };
                 })(variantName),
                 false,
-                lowerSetName === "card"
-                  ? { itemsPerRow: 3 }
-                  : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null)
+                  lowerSetName === "card"
+                    ? { itemsPerRow: 3 }
+                    : (lowerSetName === "tabs"
+                        ? { itemsPerRow: 2, rowItemSpacing: 20 }
+                        : (normalizedSetName === "accordionitem"
+                            ? { itemsPerRow: 1, rowItemSpacing: 12 }
+                            : null))
               );
             }
             variantSection.appendChild(variantStatesPanel);
@@ -4028,9 +4153,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         } else {
           addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
               return makeInstance({ State: stateName });
-          }, false, lowerSetName === "card"
-            ? { itemsPerRow: 3 }
-            : (lowerSetName === "tabs" ? { itemsPerRow: 2, rowItemSpacing: 20 } : null));
+            }, false, lowerSetName === "card"
+              ? { itemsPerRow: 3 }
+              : (lowerSetName === "tabs"
+                  ? { itemsPerRow: 2, rowItemSpacing: 20 }
+                  : (normalizedSetName === "accordionitem"
+                      ? { itemsPerRow: 1, rowItemSpacing: 12 }
+                      : null)));
         }
       }
 
@@ -4249,6 +4378,24 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         }
       }
 
+      // Progress docs should include radius examples explicitly.
+      if (lowerSetName === "progress" && radiusKey && orderedRadiiAll.length > 1) {
+        doc.appendChild(createSectionHeader("Radius", "Corner radius scale.", DOC_COLORS.subtitle));
+        var progressRadPanel = createPanel("progress-programmatic-radii", 10);
+        progressRadPanel.resize(1192, progressRadPanel.height);
+        doc.appendChild(progressRadPanel);
+        addInstancesRow(
+          progressRadPanel,
+          "Radius",
+          orderedRadiiAll,
+          function (rName) {
+            return makeInstance({ Radius: rName });
+          },
+          false,
+          { itemsPerRow: 3 }
+        );
+      }
+
       if (lowerSetName === "tooltip" && baseComponent) {
         var ttProgDirKey = getPropKey(variantProps, "Direction");
         var ttProgArrowKey = getPropKey(variantProps, "Arrow");
@@ -4313,6 +4460,22 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           );
         }
       }
+
+      // Components without Variant/Size/State/Icon axes (e.g. Table, TableHeader)
+      // still need at least one concrete preview instance.
+      if (!hasVariants && !hasSizes && !hasStates && !hasIcons) {
+        doc.appendChild(createSectionHeader("Example", "Default component preview.", DOC_COLORS.subtitle));
+        var plainExamplePanel = createPanel("plain-example", 10);
+        plainExamplePanel.resize(1192, plainExamplePanel.height);
+        doc.appendChild(plainExamplePanel);
+        addInstancesRow(
+          plainExamplePanel,
+          "Example",
+          [""],
+          function () { return makeInstance({}); },
+          false
+        );
+      }
     }
 
     clearExplicitModesInSubtree(doc);
@@ -4360,6 +4523,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     }
   }
   progress("Usage docs generated on page: Component Documentation (created: " + docsCreated + ", skipped: " + docsSkipped + ")");
+  return { created: docsCreated, skipped: docsSkipped };
 }
 
 async function cleanupExistingComponents(page, requestedSet) {
@@ -6096,6 +6260,14 @@ async function findTableBodyIconSources() {
     }
   }
 
+  function swapDefaultRefs(componentNode) {
+    var refs = [];
+    if (!componentNode) return refs;
+    if (componentNode.id) refs.push(componentNode.id);
+    if (componentNode.key && refs.indexOf(componentNode.key) < 0) refs.push(componentNode.key);
+    return refs;
+  }
+
   function score(c) {
     var n = String(c.name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
     if (!n) return 0;
@@ -6332,6 +6504,13 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
   /** Figma steel/9 fallback #181926 */
   var headerBgFallback = { r: 24 / 255, g: 25 / 255, b: 38 / 255 };
 
+  function swapDefaultRef(componentNode) {
+    if (!componentNode) return null;
+    if (componentNode.key) return componentNode.key;
+    if (componentNode.id) return componentNode.id;
+    return null;
+  }
+
   function bindTableHeaderPadding(node) {
     if (varMap["table/header-padding-x"]) {
       bindVar(node, "paddingLeft", varMap["table/header-padding-x"]);
@@ -6545,13 +6724,37 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
       preferred.push({ type: "COMPONENT", key: k });
     }
     try {
+      var sortSwapRefs = swapDefaultRefs(sortDefaultComp);
+      if (!sortSwapRefs.length) throw new Error("Sort icon default component key/id unavailable");
       var swapOpts = preferred.length > 0 ? { preferredValues: preferred } : undefined;
-      var swapPropName = comp.addComponentProperty("Sort icon", "INSTANCE_SWAP", sortDefaultComp, swapOpts);
+      var swapPropName = null;
+      var sortSwapErr = null;
+      for (var sri = 0; sri < sortSwapRefs.length; sri++) {
+        try {
+          swapPropName = comp.addComponentProperty("Sort icon", "INSTANCE_SWAP", sortSwapRefs[sri], swapOpts);
+          break;
+        } catch (eTrySortSwap) {
+          sortSwapErr = eTrySortSwap;
+        }
+      }
+      if (!swapPropName) throw sortSwapErr || new Error("Sort icon INSTANCE_SWAP creation failed");
       iconInst.componentPropertyReferences = { mainComponent: swapPropName };
     } catch (eSwap) {
       progress("TableHeader Sort icon INSTANCE_SWAP (with preferred list): " + String(eSwap));
       try {
-        var swapPropOnly = comp.addComponentProperty("Sort icon", "INSTANCE_SWAP", sortDefaultComp);
+        var sortSwapRefsFallback = swapDefaultRefs(sortDefaultComp);
+        if (!sortSwapRefsFallback.length) throw new Error("Sort icon default component key/id unavailable");
+        var swapPropOnly = null;
+        var sortSwapFallbackErr = null;
+        for (var srf = 0; srf < sortSwapRefsFallback.length; srf++) {
+          try {
+            swapPropOnly = comp.addComponentProperty("Sort icon", "INSTANCE_SWAP", sortSwapRefsFallback[srf]);
+            break;
+          } catch (eTrySortSwapFallback) {
+            sortSwapFallbackErr = eTrySortSwapFallback;
+          }
+        }
+        if (!swapPropOnly) throw sortSwapFallbackErr || new Error("Sort icon INSTANCE_SWAP fallback failed");
         iconInst.componentPropertyReferences = { mainComponent: swapPropOnly };
       } catch (eSwap2) {
         progress("TableHeader Sort icon INSTANCE_SWAP: " + String(eSwap2));
@@ -6827,13 +7030,37 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
         badgePreferred.push({ type: "COMPONENT", key: bk });
       }
       try {
+      var badgeSwapRefs = swapDefaultRefs(badgeTemplate);
+      if (!badgeSwapRefs.length) throw new Error("Badge default component key/id unavailable");
         var badgeSwapOpts = badgePreferred.length > 0 ? { preferredValues: badgePreferred } : undefined;
-        var badgeSwapPropName = vBadge.addComponentProperty("Badge", "INSTANCE_SWAP", badgeTemplate, badgeSwapOpts);
+      var badgeSwapPropName = null;
+      var badgeSwapErr = null;
+      for (var bri = 0; bri < badgeSwapRefs.length; bri++) {
+        try {
+          badgeSwapPropName = vBadge.addComponentProperty("Badge", "INSTANCE_SWAP", badgeSwapRefs[bri], badgeSwapOpts);
+          break;
+        } catch (eTryBadgeSwap) {
+          badgeSwapErr = eTryBadgeSwap;
+        }
+      }
+      if (!badgeSwapPropName) throw badgeSwapErr || new Error("Badge INSTANCE_SWAP creation failed");
         badgeInst.componentPropertyReferences = { mainComponent: badgeSwapPropName };
       } catch (eBadgeSwap) {
         progress("TableBody Badge INSTANCE_SWAP (with preferred list): " + String(eBadgeSwap));
         try {
-          var badgeSwapPropOnly = vBadge.addComponentProperty("Badge", "INSTANCE_SWAP", badgeTemplate);
+        var badgeSwapRefsFallback = swapDefaultRefs(badgeTemplate);
+        if (!badgeSwapRefsFallback.length) throw new Error("Badge default component key/id unavailable");
+        var badgeSwapPropOnly = null;
+        var badgeSwapFallbackErr = null;
+        for (var brf = 0; brf < badgeSwapRefsFallback.length; brf++) {
+          try {
+            badgeSwapPropOnly = vBadge.addComponentProperty("Badge", "INSTANCE_SWAP", badgeSwapRefsFallback[brf]);
+            break;
+          } catch (eTryBadgeSwapFallback) {
+            badgeSwapFallbackErr = eTryBadgeSwapFallback;
+          }
+        }
+        if (!badgeSwapPropOnly) throw badgeSwapFallbackErr || new Error("Badge INSTANCE_SWAP fallback failed");
           badgeInst.componentPropertyReferences = { mainComponent: badgeSwapPropOnly };
         } catch (eBadgeSwap2) {
           progress("TableBody Badge INSTANCE_SWAP: " + String(eBadgeSwap2));
@@ -6960,13 +7187,37 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
       flagPreferred.push({ type: "COMPONENT", key: fk });
     }
     try {
+      var flagSwapRefs = swapDefaultRefs(flagDefaultComp);
+      if (!flagSwapRefs.length) throw new Error("Flag default component key/id unavailable");
       var flagSwapOpts = flagPreferred.length > 0 ? { preferredValues: flagPreferred } : undefined;
-      var flagSwapPropName = vFlag.addComponentProperty("Flag", "INSTANCE_SWAP", flagDefaultComp, flagSwapOpts);
+      var flagSwapPropName = null;
+      var flagSwapErr = null;
+      for (var fri = 0; fri < flagSwapRefs.length; fri++) {
+        try {
+          flagSwapPropName = vFlag.addComponentProperty("Flag", "INSTANCE_SWAP", flagSwapRefs[fri], flagSwapOpts);
+          break;
+        } catch (eTryFlagSwap) {
+          flagSwapErr = eTryFlagSwap;
+        }
+      }
+      if (!flagSwapPropName) throw flagSwapErr || new Error("Flag INSTANCE_SWAP creation failed");
       flagInst.componentPropertyReferences = { mainComponent: flagSwapPropName };
     } catch (eFlagSwap) {
       progress("TableBody Flag INSTANCE_SWAP (with preferred list): " + String(eFlagSwap));
       try {
-        var flagSwapPropOnly = vFlag.addComponentProperty("Flag", "INSTANCE_SWAP", flagDefaultComp);
+        var flagSwapRefsFallback = swapDefaultRefs(flagDefaultComp);
+        if (!flagSwapRefsFallback.length) throw new Error("Flag default component key/id unavailable");
+        var flagSwapPropOnly = null;
+        var flagSwapFallbackErr = null;
+        for (var frf = 0; frf < flagSwapRefsFallback.length; frf++) {
+          try {
+            flagSwapPropOnly = vFlag.addComponentProperty("Flag", "INSTANCE_SWAP", flagSwapRefsFallback[frf]);
+            break;
+          } catch (eTryFlagSwapFallback) {
+            flagSwapFallbackErr = eTryFlagSwapFallback;
+          }
+        }
+        if (!flagSwapPropOnly) throw flagSwapFallbackErr || new Error("Flag INSTANCE_SWAP fallback failed");
         flagInst.componentPropertyReferences = { mainComponent: flagSwapPropOnly };
       } catch (eFlagSwap2) {
         progress("TableBody Flag INSTANCE_SWAP: " + String(eFlagSwap2));
@@ -7082,13 +7333,37 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
       iconPreferred.push({ type: "COMPONENT", key: ck });
     }
     try {
+      var iconSwapRefs = swapDefaultRefs(iconDefaultComp);
+      if (!iconSwapRefs.length) throw new Error("Icon default component key/id unavailable");
       var iconSwapOpts = iconPreferred.length > 0 ? { preferredValues: iconPreferred } : undefined;
-      var iconSwapPropName = vIcon.addComponentProperty("Icon", "INSTANCE_SWAP", iconDefaultComp, iconSwapOpts);
+      var iconSwapPropName = null;
+      var iconSwapErr = null;
+      for (var iri = 0; iri < iconSwapRefs.length; iri++) {
+        try {
+          iconSwapPropName = vIcon.addComponentProperty("Icon", "INSTANCE_SWAP", iconSwapRefs[iri], iconSwapOpts);
+          break;
+        } catch (eTryIconSwap) {
+          iconSwapErr = eTryIconSwap;
+        }
+      }
+      if (!iconSwapPropName) throw iconSwapErr || new Error("Icon INSTANCE_SWAP creation failed");
       iconInst.componentPropertyReferences = { mainComponent: iconSwapPropName };
     } catch (eIconSwap) {
       progress("TableBody Icon INSTANCE_SWAP (with preferred list): " + String(eIconSwap));
       try {
-        var iconSwapPropOnly = vIcon.addComponentProperty("Icon", "INSTANCE_SWAP", iconDefaultComp);
+        var iconSwapRefsFallback = swapDefaultRefs(iconDefaultComp);
+        if (!iconSwapRefsFallback.length) throw new Error("Icon default component key/id unavailable");
+        var iconSwapPropOnly = null;
+        var iconSwapFallbackErr = null;
+        for (var irf = 0; irf < iconSwapRefsFallback.length; irf++) {
+          try {
+            iconSwapPropOnly = vIcon.addComponentProperty("Icon", "INSTANCE_SWAP", iconSwapRefsFallback[irf]);
+            break;
+          } catch (eTryIconSwapFallback) {
+            iconSwapFallbackErr = eTryIconSwapFallback;
+          }
+        }
+        if (!iconSwapPropOnly) throw iconSwapFallbackErr || new Error("Icon INSTANCE_SWAP fallback failed");
         iconInst.componentPropertyReferences = { mainComponent: iconSwapPropOnly };
       } catch (eIconSwap2) {
         progress("TableBody Icon INSTANCE_SWAP: " + String(eIconSwap2));
@@ -7407,7 +7682,9 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
       TABLE_BODY_BUILD +
       "] — nested Badge / Progress / Text / Avatar instances; Flag and Icon variants use INSTANCE_SWAP. Also exported composed Table component."
   );
-  return [tableComp, comp, bodySet];
+  // Keep output order aligned with docs/navigation expectations.
+  // Desired sequence: TableHeader -> TableBody -> Table.
+  return [comp, bodySet, tableComp];
 }
 
 function buildTitleComponentSet(varMap, page, font, sampleText) {

@@ -169,6 +169,29 @@ function pushPropertyTable(lines, componentName, variants, states, dimTokens) {
   lines.push("");
 }
 
+function pushTableHeaderSection(lines, colorTokens, dimTokens) {
+  const headerColorTokens = colorTokens.filter(([tokenName]) =>
+    tokenName.startsWith("table-header-") || tokenName === "table-sort-icon"
+  );
+  const headerDimTokens = dimTokens.filter(([tokenName]) => tokenName.startsWith("table-header-"));
+
+  if (headerColorTokens.length === 0 && headerDimTokens.length === 0) return;
+
+  lines.push("### TableHeader");
+  lines.push("");
+  lines.push("Guidelines for implementing table header structure, typography, spacing, and sort affordances.");
+  lines.push("");
+  lines.push("| Token | Figma Path | Semantic/Type |");
+  lines.push("|-------|------------|---------------|");
+  headerColorTokens.forEach(([tokenName, def]) => {
+    lines.push(`| ${tokenName} | \`${def.figmaPath}\` | ${def.semantic || "—"} |`);
+  });
+  headerDimTokens.forEach(([tokenName, def]) => {
+    lines.push(`| ${tokenName} | \`${def.figmaPath}\` | ${def.type} |`);
+  });
+  lines.push("");
+}
+
 export function buildComponentDocsExport(brands) {
   const payload = buildExportPayload(brands, null);
   const brandIds = Object.keys(brands);
@@ -257,6 +280,10 @@ export function buildComponentDocsExport(brands) {
       lines.push(`| ${tokenName} | \`${def.figmaPath}\` | ${def.type} |`);
     });
     lines.push("");
+
+    if (componentName === "table") {
+      pushTableHeaderSection(lines, colorTokens, dimTokens);
+    }
 
     lines.push("### Brand Preview Values (Light / Dark)");
     lines.push("");
