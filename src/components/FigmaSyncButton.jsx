@@ -14,6 +14,7 @@ const BUILDABLE_COMPONENTS = [
   "alert",
   "modal",
   "tooltip",
+  "popover",
   "loader",
   "progress",
   "pill",
@@ -36,6 +37,7 @@ const COMPONENT_LABELS = {
   actionicon: "ActionIcon",
   rangeslider: "RangeSlider",
   textinput: "TextInput",
+  popover: "Popover",
 };
 
 export default function FigmaSyncButton({ brands, syncBuildOptions }) {

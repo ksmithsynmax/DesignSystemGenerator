@@ -26,8 +26,8 @@ function weightToCss(weight, isActive) {
 }
 
 function resolveTabsStyleVariant(variant) {
-  if (variant === "outlined") return "pills";
-  if (variant === "pills") return "outlined";
+  if (variant === "outlined") return "outlined";
+  if (variant === "pills") return "pills";
   return variant;
 }
 
@@ -50,6 +50,7 @@ export default function TabsPreview({
   const prefix = `tabs-${styleVariant}`;
   const isDefaultVariant = styleVariant === "default";
   const isPillsVariant = styleVariant === "pills";
+  const isOutlinedVariant = styleVariant === "outlined";
 
   const listBg = getColor(brands, brandId, `${prefix}-list-background`, tokens);
   const listBorder = getColor(brands, brandId, `${prefix}-list-border`, tokens);
@@ -67,10 +68,7 @@ export default function TabsPreview({
   const tabBorderDisabled = getColor(brands, brandId, `${prefix}-tab-border-disabled`, tokens);
   const focusRing = getColor(brands, brandId, "tabs-focus-ring", tokens);
 
-  const tabsRadius =
-    radius === "default"
-      ? resolveDimension(brands, brandId, `${prefix}-radius-default`)
-      : resolveDimension(brands, brandId, "tabs-radius", radius);
+  const tabsRadius = resolveDimension(brands, brandId, `${prefix}-radius`, radius);
   const tabsFontSize = resolveDimension(brands, brandId, "tabs-font-size");
   const tabsFontFamily = resolveDimension(brands, brandId, "tabs-font-family");
   const tabsFontWeight = resolveDimension(brands, brandId, "tabs-font-weight");
@@ -206,15 +204,15 @@ export default function TabsPreview({
                   borderRightWidth: `${resolvedTabBorderWidth}px`,
                   borderBottomWidth: `${resolvedTabBorderWidth}px`,
                   borderLeftWidth:
-                    isPillsVariant && orientation === "horizontal"
+                    isOutlinedVariant && orientation === "horizontal"
                       ? tabIndex === 0
                         ? `${resolvedTabBorderWidth}px`
                         : "0px"
                       : `${resolvedTabBorderWidth}px`,
-                  ...(isPillsVariant && orientation === "vertical" && tabIndex > 0
+                  ...(isOutlinedVariant && orientation === "vertical" && tabIndex > 0
                     ? { borderTopWidth: "0px" }
                     : {}),
-                  ...(isPillsVariant &&
+                  ...(isOutlinedVariant &&
                   orientation === "horizontal" &&
                   tabVisual.visualState === "active"
                     ? {

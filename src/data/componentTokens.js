@@ -302,10 +302,24 @@ export const COMPONENT_TOKENS = {
     "tabs-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "tabs/focus-ring" },
 
     // ── FLOAT TOKENS ──
-    "tabs-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "tabs/radius" },
-    "tabs-default-radius-default": { type: "FLOAT", unit: "px", value: 4, figmaPath: "tabs/default-radius-default" },
-    "tabs-outlined-radius-default": { type: "FLOAT", unit: "px", value: 4, figmaPath: "tabs/outlined-radius-default" },
-    "tabs-pills-radius-default": { type: "FLOAT", unit: "px", value: 4, figmaPath: "tabs/pills-radius-default" },
+    "tabs-default-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },
+      figmaPath: "tabs/default-radius",
+    },
+    "tabs-outlined-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },
+      figmaPath: "tabs/outlined-radius",
+    },
+    "tabs-pills-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },
+      figmaPath: "tabs/pills-radius",
+    },
     "tabs-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "tabs/font-size" },
     "tabs-font-family": { type: "STRING", value: "Inter", figmaPath: "tabs/font-family" },
     "tabs-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "tabs/font-weight" },
@@ -332,6 +346,18 @@ export const COMPONENT_TOKENS = {
     "tabs-icon-size": { type: "FLOAT", unit: "px", value: 16, figmaPath: "tabs/icon-size" },
     "tabs-icon-stroke-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "tabs/icon-stroke-width" },
     "tabs-icon-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/icon-gap" },
+    "tabs-outlined-overflow-control-padding-x": {
+      type: "FLOAT",
+      unit: "px",
+      value: 16,
+      figmaPath: "tabs/outlined-overflow-control-padding-x",
+    },
+    "tabs-outlined-overflow-control-padding-y": {
+      type: "FLOAT",
+      unit: "px",
+      value: 16,
+      figmaPath: "tabs/outlined-overflow-control-padding-y",
+    },
   },
 
   accordion: {
@@ -1072,6 +1098,36 @@ export const COMPONENT_TOKENS = {
     "notification-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "notification/border-width" },
   },
 
+  popover: {
+    // ── COLOR TOKENS ──
+    "popover-background": { type: "COLOR", semantic: "surface-inverse", figmaPath: "popover/background" },
+    "popover-border": { type: "COLOR", semantic: "surface-inverse", figmaPath: "popover/border" },
+    "popover-text": { type: "COLOR", semantic: "text-inverse", figmaPath: "popover/text" },
+    "popover-arrow": { type: "COLOR", semantic: "surface-inverse", figmaPath: "popover/arrow" },
+
+    // ── FLOAT / STRING TOKENS ──
+    "popover-width": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 280, xs: 160, sm: 200, md: 240, lg: 280, xl: 320 },
+      figmaPath: "popover/width",
+    },
+    "popover-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },
+      figmaPath: "popover/radius",
+    },
+    "popover-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "popover/padding-x" },
+    "popover-padding-y": { type: "FLOAT", unit: "px", value: 10, figmaPath: "popover/padding-y" },
+    "popover-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "popover/border-width" },
+    "popover-arrow-size": { type: "FLOAT", unit: "px", value: 8, figmaPath: "popover/arrow-size" },
+    "popover-text-font-size": { type: "FLOAT", unit: "px", value: 13, figmaPath: "popover/text-font-size" },
+    "popover-text-font-family": { type: "STRING", value: "Inter", figmaPath: "popover/text-font-family" },
+    "popover-text-font-weight": { type: "STRING", value: "Regular", figmaPath: "popover/text-font-weight" },
+    "popover-text-line-height": { type: "FLOAT", unit: "px", value: 18, figmaPath: "popover/text-line-height" },
+  },
+
   tooltip: {
     // ── COLOR TOKENS ──
     "tooltip-background": { type: "COLOR", semantic: "surface-inverse", figmaPath: "tooltip/background" },
@@ -1698,6 +1754,7 @@ export const COMPONENT_SIZE_KEYS = {
   anchor: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["default", "xs", "sm", "md", "lg", "xl"],
   select: ["xs", "sm", "md", "lg", "xl"],
+  popover: ["default", "xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
   text: ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"],
 };

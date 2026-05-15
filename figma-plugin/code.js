@@ -979,9 +979,10 @@ function normalizeComponentKey(name) {
 function resolveManagedComponentKeyFromName(name) {
   var normalized = normalizeComponentKey(name);
   if (!normalized) return null;
+  if (normalized === "popup") return "popover";
   var managedKeys = [
     "button", "switch", "slider", "rangeslider", "checkbox", "radio",
-    "chip", "notification", "alert", "modal", "tooltip", "loader",
+    "chip", "notification", "alert", "modal", "tooltip", "popover", "loader",
     "progress",
     "avatar",
     "pill", "badge", "textinput", "select", "card", "actionicon",
@@ -1035,6 +1036,16 @@ function isLegacyTabsDisabledArtifact(node) {
 }
 
 async function buildComponents(varMap, componentsToBuild, buildOptions, collectionsCtx) {
+  if (!buildComponents._allPagesLoaded) {
+    try {
+      if (typeof figma.loadAllPagesAsync === "function") {
+        await figma.loadAllPagesAsync();
+      }
+      buildComponents._allPagesLoaded = true;
+    } catch (loadAllPagesErr) {
+      progress("Could not preload all pages: " + String(loadAllPagesErr));
+    }
+  }
   var page = figma.currentPage;
   if (page && page.name === "Component Documentation") {
     page = null;
@@ -1077,6 +1088,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     var normalizedRequested = {};
     var hasSelection = false;
     var buildAllSentinel = false;
+    var unknownSelections = [];
     for (var rci = 0; rci < componentsToBuild.length; rci++) {
       var normalizedKey = normalizeComponentKey(componentsToBuild[rci]);
       if (!normalizedKey) continue;
@@ -1092,11 +1104,21 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
       // Canonicalize aliases/subcomponent labels to the managed root key.
       // Example: "tableheader"/"tablebody" should still build the "table" set.
       var managedKey = resolveManagedComponentKeyFromName(normalizedKey);
-      normalizedRequested[managedKey || normalizedKey] = true;
-      hasSelection = true;
+      if (managedKey) {
+        normalizedRequested[managedKey] = true;
+        hasSelection = true;
+      } else {
+        unknownSelections.push(normalizedKey);
+      }
     }
     if (!buildAllSentinel && hasSelection) {
       requestedSet = normalizedRequested;
+    } else if (!buildAllSentinel && unknownSelections.length > 0 && !hasSelection) {
+      progress(
+        "No recognized components in selection (" +
+          unknownSelections.join(", ") +
+          "). Falling back to building all components."
+      );
     }
   }
 
@@ -1230,6 +1252,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var tooltipSet = await buildSet("Tooltip", function () {
     return buildTooltipComponentSet(varMap, page, font);
   });
+  var popoverSet = await buildSet("Popover", function () {
+    return buildPopoverComponentSet(varMap, page, font);
+  });
   var pillSet = await buildSet("Pill", function () {
     return buildPillComponentSet(varMap, page, font);
   });
@@ -1321,6 +1346,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     alertSet,
     modalSet,
     tooltipSet,
+    popoverSet,
     pillSet,
     badgeSet,
     textInputSet,
@@ -1412,7 +1438,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
 
   var docsSourceSets = validSets;
   if (!docsSourceSets || docsSourceSets.length === 0) {
-    docsSourceSets = collectManagedComponentSetsFromPage(page, requestedSet);
+    docsSourceSets = collectManagedComponentSetsFromPage(page, null);
     progress("Docs fallback set scan found " + docsSourceSets.length + " component sets.");
   }
   // Docs should focus on public components. Keep Accordion Item generated,
@@ -1420,6 +1446,11 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   docsSourceSets = (docsSourceSets || []).filter(function (set) {
     if (!set) return false;
     if (set.type === "COMPONENT") {
+      var keyFromComponentName = resolveManagedComponentKeyFromName(set.name);
+      if (keyFromComponentName) {
+        if (requestedSet && !requestedSet[keyFromComponentName]) return false;
+        return true;
+      }
       var cn = normalizeComponentKey(set.name);
       if (cn === "table" || cn === "tableheader" || cn === "tablebody") return true;
       return false;
@@ -1427,6 +1458,29 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     if (set.type !== "COMPONENT_SET") return false;
     return true;
   });
+
+  if (!docsSourceSets || docsSourceSets.length === 0) {
+    progress("Docs source list empty after filtering. Falling back to page scan.");
+    docsSourceSets = collectManagedComponentSetsFromPage(page, null);
+  }
+  if (!docsSourceSets || docsSourceSets.length === 0) {
+    docsSourceSets = collectManagedComponentSetsFromRoot(null);
+    progress("Docs root scan found " + docsSourceSets.length + " component sets.");
+  }
+
+  if ((!docsSourceSets || docsSourceSets.length === 0) && buildFailures.length > 0) {
+    progress("No component sets available for docs. Creating failure summary doc.");
+    try {
+      var failureDocsSummary = await createFailureSummaryDocsPage(buildFailures, font);
+      if (failureDocsSummary) {
+        docsBuildSummary = failureDocsSummary;
+        progress("Components created.");
+        return { failures: buildFailures, docs: docsBuildSummary };
+      }
+    } catch (failureDocErr) {
+      progress("Could not create failure summary docs: " + String(failureDocErr));
+    }
+  }
 
   try {
     var docsBuildSummary = await buildUsageDocsPage(docsSourceSets, font);
@@ -1474,6 +1528,87 @@ function collectManagedComponentSetsFromPage(page, requestedSet) {
     sets.push(node);
   }
   return sets;
+}
+
+function collectManagedComponentSetsFromRoot(requestedSet) {
+  var seen = {};
+  var sets = [];
+  if (!figma || !figma.root || !figma.root.children) return sets;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var page = figma.root.children[pi];
+    if (!page || page.type !== "PAGE" || !page.children) continue;
+    var pageSets = collectManagedComponentSetsFromPage(page, requestedSet);
+    for (var si = 0; si < pageSets.length; si++) {
+      var set = pageSets[si];
+      if (!set || seen[set.id]) continue;
+      seen[set.id] = true;
+      sets.push(set);
+    }
+  }
+  return sets;
+}
+
+async function createFailureSummaryDocsPage(buildFailures, titleFont) {
+  if (!buildFailures || buildFailures.length === 0) return { created: 0, skipped: 0 };
+  var docsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var p = figma.root.children[pi];
+    if (p && p.type === "PAGE" && p.name === "Component Documentation") {
+      docsPage = p;
+      break;
+    }
+  }
+  if (!docsPage) {
+    docsPage = figma.createPage();
+    docsPage.name = "Component Documentation";
+  }
+  try { await docsPage.loadAsync(); } catch (_e) {}
+
+  for (var ci = docsPage.children.length - 1; ci >= 0; ci--) {
+    var child = docsPage.children[ci];
+    if (child && String(child.name || "") === "__AUTO_DOCS__ - Build Failures") {
+      try { child.remove(); } catch (_removeErr) {}
+    }
+  }
+
+  var frame = figma.createFrame();
+  frame.name = "__AUTO_DOCS__ - Build Failures";
+  frame.layoutMode = "VERTICAL";
+  frame.primaryAxisSizingMode = "AUTO";
+  frame.counterAxisSizingMode = "AUTO";
+  frame.counterAxisAlignItems = "MIN";
+  frame.itemSpacing = 8;
+  frame.paddingLeft = 24;
+  frame.paddingRight = 24;
+  frame.paddingTop = 24;
+  frame.paddingBottom = 24;
+  frame.fills = [{ type: "SOLID", color: { r: 0.094, g: 0.098, b: 0.149 } }];
+  frame.strokes = [{ type: "SOLID", color: { r: 0.224, g: 0.235, b: 0.337 } }];
+  frame.strokeAlign = "INSIDE";
+  frame.cornerRadius = 8;
+
+  var heading = figma.createText();
+  heading.name = "Failure Heading";
+  heading.fontName = titleFont;
+  heading.fontSize = 24;
+  heading.characters = "Component docs were not generated";
+  heading.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+  frame.appendChild(heading);
+
+  for (var fi = 0; fi < buildFailures.length; fi++) {
+    var line = figma.createText();
+    line.name = "Failure " + (fi + 1);
+    line.fontName = titleFont;
+    line.fontSize = 12;
+    line.characters = "• " + String(buildFailures[fi]);
+    line.fills = [{ type: "SOLID", color: { r: 0.651, g: 0.671, b: 0.718 } }];
+    frame.appendChild(line);
+  }
+
+  docsPage.appendChild(frame);
+  frame.x = 0;
+  frame.y = 0;
+  return { created: 1, skipped: 0 };
 }
 
 async function buildUsageDocsPage(componentSets, titleFont) {
@@ -2205,7 +2340,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var hasStates = states.length > 0;
     var hasIcons = getPropValues(variantProps, "LeftIcon").length > 0 || getPropValues(variantProps, "RightIcon").length > 0;
 
-    var useTemplateForSet = Boolean(docsTemplate) && lowerSetName !== "text" && lowerSetName !== "image";
+    var useTemplateForSet =
+      Boolean(docsTemplate) &&
+      lowerSetName !== "text" &&
+      lowerSetName !== "image" &&
+      lowerSetName !== "popover";
     if (useTemplateForSet) {
       var templatedDoc = docsTemplate.clone();
       templatedDoc.name = "__AUTO_DOCS__ - " + setName;
@@ -2973,7 +3112,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             if (
               templateMenuKey &&
               templateMenuOn != null &&
-              String(variantName || "").toLowerCase() === "outlined"
+              (String(variantName || "").toLowerCase() === "default" ||
+                String(variantName || "").toLowerCase() === "outlined")
             ) {
               patch[templateMenuKey] = templateMenuOn;
             }
@@ -3998,7 +4138,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (
             menuKey &&
             menuOn != null &&
-            String(variantName || "").toLowerCase() === "outlined"
+            (String(variantName || "").toLowerCase() === "default" ||
+              String(variantName || "").toLowerCase() === "outlined")
           ) {
             patch[menuKey] = menuOn;
           }
@@ -4396,7 +4537,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         );
       }
 
-      if (lowerSetName === "tooltip" && baseComponent) {
+      if ((lowerSetName === "tooltip" || lowerSetName === "popover") && baseComponent) {
         var ttProgDirKey = getPropKey(variantProps, "Direction");
         var ttProgArrowKey = getPropKey(variantProps, "Arrow");
         var ttProgDirs = ttProgDirKey ? getPropValues(variantProps, "Direction") : [];
@@ -10332,6 +10473,145 @@ function buildTooltipComponentSet(varMap, page, font) {
 }
 
 // ---------------------------------------------------------------------------
+// Popover Component Set
+// ---------------------------------------------------------------------------
+
+function buildPopoverComponentSet(varMap, page, font) {
+  var directions = ["top", "bottom", "left", "right"];
+  var arrowStates = ["with-arrow", "without-arrow"];
+  var components = [];
+  var gap = 16;
+  var colWidth = 170;
+  var rowHeight = 70;
+  var fallbackArrowSize = 8;
+
+  for (var di = 0; di < directions.length; di++) {
+    for (var ai = 0; ai < arrowStates.length; ai++) {
+      var direction = directions[di];
+      var hasArrow = arrowStates[ai] === "with-arrow";
+      var isVertical = direction === "top" || direction === "bottom";
+      var capDirection = direction.charAt(0).toUpperCase() + direction.slice(1);
+      var capArrow = hasArrow ? "WithArrow" : "WithoutArrow";
+
+      var comp = figma.createComponent();
+      comp.name = "Direction=" + capDirection + ", Arrow=" + capArrow;
+      comp.layoutMode = isVertical ? "VERTICAL" : "HORIZONTAL";
+      comp.primaryAxisAlignItems = "CENTER";
+      comp.counterAxisAlignItems = "CENTER";
+      comp.primaryAxisSizingMode = "AUTO";
+      comp.counterAxisSizingMode = "AUTO";
+      comp.itemSpacing = 0;
+      comp.fills = [];
+
+      var body = figma.createFrame();
+      body.name = "body";
+      body.layoutMode = "HORIZONTAL";
+      body.primaryAxisAlignItems = "CENTER";
+      body.counterAxisAlignItems = "CENTER";
+      body.primaryAxisSizingMode = "FIXED";
+      body.counterAxisSizingMode = "AUTO";
+      body.itemSpacing = 0;
+      body.paddingTop = 10;
+      body.paddingBottom = 10;
+      body.paddingLeft = 12;
+      body.paddingRight = 12;
+      body.resize(280, 38);
+      body.fills = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }];
+      body.strokes = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }];
+      body.strokeAlign = "INSIDE";
+      body.cornerRadius = 8;
+
+      var bgVar = varMap["popover/background"];
+      var borderVar = varMap["popover/border"];
+      var textVar = varMap["popover/text"];
+      var arrowVar = varMap["popover/arrow"] || bgVar;
+      var widthVar = varMap["popover/width-default"];
+      var radiusVar = varMap["popover/radius-default"];
+      var padXVar = varMap["popover/padding-x"];
+      var padYVar = varMap["popover/padding-y"];
+      var borderWidthVar = varMap["popover/border-width"];
+      var arrowSizeVar = varMap["popover/arrow-size"];
+      if (bgVar) bindPaintVar(body, "fills", 0, bgVar);
+      if (borderVar) bindPaintVar(body, "strokes", 0, borderVar);
+      if (widthVar) bindVar(body, "width", widthVar);
+      if (radiusVar) {
+        bindVar(body, "topLeftRadius", radiusVar);
+        bindVar(body, "topRightRadius", radiusVar);
+        bindVar(body, "bottomLeftRadius", radiusVar);
+        bindVar(body, "bottomRightRadius", radiusVar);
+      }
+      if (padXVar) {
+        bindVar(body, "paddingLeft", padXVar);
+        bindVar(body, "paddingRight", padXVar);
+      }
+      if (padYVar) {
+        bindVar(body, "paddingTop", padYVar);
+        bindVar(body, "paddingBottom", padYVar);
+      }
+      if (borderWidthVar) bindVar(body, "strokeWeight", borderWidthVar);
+
+      var textNode = figma.createText();
+      textNode.fontName = font;
+      textNode.characters = "Additional context and actions can live here.";
+      textNode.fontSize = 13;
+      textNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+      if (textVar) bindPaintVar(textNode, "fills", 0, textVar);
+      if (varMap["popover/text-font-size"]) {
+        bindVar(textNode, "fontSize", varMap["popover/text-font-size"]);
+        bindVar(textNode, "fontFamily", varMap["popover/text-font-family"]);
+        bindVar(textNode, "fontStyle", varMap["popover/text-font-weight"]);
+        bindVar(textNode, "lineHeight", varMap["popover/text-line-height"]);
+      }
+      body.appendChild(textNode);
+
+      var arrow = null;
+      if (hasArrow) {
+        arrow = figma.createVector();
+        arrow.name = "arrow";
+        var half = fallbackArrowSize / 2;
+        if (direction === "top") {
+          arrow.vectorPaths = [{ windingRule: "NONZERO", data: "M 0 0 L " + half + " " + half + " L " + fallbackArrowSize + " 0 Z" }];
+          arrow.resize(fallbackArrowSize, half);
+        } else if (direction === "bottom") {
+          arrow.vectorPaths = [{ windingRule: "NONZERO", data: "M 0 " + half + " L " + half + " 0 L " + fallbackArrowSize + " " + half + " Z" }];
+          arrow.resize(fallbackArrowSize, half);
+        } else if (direction === "left") {
+          arrow.vectorPaths = [{ windingRule: "NONZERO", data: "M 0 0 L " + half + " " + half + " L 0 " + fallbackArrowSize + " Z" }];
+          arrow.resize(half, fallbackArrowSize);
+        } else {
+          arrow.vectorPaths = [{ windingRule: "NONZERO", data: "M " + half + " 0 L 0 " + half + " L " + half + " " + fallbackArrowSize + " Z" }];
+          arrow.resize(half, fallbackArrowSize);
+        }
+        arrow.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+        arrow.strokes = [];
+        if (arrowVar) bindPaintVar(arrow, "fills", 0, arrowVar);
+        if (arrowSizeVar) {
+          if (direction === "top" || direction === "bottom") bindVar(arrow, "width", arrowSizeVar);
+          else bindVar(arrow, "height", arrowSizeVar);
+        }
+      }
+
+      if (direction === "bottom" || direction === "right") {
+        if (arrow) comp.appendChild(arrow);
+        comp.appendChild(body);
+      } else {
+        comp.appendChild(body);
+        if (arrow) comp.appendChild(arrow);
+      }
+
+      comp.x = ai * (colWidth + gap);
+      comp.y = di * (rowHeight + gap);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+  }
+
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Popover";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
 // Loader Component Set
 // ---------------------------------------------------------------------------
 
@@ -12801,7 +13081,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               var showRightArrow = rightArrowMode === "on";
               var capRightArrow = showRightArrow ? "On" : "Off";
               var menuModesForVariant =
-                orientation === "horizontal" && variant === "outlined"
+                orientation === "horizontal" && (variant === "default" || variant === "outlined")
                   ? menuModes
                   : ["off"];
               for (var mi = 0; mi < menuModesForVariant.length; mi++) {
@@ -12855,9 +13135,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               list.clipsContent = false;
               try { list.layoutSizingHorizontal = "HUG"; } catch (_tabsListHugWidthErr) {}
               try { list.layoutSizingVertical = "HUG"; } catch (_tabsListHugHeightErr) {}
-              var radiusVar = rad === "default"
-                ? varMap["tabs/" + variant + "-radius-default"]
-                : varMap["tabs/radius-" + rad];
+              var radiusVar = varMap["tabs/" + variant + "-radius-" + rad];
 
               bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
               if (visualVariant !== "pills") {
@@ -12876,7 +13154,17 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               } else if (visualVariant === "pills") {
                 list.strokeWeight = 0;
               } else {
-                bindVar(list, "strokeWeight", varMap["tabs/list-border-width"]);
+                // Match preview behavior: outlined list border is a single edge (bottom/right),
+                // not a full rectangular border.
+                list.strokeTopWeight = 0;
+                list.strokeLeftWeight = 0;
+                list.strokeBottomWeight = 0;
+                list.strokeRightWeight = 0;
+                if (orientation === "horizontal") {
+                  bindVar(list, "strokeBottomWeight", varMap["tabs/list-border-width"]);
+                } else {
+                  bindVar(list, "strokeRightWeight", varMap["tabs/list-border-width"]);
+                }
               }
               bindVar(list, "paddingLeft", varMap["tabs/" + variant + "-list-padding"]);
               bindVar(list, "paddingRight", varMap["tabs/" + variant + "-list-padding"]);
@@ -12999,25 +13287,12 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                     : varMap["tabs/tab-border-width"];
                   bindVar(tab, "strokeWeight", tabBorderWidthVar);
                   bindPaintVar(tab, "strokes", 0, varMap[tabBorderPath]);
-                  if (variant === "outlined" && orientation === "horizontal") {
-                    tab.strokeTopWeight = 1;
-                    bindVar(tab, "strokeTopWeight", tabBorderWidthVar);
-                    tab.strokeBottomWeight = visualState === "active" ? 0 : 1;
-                    if (visualState !== "active") {
-                      bindVar(tab, "strokeBottomWeight", tabBorderWidthVar);
-                    }
-                    tab.strokeLeftWeight = 0;
-                    tab.strokeRightWeight = ti === (tabDefs.length - 1) ? 0 : 1;
-                    if (ti !== (tabDefs.length - 1)) {
-                      bindVar(tab, "strokeRightWeight", tabBorderWidthVar);
-                    }
-                  }
-                  if (visualVariant === "pills" && orientation === "horizontal" && visualState === "active") {
+                  if (variant === "outlined" && orientation === "horizontal" && visualState === "active") {
                     tab.strokeBottomWeight = 0;
                   }
-                  if (visualVariant === "pills" && orientation === "horizontal" && ti > 0) {
+                  if (variant === "outlined" && orientation === "horizontal" && ti > 0) {
                     tab.strokeLeftWeight = 0;
-                  } else if (visualVariant === "pills" && orientation === "vertical" && ti > 0) {
+                  } else if (variant === "outlined" && orientation === "vertical" && ti > 0) {
                     tab.strokeTopWeight = 0;
                   }
                 }
@@ -13362,9 +13637,7 @@ async function buildTabsItemComponentSet(varMap, page, font, selectedVariants) {
               try { comp.layoutSizingHorizontal = "HUG"; } catch (_tabsItemCompHugWidthErr) {}
               try { comp.layoutSizingVertical = "HUG"; } catch (_tabsItemCompHugHeightErr) {}
 
-              var radiusVar = rad === "default"
-                ? varMap["tabs/" + variant + "-radius-default"]
-                : varMap["tabs/radius-" + rad];
+              var radiusVar = varMap["tabs/" + variant + "-radius-" + rad];
 
               var tabContent = comp;
               if (variant === "default") {
@@ -13598,8 +13871,8 @@ function tabsTabColorPath(variant, property, state) {
 }
 
 function tabsVisualVariant(variant) {
-  if (variant === "outlined") return "pills";
-  if (variant === "pills") return "outlined";
+  if (variant === "outlined") return "outlined";
+  if (variant === "pills") return "pills";
   return variant;
 }
 
@@ -13622,8 +13895,8 @@ function createTabsOverflowControl(options) {
   control.counterAxisAlignItems = "CENTER";
   control.paddingLeft = variant === "outlined" ? 16 : 4;
   control.paddingRight = variant === "outlined" ? 16 : 4;
-  control.paddingTop = variant === "outlined" ? 18 : 11;
-  control.paddingBottom = variant === "outlined" ? 18 : 11;
+  control.paddingTop = variant === "outlined" ? 16 : 11;
+  control.paddingBottom = variant === "outlined" ? 16 : 11;
   control.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
   control.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
   control.strokeAlign = "INSIDE";
@@ -13643,6 +13916,10 @@ function createTabsOverflowControl(options) {
     control.strokeRightWeight = 0;
     bindVar(control, "strokeBottomWeight", varMap["tabs/list-border-width"]);
   } else {
+    bindVar(control, "paddingLeft", varMap["tabs/outlined-overflow-control-padding-x"]);
+    bindVar(control, "paddingRight", varMap["tabs/outlined-overflow-control-padding-x"]);
+    bindVar(control, "paddingTop", varMap["tabs/outlined-overflow-control-padding-y"]);
+    bindVar(control, "paddingBottom", varMap["tabs/outlined-overflow-control-padding-y"]);
     control.strokeTopWeight = 1;
     control.strokeBottomWeight = 1;
     control.strokeLeftWeight = 1;
@@ -13864,6 +14141,18 @@ async function findTabsIconComponents() {
   var result = { image: null, message: null, settings: null, close: null, chevronLeft: null, chevronRight: null, menu: null };
   var iconCandidates = [];
   var iconsPage = null;
+  var arrowLeftFallback = null;
+  var arrowRightFallback = null;
+  if (!findTabsIconComponents._allPagesLoaded) {
+    try {
+      if (typeof figma.loadAllPagesAsync === "function") {
+        await figma.loadAllPagesAsync();
+      }
+      findTabsIconComponents._allPagesLoaded = true;
+    } catch (loadAllPagesErr) {
+      progress("[Tabs] Could not preload all pages: " + String(loadAllPagesErr));
+    }
+  }
 
   for (var pi = 0; pi < figma.root.children.length; pi++) {
     var page = figma.root.children[pi];
@@ -13895,6 +14184,8 @@ async function findTabsIconComponents() {
 
   for (var j = 0; j < iconCandidates.length; j++) {
     var name = iconCandidates[j].name.toLowerCase();
+    var compactName = name.replace(/[^a-z0-9]/g, "");
+    var hasCircleWord = compactName.indexOf("circle") >= 0;
     if (!result.image && (name.indexOf("image") >= 0 || name.indexOf("gallery") >= 0 || name.indexOf("photo") >= 0)) {
       result.image = iconCandidates[j];
     }
@@ -13907,11 +14198,17 @@ async function findTabsIconComponents() {
     if (!result.close && (name.indexOf("close") >= 0 || name.indexOf("x") >= 0 || name.indexOf("cancel") >= 0)) {
       result.close = iconCandidates[j];
     }
-    if (!result.chevronLeft && (name.indexOf("chevronleft") >= 0 || name.indexOf("arrowleft") >= 0 || name.indexOf("left") >= 0)) {
+    if (!result.chevronLeft && compactName.indexOf("chevronleft") >= 0) {
       result.chevronLeft = iconCandidates[j];
     }
-    if (!result.chevronRight && (name.indexOf("chevronright") >= 0 || name.indexOf("arrowright") >= 0 || name.indexOf("right") >= 0)) {
+    if (!result.chevronRight && compactName.indexOf("chevronright") >= 0) {
       result.chevronRight = iconCandidates[j];
+    }
+    if (!arrowLeftFallback && compactName.indexOf("arrowleft") >= 0 && !hasCircleWord) {
+      arrowLeftFallback = iconCandidates[j];
+    }
+    if (!arrowRightFallback && compactName.indexOf("arrowright") >= 0 && !hasCircleWord) {
+      arrowRightFallback = iconCandidates[j];
     }
     if (!result.menu && (name.indexOf("menu") >= 0 || name.indexOf("hamburger") >= 0 || name.indexOf("menu03") >= 0 || name.indexOf("more") >= 0)) {
       result.menu = iconCandidates[j];
@@ -13928,8 +14225,8 @@ async function findTabsIconComponents() {
     if (!result.settings) result.settings = sorted[2];
     if (!result.close) result.close = sorted[3] || sorted[2];
   }
-  if (!result.chevronLeft) result.chevronLeft = result.image || result.message || result.settings || null;
-  if (!result.chevronRight) result.chevronRight = result.close || result.settings || result.message || null;
+  if (!result.chevronLeft) result.chevronLeft = arrowLeftFallback || result.image || result.message || result.settings || null;
+  if (!result.chevronRight) result.chevronRight = arrowRightFallback || result.close || result.settings || result.message || null;
   if (!result.menu) result.menu = result.settings || result.close || result.message || null;
 
   if (result.image) progress("[Tabs] LeftIcon image source: " + result.image.name);
@@ -13945,7 +14242,7 @@ async function findTabsIconComponents() {
 
 function validateTabsVariables(varMap) {
   var variants = ["default", "outlined", "pills"];
-  var sharedRadii = ["xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "active", "disabled"];
   var required = [
     "tabs/font-size",
@@ -13955,16 +14252,16 @@ function validateTabsVariables(varMap) {
     "tabs/icon-size",
     "tabs/icon-stroke-width",
     "tabs/icon-gap",
-    "tabs/focus-ring"
+    "tabs/focus-ring",
+    "tabs/outlined-overflow-control-padding-x",
+    "tabs/outlined-overflow-control-padding-y"
   ];
-
-  for (var ri = 0; ri < sharedRadii.length; ri++) {
-    required.push("tabs/radius-" + sharedRadii[ri]);
-  }
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
-    required.push("tabs/" + variant + "-radius-default");
+    for (var ri = 0; ri < radii.length; ri++) {
+      required.push("tabs/" + variant + "-radius-" + radii[ri]);
+    }
     required.push("tabs/" + variant + "-list-background");
     required.push("tabs/" + variant + "-list-padding");
     required.push("tabs/" + variant + "-list-gap");

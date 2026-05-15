@@ -64,6 +64,10 @@ import {
   TooltipPropertiesPanel,
 } from "./components/panels/TooltipPreviewPanel";
 import {
+  PopoverPreviewContent,
+  PopoverPropertiesPanel,
+} from "./components/panels/PopoverPreviewPanel";
+import {
   LoaderPreviewContent,
   LoaderPropertiesPanel,
 } from "./components/panels/LoaderPreviewPanel";
@@ -472,6 +476,11 @@ export default function App() {
   const [activeChipState, setActiveChipState] = useState("default");
   const [activeTooltipPosition, setActiveTooltipPosition] = useState("top");
   const [activeTooltipWithArrow, setActiveTooltipWithArrow] = useState(true);
+  const [activePopoverPosition, setActivePopoverPosition] = useState("top");
+  const [activePopoverWithArrow, setActivePopoverWithArrow] = useState(true);
+  const [activePopoverWidthSize, setActivePopoverWidthSize] = useState("default");
+  const [activePopoverRadiusSize, setActivePopoverRadiusSize] = useState("default");
+  const [activePopoverBody, setActivePopoverBody] = useState("Additional context and actions can live here.");
   const [activeLoaderSize, setActiveLoaderSize] = useState("default");
   const [activeLoaderType, setActiveLoaderType] = useState("oval");
   const [activeProgressSize, setActiveProgressSize] = useState(progressHeightDefault);
@@ -820,6 +829,12 @@ export default function App() {
     } else if (newComp === "tooltip") {
       setActiveTooltipPosition("top");
       setActiveTooltipWithArrow(true);
+    } else if (newComp === "popover") {
+      setActivePopoverPosition("bottom");
+      setActivePopoverWithArrow(true);
+      setActivePopoverWidthSize("md");
+      setActivePopoverRadiusSize("md");
+      setActivePopoverBody("Additional context and actions can live here.");
     } else if (newComp === "image") {
       setActiveImageSrc("https://picsum.photos/id/28/1200/800");
       setActiveImageAlt("Mountain landscape");
@@ -1061,10 +1076,8 @@ export default function App() {
 
   // Parse forced state/checked/variant from the active token card
   const INTERACTIVE_STATES = ["active", "hover", "focus", "pressed", "disabled", "error", "visited"];
-  const mapTabsTokenVariant = (variantName) =>
-    variantName === "outlined" ? "pills" : variantName === "pills" ? "outlined" : variantName;
-  const fromTabsTokenVariant = (variantName) =>
-    variantName === "outlined" ? "pills" : variantName === "pills" ? "outlined" : variantName;
+  const mapTabsTokenVariant = (variantName) => variantName;
+  const fromTabsTokenVariant = (variantName) => variantName;
   let forcedState = null;
   let forcedChecked = null;
   let forcedIndeterminate = false;
@@ -1447,11 +1460,9 @@ export default function App() {
     }
     if (activeComponent !== "tabs") return true;
     if (activeVariant === "default") {
-      if (token === "tabs-radius") return false;
-      if (/^tabs-(default|outlined|pills)-radius-default$/.test(token)) return false;
+      if (/^tabs-(default|outlined|pills)-radius$/.test(token)) return false;
     }
-    if (token === "tabs-radius") return activeVariant !== "default" && activeTabsRadius !== "default";
-    const radiusMatch = token.match(/^tabs-(default|outlined|pills)-radius-default$/);
+    const radiusMatch = token.match(/^tabs-(default|outlined|pills)-radius$/);
     if (radiusMatch) return radiusMatch[1] === activeTabsTokenVariant;
     const listPaddingMatch = token.match(/^tabs-(default|outlined|pills)-list-padding$/);
     if (listPaddingMatch) return listPaddingMatch[1] === activeTabsTokenVariant;
@@ -1459,6 +1470,8 @@ export default function App() {
     if (tabPadXMatch) return tabPadXMatch[1] === activeTabsTokenVariant;
     const tabPadYMatch = token.match(/^tabs-(default|outlined|pills)-tab-padding-y$/);
     if (tabPadYMatch) return tabPadYMatch[1] === activeTabsTokenVariant;
+    const overflowPadMatch = token.match(/^tabs-outlined-overflow-control-padding-(x|y)$/);
+    if (overflowPadMatch) return activeTabsTokenVariant === "outlined";
     const match = token.match(/^tabs-(default|outlined|pills)-list-gap$/);
     if (!match) return true;
     return match[1] === activeTabsTokenVariant;
@@ -1536,23 +1549,22 @@ export default function App() {
       return;
     }
     if (activeComponent !== "tabs") return;
-    if (activeTabsRadius === "default" && activeDimensionToken === "tabs-radius") {
-      setActiveDimensionToken(null);
-      return;
-    }
     if (
       activeVariant === "default" &&
-      (activeDimensionToken === "tabs-radius" ||
-        /^tabs-(default|outlined|pills)-radius-default$/.test(activeDimensionToken))
+      /^tabs-(default|outlined|pills)-radius$/.test(activeDimensionToken)
     ) {
       setActiveDimensionToken(null);
       return;
     }
     const match = activeDimensionToken.match(
-      /^tabs-(default|outlined|pills)-(list-gap|list-padding|tab-padding-x|tab-padding-y|radius-default)$/,
+      /^tabs-(default|outlined|pills)-(list-gap|list-padding|tab-padding-x|tab-padding-y|radius)$|^tabs-outlined-overflow-control-padding-(x|y)$/,
     );
     if (!match) return;
-    if (match[1] !== activeTabsTokenVariant) {
+    if (match[1] && match[1] !== activeTabsTokenVariant) {
+      setActiveDimensionToken(null);
+      return;
+    }
+    if (!match[1] && activeTabsTokenVariant !== "outlined") {
       setActiveDimensionToken(null);
     }
   }, [activeBadgeRadius, activeProgressRadius, activeAvatarRadius, activeChipRadius, activeComponent, activeDimensionToken, activeVariant, activeTabsRadius, dimensionTokens, activeTabsTokenVariant]);
@@ -1618,8 +1630,8 @@ export default function App() {
     if (activeComponent === "card" && tokenName === "card-radius") {
       return activeCardRadius;
     }
-    if (activeComponent === "tabs" && tokenName === "tabs-radius") {
-      return activeTabsRadius === "default" ? undefined : activeTabsRadius;
+    if (activeComponent === "tabs" && /^tabs-(default|outlined|pills)-radius$/.test(tokenName)) {
+      return activeTabsRadius;
     }
     if (activeComponent === "chip" && tokenName === "chip-radius") {
       return activeChipRadius;
@@ -2184,6 +2196,17 @@ export default function App() {
                   withArrow={activeTooltipWithArrow}
                 />
               )}
+              {activeComponent === "popover" && (
+                <PopoverPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activePosition={activePopoverPosition}
+                  withArrow={activePopoverWithArrow}
+                  widthSize={activePopoverWidthSize}
+                  radiusSize={activePopoverRadiusSize}
+                  body={activePopoverBody}
+                />
+              )}
 
               {activeComponent === "notification" && (
                 <NotificationPreviewContent
@@ -2637,6 +2660,20 @@ export default function App() {
                   setActivePosition={setActiveTooltipPosition}
                   withArrow={activeTooltipWithArrow}
                   setWithArrow={setActiveTooltipWithArrow}
+                />
+              )}
+              {activeComponent === "popover" && (
+                <PopoverPropertiesPanel
+                  activePosition={activePopoverPosition}
+                  setActivePosition={setActivePopoverPosition}
+                  withArrow={activePopoverWithArrow}
+                  setWithArrow={setActivePopoverWithArrow}
+                  widthSize={activePopoverWidthSize}
+                  setWidthSize={setActivePopoverWidthSize}
+                  radiusSize={activePopoverRadiusSize}
+                  setRadiusSize={setActivePopoverRadiusSize}
+                  body={activePopoverBody}
+                  setBody={setActivePopoverBody}
                 />
               )}
               {activeComponent === "notification" && (
