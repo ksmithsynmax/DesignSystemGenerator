@@ -72,6 +72,10 @@ import {
   MenuPropertiesPanel,
 } from "./components/panels/MenuPreviewPanel";
 import {
+  DividerPreviewContent,
+  DividerPropertiesPanel,
+} from "./components/panels/DividerPreviewPanel";
+import {
   LoaderPreviewContent,
   LoaderPropertiesPanel,
 } from "./components/panels/LoaderPreviewPanel";
@@ -491,6 +495,10 @@ export default function App() {
   const [activeMenuState, setActiveMenuState] = useState("default");
   const [activeMenuWithSection, setActiveMenuWithSection] = useState(true);
   const [activeMenuWithIcons, setActiveMenuWithIcons] = useState(true);
+  const [activeDividerSize, setActiveDividerSize] = useState("default");
+  const [activeDividerOrientation, setActiveDividerOrientation] = useState("horizontal");
+  const [activeDividerState, setActiveDividerState] = useState("default");
+  const [activeDividerInset, setActiveDividerInset] = useState(true);
   const [activeLoaderSize, setActiveLoaderSize] = useState("default");
   const [activeLoaderType, setActiveLoaderType] = useState("oval");
   const [activeProgressSize, setActiveProgressSize] = useState(progressHeightDefault);
@@ -852,6 +860,11 @@ export default function App() {
       setActiveMenuState("default");
       setActiveMenuWithSection(true);
       setActiveMenuWithIcons(true);
+    } else if (newComp === "divider") {
+      setActiveDividerSize("default");
+      setActiveDividerOrientation("horizontal");
+      setActiveDividerState("default");
+      setActiveDividerInset(true);
     } else if (newComp === "image") {
       setActiveImageSrc("https://picsum.photos/id/28/1200/800");
       setActiveImageAlt("Mountain landscape");
@@ -1613,6 +1626,7 @@ export default function App() {
     select: activeSelectSize,
     card: activeCardSize,
     loader: activeLoaderSize,
+    divider: activeDividerSize,
     progress: activeProgressSize,
     avatar: activeAvatarSize,
     pill: activePillSize,
@@ -2236,6 +2250,16 @@ export default function App() {
                   withIcons={activeMenuWithIcons}
                 />
               )}
+              {activeComponent === "divider" && (
+                <DividerPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  size={activeDividerSize}
+                  orientation={activeDividerOrientation}
+                  state={activeDividerState}
+                  inset={activeDividerInset}
+                />
+              )}
 
               {activeComponent === "notification" && (
                 <NotificationPreviewContent
@@ -2719,6 +2743,18 @@ export default function App() {
                   setWithSection={setActiveMenuWithSection}
                   withIcons={activeMenuWithIcons}
                   setWithIcons={setActiveMenuWithIcons}
+                />
+              )}
+              {activeComponent === "divider" && (
+                <DividerPropertiesPanel
+                  size={activeDividerSize}
+                  setSize={setActiveDividerSize}
+                  orientation={activeDividerOrientation}
+                  setOrientation={setActiveDividerOrientation}
+                  state={activeDividerState}
+                  setState={setActiveDividerState}
+                  inset={activeDividerInset}
+                  setInset={setActiveDividerInset}
                 />
               )}
               {activeComponent === "notification" && (

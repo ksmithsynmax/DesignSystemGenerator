@@ -982,7 +982,7 @@ function resolveManagedComponentKeyFromName(name) {
   if (normalized === "popup") return "popover";
   var managedKeys = [
     "button", "switch", "slider", "rangeslider", "checkbox", "radio",
-    "chip", "notification", "alert", "modal", "tooltip", "popover", "menu", "loader",
+    "chip", "notification", "alert", "modal", "tooltip", "popover", "menu", "divider", "loader",
     "progress",
     "avatar",
     "pill", "badge", "textinput", "select", "card", "actionicon",
@@ -1258,6 +1258,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var menuSet = await buildSet("Menu", function () {
     return buildMenuComponentSet(varMap, page, font);
   });
+  var dividerSet = await buildSet("Divider", function () {
+    return buildDividerComponentSet(varMap, page);
+  });
   var pillSet = await buildSet("Pill", function () {
     return buildPillComponentSet(varMap, page, font);
   });
@@ -1351,6 +1354,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     tooltipSet,
     popoverSet,
     menuSet,
+    dividerSet,
     pillSet,
     badgeSet,
     textInputSet,
@@ -2144,6 +2148,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var rowTitleFont = (titleConfig && titleConfig.font) ? titleConfig.font : titleFont;
     var rowTitleSize = (titleConfig && titleConfig.size) ? titleConfig.size : 18;
     var rowItemSpacing = (titleConfig && titleConfig.rowItemSpacing != null) ? titleConfig.rowItemSpacing : 12;
+    var instancePaddingX = (titleConfig && titleConfig.instancePaddingX != null) ? Math.max(0, Number(titleConfig.instancePaddingX) || 0) : 0;
+    var instancePaddingY = (titleConfig && titleConfig.instancePaddingY != null) ? Math.max(0, Number(titleConfig.instancePaddingY) || 0) : 0;
+    var fillCellWidth = Boolean(titleConfig && titleConfig.fillCellWidth);
     var itemsPerRow = 0;
     if (titleConfig && titleConfig.itemsPerRow != null) {
       var ipr = Number(titleConfig.itemsPerRow);
@@ -2161,8 +2168,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         cell.itemSpacing = 6;
         cell.clipsContent = false;
         cell.fills = [];
+        if (fillCellWidth) {
+          try { cell.layoutAlign = "STRETCH"; } catch (_cellStretchErr) {}
+          try { cell.layoutSizingHorizontal = "FILL"; } catch (_cellFillErr) {}
+        }
         if (label != null && String(label).trim().length > 0) {
-          appendText(cell, bodyFont, String(label), 10, DOC_COLORS.cellLabel, "Cell Label");
+          var labelNode = appendText(cell, bodyFont, String(label), 10, DOC_COLORS.cellLabel, "Cell Label");
+          try { labelNode.textAlignHorizontal = "CENTER"; } catch (_labelAlignErr) {}
         }
         var inst = null;
         try {
@@ -2170,7 +2182,28 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         } catch (instErr) {
           progress("Docs instance creation failed (" + String(label) + "): " + String(instErr));
         }
-        if (inst) cell.appendChild(inst);
+        if (inst) {
+          if (instancePaddingX > 0 || instancePaddingY > 0) {
+            var instWrap = figma.createFrame();
+            instWrap.layoutMode = "VERTICAL";
+            instWrap.primaryAxisSizingMode = "AUTO";
+            instWrap.counterAxisSizingMode = "AUTO";
+            instWrap.primaryAxisAlignItems = "CENTER";
+            instWrap.counterAxisAlignItems = "CENTER";
+            instWrap.paddingLeft = instancePaddingX;
+            instWrap.paddingRight = instancePaddingX;
+            instWrap.paddingTop = instancePaddingY;
+            instWrap.paddingBottom = instancePaddingY;
+            instWrap.itemSpacing = 0;
+            instWrap.fills = [];
+            instWrap.strokes = [];
+            instWrap.clipsContent = false;
+            instWrap.appendChild(inst);
+            cell.appendChild(instWrap);
+          } else {
+            cell.appendChild(inst);
+          }
+        }
         rowFrame.appendChild(cell);
       }
     }
@@ -2221,6 +2254,70 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     }
 
     target.appendChild(rowWrap);
+  }
+
+  function renderDividerDocsRows(target, labels, createInstanceForLabel) {
+    clearChildren(target);
+    target.layoutMode = "VERTICAL";
+    target.primaryAxisSizingMode = "AUTO";
+    target.counterAxisSizingMode = "AUTO";
+    target.counterAxisAlignItems = "MIN";
+    target.layoutAlign = "STRETCH";
+    target.itemSpacing = 18;
+    target.clipsContent = false;
+    target.fills = target.fills || [];
+    target.strokes = target.strokes || [];
+    try { target.layoutSizingHorizontal = "FILL"; } catch (_dividerTargetFillErr) {}
+
+    for (var i = 0; i < labels.length; i++) {
+      var label = labels[i];
+      var row = figma.createFrame();
+      row.name = "divider-doc-row";
+      row.layoutMode = "VERTICAL";
+      row.primaryAxisSizingMode = "AUTO";
+      row.counterAxisSizingMode = "AUTO";
+      row.counterAxisAlignItems = "CENTER";
+      row.layoutAlign = "STRETCH";
+      row.itemSpacing = 8;
+      row.fills = [];
+      row.strokes = [];
+      row.clipsContent = false;
+
+      if (label != null && String(label).trim().length > 0) {
+        var labelNode = appendText(row, bodyFont, String(label), 10, DOC_COLORS.cellLabel, "Cell Label");
+        try { labelNode.textAlignHorizontal = "CENTER"; } catch (_dividerLabelAlignErr) {}
+      }
+
+      var inst = null;
+      try {
+        inst = createInstanceForLabel(label);
+      } catch (_dividerInstanceErr) {
+        inst = null;
+      }
+      if (inst) {
+        var host = figma.createFrame();
+        host.name = "divider-doc-host";
+        host.layoutMode = "HORIZONTAL";
+        host.primaryAxisSizingMode = "AUTO";
+        host.counterAxisSizingMode = "AUTO";
+        host.primaryAxisAlignItems = "CENTER";
+        host.counterAxisAlignItems = "CENTER";
+        host.layoutAlign = "STRETCH";
+        host.paddingLeft = 0;
+        host.paddingRight = 0;
+        host.paddingTop = 14;
+        host.paddingBottom = 14;
+        host.itemSpacing = 0;
+        host.fills = [];
+        host.strokes = [];
+        host.clipsContent = false;
+        try { host.layoutSizingHorizontal = "FILL"; } catch (_dividerHostFillErr) {}
+        host.appendChild(inst);
+        row.appendChild(host);
+      }
+
+      target.appendChild(row);
+    }
   }
 
   function getVariantDescription(componentName, variantName) {
@@ -2865,10 +2962,14 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             addInstancesRow(templateSwitchSizeOnPanel, "Checked On", templateOrderedSizes, function (sizeName) {
               return makeTemplateInstance({ Size: sizeName, Checked: templateCheckedOn });
             }, true, { font: mediumFont, size: 14 });
+          } else if (lowerSetName === "divider") {
+            renderDividerDocsRows(templateSizeSlot, templateOrderedSizes, function (sizeName) {
+              return makeTemplateInstance({ Size: sizeName });
+            });
           } else {
             addInstancesRow(templateSizeSlot, "Sizes", templateOrderedSizes, function (sizeName) {
               return makeTemplateInstance({ Size: sizeName });
-            }, false);
+            }, false, lowerSetName === "divider" ? { itemsPerRow: 3, rowItemSpacing: 56, instancePaddingX: 22, instancePaddingY: 10 } : null);
           }
         } else if (!hasSizes) {
           removeSectionOrSlot(templatedDoc, slug, "size");
@@ -2990,6 +3091,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 templateStatesSlot.appendChild(templateVariantStatesBlock);
               })(templateRadioVariants[trvi]);
             }
+          } else if (lowerSetName === "divider") {
+            renderDividerDocsRows(templateStatesSlot, templateOrderedStates, function (stateName) {
+              return makeTemplateInstance({ State: stateName });
+            });
           } else {
             addInstancesRow(templateStatesSlot, "States", templateOrderedStates, function (stateName) {
               return makeTemplateInstance({ State: stateName });
@@ -2997,9 +3102,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               ? { itemsPerRow: 3 }
               : (lowerSetName === "tabs"
                   ? { itemsPerRow: 2, rowItemSpacing: 20 }
+                  : (lowerSetName === "divider"
+                      ? { itemsPerRow: 2, rowItemSpacing: 84, instancePaddingX: 22, instancePaddingY: 10 }
                   : (normalizedSetName === "accordionitem"
                       ? { itemsPerRow: 1, rowItemSpacing: 12 }
-                      : null)));
+                      : null))));
           }
         } else if (!hasStates) {
           removeSectionOrSlot(templatedDoc, slug, "states");
@@ -3658,6 +3765,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var leftArrowKey = getPropKey(variantProps, "LeftArrow");
       var rightArrowKey = getPropKey(variantProps, "RightArrow");
       var menuKey = getPropKey(variantProps, "Menu");
+      var orientationKey = getPropKey(variantProps, "Orientation");
+      var insetKey = getPropKey(variantProps, "Inset");
       var colorKey = getPropKey(variantProps, "Color");
 
       var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills"];
@@ -3741,6 +3850,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var leftArrowValues = leftArrowKey ? getPropValues(variantProps, leftArrowKey) : [];
       var rightArrowValues = rightArrowKey ? getPropValues(variantProps, rightArrowKey) : [];
       var menuValues = menuKey ? getPropValues(variantProps, menuKey) : [];
+      var orientationValues = orientationKey ? getPropValues(variantProps, orientationKey) : [];
+      var insetValues = insetKey ? getPropValues(variantProps, insetKey) : [];
       var sectionValues = sectionKey ? getPropValues(variantProps, sectionKey) : [];
       var checkedValues = checkedKey ? getPropValues(variantProps, checkedKey) : [];
       var leftOn = leftValues.indexOf("On") >= 0 ? "On" : (leftValues.indexOf("True") >= 0 ? "True" : (leftValues[0] || null));
@@ -3753,6 +3864,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var rightArrowOff = rightArrowValues.indexOf("Off") >= 0 ? "Off" : (rightArrowValues.indexOf("False") >= 0 ? "False" : (rightArrowValues[0] || null));
       var menuOn = menuValues.indexOf("On") >= 0 ? "On" : (menuValues.indexOf("True") >= 0 ? "True" : (menuValues[0] || null));
       var menuOff = menuValues.indexOf("Off") >= 0 ? "Off" : (menuValues.indexOf("False") >= 0 ? "False" : (menuValues[0] || null));
+      var orientationHorizontal = orientationValues.indexOf("Horizontal") >= 0 ? "Horizontal" : (orientationValues[0] || null);
+      var insetOn = insetValues.indexOf("On") >= 0 ? "On" : (insetValues.indexOf("True") >= 0 ? "True" : (insetValues[0] || null));
+      var insetOff = insetValues.indexOf("Off") >= 0 ? "Off" : (insetValues.indexOf("False") >= 0 ? "False" : (insetValues[0] || null));
       var sectionOff = sectionValues.indexOf("Off") >= 0
         ? "Off"
         : (sectionValues.indexOf("False") >= 0 ? "False" : (sectionValues[0] || null));
@@ -3791,6 +3905,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         if (leftArrowKey && leftArrowOff != null) props[leftArrowKey] = leftArrowOff;
         if (rightArrowKey && rightArrowOff != null) props[rightArrowKey] = rightArrowOff;
         if (menuKey && menuOff != null) props[menuKey] = menuOff;
+        if (lowerSetName === "divider") {
+          if (orientationKey && orientationHorizontal != null) props[orientationKey] = orientationHorizontal;
+          if (insetKey && insetOn != null) props[insetKey] = insetOn;
+        } else if (insetKey && insetOff != null) {
+          props[insetKey] = insetOff;
+        }
         var patchKeys = Object.keys(propPatch || {});
         for (var p = 0; p < patchKeys.length; p++) {
           var userKey = patchKeys[p];
@@ -4091,10 +4211,16 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           addInstancesRow(switchSizeOnPanel, "Checked On", orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName, Checked: checkedOn });
           }, true, { font: mediumFont, size: 14 });
+        } else if (lowerSetName === "divider") {
+          renderDividerDocsRows(sizeSlot, orderedSizes, function (sizeName) {
+            return makeInstance({ Size: sizeName });
+          });
         } else {
           addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName });
-          }, false);
+          }, false, lowerSetName === "divider"
+            ? { itemsPerRow: 3, rowItemSpacing: 56, instancePaddingX: 22, instancePaddingY: 10 }
+            : null);
         }
       }
 
@@ -4295,6 +4421,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               statesSlot.appendChild(variantStatesBlock);
             })(radioVariants[rvi]);
           }
+        } else if (lowerSetName === "divider") {
+          renderDividerDocsRows(statesSlot, orderedStates, function (stateName) {
+            return makeInstance({ State: stateName });
+          });
         } else {
           addInstancesRow(statesSlot, "States", orderedStates, function (stateName) {
               return makeInstance({ State: stateName });
@@ -4302,9 +4432,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               ? { itemsPerRow: 3 }
               : (lowerSetName === "tabs"
                   ? { itemsPerRow: 2, rowItemSpacing: 20 }
+                  : (lowerSetName === "divider"
+                      ? { itemsPerRow: 2, rowItemSpacing: 84, instancePaddingX: 22, instancePaddingY: 10 }
                   : (normalizedSetName === "accordionitem"
                       ? { itemsPerRow: 1, rowItemSpacing: 12 }
-                      : null)));
+                      : null))));
         }
       }
 
@@ -10999,6 +11131,147 @@ async function buildMenuComponentSet(varMap, page, font) {
 
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Menu";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
+// Divider Component Set
+// ---------------------------------------------------------------------------
+
+function buildDividerComponentSet(varMap, page) {
+  var orientations = ["horizontal", "vertical"];
+  var insetModes = ["off", "on"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "disabled"];
+  var components = [];
+  var gap = 20;
+  var colWidth = 280;
+  var rowHeight = 120;
+
+  function dividerColorVarForState(state) {
+    if (state === "disabled") return varMap["divider/color-disabled"] || varMap["divider/color"];
+    return varMap["divider/color"];
+  }
+
+  for (var oi = 0; oi < orientations.length; oi++) {
+    var orientation = orientations[oi];
+    var capOrientation = orientation.charAt(0).toUpperCase() + orientation.slice(1);
+    for (var ii = 0; ii < insetModes.length; ii++) {
+      var insetMode = insetModes[ii];
+      var insetOn = insetMode === "on";
+      var capInset = insetOn ? "On" : "Off";
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
+        for (var sti = 0; sti < states.length; sti++) {
+          var state = states[sti];
+          var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+          var component = figma.createComponent();
+          component.name =
+            "Orientation=" + capOrientation +
+            ", Inset=" + capInset +
+            ", Size=" + capSize +
+            ", State=" + capState;
+          component.layoutMode = "HORIZONTAL";
+          component.primaryAxisSizingMode = "AUTO";
+          component.counterAxisSizingMode = "AUTO";
+          component.primaryAxisAlignItems = "CENTER";
+          component.counterAxisAlignItems = "CENTER";
+          component.fills = [];
+          component.strokes = [];
+          component.clipsContent = false;
+          try { component.layoutSizingHorizontal = "HUG"; } catch (_dividerCompHugWidthErr) {}
+          try { component.layoutSizingVertical = "HUG"; } catch (_dividerCompHugHeightErr) {}
+
+          var container = figma.createFrame();
+          container.name = "DividerContainer";
+          container.fills = [];
+          container.strokes = [];
+          container.clipsContent = false;
+          container.layoutPositioning = "AUTO";
+
+          if (orientation === "horizontal") {
+            container.layoutMode = "VERTICAL";
+            container.primaryAxisSizingMode = "AUTO";
+            container.counterAxisSizingMode = "FIXED";
+            container.primaryAxisAlignItems = "CENTER";
+            container.counterAxisAlignItems = "MIN";
+            container.itemSpacing = 0;
+            container.paddingTop = 0;
+            container.paddingBottom = 0;
+            try { container.resizeWithoutConstraints(240, 3); } catch (_dividerHorizontalInitSizeErr) {}
+            if (insetOn) {
+              bindVar(container, "paddingLeft", varMap["divider/inset"]);
+              bindVar(container, "paddingRight", varMap["divider/inset"]);
+            } else {
+              container.paddingLeft = 0;
+              container.paddingRight = 0;
+            }
+            bindVar(container, "width", varMap["divider/length"]);
+          } else {
+            container.layoutMode = "HORIZONTAL";
+            container.primaryAxisSizingMode = "FIXED";
+            container.counterAxisSizingMode = "AUTO";
+            container.primaryAxisAlignItems = "MIN";
+            container.counterAxisAlignItems = "CENTER";
+            container.itemSpacing = 0;
+            container.paddingLeft = 0;
+            container.paddingRight = 0;
+            try { container.resizeWithoutConstraints(3, 240); } catch (_dividerVerticalInitSizeErr) {}
+            if (insetOn) {
+              bindVar(container, "paddingTop", varMap["divider/inset"]);
+              bindVar(container, "paddingBottom", varMap["divider/inset"]);
+            } else {
+              container.paddingTop = 0;
+              container.paddingBottom = 0;
+            }
+            bindVar(container, "height", varMap["divider/length"]);
+          }
+
+          var line = figma.createRectangle();
+          line.name = "Line";
+          line.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+          line.strokes = [];
+          line.layoutPositioning = "AUTO";
+          if (orientation === "horizontal") {
+            line.resize(240, 3);
+          } else {
+            line.resize(3, 240);
+          }
+          bindPaintVar(line, "fills", 0, dividerColorVarForState(state));
+          bindVar(line, "topLeftRadius", varMap["divider/radius"]);
+          bindVar(line, "topRightRadius", varMap["divider/radius"]);
+          bindVar(line, "bottomLeftRadius", varMap["divider/radius"]);
+          bindVar(line, "bottomRightRadius", varMap["divider/radius"]);
+          if (orientation === "horizontal") {
+            line.layoutAlign = "STRETCH";
+            bindVar(line, "height", varMap["divider/thickness-" + size]);
+          } else {
+            line.layoutAlign = "STRETCH";
+            bindVar(line, "width", varMap["divider/thickness-" + size]);
+          }
+
+          if (state === "disabled") {
+            line.opacity = 0.7;
+          }
+
+          container.appendChild(line);
+          component.appendChild(container);
+
+          var colIndex = ((oi * insetModes.length + ii) * sizes.length) + si;
+          var rowIndex = sti;
+          component.x = colIndex * (colWidth + gap);
+          component.y = rowIndex * (rowHeight + gap);
+          page.appendChild(component);
+          components.push(component);
+        }
+      }
+    }
+  }
+
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Divider";
   return componentSet;
 }
 

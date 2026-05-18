@@ -1207,6 +1207,23 @@ export const COMPONENT_TOKENS = {
     "menu-font-weight": { type: "STRING", value: "Regular", figmaPath: "menu/font-weight" },
   },
 
+  divider: {
+    // ── COLOR TOKENS ──
+    "divider-color": { type: "COLOR", semantic: "border-default", figmaPath: "divider/color" },
+    "divider-color-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "divider/color-disabled" },
+
+    // ── FLOAT TOKENS ──
+    "divider-length": { type: "FLOAT", unit: "px", value: 240, figmaPath: "divider/length" },
+    "divider-thickness": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 3, xs: 1, sm: 2, md: 3, lg: 4, xl: 6 },
+      figmaPath: "divider/thickness",
+    },
+    "divider-radius": { type: "FLOAT", unit: "px", value: 999, figmaPath: "divider/radius" },
+    "divider-inset": { type: "FLOAT", unit: "px", value: 16, figmaPath: "divider/inset" },
+  },
+
   tooltip: {
     // ── COLOR TOKENS ──
     "tooltip-background": { type: "COLOR", semantic: "surface-inverse", figmaPath: "tooltip/background" },
@@ -1834,6 +1851,7 @@ export const COMPONENT_SIZE_KEYS = {
   textinput: ["default", "xs", "sm", "md", "lg", "xl"],
   select: ["xs", "sm", "md", "lg", "xl"],
   menu: ["default", "xs", "sm", "md", "lg", "xl"],
+  divider: ["default", "xs", "sm", "md", "lg", "xl"],
   popover: ["default", "xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
   text: ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"],
