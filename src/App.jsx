@@ -68,6 +68,10 @@ import {
   PopoverPropertiesPanel,
 } from "./components/panels/PopoverPreviewPanel";
 import {
+  MenuPreviewContent,
+  MenuPropertiesPanel,
+} from "./components/panels/MenuPreviewPanel";
+import {
   LoaderPreviewContent,
   LoaderPropertiesPanel,
 } from "./components/panels/LoaderPreviewPanel";
@@ -481,6 +485,11 @@ export default function App() {
   const [activePopoverWidthSize, setActivePopoverWidthSize] = useState("default");
   const [activePopoverRadiusSize, setActivePopoverRadiusSize] = useState("default");
   const [activePopoverBody, setActivePopoverBody] = useState("Additional context and actions can live here.");
+  const [activeMenuSize, setActiveMenuSize] = useState("default");
+  const [activeMenuRadiusSize, setActiveMenuRadiusSize] = useState("default");
+  const [activeMenuState, setActiveMenuState] = useState("default");
+  const [activeMenuWithSection, setActiveMenuWithSection] = useState(true);
+  const [activeMenuWithIcons, setActiveMenuWithIcons] = useState(true);
   const [activeLoaderSize, setActiveLoaderSize] = useState("default");
   const [activeLoaderType, setActiveLoaderType] = useState("oval");
   const [activeProgressSize, setActiveProgressSize] = useState(progressHeightDefault);
@@ -835,6 +844,12 @@ export default function App() {
       setActivePopoverWidthSize("md");
       setActivePopoverRadiusSize("md");
       setActivePopoverBody("Additional context and actions can live here.");
+    } else if (newComp === "menu") {
+      setActiveMenuSize("default");
+      setActiveMenuRadiusSize("default");
+      setActiveMenuState("default");
+      setActiveMenuWithSection(true);
+      setActiveMenuWithIcons(true);
     } else if (newComp === "image") {
       setActiveImageSrc("https://picsum.photos/id/28/1200/800");
       setActiveImageAlt("Mountain landscape");
@@ -2207,6 +2222,17 @@ export default function App() {
                   body={activePopoverBody}
                 />
               )}
+              {activeComponent === "menu" && (
+                <MenuPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  size={activeMenuSize}
+                  radiusSize={activeMenuRadiusSize}
+                  state={activeMenuState}
+                  withSection={activeMenuWithSection}
+                  withIcons={activeMenuWithIcons}
+                />
+              )}
 
               {activeComponent === "notification" && (
                 <NotificationPreviewContent
@@ -2674,6 +2700,20 @@ export default function App() {
                   setRadiusSize={setActivePopoverRadiusSize}
                   body={activePopoverBody}
                   setBody={setActivePopoverBody}
+                />
+              )}
+              {activeComponent === "menu" && (
+                <MenuPropertiesPanel
+                  size={activeMenuSize}
+                  setSize={setActiveMenuSize}
+                  radiusSize={activeMenuRadiusSize}
+                  setRadiusSize={setActiveMenuRadiusSize}
+                  state={activeMenuState}
+                  setState={setActiveMenuState}
+                  withSection={activeMenuWithSection}
+                  setWithSection={setActiveMenuWithSection}
+                  withIcons={activeMenuWithIcons}
+                  setWithIcons={setActiveMenuWithIcons}
                 />
               )}
               {activeComponent === "notification" && (

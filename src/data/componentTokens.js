@@ -1128,6 +1128,85 @@ export const COMPONENT_TOKENS = {
     "popover-text-line-height": { type: "FLOAT", unit: "px", value: 18, figmaPath: "popover/text-line-height" },
   },
 
+  menu: {
+    // ── COLOR TOKENS ──
+    "menu-background": { type: "COLOR", semantic: "surface-default", figmaPath: "menu/background" },
+    "menu-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "menu/background-disabled" },
+    "menu-border": { type: "COLOR", semantic: "border-default", figmaPath: "menu/border" },
+    "menu-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "menu/border-disabled" },
+    "menu-divider": { type: "COLOR", semantic: "border-default", figmaPath: "menu/divider" },
+    "menu-divider-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "menu/divider-disabled" },
+    "menu-section-label": { type: "COLOR", semantic: "text-subtle", figmaPath: "menu/section-label" },
+    "menu-section-label-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "menu/section-label-disabled" },
+    "menu-item-background": { type: "COLOR", semantic: "transparent", figmaPath: "menu/item-background" },
+    "menu-item-background-hover": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "menu/item-background-hover" },
+    "menu-item-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "menu/item-background-disabled" },
+    "menu-item-text": { type: "COLOR", semantic: "text-default", figmaPath: "menu/item-text" },
+    "menu-item-text-hover": { type: "COLOR", semantic: "text-default", figmaPath: "menu/item-text-hover" },
+    "menu-item-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "menu/item-text-disabled" },
+    "menu-item-icon": { type: "COLOR", semantic: "text-subtle", figmaPath: "menu/item-icon" },
+    "menu-item-icon-hover": { type: "COLOR", semantic: "text-default", figmaPath: "menu/item-icon-hover" },
+    "menu-item-icon-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "menu/item-icon-disabled" },
+
+    // ── FLOAT / STRING TOKENS ──
+    "menu-width": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 220, xs: 180, sm: 200, md: 220, lg: 260, xl: 300 },
+      figmaPath: "menu/width",
+    },
+    "menu-border-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },
+      figmaPath: "menu/border-radius",
+    },
+    "menu-item-border-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 6, xs: 2, sm: 4, md: 6, lg: 10, xl: 14 },
+      figmaPath: "menu/item-border-radius",
+    },
+    // Legacy fallback: kept for backward compatibility with earlier menu builds.
+    "menu-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },
+      figmaPath: "menu/radius",
+    },
+    "menu-padding": { type: "FLOAT", unit: "px", value: 6, figmaPath: "menu/padding" },
+    "menu-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "menu/border-width" },
+    "menu-divider-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "menu/divider-width" },
+    "menu-divider-radius": { type: "FLOAT", unit: "px", value: 999, figmaPath: "menu/divider-radius" },
+    "menu-item-height": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 32, xs: 24, sm: 28, md: 32, lg: 36, xl: 40 },
+      figmaPath: "menu/item-height",
+    },
+    "menu-content-padding-x": { type: "FLOAT", unit: "px", value: 8, figmaPath: "menu/content-padding-x" },
+    "menu-content-padding-y": { type: "FLOAT", unit: "px", value: 6, figmaPath: "menu/content-padding-y" },
+    "menu-label-divider-gap": { type: "FLOAT", unit: "px", value: 4, figmaPath: "menu/label-divider-gap" },
+    "menu-item-gap": { type: "FLOAT", unit: "px", value: 2, figmaPath: "menu/item-gap" },
+    "menu-item-padding-x": { type: "FLOAT", unit: "px", value: 10, figmaPath: "menu/item-padding-x" },
+    "menu-item-padding-y": { type: "FLOAT", unit: "px", value: 6, figmaPath: "menu/item-padding-y" },
+    "menu-icon-stroke-width": { type: "FLOAT", unit: "px", value: 1.75, figmaPath: "menu/icon-stroke-width" },
+    "menu-font-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 13, xs: 11, sm: 12, md: 13, lg: 14, xl: 16 },
+      figmaPath: "menu/font-size",
+    },
+    "menu-line-height": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 20, xs: 16, sm: 18, md: 20, lg: 22, xl: 24 },
+      figmaPath: "menu/line-height",
+    },
+    "menu-font-family": { type: "STRING", value: "Inter", figmaPath: "menu/font-family" },
+    "menu-font-weight": { type: "STRING", value: "Regular", figmaPath: "menu/font-weight" },
+  },
+
   tooltip: {
     // ── COLOR TOKENS ──
     "tooltip-background": { type: "COLOR", semantic: "surface-inverse", figmaPath: "tooltip/background" },
@@ -1754,6 +1833,7 @@ export const COMPONENT_SIZE_KEYS = {
   anchor: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["default", "xs", "sm", "md", "lg", "xl"],
   select: ["xs", "sm", "md", "lg", "xl"],
+  menu: ["default", "xs", "sm", "md", "lg", "xl"],
   popover: ["default", "xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
   text: ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"],

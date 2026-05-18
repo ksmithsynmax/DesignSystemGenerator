@@ -982,7 +982,7 @@ function resolveManagedComponentKeyFromName(name) {
   if (normalized === "popup") return "popover";
   var managedKeys = [
     "button", "switch", "slider", "rangeslider", "checkbox", "radio",
-    "chip", "notification", "alert", "modal", "tooltip", "popover", "loader",
+    "chip", "notification", "alert", "modal", "tooltip", "popover", "menu", "loader",
     "progress",
     "avatar",
     "pill", "badge", "textinput", "select", "card", "actionicon",
@@ -1255,6 +1255,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var popoverSet = await buildSet("Popover", function () {
     return buildPopoverComponentSet(varMap, page, font);
   });
+  var menuSet = await buildSet("Menu", function () {
+    return buildMenuComponentSet(varMap, page, font);
+  });
   var pillSet = await buildSet("Pill", function () {
     return buildPillComponentSet(varMap, page, font);
   });
@@ -1347,6 +1350,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     modalSet,
     tooltipSet,
     popoverSet,
+    menuSet,
     pillSet,
     badgeSet,
     textInputSet,
@@ -10608,6 +10612,393 @@ function buildPopoverComponentSet(varMap, page, font) {
 
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Popover";
+  return componentSet;
+}
+
+async function findMenuIconComponents() {
+  var result = { check: null, plus: null, alert: null, fallback: null, candidates: [] };
+  var iconPages = [];
+  for (var i = 0; i < figma.root.children.length; i++) {
+    var p = figma.root.children[i];
+    if (p.type === "PAGE" && String(p.name || "").toLowerCase() === "icons") iconPages.push(p);
+  }
+  if (iconPages.length === 0) iconPages = figma.root.children.filter(function (p) { return p.type === "PAGE"; });
+
+  for (var pi = 0; pi < iconPages.length; pi++) {
+    var pageNode = iconPages[pi];
+    try { if (typeof pageNode.loadAsync === "function") await pageNode.loadAsync(); } catch (_e) {}
+    if (!pageNode || typeof pageNode.findAll !== "function") continue;
+    var nodes = [];
+    try {
+      nodes = pageNode.findAll(function (n) {
+        return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+      });
+    } catch (_scanErr) {
+      nodes = [];
+    }
+    for (var ni = 0; ni < nodes.length; ni++) {
+      var node = nodes[ni];
+      if (node.type === "COMPONENT") {
+        result.candidates.push(node);
+      } else if (node.type === "COMPONENT_SET" && node.children && node.children.length > 0) {
+        for (var ci = 0; ci < node.children.length; ci++) {
+          if (node.children[ci].type === "COMPONENT") result.candidates.push(node.children[ci]);
+        }
+      }
+    }
+  }
+
+  function pickByName(matchers) {
+    for (var i = 0; i < result.candidates.length; i++) {
+      var n = String(result.candidates[i].name || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+      for (var m = 0; m < matchers.length; m++) {
+        if (n.indexOf(matchers[m]) >= 0) return result.candidates[i];
+      }
+    }
+    return null;
+  }
+
+  result.check = pickByName(["check", "checkcircle"]);
+  result.plus = pickByName(["plus", "add"]);
+  result.alert = pickByName(["alerttriangle", "alert", "warningtriangle", "warning"]);
+  if (!result.fallback) {
+    result.fallback = result.check || result.plus || result.alert || (result.candidates.length > 0 ? result.candidates[0] : null);
+  }
+  return result;
+}
+
+// ---------------------------------------------------------------------------
+// Menu Component Set
+// ---------------------------------------------------------------------------
+
+async function buildMenuComponentSet(varMap, page, font) {
+  var states = ["default", "hover", "disabled"];
+  var sectionModes = ["on", "off"];
+  var iconModes = ["on", "off"];
+  var components = [];
+  var gap = 24;
+  var colWidth = 280;
+  var rowHeight = 210;
+  var iconComponents = await findMenuIconComponents();
+
+  function itemBgVarForState(state) {
+    if (state === "hover") return varMap["menu/item-background-hover"];
+    if (state === "disabled") return varMap["menu/item-background-disabled"];
+    return varMap["menu/item-background"];
+  }
+
+  function menuBgVarForState(state) {
+    if (state === "disabled") return varMap["menu/background-disabled"] || varMap["menu/background"];
+    return varMap["menu/background"];
+  }
+
+  function menuBorderVarForState(state) {
+    if (state === "disabled") return varMap["menu/border-disabled"] || varMap["menu/border"];
+    return varMap["menu/border"];
+  }
+
+  function menuDividerVarForState(state) {
+    if (state === "disabled") return varMap["menu/divider-disabled"] || varMap["menu/divider"];
+    return varMap["menu/divider"];
+  }
+
+  function menuSectionLabelVarForState(state) {
+    if (state === "disabled") return varMap["menu/section-label-disabled"] || varMap["menu/section-label"];
+    return varMap["menu/section-label"];
+  }
+
+  function itemTextVarForState(state) {
+    if (state === "hover") return varMap["menu/item-text-hover"];
+    if (state === "disabled") return varMap["menu/item-text-disabled"];
+    return varMap["menu/item-text"];
+  }
+
+  function itemIconVarForState(state) {
+    if (state === "hover") return varMap["menu/item-icon-hover"];
+    if (state === "disabled") return varMap["menu/item-icon-disabled"];
+    return varMap["menu/item-icon"];
+  }
+
+  function createSwapPropertyRefs(iconComp) {
+    var refs = [];
+    if (!iconComp) return refs;
+    if (iconComp.key) refs.push(iconComp.key);
+    if (iconComp.id) refs.push(iconComp.id);
+    return refs;
+  }
+
+  function createSwapPreferredValues(candidates) {
+    var preferred = [];
+    var seen = {};
+    for (var i = 0; i < candidates.length && preferred.length < 32; i++) {
+      var c = candidates[i];
+      if (!c || !c.key || seen[c.key]) continue;
+      seen[c.key] = true;
+      preferred.push({ type: "COMPONENT", key: c.key, name: c.name });
+    }
+    return preferred;
+  }
+
+  function bindMenuIconColor(iconInst, colorVar) {
+    if (!iconInst || !colorVar) return;
+    var vectors = [];
+    try { vectors = iconInst.findAll(function (n) { return n.type === "VECTOR"; }); } catch (_scanErr) {}
+    for (var vi = 0; vi < vectors.length; vi++) {
+      bindVar(vectors[vi], "strokeWeight", varMap["menu/icon-stroke-width"]);
+      if (vectors[vi].strokes && vectors[vi].strokes.length > 0) {
+        vectors[vi].strokes = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } }];
+        bindPaintVar(vectors[vi], "strokes", 0, colorVar);
+      }
+      if (vectors[vi].fills && vectors[vi].fills.length > 0) {
+        vectors[vi].fills = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } }];
+        bindPaintVar(vectors[vi], "fills", 0, colorVar);
+      }
+    }
+  }
+
+  function attachMenuItemSwap(component, itemMeta) {
+    if (!component || !itemMeta || !itemMeta.iconInst || !itemMeta.iconComp || !itemMeta.swapLabel) return;
+    if (typeof component.addComponentProperty !== "function") return;
+    var swapRefs = createSwapPropertyRefs(itemMeta.iconComp);
+    var swapPreferred = createSwapPreferredValues(iconComponents.candidates || []);
+    var swapOpts = swapPreferred.length > 0 ? { preferredValues: swapPreferred } : undefined;
+    var swapPropName = null;
+    var lastErr = null;
+    for (var sri = 0; sri < swapRefs.length; sri++) {
+      try {
+        swapPropName = component.addComponentProperty(itemMeta.swapLabel, "INSTANCE_SWAP", swapRefs[sri], swapOpts);
+        break;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    if (!swapPropName && swapRefs.length > 0) {
+      for (var srf = 0; srf < swapRefs.length; srf++) {
+        try {
+          swapPropName = component.addComponentProperty(itemMeta.swapLabel, "INSTANCE_SWAP", swapRefs[srf]);
+          break;
+        } catch (e2) {
+          lastErr = e2;
+        }
+      }
+    }
+    if (swapPropName) {
+      try {
+        itemMeta.iconInst.componentPropertyReferences = { mainComponent: swapPropName };
+      } catch (eSetRef) {
+        progress("[Menu] " + itemMeta.swapLabel + " set_componentPropertyReferences failed: " + String(eSetRef));
+      }
+    } else if (lastErr) {
+      progress("[Menu] " + itemMeta.swapLabel + " INSTANCE_SWAP create failed: " + String(lastErr));
+    }
+  }
+
+  function createMenuItem(swapLabel, label, state, iconOn, defaultIconComp) {
+    var row = figma.createFrame();
+    row.layoutMode = "HORIZONTAL";
+    row.primaryAxisSizingMode = "AUTO";
+    row.counterAxisSizingMode = "FIXED";
+    row.primaryAxisAlignItems = "MIN";
+    row.counterAxisAlignItems = "CENTER";
+    row.itemSpacing = 8;
+    row.paddingLeft = 10;
+    row.paddingRight = 10;
+    row.paddingTop = 6;
+    row.paddingBottom = 6;
+    row.resize(8, 32);
+    row.layoutAlign = "STRETCH";
+    row.cornerRadius = 6;
+    row.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+    bindPaintVar(row, "fills", 0, itemBgVarForState(state));
+    bindVar(row, "paddingLeft", varMap["menu/item-padding-x"]);
+    bindVar(row, "paddingRight", varMap["menu/item-padding-x"]);
+    bindVar(row, "paddingTop", varMap["menu/item-padding-y"]);
+    bindVar(row, "paddingBottom", varMap["menu/item-padding-y"]);
+    bindVar(row, "height", varMap["menu/item-height-default"]);
+    var menuItemRadiusVar = varMap["menu/item-border-radius-default"];
+    if (menuItemRadiusVar) {
+      bindVar(row, "topLeftRadius", menuItemRadiusVar);
+      bindVar(row, "topRightRadius", menuItemRadiusVar);
+      bindVar(row, "bottomLeftRadius", menuItemRadiusVar);
+      bindVar(row, "bottomRightRadius", menuItemRadiusVar);
+    }
+
+    var iconInstRef = null;
+    var iconCompRef = null;
+    if (iconOn) {
+      var iconComp = defaultIconComp || iconComponents.fallback;
+      if (iconComp && typeof iconComp.createInstance === "function") {
+        var iconInst = iconComp.createInstance();
+        iconInst.name = "icon";
+        iconInst.layoutPositioning = "AUTO";
+        iconInst.resize(14, 14);
+        bindMenuIconColor(iconInst, itemIconVarForState(state));
+
+        iconInstRef = iconInst;
+        iconCompRef = iconComp;
+        row.appendChild(iconInst);
+      } else {
+        var icon = figma.createRectangle();
+        icon.name = "icon";
+        icon.resize(12, 12);
+        icon.cornerRadius = 3;
+        icon.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+        bindPaintVar(icon, "fills", 0, itemIconVarForState(state));
+        row.appendChild(icon);
+      }
+    }
+
+    var textNode = figma.createText();
+    textNode.name = "label";
+    textNode.fontName = font;
+    textNode.characters = label;
+    textNode.fontSize = 13;
+    textNode.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.1 } }];
+    bindPaintVar(textNode, "fills", 0, itemTextVarForState(state));
+    bindVar(textNode, "fontSize", varMap["menu/font-size-default"]);
+    bindVar(textNode, "fontFamily", varMap["menu/font-family"]);
+    bindVar(textNode, "fontStyle", varMap["menu/font-weight"]);
+    bindVar(textNode, "lineHeight", varMap["menu/line-height-default"]);
+    row.appendChild(textNode);
+
+    return { row: row, iconInst: iconInstRef, iconComp: iconCompRef, swapLabel: swapLabel };
+  }
+
+  for (var si = 0; si < states.length; si++) {
+    for (var sci = 0; sci < sectionModes.length; sci++) {
+      for (var ii = 0; ii < iconModes.length; ii++) {
+        var state = states[si];
+        var sectionOn = sectionModes[sci] === "on";
+        var iconOn = iconModes[ii] === "on";
+
+        var component = figma.createComponent();
+        component.name =
+          "State=" + state.charAt(0).toUpperCase() + state.slice(1) +
+          ", Section=" + (sectionOn ? "On" : "Off") +
+          ", Icon=" + (iconOn ? "On" : "Off");
+        component.layoutMode = "VERTICAL";
+        component.primaryAxisSizingMode = "AUTO";
+        component.counterAxisSizingMode = "AUTO";
+        component.primaryAxisAlignItems = "MIN";
+        component.counterAxisAlignItems = "MIN";
+        component.itemSpacing = 4;
+        component.paddingLeft = 6;
+        component.paddingRight = 6;
+        component.paddingTop = 6;
+        component.paddingBottom = 6;
+        component.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+        component.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+        component.strokeAlign = "INSIDE";
+        component.cornerRadius = 8;
+
+        bindPaintVar(component, "fills", 0, menuBgVarForState(state));
+        bindPaintVar(component, "strokes", 0, menuBorderVarForState(state));
+        bindVar(component, "paddingLeft", varMap["menu/padding"]);
+        bindVar(component, "paddingRight", varMap["menu/padding"]);
+        bindVar(component, "paddingTop", varMap["menu/padding"]);
+        bindVar(component, "paddingBottom", varMap["menu/padding"]);
+        bindVar(component, "width", varMap["menu/width-default"]);
+        bindVar(component, "strokeWeight", varMap["menu/border-width"]);
+        var menuRadiusVar = varMap["menu/border-radius-default"] || varMap["menu/radius-default"];
+        if (menuRadiusVar) {
+          bindVar(component, "topLeftRadius", menuRadiusVar);
+          bindVar(component, "topRightRadius", menuRadiusVar);
+          bindVar(component, "bottomLeftRadius", menuRadiusVar);
+          bindVar(component, "bottomRightRadius", menuRadiusVar);
+        }
+
+        if (sectionOn) {
+          var sectionWrap = figma.createFrame();
+          sectionWrap.name = "section-wrap";
+          sectionWrap.layoutMode = "VERTICAL";
+          sectionWrap.primaryAxisSizingMode = "AUTO";
+          sectionWrap.counterAxisSizingMode = "AUTO";
+          sectionWrap.layoutAlign = "STRETCH";
+          sectionWrap.primaryAxisAlignItems = "MIN";
+          sectionWrap.counterAxisAlignItems = "MIN";
+          sectionWrap.itemSpacing = 0;
+          sectionWrap.paddingLeft = 8;
+          sectionWrap.paddingRight = 8;
+          sectionWrap.paddingTop = 4;
+          sectionWrap.paddingBottom = 4;
+          sectionWrap.fills = [];
+          bindVar(sectionWrap, "paddingBottom", varMap["menu/label-divider-gap"]);
+
+          var section = figma.createText();
+          section.name = "section";
+          section.fontName = font;
+          section.characters = "Actions";
+          section.fontSize = 11;
+          section.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } }];
+          bindPaintVar(section, "fills", 0, menuSectionLabelVarForState(state));
+          sectionWrap.appendChild(section);
+          component.appendChild(sectionWrap);
+
+          var divider = figma.createRectangle();
+          divider.name = "divider";
+          divider.resize(8, 1);
+          divider.cornerRadius = 999;
+          divider.layoutAlign = "STRETCH";
+          divider.fills = [{ type: "SOLID", color: { r: 0.75, g: 0.75, b: 0.75 } }];
+          bindPaintVar(divider, "fills", 0, menuDividerVarForState(state));
+          bindVar(divider, "height", varMap["menu/divider-width"]);
+          if (varMap["menu/divider-radius"]) {
+            bindVar(divider, "topLeftRadius", varMap["menu/divider-radius"]);
+            bindVar(divider, "topRightRadius", varMap["menu/divider-radius"]);
+            bindVar(divider, "bottomLeftRadius", varMap["menu/divider-radius"]);
+            bindVar(divider, "bottomRightRadius", varMap["menu/divider-radius"]);
+          }
+          component.appendChild(divider);
+        }
+
+        var isDisabledState = state === "disabled";
+        var item1State = state;
+        var item2State = isDisabledState ? "disabled" : "default";
+        var item3State = isDisabledState ? "disabled" : "default";
+
+        var itemsWrap = figma.createFrame();
+        itemsWrap.name = "items";
+        itemsWrap.layoutMode = "VERTICAL";
+        itemsWrap.primaryAxisSizingMode = "AUTO";
+        itemsWrap.counterAxisSizingMode = "AUTO";
+        itemsWrap.primaryAxisAlignItems = "MIN";
+        itemsWrap.counterAxisAlignItems = "MIN";
+        itemsWrap.layoutAlign = "STRETCH";
+        itemsWrap.itemSpacing = 2;
+        itemsWrap.paddingLeft = 8;
+        itemsWrap.paddingRight = 8;
+        itemsWrap.paddingTop = 6;
+        itemsWrap.paddingBottom = 6;
+        itemsWrap.fills = [];
+        bindVar(itemsWrap, "itemSpacing", varMap["menu/item-gap"]);
+        bindVar(itemsWrap, "paddingLeft", varMap["menu/content-padding-x"]);
+        bindVar(itemsWrap, "paddingRight", varMap["menu/content-padding-x"]);
+        bindVar(itemsWrap, "paddingTop", varMap["menu/content-padding-y"]);
+        bindVar(itemsWrap, "paddingBottom", varMap["menu/content-padding-y"]);
+        component.appendChild(itemsWrap);
+
+        var item1 = createMenuItem("Item 1 Icon", "Open details", item1State, iconOn, iconComponents.check || iconComponents.fallback);
+        itemsWrap.appendChild(item1.row);
+        attachMenuItemSwap(component, item1);
+
+        var item2 = createMenuItem("Item 2 Icon", "Duplicate", item2State, iconOn, iconComponents.plus || iconComponents.fallback);
+        itemsWrap.appendChild(item2.row);
+        attachMenuItemSwap(component, item2);
+
+        var item3 = createMenuItem("Item 3 Icon", "Archive", item3State, iconOn, iconComponents.alert || iconComponents.fallback);
+        itemsWrap.appendChild(item3.row);
+        attachMenuItemSwap(component, item3);
+
+        component.x = ii * (colWidth + gap) + sci * ((iconModes.length * (colWidth + gap)) + gap);
+        component.y = si * (rowHeight + gap);
+        page.appendChild(component);
+        components.push(component);
+      }
+    }
+  }
+
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Menu";
   return componentSet;
 }
 
