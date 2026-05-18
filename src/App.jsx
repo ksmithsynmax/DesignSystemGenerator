@@ -422,6 +422,7 @@ export default function App() {
   const [activeTabsRadius, setActiveTabsRadius] = useState(tabsDefault);
   const [activeTabsOrientation, setActiveTabsOrientation] = useState("horizontal");
   const [activeTabsShowPanel, setActiveTabsShowPanel] = useState(false);
+  const [activeTabsShowMenu, setActiveTabsShowMenu] = useState(false);
   const [activeTabsShowLeftIcon, setActiveTabsShowLeftIcon] = useState(false);
   const [activeTabsShowRightIcon, setActiveTabsShowRightIcon] = useState(false);
   const [activeTabsState, setActiveTabsState] = useState("default");
@@ -676,6 +677,7 @@ export default function App() {
       setActiveTabsRadius(tabsDefault);
       setActiveTabsOrientation("horizontal");
       setActiveTabsShowPanel(false);
+      setActiveTabsShowMenu(false);
       setActiveTabsShowLeftIcon(false);
       setActiveTabsShowRightIcon(false);
       setActiveTabsState("default");
@@ -2036,6 +2038,7 @@ export default function App() {
                   selectedState={forcedState || activeTabsState}
                   activeColorToken={activeColorToken}
                   showPanel={activeTabsShowPanel}
+                  showMenu={activeTabsShowMenu}
                   showLeftIcon={activeTabsShowLeftIcon}
                   showRightIcon={activeTabsShowRightIcon}
                 />
@@ -2473,6 +2476,8 @@ export default function App() {
                   setActiveTabsOrientation={setActiveTabsOrientation}
                   showPanel={activeTabsShowPanel}
                   setShowPanel={setActiveTabsShowPanel}
+                  showMenu={activeTabsShowMenu}
+                  setShowMenu={setActiveTabsShowMenu}
                   showLeftIcon={activeTabsShowLeftIcon}
                   setShowLeftIcon={setActiveTabsShowLeftIcon}
                   showRightIcon={activeTabsShowRightIcon}

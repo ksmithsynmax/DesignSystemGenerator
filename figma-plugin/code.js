@@ -13429,6 +13429,12 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
   var rowHeights = [];
 
   var iconComponents = await findTabsIconComponents();
+  var tabsMenuTemplate = findTabsMenuTemplateComponent(page);
+  var menuIconComponents = null;
+  if (!tabsMenuTemplate) {
+    menuIconComponents = await findMenuIconComponents();
+    progress("[Tabs] Warning: Menu component template not found; using inline menu fallback.");
+  }
   if (!iconComponents.image) progress("[Tabs] Warning: Image icon component not found on icons page");
   if (!iconComponents.message) progress("[Tabs] Warning: Message icon component not found on icons page");
   if (!iconComponents.settings) progress("[Tabs] Warning: Settings icon component not found on icons page");
@@ -13501,7 +13507,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               comp.layoutMode = "VERTICAL";
               comp.primaryAxisSizingMode = "AUTO";
               comp.counterAxisSizingMode = "AUTO";
-              comp.itemSpacing = 0;
+              comp.itemSpacing = effectiveShowMenu ? 6 : 0;
               comp.fills = [];
               comp.clipsContent = false;
               try { comp.layoutSizingHorizontal = "HUG"; } catch (_tabsCompHugWidthErr) {}
@@ -13906,6 +13912,37 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
               }
 
               comp.appendChild(rootNode);
+              if (effectiveShowMenu && orientation === "horizontal") {
+                var menuDropdown = createTabsMenuDropdown({
+                  page: page,
+                  varMap: varMap,
+                  font: font,
+                  state: state,
+                  templateComponent: tabsMenuTemplate,
+                  iconComponents: menuIconComponents,
+                });
+                if (menuDropdown) {
+                  var menuWrap = figma.createFrame();
+                  menuWrap.name = "MenuAnchor";
+                  menuWrap.layoutMode = "HORIZONTAL";
+                  menuWrap.primaryAxisSizingMode = "FIXED";
+                  menuWrap.counterAxisSizingMode = "AUTO";
+                  menuWrap.primaryAxisAlignItems = "MAX";
+                  menuWrap.counterAxisAlignItems = "MIN";
+                  menuWrap.itemSpacing = 0;
+                  menuWrap.fills = [];
+                  menuWrap.strokes = [];
+                  menuWrap.layoutPositioning = "AUTO";
+                  menuWrap.clipsContent = false;
+                  var menuAnchorWidth = Math.max(1, Math.ceil(nodeRenderedWidth(rootNode)));
+                  var menuAnchorHeight = Math.max(1, Math.ceil(nodeRenderedHeight(menuDropdown)));
+                  try { menuWrap.resizeWithoutConstraints(menuAnchorWidth, menuAnchorHeight); } catch (_tabsMenuWrapResizeErr) {}
+                  try { menuWrap.layoutSizingHorizontal = "FIXED"; } catch (_tabsMenuWrapFixedWidthErr) {}
+                  try { menuWrap.layoutSizingVertical = "HUG"; } catch (_tabsMenuWrapHugErr) {}
+                  menuWrap.appendChild(menuDropdown);
+                  comp.appendChild(menuWrap);
+                }
+              }
 
               page.appendChild(comp);
               var colIndex =
@@ -13953,6 +13990,273 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Tabs";
   return componentSet;
+}
+
+function findTabsMenuTemplateComponent(page) {
+  if (!page || typeof page.findOne !== "function") return null;
+  var menuSet = null;
+  try {
+    menuSet = page.findOne(function (n) {
+      return n && n.type === "COMPONENT_SET" && String(n.name || "").toLowerCase() === "menu";
+    });
+  } catch (_tabsMenuSetFindErr) {
+    menuSet = null;
+  }
+  if (!menuSet || !menuSet.children || !menuSet.children.length) return null;
+
+  var firstComp = null;
+  var defaultComp = null;
+  for (var i = 0; i < menuSet.children.length; i++) {
+    var child = menuSet.children[i];
+    if (!child || child.type !== "COMPONENT") continue;
+    if (!firstComp) firstComp = child;
+    var lowerName = String(child.name || "").toLowerCase();
+    var hasDefaultState = lowerName.indexOf("state=default") >= 0;
+    var hasSectionOn = lowerName.indexOf("section=on") >= 0;
+    var hasIconOn = lowerName.indexOf("icon=on") >= 0;
+    if (hasDefaultState && hasSectionOn && hasIconOn) return child;
+    if (!defaultComp && hasDefaultState) defaultComp = child;
+  }
+  return defaultComp || firstComp;
+}
+
+function setInstancePropertyByBaseName(instance, baseName, value) {
+  if (!instance || typeof instance.setProperties !== "function") return;
+  var meta = instance.componentProperties || {};
+  var keys = Object.keys(meta);
+  var targetKey = null;
+  for (var i = 0; i < keys.length; i++) {
+    var base = String(keys[i] || "").split("#")[0];
+    if (base.toLowerCase() === String(baseName || "").toLowerCase()) {
+      targetKey = keys[i];
+      break;
+    }
+  }
+  if (!targetKey) return;
+  var patch = {};
+  patch[targetKey] = value;
+  try { instance.setProperties(patch); } catch (_tabsSetInstPropErr) {}
+}
+
+function createTabsMenuDropdown(options) {
+  var varMap = (options && options.varMap) || {};
+  var font = (options && options.font) || { family: "Inter", style: "Regular" };
+  var state = (options && options.state) || "default";
+  var templateComponent = options && options.templateComponent;
+  var iconComponents = (options && options.iconComponents) || {};
+
+  var effectiveMenuState = state === "disabled" ? "Disabled" : "Default";
+
+  if (templateComponent && templateComponent.type === "COMPONENT") {
+    var inst = null;
+    try {
+      inst = templateComponent.createInstance();
+      inst.name = "Menu";
+      inst.layoutPositioning = "AUTO";
+      setInstancePropertyByBaseName(inst, "State", effectiveMenuState);
+      setInstancePropertyByBaseName(inst, "Section", "On");
+      setInstancePropertyByBaseName(inst, "Icon", "On");
+      return inst;
+    } catch (_tabsMenuTemplateErr) {
+      inst = null;
+    }
+  }
+
+  var menu = figma.createFrame();
+  menu.name = "Menu";
+  menu.layoutMode = "VERTICAL";
+  menu.primaryAxisSizingMode = "AUTO";
+  menu.counterAxisSizingMode = "AUTO";
+  menu.primaryAxisAlignItems = "MIN";
+  menu.counterAxisAlignItems = "MIN";
+  menu.itemSpacing = 4;
+  menu.layoutPositioning = "AUTO";
+  menu.clipsContent = false;
+  menu.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+  menu.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
+  menu.strokeAlign = "INSIDE";
+  menu.paddingLeft = 8;
+  menu.paddingRight = 8;
+  menu.paddingTop = 8;
+  menu.paddingBottom = 8;
+  try { menu.layoutSizingHorizontal = "HUG"; } catch (_tabsMenuHugWidthErr) {}
+  try { menu.layoutSizingVertical = "HUG"; } catch (_tabsMenuHugHeightErr) {}
+
+  var menuBgVar = effectiveMenuState === "Disabled"
+    ? (varMap["menu/background-disabled"] || varMap["menu/background"])
+    : varMap["menu/background"];
+  var menuBorderVar = effectiveMenuState === "Disabled"
+    ? (varMap["menu/border-disabled"] || varMap["menu/border"])
+    : varMap["menu/border"];
+  var menuDividerVar = effectiveMenuState === "Disabled"
+    ? (varMap["menu/divider-disabled"] || varMap["menu/divider"])
+    : varMap["menu/divider"];
+  var menuSectionVar = effectiveMenuState === "Disabled"
+    ? (varMap["menu/section-label-disabled"] || varMap["menu/section-label"])
+    : varMap["menu/section-label"];
+  bindPaintVar(menu, "fills", 0, menuBgVar);
+  bindPaintVar(menu, "strokes", 0, menuBorderVar);
+  bindVar(menu, "paddingLeft", varMap["menu/padding"]);
+  bindVar(menu, "paddingRight", varMap["menu/padding"]);
+  bindVar(menu, "paddingTop", varMap["menu/padding"]);
+  bindVar(menu, "paddingBottom", varMap["menu/padding"]);
+  bindVar(menu, "width", varMap["menu/width-default"]);
+  bindVar(menu, "strokeWeight", varMap["menu/border-width"]);
+  var menuRadiusVar = varMap["menu/border-radius-default"] || varMap["menu/radius-default"];
+  if (menuRadiusVar) {
+    bindVar(menu, "topLeftRadius", menuRadiusVar);
+    bindVar(menu, "topRightRadius", menuRadiusVar);
+    bindVar(menu, "bottomLeftRadius", menuRadiusVar);
+    bindVar(menu, "bottomRightRadius", menuRadiusVar);
+  }
+
+  var sectionWrap = figma.createFrame();
+  sectionWrap.name = "section-wrap";
+  sectionWrap.layoutMode = "VERTICAL";
+  sectionWrap.primaryAxisSizingMode = "AUTO";
+  sectionWrap.counterAxisSizingMode = "AUTO";
+  sectionWrap.primaryAxisAlignItems = "MIN";
+  sectionWrap.counterAxisAlignItems = "MIN";
+  sectionWrap.paddingLeft = 8;
+  sectionWrap.paddingRight = 8;
+  sectionWrap.paddingTop = 4;
+  sectionWrap.paddingBottom = 4;
+  sectionWrap.fills = [];
+  sectionWrap.strokes = [];
+  try { sectionWrap.layoutSizingHorizontal = "FILL"; } catch (_tabsMenuSectionFillErr) {}
+  try { sectionWrap.layoutSizingVertical = "HUG"; } catch (_tabsMenuSectionHugErr) {}
+  bindVar(sectionWrap, "paddingBottom", varMap["menu/label-divider-gap"]);
+
+  var section = figma.createText();
+  section.name = "Section";
+  section.fontName = { family: "Inter", style: "Semi Bold" };
+  section.characters = "Actions";
+  section.fontSize = 11;
+  section.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+  bindPaintVar(section, "fills", 0, menuSectionVar);
+  sectionWrap.appendChild(section);
+  menu.appendChild(sectionWrap);
+
+  var divider = figma.createRectangle();
+  divider.name = "divider";
+  divider.resize(10, 1);
+  divider.layoutAlign = "STRETCH";
+  divider.fills = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
+  divider.strokes = [];
+  bindPaintVar(divider, "fills", 0, menuDividerVar);
+  bindVar(divider, "height", varMap["menu/divider-width"]);
+  if (varMap["menu/divider-radius"]) {
+    bindVar(divider, "topLeftRadius", varMap["menu/divider-radius"]);
+    bindVar(divider, "topRightRadius", varMap["menu/divider-radius"]);
+    bindVar(divider, "bottomLeftRadius", varMap["menu/divider-radius"]);
+    bindVar(divider, "bottomRightRadius", varMap["menu/divider-radius"]);
+  }
+  menu.appendChild(divider);
+
+  var items = figma.createFrame();
+  items.name = "items";
+  items.layoutMode = "VERTICAL";
+  items.primaryAxisSizingMode = "AUTO";
+  items.counterAxisSizingMode = "AUTO";
+  items.primaryAxisAlignItems = "MIN";
+  items.counterAxisAlignItems = "MIN";
+  items.itemSpacing = 2;
+  items.fills = [];
+  items.strokes = [];
+  items.clipsContent = false;
+  try { items.layoutSizingHorizontal = "FILL"; } catch (_tabsMenuItemsFillErr) {}
+  try { items.layoutSizingVertical = "HUG"; } catch (_tabsMenuItemsHugErr) {}
+  bindVar(items, "itemSpacing", varMap["menu/item-gap"]);
+  bindVar(items, "paddingLeft", varMap["menu/content-padding-x"]);
+  bindVar(items, "paddingRight", varMap["menu/content-padding-x"]);
+  bindVar(items, "paddingTop", varMap["menu/content-padding-y"]);
+  bindVar(items, "paddingBottom", varMap["menu/content-padding-y"]);
+
+  var rowState = effectiveMenuState === "Disabled" ? "disabled" : "default";
+  var rowBgVar = rowState === "disabled"
+    ? varMap["menu/item-background-disabled"]
+    : varMap["menu/item-background"];
+  var rowTextVar = rowState === "disabled"
+    ? varMap["menu/item-text-disabled"]
+    : varMap["menu/item-text"];
+  var rowIconVar = rowState === "disabled"
+    ? varMap["menu/item-icon-disabled"]
+    : varMap["menu/item-icon"];
+  var itemRadiusVar = varMap["menu/item-border-radius-default"];
+  var iconList = [iconComponents.check, iconComponents.plus, iconComponents.alert];
+  var labels = ["Open details", "Duplicate", "Archive"];
+
+  for (var ri = 0; ri < labels.length; ri++) {
+    var row = figma.createFrame();
+    row.name = "Frame";
+    row.layoutMode = "HORIZONTAL";
+    row.primaryAxisSizingMode = "AUTO";
+    row.counterAxisSizingMode = "AUTO";
+    row.primaryAxisAlignItems = "MIN";
+    row.counterAxisAlignItems = "CENTER";
+    row.layoutAlign = "STRETCH";
+    row.itemSpacing = 8;
+    row.paddingLeft = 10;
+    row.paddingRight = 10;
+    row.paddingTop = 6;
+    row.paddingBottom = 6;
+    row.fills = [{ type: "SOLID", color: { r: 0, g: 0, b: 0, a: 0 } }];
+    row.strokes = [];
+    row.clipsContent = true;
+    bindPaintVar(row, "fills", 0, rowBgVar);
+    bindVar(row, "paddingLeft", varMap["menu/item-padding-x"]);
+    bindVar(row, "paddingRight", varMap["menu/item-padding-x"]);
+    bindVar(row, "paddingTop", varMap["menu/item-padding-y"]);
+    bindVar(row, "paddingBottom", varMap["menu/item-padding-y"]);
+    bindVar(row, "height", varMap["menu/item-height-default"]);
+    if (itemRadiusVar) {
+      bindVar(row, "topLeftRadius", itemRadiusVar);
+      bindVar(row, "topRightRadius", itemRadiusVar);
+      bindVar(row, "bottomLeftRadius", itemRadiusVar);
+      bindVar(row, "bottomRightRadius", itemRadiusVar);
+    }
+    try { row.layoutSizingHorizontal = "FILL"; } catch (_tabsMenuRowFillErr) {}
+    try { row.layoutSizingVertical = "HUG"; } catch (_tabsMenuRowHugErr) {}
+
+    var iconComp = iconList[ri] || iconComponents.fallback || null;
+    if (iconComp) {
+      var iconInst = iconComp.createInstance();
+      iconInst.name = "icon";
+      iconInst.layoutPositioning = "AUTO";
+      try { iconInst.resize(14, 14); } catch (_tabsMenuIconResizeErr) {}
+      var vectors = iconInst.findAll(function (n) { return n.type === "VECTOR"; });
+      for (var vi = 0; vi < vectors.length; vi++) {
+        bindVar(vectors[vi], "strokeWeight", varMap["menu/icon-stroke-width"]);
+        if (vectors[vi].strokes && vectors[vi].strokes.length > 0) {
+          vectors[vi].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          bindPaintVar(vectors[vi], "strokes", 0, rowIconVar);
+        }
+        if (vectors[vi].fills && vectors[vi].fills.length > 0) {
+          vectors[vi].fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+          bindPaintVar(vectors[vi], "fills", 0, rowIconVar);
+        }
+      }
+      row.appendChild(iconInst);
+    }
+
+    var label = figma.createText();
+    label.name = "Label";
+    label.fontName = font;
+    label.characters = labels[ri];
+    label.fontSize = 13;
+    label.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+    bindVar(label, "fontSize", varMap["menu/font-size-default"]);
+    bindVar(label, "fontFamily", varMap["menu/font-family"]);
+    bindVar(label, "fontStyle", varMap["menu/font-weight"]);
+    bindVar(label, "lineHeight", varMap["menu/line-height-default"]);
+    bindPaintVar(label, "fills", 0, rowTextVar);
+    row.appendChild(label);
+
+    items.appendChild(row);
+  }
+
+  menu.appendChild(items);
+  return menu;
 }
 
 async function buildTabsItemComponentSet(varMap, page, font, selectedVariants) {

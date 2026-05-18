@@ -89,6 +89,7 @@ export function TabsPreviewContent({
   selectedState,
   activeColorToken,
   showPanel,
+  showMenu,
   showLeftIcon,
   showRightIcon,
 }) {
@@ -108,6 +109,7 @@ export function TabsPreviewContent({
           orientation={activeTabsOrientation}
           state={selectedState === "default" ? undefined : selectedState}
           showPanel={showPanel}
+          showMenu={showMenu}
           showLeftIcon={showLeftIcon}
           showRightIcon={showRightIcon}
           interactive={false}
@@ -127,6 +129,7 @@ export function TabsPreviewContent({
             radius={activeTabsRadius}
             orientation={orientation}
             showPanel={showPanel}
+            showMenu={showMenu}
             showLeftIcon={showLeftIcon}
             showRightIcon={showRightIcon}
             interactive={false}
@@ -146,6 +149,8 @@ export function TabsPropertiesPanel({
   setActiveTabsOrientation,
   showPanel,
   setShowPanel,
+  showMenu,
+  setShowMenu,
   showLeftIcon,
   setShowLeftIcon,
   showRightIcon,
@@ -188,6 +193,12 @@ export function TabsPropertiesPanel({
         options={["off", "on"]}
       />
       <PropertyRow
+        label="Menu"
+        value={showMenu ? "on" : "off"}
+        onChange={(v) => setShowMenu(v === "on")}
+        options={["off", "on"]}
+      />
+      <PropertyRow
         label="Left Icon"
         value={showLeftIcon ? "on" : "off"}
         onChange={(v) => setShowLeftIcon(v === "on")}
@@ -223,17 +234,22 @@ export default function TabsPreviewPanel({
   activeColorToken,
   showPanel,
   setShowPanel,
+  showMenu,
+  setShowMenu,
   showLeftIcon,
   setShowLeftIcon,
   showRightIcon,
   setShowRightIcon,
 }) {
   const [internalShowPanel, setInternalShowPanel] = useState(false);
+  const [internalShowMenu, setInternalShowMenu] = useState(false);
   const [internalShowLeftIcon, setInternalShowLeftIcon] = useState(false);
   const [internalShowRightIcon, setInternalShowRightIcon] = useState(false);
   const [internalState, setInternalState] = useState("default");
   const resolvedShowPanel = typeof showPanel === "boolean" ? showPanel : internalShowPanel;
   const resolvedSetShowPanel = setShowPanel || setInternalShowPanel;
+  const resolvedShowMenu = typeof showMenu === "boolean" ? showMenu : internalShowMenu;
+  const resolvedSetShowMenu = setShowMenu || setInternalShowMenu;
   const resolvedShowLeftIcon = typeof showLeftIcon === "boolean" ? showLeftIcon : internalShowLeftIcon;
   const resolvedSetShowLeftIcon = setShowLeftIcon || setInternalShowLeftIcon;
   const resolvedShowRightIcon = typeof showRightIcon === "boolean" ? showRightIcon : internalShowRightIcon;
@@ -251,6 +267,8 @@ export default function TabsPreviewPanel({
         setActiveTabsOrientation={setActiveTabsOrientation}
         showPanel={resolvedShowPanel}
         setShowPanel={resolvedSetShowPanel}
+        showMenu={resolvedShowMenu}
+        setShowMenu={resolvedSetShowMenu}
         showLeftIcon={resolvedShowLeftIcon}
         setShowLeftIcon={resolvedSetShowLeftIcon}
         showRightIcon={resolvedShowRightIcon}
@@ -269,6 +287,7 @@ export default function TabsPreviewPanel({
           selectedState={resolvedState}
           activeColorToken={activeColorToken}
           showPanel={resolvedShowPanel}
+          showMenu={resolvedShowMenu}
           showLeftIcon={resolvedShowLeftIcon}
           showRightIcon={resolvedShowRightIcon}
         />
