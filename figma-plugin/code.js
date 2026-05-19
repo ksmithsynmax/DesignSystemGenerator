@@ -982,7 +982,7 @@ function resolveManagedComponentKeyFromName(name) {
   if (normalized === "popup") return "popover";
   var managedKeys = [
     "button", "switch", "slider", "rangeslider", "checkbox", "radio",
-    "chip", "notification", "alert", "modal", "tooltip", "popover", "menu", "divider", "loader",
+    "chip", "notification", "alert", "modal", "tooltip", "popover", "menu", "divider", "list", "loader",
     "progress",
     "avatar",
     "pill", "badge", "textinput", "select", "card", "actionicon",
@@ -1261,6 +1261,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var dividerSet = await buildSet("Divider", function () {
     return buildDividerComponentSet(varMap, page);
   });
+  var listSet = await buildSet("List", function () {
+    return buildListComponentSet(varMap, page, font);
+  });
   var pillSet = await buildSet("Pill", function () {
     return buildPillComponentSet(varMap, page, font);
   });
@@ -1355,6 +1358,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     popoverSet,
     menuSet,
     dividerSet,
+    listSet,
     pillSet,
     badgeSet,
     textInputSet,
@@ -2320,9 +2324,77 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     }
   }
 
+  function renderListDocsRows(target, labels, createInstanceForLabel) {
+    clearChildren(target);
+    target.layoutMode = "VERTICAL";
+    target.primaryAxisSizingMode = "AUTO";
+    target.counterAxisSizingMode = "AUTO";
+    target.counterAxisAlignItems = "CENTER";
+    target.layoutAlign = "STRETCH";
+    target.itemSpacing = 16;
+    target.clipsContent = false;
+    target.fills = target.fills || [];
+    target.strokes = target.strokes || [];
+    try { target.layoutSizingHorizontal = "FILL"; } catch (_listTargetFillErr) {}
+
+    for (var i = 0; i < labels.length; i++) {
+      var label = labels[i];
+      var row = figma.createFrame();
+      row.name = "list-doc-row";
+      row.layoutMode = "VERTICAL";
+      row.primaryAxisSizingMode = "AUTO";
+      row.counterAxisSizingMode = "AUTO";
+      row.counterAxisAlignItems = "CENTER";
+      row.layoutAlign = "STRETCH";
+      row.itemSpacing = 8;
+      row.fills = [];
+      row.strokes = [];
+      row.clipsContent = false;
+
+      if (label != null && String(label).trim().length > 0) {
+        var labelNode = appendText(row, bodyFont, String(label), 10, DOC_COLORS.cellLabel, "Cell Label");
+        try { labelNode.textAlignHorizontal = "CENTER"; } catch (_listLabelAlignErr) {}
+      }
+
+      var inst = null;
+      try {
+        inst = createInstanceForLabel(label);
+      } catch (_listInstanceErr) {
+        inst = null;
+      }
+      if (inst) {
+        var host = figma.createFrame();
+        host.name = "list-doc-host";
+        host.layoutMode = "HORIZONTAL";
+        host.primaryAxisSizingMode = "AUTO";
+        host.counterAxisSizingMode = "AUTO";
+        host.primaryAxisAlignItems = "CENTER";
+        host.counterAxisAlignItems = "CENTER";
+        host.layoutAlign = "STRETCH";
+        host.paddingLeft = 0;
+        host.paddingRight = 0;
+        host.paddingTop = 0;
+        host.paddingBottom = 0;
+        host.itemSpacing = 0;
+        host.fills = [];
+        host.strokes = [];
+        host.clipsContent = false;
+        try { host.layoutSizingHorizontal = "FILL"; } catch (_listHostFillErr) {}
+        host.appendChild(inst);
+        row.appendChild(host);
+      }
+
+      target.appendChild(row);
+    }
+  }
+
   function getVariantDescription(componentName, variantName) {
     var comp = String(componentName || "").toLowerCase();
     var variant = String(variantName || "").toLowerCase();
+    if (comp === "list") {
+      if (variant === "unordered") return "Use for casual item lists with bullet markers or visual emphasis via icons.";
+      if (variant === "ordered") return "Use when sequence matters and list item order should be communicated clearly.";
+    }
     if (comp === "button") {
       if (variant === "filled") return "Serves as the primary button and CTA, representing the most important action to move forward in the flow.";
       if (variant === "outlined") return "Provides a medium level of emphasis, guiding user to take action on functions and features.";
@@ -2472,6 +2544,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateLeftSlot = getTemplateSlot(templatedDoc, slug, "icons-left");
       var templateRightSlot = getTemplateSlot(templatedDoc, slug, "icons-right");
       var templateBothSlot = getTemplateSlot(templatedDoc, slug, "icons-both");
+      var templateListIconsSlot = getTemplateSlot(templatedDoc, slug, "icons");
       var templateOverflowDefaultSlot = null;
       var templateOverflowOutlinedSlot = null;
       if (hasIcons && !templateBothSlot) {
@@ -2519,6 +2592,16 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateLeftArrowKey = getPropKey(variantProps, "LeftArrow");
       var templateRightArrowKey = getPropKey(variantProps, "RightArrow");
       var templateMenuKey = getPropKey(variantProps, "Menu");
+      var templateIconModeKey = getPropKey(variantProps, "Icon");
+      if (lowerSetName === "list" && templateIconModeKey && !templateListIconsSlot) {
+        templatedDoc.appendChild(createSectionHeader("With Icons", "Preview list content with and without icon markers.", DOC_COLORS.subtitle));
+        var templateListIconsBlock = createStack("list-icons-block", 8);
+        appendText(templateListIconsBlock, titleFont, "With Icons", 18, DOC_COLORS.panelHeading, "List Icons Heading", "title");
+        templateListIconsSlot = createPanel("slot:" + slug + ":icons", 10);
+        templateListIconsSlot.resize(1192, templateListIconsSlot.height);
+        templateListIconsBlock.appendChild(templateListIconsSlot);
+        templatedDoc.appendChild(templateListIconsBlock);
+      }
 
       var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Oval", "Bars", "Dots"];
       var templateVariantLimit = lowerSetName === "tablebody"
@@ -2602,6 +2685,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateLeftArrowValues = templateLeftArrowKey ? getPropValues(variantProps, templateLeftArrowKey) : [];
       var templateRightArrowValues = templateRightArrowKey ? getPropValues(variantProps, templateRightArrowKey) : [];
       var templateMenuValues = templateMenuKey ? getPropValues(variantProps, templateMenuKey) : [];
+      var templateIconModeValues = templateIconModeKey ? getPropValues(variantProps, templateIconModeKey) : [];
       var templateSectionValues = templateSectionKey ? getPropValues(variantProps, templateSectionKey) : [];
       var templateCheckedValues = templateCheckedKey ? getPropValues(variantProps, templateCheckedKey) : [];
       var templateLeftOn = templateLeftValues.indexOf("On") >= 0 ? "On" : (templateLeftValues.indexOf("True") >= 0 ? "True" : (templateLeftValues[0] || null));
@@ -2614,6 +2698,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateRightArrowOff = templateRightArrowValues.indexOf("Off") >= 0 ? "Off" : (templateRightArrowValues.indexOf("False") >= 0 ? "False" : (templateRightArrowValues[0] || null));
       var templateMenuOn = templateMenuValues.indexOf("On") >= 0 ? "On" : (templateMenuValues.indexOf("True") >= 0 ? "True" : (templateMenuValues[0] || null));
       var templateMenuOff = templateMenuValues.indexOf("Off") >= 0 ? "Off" : (templateMenuValues.indexOf("False") >= 0 ? "False" : (templateMenuValues[0] || null));
+      var templateIconModeOn = templateIconModeValues.indexOf("On") >= 0
+        ? "On"
+        : (templateIconModeValues.indexOf("True") >= 0 ? "True" : (templateIconModeValues[0] || null));
+      var templateIconModeOff = templateIconModeValues.indexOf("Off") >= 0
+        ? "Off"
+        : (templateIconModeValues.indexOf("False") >= 0 ? "False" : (templateIconModeValues[0] || null));
       var templateSectionOff = templateSectionValues.indexOf("Off") >= 0
         ? "Off"
         : (templateSectionValues.indexOf("False") >= 0 ? "False" : (templateSectionValues[0] || null));
@@ -2654,6 +2744,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (templateLeftArrowKey && templateLeftArrowOff != null) props[templateLeftArrowKey] = templateLeftArrowOff;
           if (templateRightArrowKey && templateRightArrowOff != null) props[templateRightArrowKey] = templateRightArrowOff;
           if (templateMenuKey && templateMenuOff != null) props[templateMenuKey] = templateMenuOff;
+          if (lowerSetName === "list" && templateIconModeKey && templateIconModeOff != null) {
+            props[templateIconModeKey] = templateIconModeOff;
+          }
           var patchKeys = Object.keys(propPatch || {});
           for (var p = 0; p < patchKeys.length; p++) {
             var userKey = patchKeys[p];
@@ -2848,9 +2941,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                     ? { itemsPerRow: 3 }
                     : (lowerSetName === "tabs"
                         ? { itemsPerRow: 2, rowItemSpacing: 20 }
-                        : (normalizedSetName === "accordionitem"
+                        : (lowerSetName === "list"
                             ? { itemsPerRow: 1, rowItemSpacing: 12 }
-                            : null))
+                            : (normalizedSetName === "accordionitem"
+                                ? { itemsPerRow: 1, rowItemSpacing: 12 }
+                                : null)))
                 );
               }
               templateVariantSection.appendChild(templateVariantStatesPanel);
@@ -2964,6 +3059,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             }, true, { font: mediumFont, size: 14 });
           } else if (lowerSetName === "divider") {
             renderDividerDocsRows(templateSizeSlot, templateOrderedSizes, function (sizeName) {
+              return makeTemplateInstance({ Size: sizeName });
+            });
+          } else if (lowerSetName === "list") {
+            renderListDocsRows(templateSizeSlot, templateOrderedSizes, function (sizeName) {
               return makeTemplateInstance({ Size: sizeName });
             });
           } else {
@@ -3201,6 +3300,28 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         } else if (!hasIcons) {
           removeSectionOrSlot(templatedDoc, slug, "icons-right");
         }
+
+        if (lowerSetName === "list" && templateListIconsSlot && templateIconModeKey) {
+          clearChildren(templateListIconsSlot);
+          var templateListIconLabels = [];
+          if (templateIconModeOff != null) templateListIconLabels.push("Without icons");
+          if (templateIconModeOn != null) templateListIconLabels.push("With icons");
+          addInstancesRow(
+            templateListIconsSlot,
+            "Icon mode",
+            templateListIconLabels,
+            function (iconLabel) {
+              var patch = {};
+              patch.Icon = String(iconLabel).toLowerCase().indexOf("without") >= 0 ? templateIconModeOff : templateIconModeOn;
+              return makeTemplateInstance(patch);
+            },
+            false,
+            { itemsPerRow: 2, rowItemSpacing: 24 }
+          );
+        } else if (lowerSetName === "list") {
+          removeSectionOrSlot(templatedDoc, slug, "icons");
+        }
+
 
         if (lowerSetName === "tabs" && (templateOverflowDefaultSlot || templateOverflowOutlinedSlot)) {
           if (templateOverflowDefaultSlot) clearChildren(templateOverflowDefaultSlot);
@@ -3702,6 +3823,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var leftSlot = null;
     var rightSlot = null;
     var bothSlot = null;
+    var listIconsSlot = null;
     var overflowDefaultSlot = null;
     var overflowOutlinedSlot = null;
     if (hasIcons) {
@@ -3765,6 +3887,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var leftArrowKey = getPropKey(variantProps, "LeftArrow");
       var rightArrowKey = getPropKey(variantProps, "RightArrow");
       var menuKey = getPropKey(variantProps, "Menu");
+      var iconModeKey = getPropKey(variantProps, "Icon");
       var orientationKey = getPropKey(variantProps, "Orientation");
       var insetKey = getPropKey(variantProps, "Inset");
       var colorKey = getPropKey(variantProps, "Color");
@@ -3850,6 +3973,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var leftArrowValues = leftArrowKey ? getPropValues(variantProps, leftArrowKey) : [];
       var rightArrowValues = rightArrowKey ? getPropValues(variantProps, rightArrowKey) : [];
       var menuValues = menuKey ? getPropValues(variantProps, menuKey) : [];
+      var iconModeValues = iconModeKey ? getPropValues(variantProps, iconModeKey) : [];
       var orientationValues = orientationKey ? getPropValues(variantProps, orientationKey) : [];
       var insetValues = insetKey ? getPropValues(variantProps, insetKey) : [];
       var sectionValues = sectionKey ? getPropValues(variantProps, sectionKey) : [];
@@ -3864,6 +3988,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var rightArrowOff = rightArrowValues.indexOf("Off") >= 0 ? "Off" : (rightArrowValues.indexOf("False") >= 0 ? "False" : (rightArrowValues[0] || null));
       var menuOn = menuValues.indexOf("On") >= 0 ? "On" : (menuValues.indexOf("True") >= 0 ? "True" : (menuValues[0] || null));
       var menuOff = menuValues.indexOf("Off") >= 0 ? "Off" : (menuValues.indexOf("False") >= 0 ? "False" : (menuValues[0] || null));
+      var iconModeOn = iconModeValues.indexOf("On") >= 0
+        ? "On"
+        : (iconModeValues.indexOf("True") >= 0 ? "True" : (iconModeValues[0] || null));
+      var iconModeOff = iconModeValues.indexOf("Off") >= 0
+        ? "Off"
+        : (iconModeValues.indexOf("False") >= 0 ? "False" : (iconModeValues[0] || null));
       var orientationHorizontal = orientationValues.indexOf("Horizontal") >= 0 ? "Horizontal" : (orientationValues[0] || null);
       var insetOn = insetValues.indexOf("On") >= 0 ? "On" : (insetValues.indexOf("True") >= 0 ? "True" : (insetValues[0] || null));
       var insetOff = insetValues.indexOf("Off") >= 0 ? "Off" : (insetValues.indexOf("False") >= 0 ? "False" : (insetValues[0] || null));
@@ -3889,6 +4019,15 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var checkedIndeterminate = checkedValues.indexOf("Indeterminate") >= 0
         ? "Indeterminate"
         : null;
+      if (lowerSetName === "list" && iconModeKey) {
+        doc.appendChild(createSectionHeader("With Icons", "Preview list content with and without icon markers.", DOC_COLORS.panelBody));
+        var listIconsBlock = createStack("list-icons-block", 8);
+        appendText(listIconsBlock, titleFont, "With Icons", 18, DOC_COLORS.panelHeading, "List Icons Heading", "title");
+        listIconsSlot = createPanel("slot:" + slug + ":icons", 10);
+        listIconsSlot.resize(1192, listIconsSlot.height);
+        listIconsBlock.appendChild(listIconsSlot);
+        doc.appendChild(listIconsBlock);
+      }
 
       function makeInstance(propPatch) {
         var inst = baseComponent.createInstance();
@@ -3905,6 +4044,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         if (leftArrowKey && leftArrowOff != null) props[leftArrowKey] = leftArrowOff;
         if (rightArrowKey && rightArrowOff != null) props[rightArrowKey] = rightArrowOff;
         if (menuKey && menuOff != null) props[menuKey] = menuOff;
+        if (lowerSetName === "list" && iconModeKey && iconModeOff != null) {
+          props[iconModeKey] = iconModeOff;
+        }
         if (lowerSetName === "divider") {
           if (orientationKey && orientationHorizontal != null) props[orientationKey] = orientationHorizontal;
           if (insetKey && insetOn != null) props[insetKey] = insetOn;
@@ -4102,9 +4244,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                     ? { itemsPerRow: 3 }
                     : (lowerSetName === "tabs"
                         ? { itemsPerRow: 2, rowItemSpacing: 20 }
-                        : (normalizedSetName === "accordionitem"
+                        : (lowerSetName === "list"
                             ? { itemsPerRow: 1, rowItemSpacing: 12 }
-                            : null))
+                            : (normalizedSetName === "accordionitem"
+                                ? { itemsPerRow: 1, rowItemSpacing: 12 }
+                                : null)))
               );
             }
             variantSection.appendChild(variantStatesPanel);
@@ -4215,6 +4359,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           renderDividerDocsRows(sizeSlot, orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName });
           });
+        } else if (lowerSetName === "list") {
+          renderListDocsRows(sizeSlot, orderedSizes, function (sizeName) {
+            return makeInstance({ Size: sizeName });
+          });
         } else {
           addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName });
@@ -4246,6 +4394,25 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           return makeInstance(patch);
         }, false);
       }
+      if (lowerSetName === "list" && listIconsSlot && iconModeKey) {
+        clearChildren(listIconsSlot);
+        var listIconLabels = [];
+        if (iconModeOff != null) listIconLabels.push("Without icons");
+        if (iconModeOn != null) listIconLabels.push("With icons");
+        addInstancesRow(
+          listIconsSlot,
+          "Icon mode",
+          listIconLabels,
+          function (iconLabel) {
+            var patch = {};
+            patch.Icon = String(iconLabel).toLowerCase().indexOf("without") >= 0 ? iconModeOff : iconModeOn;
+            return makeInstance(patch);
+          },
+          false,
+          { itemsPerRow: 2, rowItemSpacing: 24 }
+        );
+      }
+
 
       if (lowerSetName === "tabs" && (overflowDefaultSlot || overflowOutlinedSlot)) {
         if (overflowDefaultSlot) clearChildren(overflowDefaultSlot);
@@ -11272,6 +11439,186 @@ function buildDividerComponentSet(varMap, page) {
 
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Divider";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
+// List Component Set
+// ---------------------------------------------------------------------------
+
+async function buildListComponentSet(varMap, page, font) {
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var types = ["unordered", "ordered"];
+  var iconModes = ["on", "off"];
+  var paddingModes = ["off", "on"];
+  var components = [];
+  var gap = 20;
+  var colWidth = 320;
+  var rowHeight = 140;
+  var iconComponents = await findMenuIconComponents();
+
+  function bindListIconColor(iconInst, colorVar, strokeVar) {
+    if (!iconInst) return;
+    var vectors = [];
+    try { vectors = iconInst.findAll(function (n) { return n.type === "VECTOR"; }); } catch (_scanErr) {}
+    for (var vi = 0; vi < vectors.length; vi++) {
+      if (strokeVar) bindVar(vectors[vi], "strokeWeight", strokeVar);
+      if (vectors[vi].strokes && vectors[vi].strokes.length > 0) {
+        vectors[vi].strokes = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } }];
+        bindPaintVar(vectors[vi], "strokes", 0, colorVar);
+      }
+      if (vectors[vi].fills && vectors[vi].fills.length > 0) {
+        vectors[vi].fills = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } }];
+        bindPaintVar(vectors[vi], "fills", 0, colorVar);
+      }
+    }
+  }
+
+  function createListItem(label, iconOn, iconComp, size, markerText) {
+    var row = figma.createFrame();
+    row.layoutMode = "HORIZONTAL";
+    row.primaryAxisSizingMode = "AUTO";
+    row.counterAxisSizingMode = "FIXED";
+    row.primaryAxisAlignItems = "MIN";
+    row.counterAxisAlignItems = "CENTER";
+    row.itemSpacing = 8;
+    row.resize(8, 24);
+    row.layoutAlign = "STRETCH";
+    row.fills = [];
+
+    if (iconOn) {
+      var itemIconComp = iconComp || iconComponents.fallback;
+      if (itemIconComp && typeof itemIconComp.createInstance === "function") {
+        var iconInst = itemIconComp.createInstance();
+        iconInst.name = "icon";
+        iconInst.layoutPositioning = "AUTO";
+        iconInst.resize(14, 14);
+        bindVar(iconInst, "width", varMap["list/icon-size-" + size]);
+        bindVar(iconInst, "height", varMap["list/icon-size-" + size]);
+        bindListIconColor(
+          iconInst,
+          varMap["list/icon-color"],
+          varMap["list/icon-stroke-width-" + size]
+        );
+        row.appendChild(iconInst);
+      } else {
+        var iconFallback = figma.createRectangle();
+        iconFallback.name = "icon";
+        iconFallback.resize(12, 12);
+        iconFallback.cornerRadius = 3;
+        iconFallback.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+        bindPaintVar(iconFallback, "fills", 0, varMap["list/icon-color"]);
+        row.appendChild(iconFallback);
+      }
+    } else {
+      var marker = figma.createText();
+      marker.name = "marker";
+      marker.fontName = font;
+      marker.characters = markerText;
+      marker.fontSize = 13;
+      marker.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } }];
+      bindPaintVar(marker, "fills", 0, varMap["list/marker-color"]);
+      bindVar(marker, "fontSize", varMap["list/font-size-" + size]);
+      bindVar(marker, "fontFamily", varMap["list/font-family"]);
+      bindVar(marker, "fontStyle", varMap["list/font-weight"]);
+      bindVar(marker, "lineHeight", varMap["list/line-height-" + size]);
+      row.appendChild(marker);
+    }
+
+    var textNode = figma.createText();
+    textNode.name = "label";
+    textNode.fontName = font;
+    textNode.characters = label;
+    textNode.fontSize = 13;
+    textNode.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.1 } }];
+    bindPaintVar(textNode, "fills", 0, varMap["list/item-color"]);
+    bindVar(textNode, "fontSize", varMap["list/font-size-" + size]);
+    bindVar(textNode, "fontFamily", varMap["list/font-family"]);
+    bindVar(textNode, "fontStyle", varMap["list/font-weight"]);
+    bindVar(textNode, "lineHeight", varMap["list/line-height-" + size]);
+    row.appendChild(textNode);
+
+    return row;
+  }
+
+  for (var si = 0; si < sizes.length; si++) {
+    var size = sizes[si];
+    var capSize = size === "default" ? "Default" : size.toUpperCase();
+    for (var ti = 0; ti < types.length; ti++) {
+      var type = types[ti];
+      var capType = type === "unordered" ? "Unordered" : "Ordered";
+      for (var ii = 0; ii < iconModes.length; ii++) {
+        var iconMode = iconModes[ii];
+        var iconOn = iconMode === "on";
+        var capIcon = iconOn ? "On" : "Off";
+        for (var pi = 0; pi < paddingModes.length; pi++) {
+          var paddingMode = paddingModes[pi];
+          var withPadding = paddingMode === "on";
+          var capPadding = withPadding ? "On" : "Off";
+
+          var component = figma.createComponent();
+          component.name =
+            "Size=" + capSize +
+            ", Type=" + capType +
+            ", Icon=" + capIcon +
+            ", Padding=" + capPadding;
+          component.layoutMode = "VERTICAL";
+          component.primaryAxisSizingMode = "AUTO";
+          component.counterAxisSizingMode = "AUTO";
+          component.primaryAxisAlignItems = "MIN";
+          component.counterAxisAlignItems = "MIN";
+          component.itemSpacing = 4;
+          component.fills = [];
+          component.strokes = [];
+          bindVar(component, "itemSpacing", varMap["list/spacing-" + size]);
+
+          if (withPadding) {
+            bindVar(component, "paddingLeft", varMap["list/item-padding-left-" + size]);
+          } else {
+            component.paddingLeft = 0;
+          }
+
+          component.appendChild(
+            createListItem(
+              "Clone or download repository from GitHub",
+              iconOn,
+              iconComponents.check || iconComponents.fallback,
+              size,
+              type === "ordered" ? "1." : "\u2022"
+            )
+          );
+          component.appendChild(
+            createListItem(
+              "Install dependencies with yarn",
+              iconOn,
+              iconComponents.plus || iconComponents.fallback,
+              size,
+              type === "ordered" ? "2." : "\u2022"
+            )
+          );
+          component.appendChild(
+            createListItem(
+              "Run tests before opening your pull request",
+              iconOn,
+              iconComponents.alert || iconComponents.fallback,
+              size,
+              type === "ordered" ? "3." : "\u2022"
+            )
+          );
+
+          var colIndex = pi + ii * paddingModes.length + ti * (iconModes.length * paddingModes.length);
+          var rowIndex = si;
+          component.x = colIndex * (colWidth + gap);
+          component.y = rowIndex * (rowHeight + gap);
+          page.appendChild(component);
+          components.push(component);
+        }
+      }
+    }
+  }
+
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "List";
   return componentSet;
 }
 

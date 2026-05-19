@@ -17,6 +17,7 @@ const BUILDABLE_COMPONENTS = [
   "popover",
   "menu",
   "divider",
+  "list",
   "loader",
   "progress",
   "pill",
@@ -42,6 +43,7 @@ const COMPONENT_LABELS = {
   popover: "Popover",
   menu: "Menu",
   divider: "Divider",
+  list: "List",
 };
 
 export default function FigmaSyncButton({ brands, syncBuildOptions }) {

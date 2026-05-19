@@ -76,6 +76,10 @@ import {
   DividerPropertiesPanel,
 } from "./components/panels/DividerPreviewPanel";
 import {
+  ListPreviewContent,
+  ListPropertiesPanel,
+} from "./components/panels/ListPreviewPanel";
+import {
   LoaderPreviewContent,
   LoaderPropertiesPanel,
 } from "./components/panels/LoaderPreviewPanel";
@@ -293,8 +297,6 @@ export default function App() {
     textinput: "TextInput",
     rangeslider: "RangeSlider",
     multiselect: "MultiSelect",
-    "accordion-item": "Accordion Item",
-    "accordion-content": "Accordion Content",
   };
   const getComponentLabel = (name) =>
     COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
@@ -430,8 +432,6 @@ export default function App() {
   const [activeTabsShowLeftIcon, setActiveTabsShowLeftIcon] = useState(false);
   const [activeTabsShowRightIcon, setActiveTabsShowRightIcon] = useState(false);
   const [activeTabsState, setActiveTabsState] = useState("default");
-  const [accordionNavExpanded, setAccordionNavExpanded] = useState(true);
-  const [activeAccordionNavItem, setActiveAccordionNavItem] = useState("accordion");
   const [activeAccordionVariant, setActiveAccordionVariant] = useState("default");
   const [activeAccordionPosition, setActiveAccordionPosition] = useState("single");
   const [activeAccordionState, setActiveAccordionState] = useState("default");
@@ -499,6 +499,10 @@ export default function App() {
   const [activeDividerOrientation, setActiveDividerOrientation] = useState("horizontal");
   const [activeDividerState, setActiveDividerState] = useState("default");
   const [activeDividerInset, setActiveDividerInset] = useState(true);
+  const [activeListSize, setActiveListSize] = useState("default");
+  const [activeListType, setActiveListType] = useState("unordered");
+  const [activeListWithIcons, setActiveListWithIcons] = useState(true);
+  const [activeListWithPadding, setActiveListWithPadding] = useState(false);
   const [activeLoaderSize, setActiveLoaderSize] = useState("default");
   const [activeLoaderType, setActiveLoaderType] = useState("oval");
   const [activeProgressSize, setActiveProgressSize] = useState(progressHeightDefault);
@@ -865,6 +869,11 @@ export default function App() {
       setActiveDividerOrientation("horizontal");
       setActiveDividerState("default");
       setActiveDividerInset(true);
+    } else if (newComp === "list") {
+      setActiveListSize("default");
+      setActiveListType("unordered");
+      setActiveListWithIcons(true);
+      setActiveListWithPadding(false);
     } else if (newComp === "image") {
       setActiveImageSrc("https://picsum.photos/id/28/1200/800");
       setActiveImageAlt("Mountain landscape");
@@ -877,17 +886,6 @@ export default function App() {
       setActiveTableShowRowHover(true);
     }
   }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
-
-  const handleAccordionNavSelect = useCallback((item) => {
-    setAccordionNavExpanded(true);
-    setActiveAccordionNavItem(item);
-    if (activeComponent !== "accordion") {
-      handleComponentChange("accordion");
-      return;
-    }
-    setActiveColorToken(null);
-    setActiveDimensionToken(null);
-  }, [activeComponent, handleComponentChange]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -1627,6 +1625,7 @@ export default function App() {
     card: activeCardSize,
     loader: activeLoaderSize,
     divider: activeDividerSize,
+    list: activeListSize,
     progress: activeProgressSize,
     avatar: activeAvatarSize,
     pill: activePillSize,
@@ -2260,6 +2259,16 @@ export default function App() {
                   inset={activeDividerInset}
                 />
               )}
+              {activeComponent === "list" && (
+                <ListPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  size={activeListSize}
+                  type={activeListType}
+                  withIcons={activeListWithIcons}
+                  withPadding={activeListWithPadding}
+                />
+              )}
 
               {activeComponent === "notification" && (
                 <NotificationPreviewContent
@@ -2757,6 +2766,18 @@ export default function App() {
                   setInset={setActiveDividerInset}
                 />
               )}
+              {activeComponent === "list" && (
+                <ListPropertiesPanel
+                  size={activeListSize}
+                  setSize={setActiveListSize}
+                  type={activeListType}
+                  setType={setActiveListType}
+                  withIcons={activeListWithIcons}
+                  setWithIcons={setActiveListWithIcons}
+                  withPadding={activeListWithPadding}
+                  setWithPadding={setActiveListWithPadding}
+                />
+              )}
               {activeComponent === "notification" && (
                 <NotificationPropertiesPanel
                   radius={activeNotificationRadius}
@@ -2984,73 +3005,7 @@ export default function App() {
             </div>
             <div>
               {COMPONENT_NAMES.map((name) => {
-                if (name === "accordion") {
-                  const isGroupActive = activeComponent === "accordion";
-                  const accordionItems = ["accordion", "accordion-item", "accordion-content"];
-                  return (
-                    <div key="accordion-group" style={{ marginBottom: 4 }}>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setAccordionNavExpanded((prev) => !prev);
-                          if (activeComponent !== "accordion") {
-                            handleAccordionNavSelect("accordion");
-                          }
-                        }}
-                        style={{
-                          display: "block",
-                          width: "100%",
-                          textAlign: "left",
-                          background: isGroupActive ? "#25262B" : "transparent",
-                          border: "none",
-                          borderRadius: 6,
-                          padding: "8px 12px",
-                          boxSizing: "border-box",
-                          fontSize: 13,
-                          fontWeight: isGroupActive ? 600 : 400,
-                          color: isGroupActive ? "#E9ECEF" : "#909296",
-                          cursor: "pointer",
-                          marginBottom: 2,
-                        }}
-                      >
-                        <span style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                          <span>{getComponentLabel("accordion")}</span>
-                          <span style={{ fontSize: 11, color: "#868E96" }}>{accordionNavExpanded ? "▾" : "▸"}</span>
-                        </span>
-                      </button>
-                      {accordionNavExpanded && (
-                        <div style={{ display: "grid", gap: 2, paddingLeft: 10 }}>
-                          {accordionItems.map((item) => {
-                            const isSelected = activeComponent === "accordion" && activeAccordionNavItem === item;
-                            return (
-                              <button
-                                key={item}
-                                type="button"
-                                onClick={() => handleAccordionNavSelect(item)}
-                                style={{
-                                  display: "block",
-                                  width: "100%",
-                                  textAlign: "left",
-                                  background: isSelected ? "#2C2E33" : "transparent",
-                                  border: "none",
-                                  borderRadius: 6,
-                                  padding: "7px 12px",
-                                  boxSizing: "border-box",
-                                  fontSize: 12,
-                                  fontWeight: isSelected ? 600 : 400,
-                                  color: isSelected ? "#E9ECEF" : "#909296",
-                                  cursor: "pointer",
-                                }}
-                              >
-                                {item === "accordion" ? "Accordion (Full)" : getComponentLabel(item)}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                }
+                if (name === "accordion-item" || name === "accordion-content") return null;
                 return (
                   <button
                     key={name}

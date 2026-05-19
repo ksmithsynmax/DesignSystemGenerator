@@ -380,14 +380,17 @@ export const STORYBOOK_BRANDS = {
       "loader-size-default": "md",
       "loader-stroke-width-default": "md",
       "loader-oval-corner-radius-default": "md",
+      "chip-padding-x-default": "sm",
+      "chip-padding-y-default": "sm",
+      "chip-checked-padding-x-default": "sm",
+      "chip-checked-padding-y-default": "sm",
       "progress-height-default": "md",
       "progress-radius-default": "md",
       "avatar-size-default": "md",
       "avatar-radius-default": "md",
-      "chip-padding-x-default": "sm",
-      "chip-padding-y-default": "sm",
-      "chip-checked-padding-x-default": "sm",
-      "chip-checked-padding-y-default": "sm"
+      "tabs-default-radius-default": "sm",
+      "tabs-outlined-radius-default": "sm",
+      "tabs-pills-radius-default": "sm"
     },
     "dimensionOverrides": {
       "button-focus-ring-radius": {
@@ -450,8 +453,8 @@ export const STORYBOOK_BRANDS = {
       },
       "actionicon-icon-stroke-width": {
         "xs": 1.5,
-        "sm": 1,
-        "md": 2
+        "sm": 1.5,
+        "md": 1.75
       },
       "actionicon-focus-ring-width": {
         "xs": 1,
@@ -479,7 +482,7 @@ export const STORYBOOK_BRANDS = {
         "_value": 0
       },
       "tabs-panel-padding": {
-        "_value": 0
+        "_value": 12
       },
       "tabs-font-weight": {
         "_value": "Medium"
@@ -494,16 +497,16 @@ export const STORYBOOK_BRANDS = {
         "_value": 8
       },
       "tabs-pills-list-gap": {
-        "_value": 0
+        "_value": 8
       },
       "tabs-pills-radius-default": {
         "_value": 0
       },
       "tabs-default-list-gap": {
-        "_value": 4
+        "_value": 0
       },
       "tabs-icon-stroke-width": {
-        "_value": 1.5
+        "_value": 1
       },
       "tabs-pills-list-padding": {
         "_value": 0
@@ -536,7 +539,7 @@ export const STORYBOOK_BRANDS = {
         "xl": 8
       },
       "badge-padding-x": {
-        "xs": 4,
+        "xs": 12,
         "default": 8,
         "md": 8,
         "sm": 6
@@ -554,11 +557,11 @@ export const STORYBOOK_BRANDS = {
         "lg": 6
       },
       "badge-font-size": {
-        "xs": 8,
+        "xs": 10,
         "sm": 10
       },
       "badge-line-height": {
-        "xs": 8
+        "xs": 12
       },
       "pill-gap": {
         "md": 3,
@@ -777,13 +780,169 @@ export const STORYBOOK_BRANDS = {
       },
       "notification-padding-y": {
         "_value": 12
+      },
+      "notification-icon-stroke-width": {
+        "_value": 1.5
+      },
+      "table-header-icon-gap": {
+        "_value": 6
+      },
+      "table-header-icon-stroke-width": {
+        "_value": 1.5
+      },
+      "table-radius": {
+        "default": 0
+      },
+      "avatar-font-weight": {
+        "_value": "Medium"
+      },
+      "select-padding-x": {
+        "sm": 2,
+        "default": 12
+      },
+      "select-font-weight": {
+        "sm": "Regular",
+        "default": "Semi Bold"
+      },
+      "select-font-family": {
+        "sm": "Inter",
+        "xs": "Roboto Mono"
+      },
+      "select-section-size": {
+        "default": 31
+      },
+      "select-font-size": {
+        "default": 12,
+        "xs": 12
+      },
+      "select-height": {
+        "default": 32,
+        "xs": 33,
+        "sm": 63
+      },
+      "select-width-compact": {
+        "default": 115
+      },
+      "select-filled-height": {
+        "default": 32,
+        "xs": 28,
+        "sm": 32,
+        "md": 36,
+        "lg": 40,
+        "xl": 48
+      },
+      "select-filled-padding-x": {
+        "default": 8,
+        "xs": 8
+      },
+      "select-default-height": {
+        "default": 24
+      },
+      "select-default-width-compact": {
+        "default": 128,
+        "xl": 148,
+        "sm": 110,
+        "xs": 94,
+        "md": 120,
+        "lg": 136
+      },
+      "select-default-font-size": {
+        "default": 12
+      },
+      "select-filled-font-size": {
+        "xl": 18,
+        "lg": 16,
+        "md": 14,
+        "sm": 12,
+        "xs": 10,
+        "default": 12
+      },
+      "select-filled-line-height": {
+        "sm": 16,
+        "default": 16
+      },
+      "select-default-padding-x": {
+        "default": 0,
+        "xs": 0,
+        "sm": 0,
+        "md": 0,
+        "lg": 0,
+        "xl": 0
+      },
+      "tabs-outlined-radius": {
+        "xs": 2,
+        "md": 6,
+        "lg": 8,
+        "sm": 0,
+        "default": 0
+      },
+      "tabs-pills-radius": {
+        "default": 4,
+        "xs": 2,
+        "sm": 4,
+        "md": 6,
+        "lg": 8,
+        "xl": 32
+      },
+      "tabs-outlined-list-gap": {
+        "_value": 0
+      },
+      "tabs-outlined-tab-border-width-active": {
+        "_value": 1
+      },
+      "tabs-default-radius": {
+        "xs": 0
+      },
+      "popover-radius": {
+        "default": 4
+      },
+      "popover-text-font-size": {
+        "_value": 12
+      },
+      "popover-text-line-height": {
+        "_value": 16
+      },
+      "popover-padding-x": {
+        "_value": 8
+      },
+      "popover-padding-y": {
+        "_value": 8
+      },
+      "menu-padding": {
+        "_value": 8
+      },
+      "menu-border-radius": {
+        "default": 6
+      },
+      "menu-item-border-radius": {
+        "default": 4
+      },
+      "menu-content-padding-y": {
+        "_value": 0
+      },
+      "menu-content-padding-x": {
+        "_value": 0
+      },
+      "menu-icon-stroke-width": {
+        "_value": 1.5
+      },
+      "divider-inset": {
+        "_value": 4
+      },
+      "divider-thickness": {
+        "default": 0.5,
+        "sm": 1,
+        "xs": 0.5,
+        "md": 1.5,
+        "lg": 2,
+        "xl": 2.5
       }
     },
     "componentOverridesDark": {
       "button-focus-ring": {
-        "color": "transparent",
-        "index": 0,
-        "opacity": 0
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
       },
       "button-filled-background-disabled": {
         "color": "slate-gray",
@@ -1040,9 +1199,9 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "tabs-outlined-tab-background": {
-        "color": "transparent",
-        "index": 0,
-        "opacity": 0
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
       },
       "tabs-outlined-tab-border": {
         "color": "steel",
@@ -1060,8 +1219,8 @@ export const STORYBOOK_BRANDS = {
         "opacity": 0
       },
       "tabs-pills-tab-border-active": {
-        "color": "steel",
-        "index": 7,
+        "color": "blue",
+        "index": 5,
         "opacity": 100
       },
       "button-transparent-background-hover": {
@@ -1153,9 +1312,9 @@ export const STORYBOOK_BRANDS = {
         "opacity": 0
       },
       "tabs-outlined-tab-background-active": {
-        "color": "blue",
-        "index": 5,
-        "opacity": 11
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
       },
       "tabs-focus-ring": {
         "color": "blue",
@@ -1167,9 +1326,9 @@ export const STORYBOOK_BRANDS = {
         "opacity": 0
       },
       "tabs-pills-tab-background": {
-        "color": "steel",
-        "index": 8,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "tabs-pills-tab-border": {
         "color": "steel",
@@ -1177,9 +1336,9 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "tabs-pills-tab-background-active": {
-        "color": "steel",
-        "index": 9,
-        "opacity": 100
+        "color": "blue",
+        "index": 5,
+        "opacity": 10
       },
       "modal-border": {
         "color": "steel",
@@ -1774,14 +1933,14 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "tabs-outlined-tab-background-hover": {
-        "color": "neutral",
-        "index": 5,
-        "opacity": 10
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
       },
       "tabs-outlined-tab-border-hover": {
-        "color": "neutral",
+        "color": "transparent",
         "index": 0,
-        "opacity": 100
+        "opacity": 0
       },
       "tabs-outlined-tab-text-hover": {
         "color": "neutral",
@@ -1805,23 +1964,23 @@ export const STORYBOOK_BRANDS = {
       },
       "tabs-default-tab-text-disabled": {
         "color": "slate-gray",
-        "index": 7,
+        "index": 5,
         "opacity": 100
       },
       "tabs-default-tab-border-disabled": {
         "color": "slate-gray",
-        "index": 7,
+        "index": 5,
         "opacity": 100
       },
       "tabs-pills-tab-border-hover": {
-        "color": "steel",
-        "index": 7,
+        "color": "neutral",
+        "index": 0,
         "opacity": 100
       },
       "tabs-pills-tab-background-hover": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
+        "color": "neutral",
+        "index": 0,
+        "opacity": 10
       },
       "tabs-pills-tab-text-hover": {
         "color": "neutral",
@@ -2132,14 +2291,14 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "select-default-background": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-dropdown-background": {
         "color": "navy",
@@ -2195,38 +2354,39 @@ export const STORYBOOK_BRANDS = {
         "opacity": 10
       },
       "select-default-background-hover": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-border-hover": {
-        "color": "blue",
-        "index": 5,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-background-focus": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-border-focus": {
-        "color": "blue",
-        "index": 5
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-background-error": {
-        "color": "red",
-        "index": 5,
-        "opacity": 10
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-background-disabled": {
-        "color": "slate-gray",
-        "index": 3,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-border-disabled": {
-        "color": "slate-gray",
-        "index": 7,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-text-disabled": {
         "color": "slate-gray",
@@ -2274,8 +2434,9 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "select-placeholder": {
-        "color": "neutral",
-        "index": 0
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
       },
       "card-default-background": {
         "color": "steel",
@@ -3346,6 +3507,237 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0,
         "opacity": 100
+      },
+      "avatar-background": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "avatar-border": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "table-background": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "table-header-background": {
+        "color": "steel",
+        "index": 9
+      },
+      "table-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "table-row-hover": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "progress-track": {
+        "color": "steel",
+        "index": 7
+      },
+      "popover-background": {
+        "color": "neutral",
+        "index": 9,
+        "opacity": 100
+      },
+      "popover-border": {
+        "color": "neutral",
+        "index": 9,
+        "opacity": 100
+      },
+      "popover-arrow": {
+        "color": "neutral",
+        "index": 9,
+        "opacity": 100
+      },
+      "select-default-dropdown-background": {
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
+      },
+      "select-default-dropdown-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "select-filled-dropdown-background": {
+        "color": "navy",
+        "index": 9,
+        "opacity": 100
+      },
+      "select-filled-option-hover-background": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "select-default-option-selected-background": {
+        "color": "steel",
+        "index": 8
+      },
+      "select-filled-dropdown-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "select-default-border-error": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "select-text": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "select-text-hover": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-default-text-hover": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-default-icon-hover": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-default-text-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "select-default-icon-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "select-default-text-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-default-icon-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-default-label-color-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-filled-option-selected-background": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "tabs-default-background": {
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
+      },
+      "tabs-default-background-active": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "tabs-outlined-tab-border-active": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "popover-body": {
+        "color": "neutral",
+        "index": 0
+      },
+      "popover-text": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "menu-background": {
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
+      },
+      "menu-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-divider": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-item-background-hover": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "menu-item-background-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "menu-item-text-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-item-icon": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "menu-item-icon-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-section-label": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "menu-background-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "menu-divider-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-section-label-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-border-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "divider-color": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "divider-color-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
       }
     },
     "componentOverrides": {
@@ -3425,9 +3817,9 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "button-focus-ring": {
-        "color": "transparent",
-        "index": 0,
-        "opacity": 0
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
       },
       "button-filled-background-pressed": {
         "color": "blue",
@@ -3746,9 +4138,9 @@ export const STORYBOOK_BRANDS = {
         "opacity": 0
       },
       "tabs-outlined-tab-background": {
-        "color": "transparent",
-        "index": 0,
-        "opacity": 0
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
       },
       "tabs-outlined-tab-border": {
         "color": "steel",
@@ -3760,9 +4152,9 @@ export const STORYBOOK_BRANDS = {
         "index": 5
       },
       "tabs-outlined-tab-background-active": {
-        "color": "blue",
-        "index": 5,
-        "opacity": 10
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
       },
       "tabs-pills-list-background": {
         "color": "transparent",
@@ -3775,9 +4167,9 @@ export const STORYBOOK_BRANDS = {
         "opacity": 0
       },
       "tabs-pills-tab-background": {
-        "color": "steel",
-        "index": 8,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "tabs-pills-tab-border": {
         "color": "steel",
@@ -3785,13 +4177,13 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "tabs-pills-tab-background-active": {
-        "color": "steel",
-        "index": 9,
-        "opacity": 100
+        "color": "blue",
+        "index": 5,
+        "opacity": 10
       },
       "tabs-pills-tab-border-active": {
-        "color": "steel",
-        "index": 7,
+        "color": "blue",
+        "index": 5,
         "opacity": 100
       },
       "notification-title": {
@@ -4509,14 +4901,14 @@ export const STORYBOOK_BRANDS = {
         "index": 5
       },
       "tabs-outlined-tab-background-hover": {
-        "color": "neutral",
-        "index": 5,
-        "opacity": 10
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
       },
       "tabs-outlined-tab-border-hover": {
-        "color": "neutral",
+        "color": "transparent",
         "index": 0,
-        "opacity": 100
+        "opacity": 0
       },
       "tabs-outlined-tab-text-hover": {
         "color": "neutral",
@@ -4540,23 +4932,23 @@ export const STORYBOOK_BRANDS = {
       },
       "tabs-default-tab-text-disabled": {
         "color": "slate-gray",
-        "index": 7,
+        "index": 5,
         "opacity": 100
       },
       "tabs-default-tab-border-disabled": {
         "color": "slate-gray",
-        "index": 7,
+        "index": 5,
         "opacity": 100
       },
       "tabs-pills-tab-border-hover": {
-        "color": "steel",
-        "index": 7,
+        "color": "neutral",
+        "index": 0,
         "opacity": 100
       },
       "tabs-pills-tab-background-hover": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
+        "color": "neutral",
+        "index": 0,
+        "opacity": 10
       },
       "tabs-pills-tab-text-hover": {
         "color": "neutral",
@@ -4876,14 +5268,14 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "select-default-background": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-dropdown-background": {
         "color": "navy",
@@ -4939,38 +5331,39 @@ export const STORYBOOK_BRANDS = {
         "opacity": 10
       },
       "select-default-background-hover": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-border-hover": {
-        "color": "blue",
-        "index": 5,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-background-focus": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-border-focus": {
-        "color": "blue",
-        "index": 5
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-background-error": {
-        "color": "red",
-        "index": 5,
-        "opacity": 10
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-background-disabled": {
-        "color": "slate-gray",
-        "index": 3,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-default-border-disabled": {
-        "color": "slate-gray",
-        "index": 7,
-        "opacity": 100
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
       },
       "select-text-disabled": {
         "color": "slate-gray",
@@ -5018,8 +5411,9 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "select-placeholder": {
-        "color": "neutral",
-        "index": 0
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
       },
       "card-dark-title": {
         "color": "neutral",
@@ -5985,6 +6379,237 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0,
         "opacity": 100
+      },
+      "avatar-background": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "avatar-border": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "table-background": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "table-header-background": {
+        "color": "steel",
+        "index": 9
+      },
+      "table-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "table-row-hover": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "progress-track": {
+        "color": "steel",
+        "index": 7
+      },
+      "popover-background": {
+        "color": "neutral",
+        "index": 9,
+        "opacity": 100
+      },
+      "popover-border": {
+        "color": "neutral",
+        "index": 9,
+        "opacity": 100
+      },
+      "popover-arrow": {
+        "color": "neutral",
+        "index": 9,
+        "opacity": 100
+      },
+      "select-default-dropdown-background": {
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
+      },
+      "select-default-dropdown-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "select-filled-dropdown-background": {
+        "color": "navy",
+        "index": 9,
+        "opacity": 100
+      },
+      "select-filled-option-hover-background": {
+        "color": "blue",
+        "index": 6,
+        "opacity": 100
+      },
+      "select-default-option-selected-background": {
+        "color": "steel",
+        "index": 8
+      },
+      "select-filled-dropdown-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "select-default-border-error": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "select-text": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "select-text-hover": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-default-text-hover": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-default-icon-hover": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-default-text-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "select-default-icon-pressed": {
+        "color": "blue",
+        "index": 4,
+        "opacity": 100
+      },
+      "select-default-text-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-default-icon-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-default-label-color-disabled": {
+        "color": "slate-gray",
+        "index": 5,
+        "opacity": 100
+      },
+      "select-filled-option-selected-background": {
+        "color": "blue",
+        "index": 5,
+        "opacity": 100
+      },
+      "tabs-default-background": {
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
+      },
+      "tabs-default-background-active": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "tabs-outlined-tab-border-active": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "popover-body": {
+        "color": "neutral",
+        "index": 0
+      },
+      "popover-text": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "menu-background": {
+        "color": "steel",
+        "index": 9,
+        "opacity": 100
+      },
+      "menu-border": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-divider": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-item-background-hover": {
+        "color": "steel",
+        "index": 8,
+        "opacity": 100
+      },
+      "menu-item-background-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "menu-item-text-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-item-icon": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "menu-item-icon-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-section-label": {
+        "color": "neutral",
+        "index": 0,
+        "opacity": 100
+      },
+      "menu-background-disabled": {
+        "color": "slate-gray",
+        "index": 3,
+        "opacity": 100
+      },
+      "menu-divider-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-section-label-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "menu-border-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "divider-color": {
+        "color": "steel",
+        "index": 7,
+        "opacity": 100
+      },
+      "divider-color-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
       }
     },
     "semanticRadiusMap": {
@@ -6436,14 +7061,17 @@ export const STORYBOOK_BRANDS = {
       "loader-size-default": "md",
       "loader-stroke-width-default": "md",
       "loader-oval-corner-radius-default": "md",
+      "chip-padding-x-default": "md",
+      "chip-padding-y-default": "md",
+      "chip-checked-padding-x-default": "md",
+      "chip-checked-padding-y-default": "md",
       "progress-height-default": "md",
       "progress-radius-default": "md",
       "avatar-size-default": "md",
       "avatar-radius-default": "md",
-      "chip-padding-x-default": "md",
-      "chip-padding-y-default": "md",
-      "chip-checked-padding-x-default": "md",
-      "chip-checked-padding-y-default": "md"
+      "tabs-default-radius-default": "md",
+      "tabs-outlined-radius-default": "md",
+      "tabs-pills-radius-default": "md"
     },
     "dimensionOverrides": {
       "button-border-radius": {
@@ -6563,6 +7191,21 @@ export const STORYBOOK_BRANDS = {
       },
       "tabs-default-tab-border-width-active": {
         "_value": 1
+      },
+      "tabs-radius": {
+        "md": 0
+      },
+      "tabs-pills-radius": {
+        "default": 0
+      },
+      "tabs-pills-list-padding": {
+        "_value": 4
+      },
+      "tabs-pills-list-gap": {
+        "_value": 0
+      },
+      "tabs-default-list-gap": {
+        "_value": 0
       }
     },
     "componentOverridesDark": {
@@ -7641,7 +8284,7 @@ export const STORYBOOK_BRANDS = {
       },
       "tabs-outlined-tab-background-disabled": {
         "color": "slate-purple",
-        "index": 2,
+        "index": 9,
         "opacity": 100
       },
       "tabs-outlined-tab-text-disabled": {
@@ -7682,6 +8325,140 @@ export const STORYBOOK_BRANDS = {
       "card-brand-border": {
         "color": "green",
         "index": 6,
+        "opacity": 100
+      },
+      "button-filled-error-background": {
+        "color": "red",
+        "index": 6
+      },
+      "button-filled-error-background-hover": {
+        "color": "red",
+        "index": 7
+      },
+      "button-filled-error-background-focus": {
+        "color": "red",
+        "index": 6
+      },
+      "button-filled-error-background-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "button-filled-error-text-disabled": {
+        "color": "neutral",
+        "index": 0
+      },
+      "button-outlined-error-background-hover": {
+        "color": "red",
+        "index": 5,
+        "opacity": 10
+      },
+      "button-outlined-error-text-pressed": {
+        "color": "red",
+        "index": 4
+      },
+      "button-outlined-error-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-outlined-error-border-pressed": {
+        "color": "red",
+        "index": 4
+      },
+      "button-ghost-error-background-hover": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-ghost-error-text-hover": {
+        "color": "red",
+        "index": 6
+      },
+      "button-ghost-error-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-ghost-error-text-pressed": {
+        "color": "red",
+        "index": 4
+      },
+      "tabs-default-tab-border-hover": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "tabs-default-tab-text-hover": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "tabs-default-list-background": {
+        "color": "neutral",
+        "index": 0
+      },
+      "tabs-default-background-hover": {
+        "color": "green",
+        "index": 0,
+        "opacity": 100
+      },
+      "tabs-default-tab-text-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-default-tab-border-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-pills-background-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-pills-tab-background-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-outlined-background-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-pills-tab-background-hover": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "tabs-pills-tab-border-hover": {
+        "color": "neutral",
+        "index": 2,
+        "opacity": 100
+      },
+      "tabs-pills-tab-text-disabled": {
+        "color": "neutral",
+        "index": 0
+      },
+      "tabs-pills-tab-border-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-pills-tab-text": {
+        "color": "slate-purple",
+        "index": 3
+      },
+      "tabs-pills-tab-background-active": {
+        "color": "navy",
+        "index": 5,
+        "opacity": 100
+      },
+      "tabs-pills-tab-border-active": {
+        "color": "navy",
+        "index": 5,
         "opacity": 100
       }
     },
@@ -8717,7 +9494,7 @@ export const STORYBOOK_BRANDS = {
       },
       "tabs-outlined-tab-background-disabled": {
         "color": "slate-purple",
-        "index": 2,
+        "index": 9,
         "opacity": 100
       },
       "tabs-outlined-tab-text-disabled": {
@@ -8758,6 +9535,150 @@ export const STORYBOOK_BRANDS = {
       "card-brand-border": {
         "color": "green",
         "index": 6,
+        "opacity": 100
+      },
+      "button-filled-error-background": {
+        "color": "red",
+        "index": 6
+      },
+      "button-filled-error-background-hover": {
+        "color": "red",
+        "index": 7
+      },
+      "button-filled-error-background-focus": {
+        "color": "red",
+        "index": 6
+      },
+      "button-filled-error-background-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "button-filled-error-text-disabled": {
+        "color": "neutral",
+        "index": 0
+      },
+      "button-outlined-error-background-hover": {
+        "color": "red",
+        "index": 5,
+        "opacity": 10
+      },
+      "button-outlined-error-text-pressed": {
+        "color": "red",
+        "index": 4
+      },
+      "button-outlined-error-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-outlined-error-border-pressed": {
+        "color": "red",
+        "index": 4
+      },
+      "button-ghost-error-background-hover": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-ghost-error-text-hover": {
+        "color": "red",
+        "index": 6
+      },
+      "button-ghost-error-background-pressed": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "button-ghost-error-text-pressed": {
+        "color": "red",
+        "index": 4
+      },
+      "tabs-pills-list-background": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "tabs-pills-list-border": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "tabs-default-tab-border-hover": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "tabs-default-tab-text-hover": {
+        "color": "green",
+        "index": 6,
+        "opacity": 100
+      },
+      "tabs-default-list-background": {
+        "color": "neutral",
+        "index": 0
+      },
+      "tabs-default-background-hover": {
+        "color": "green",
+        "index": 0,
+        "opacity": 100
+      },
+      "tabs-default-tab-text-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-default-tab-border-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-pills-background-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-pills-tab-background-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-outlined-background-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-pills-tab-background-hover": {
+        "color": "transparent",
+        "index": 0,
+        "opacity": 0
+      },
+      "tabs-pills-tab-border-hover": {
+        "color": "neutral",
+        "index": 2,
+        "opacity": 100
+      },
+      "tabs-pills-tab-text-disabled": {
+        "color": "neutral",
+        "index": 0
+      },
+      "tabs-pills-tab-border-disabled": {
+        "color": "navy",
+        "index": 1,
+        "opacity": 100
+      },
+      "tabs-pills-tab-text": {
+        "color": "slate-purple",
+        "index": 3
+      },
+      "tabs-pills-tab-background-active": {
+        "color": "navy",
+        "index": 5,
+        "opacity": 100
+      },
+      "tabs-pills-tab-border-active": {
+        "color": "navy",
+        "index": 5,
         "opacity": 100
       }
     },

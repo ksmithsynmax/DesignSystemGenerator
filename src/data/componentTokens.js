@@ -1224,6 +1224,55 @@ export const COMPONENT_TOKENS = {
     "divider-inset": { type: "FLOAT", unit: "px", value: 16, figmaPath: "divider/inset" },
   },
 
+  list: {
+    // ── COLOR TOKENS ──
+    "list-item-color": { type: "COLOR", semantic: "text-default", figmaPath: "list/item-color" },
+    "list-marker-color": { type: "COLOR", semantic: "text-subtle", figmaPath: "list/marker-color" },
+    "list-icon-color": { type: "COLOR", semantic: "text-subtle", figmaPath: "list/icon-color" },
+
+    // ── FLOAT / STRING TOKENS ──
+    "list-spacing": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 0, xs: 0, sm: 2, md: 4, lg: 6, xl: 10 },
+      figmaPath: "list/spacing",
+    },
+    "list-item-padding-left": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 16, xs: 8, sm: 12, md: 16, lg: 20, xl: 24 },
+      figmaPath: "list/item-padding-left",
+    },
+    "list-marker-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "list/marker-gap" },
+    "list-icon-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "list/icon-gap" },
+    "list-font-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 13, xs: 11, sm: 12, md: 13, lg: 14, xl: 16 },
+      figmaPath: "list/font-size",
+    },
+    "list-line-height": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 20, xs: 16, sm: 18, md: 20, lg: 22, xl: 24 },
+      figmaPath: "list/line-height",
+    },
+    "list-font-family": { type: "STRING", value: "Inter", figmaPath: "list/font-family" },
+    "list-font-weight": { type: "STRING", value: "Regular", figmaPath: "list/font-weight" },
+    "list-icon-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 14, xs: 12, sm: 13, md: 14, lg: 16, xl: 18 },
+      figmaPath: "list/icon-size",
+    },
+    "list-icon-stroke-width": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 1.75, xs: 1.5, sm: 1.6, md: 1.75, lg: 2, xl: 2.25 },
+      figmaPath: "list/icon-stroke-width",
+    },
+  },
+
   tooltip: {
     // ── COLOR TOKENS ──
     "tooltip-background": { type: "COLOR", semantic: "surface-inverse", figmaPath: "tooltip/background" },
@@ -1852,6 +1901,7 @@ export const COMPONENT_SIZE_KEYS = {
   select: ["xs", "sm", "md", "lg", "xl"],
   menu: ["default", "xs", "sm", "md", "lg", "xl"],
   divider: ["default", "xs", "sm", "md", "lg", "xl"],
+  list: ["default", "xs", "sm", "md", "lg", "xl"],
   popover: ["default", "xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
   text: ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"],
