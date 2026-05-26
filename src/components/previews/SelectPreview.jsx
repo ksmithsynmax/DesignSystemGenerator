@@ -98,12 +98,12 @@ export default function SelectPreview({
     "select-option-hover-text"
   );
 
-  const height = resolveDimension(brands, brandId, "select-height", size);
   const fontSize = resolveDimension(brands, brandId, "select-font-size", size);
   const fontFamily = resolveDimension(brands, brandId, "select-font-family", size);
   const fontWeight = resolveDimension(brands, brandId, "select-font-weight", size);
   const lineHeight = resolveDimension(brands, brandId, "select-line-height", size);
   const paddingX = resolveDimension(brands, brandId, "select-padding-x", size);
+  const paddingY = resolveDimension(brands, brandId, "select-padding-y", size);
   const borderRadius = resolveDimension(brands, brandId, "select-radius", radius);
   const borderWidth = resolveDimension(brands, brandId, "select-border-width");
   const labelFontSize = resolveDimension(brands, brandId, "select-label-font-size");
@@ -137,17 +137,29 @@ export default function SelectPreview({
       searchable={searchable}
       withCheckIcon={false}
       rightSection={
-        <ChevronRightIcon
-          width={chevronIconSize}
-          height={chevronIconSize}
-          aria-hidden
+        <span
           style={{
-            color: chevronColor,
-            transform: "rotate(90deg)",
-            display: "block",
-            flexShrink: 0,
+            width: "100%",
+            height: "100%",
+            display: "inline-flex",
+            alignItems: "center",
+            justifyContent: "flex-end",
+            paddingRight: Math.max(6, Math.round((Number(paddingX) || 0) * 0.5)),
+            boxSizing: "border-box",
           }}
-        />
+        >
+          <ChevronRightIcon
+            width={chevronIconSize}
+            height={chevronIconSize}
+            aria-hidden
+            style={{
+              color: chevronColor,
+              transform: "rotate(90deg)",
+              display: "block",
+              flexShrink: 0,
+            }}
+          />
+        </span>
       }
       data={["Option one", "Option two", "Option three"]}
       value="Option one"
@@ -157,9 +169,9 @@ export default function SelectPreview({
       }}
       vars={() => ({
         root: {
-          "--input-height": `${height}px`,
           "--input-fz": `${fontSize}px`,
           "--input-padding-x": `${paddingX}px`,
+          "--input-padding-y": `${paddingY}px`,
           "--input-radius": `${borderRadius}px`,
           "--input-section-size": `${sectionSize}px`,
         },
@@ -178,6 +190,10 @@ export default function SelectPreview({
           color: textColor,
           border: bdValue,
           "--input-placeholder-color": isError ? errorColor : placeholderColor,
+          paddingLeft: paddingX,
+          paddingRight: paddingX,
+          paddingTop: paddingY,
+          paddingBottom: paddingY,
           fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
           fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
           lineHeight: lineHeight ? `${lineHeight}px` : undefined,

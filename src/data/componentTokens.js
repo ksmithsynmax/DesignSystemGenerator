@@ -116,6 +116,7 @@ export const COMPONENT_TOKENS = {
     "button-line-height":   { type: "FLOAT", unit: "px", sizes: { xxs: 14, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "button/line-height" },
     "button-font-family":   { type: "STRING", value: "Inter", figmaPath: "button/font-family" },
     "button-icon-size":     { type: "FLOAT", unit: "px", sizes: { xxs: 10, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },   figmaPath: "button/icon-size" },
+    "button-icon-spacing":  { type: "FLOAT", unit: "px", sizes: { xxs: 4, xs: 5, sm: 6, md: 8, lg: 10, xl: 12 }, figmaPath: "button/icon-spacing" },
     "button-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xxs: 1, xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 }, figmaPath: "button/icon-stroke-width" },
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "button-border-radius": { type: "FLOAT", unit: "px", value: 8,   figmaPath: "button/border-radius" },
@@ -1643,25 +1644,25 @@ export const COMPONENT_TOKENS = {
       figmaPath: "select/option-hover-text",
     },
 
-    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
-    "select-height":       { type: "FLOAT", unit: "px", sizes: { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 }, figmaPath: "select/height" },
-    "select-font-size":    { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "select/font-size" },
+    // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
+    "select-font-size":    { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "select/font-size" },
     "select-font-family": {
       type: "STRING",
-      sizes: { xs: "Inter", sm: "Inter", md: "Inter", lg: "Inter", xl: "Inter" },
+      sizes: { default: "Inter", xs: "Inter", sm: "Inter", md: "Inter", lg: "Inter", xl: "Inter" },
       figmaPath: "select/font-family",
     },
     "select-font-weight": {
       type: "STRING",
-      sizes: { xs: "Regular", sm: "Regular", md: "Regular", lg: "Regular", xl: "Regular" },
+      sizes: { default: "Regular", xs: "Regular", sm: "Regular", md: "Regular", lg: "Regular", xl: "Regular" },
       figmaPath: "select/font-weight",
     },
-    "select-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "select/line-height" },
-    "select-padding-x":    { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "select/padding-x" },
-    "select-section-size": { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 32, md: 36, lg: 40, xl: 44 }, figmaPath: "select/section-size" },
+    "select-line-height": { type: "FLOAT", unit: "px", sizes: { default: 20, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "select/line-height" },
+    "select-padding-x":    { type: "FLOAT", unit: "px", sizes: { default: 10, xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "select/padding-x" },
+    "select-padding-y":    { type: "FLOAT", unit: "px", sizes: { default: 8,  xs: 7,  sm: 8,  md: 9,  lg: 11, xl: 14 }, figmaPath: "select/padding-y" },
+    "select-section-size": { type: "FLOAT", unit: "px", sizes: { default: 32, xs: 28, sm: 32, md: 36, lg: 40, xl: 44 }, figmaPath: "select/section-size" },
 
-    // ── FLOAT TOKENS (radius variants: xs, sm, md, lg, xl — independent from size) ──
-    "select-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "select/radius" },
+    // ── FLOAT TOKENS (radius variants: default, xs, sm, md, lg, xl — independent from size) ──
+    "select-radius": { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "select/radius" },
 
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "select-border-width":    { type: "FLOAT", unit: "px", value: 1,  figmaPath: "select/border-width" },
@@ -1898,7 +1899,7 @@ export const COMPONENT_SIZE_KEYS = {
   avatar: ["default", "xs", "sm", "md", "lg", "xl"],
   anchor: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["default", "xs", "sm", "md", "lg", "xl"],
-  select: ["xs", "sm", "md", "lg", "xl"],
+  select: ["default", "xs", "sm", "md", "lg", "xl"],
   menu: ["default", "xs", "sm", "md", "lg", "xl"],
   divider: ["default", "xs", "sm", "md", "lg", "xl"],
   list: ["default", "xs", "sm", "md", "lg", "xl"],

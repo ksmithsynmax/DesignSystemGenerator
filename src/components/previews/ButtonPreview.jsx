@@ -78,6 +78,12 @@ export default function ButtonPreview({
   const fontSize = resolveDimension(brands, brandId, "button-font-size", resolvedSizeFor("button-font-size"));
   const lineHeight = resolveDimension(brands, brandId, "button-line-height", resolvedSizeFor("button-line-height"));
   const tokenIconSize = resolveDimension(brands, brandId, "button-icon-size", resolvedSizeFor("button-icon-size"));
+  const tokenIconSpacing = resolveDimension(
+    brands,
+    brandId,
+    "button-icon-spacing",
+    resolvedSizeFor("button-icon-spacing")
+  );
   const tokenIconStroke = resolveDimension(
     brands,
     brandId,
@@ -95,6 +101,7 @@ export default function ButtonPreview({
 
   const mantineVariant = VARIANT_MAP[variant] || "filled";
   const iconSize = tokenIconSize || Math.max(14, Math.round((fontSize || 14) * 1.1));
+  const iconSpacing = Number.isFinite(Number(tokenIconSpacing)) ? Number(tokenIconSpacing) : 8;
   const computedHeight = Math.round((lineHeight || fontSize || 14) + 2 * (paddingY || 0));
 
   const effectiveGradientCss = overrideGradientCss || fillGradientCss;
@@ -136,26 +143,6 @@ export default function ButtonPreview({
       variant={mantineVariant}
       disabled={state === "disabled"}
       style={state ? { pointerEvents: "none" } : undefined}
-      leftSection={
-        showLeftIcon ? (
-          <PlusIcon
-            width={iconSize}
-            height={iconSize}
-            strokeWidth={tokenIconStroke || 2}
-            style={{ color: text }}
-          />
-        ) : undefined
-      }
-      rightSection={
-        showRightIcon ? (
-          <ChevronRightIcon
-            width={iconSize}
-            height={iconSize}
-            strokeWidth={tokenIconStroke || 2}
-            style={{ color: text }}
-          />
-        ) : undefined
-      }
       vars={() => ({
         root: {
           "--button-bg": bgVar,
@@ -185,7 +172,25 @@ export default function ButtonPreview({
         },
       }}
     >
-      Button
+      <span style={{ display: "inline-flex", alignItems: "center", gap: `${iconSpacing}px` }}>
+        {showLeftIcon ? (
+          <PlusIcon
+            width={iconSize}
+            height={iconSize}
+            strokeWidth={tokenIconStroke || 2}
+            style={{ color: text }}
+          />
+        ) : null}
+        <span>Button</span>
+        {showRightIcon ? (
+          <ChevronRightIcon
+            width={iconSize}
+            height={iconSize}
+            strokeWidth={tokenIconStroke || 2}
+            style={{ color: text }}
+          />
+        ) : null}
+      </span>
     </Button>
   );
 }

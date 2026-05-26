@@ -4,7 +4,7 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
 export const SELECT_VARIANTS = ["default", "filled"];
-export const SELECT_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const SELECT_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const SELECT_STATES = ["default", "hover", "focus", "error", "disabled"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {

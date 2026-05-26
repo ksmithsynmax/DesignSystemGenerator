@@ -143,6 +143,7 @@ function syncGradientPaintStyles(payload, syncBrands) {
 
 async function syncTokens(payload) {
   var buildOptions = payload.__buildOptions || {};
+  var preserveExistingVariables = Boolean(buildOptions && buildOptions.preserveExistingVariables);
 
   // Extract globalPrimitives and brand IDs from payload
   var globalPrimitives = payload.globalPrimitives || {};
@@ -457,40 +458,42 @@ async function syncTokens(payload) {
     lhVar.setValueForMode(globalModeId, lhVal);
   }
 
-  // Remove stale global primitive variables (from previous syncs with different palettes)
-  var globalExpected = {};
-  for (var gei = 0; gei < globalPaletteNames.length; gei++) {
-    var gePalette = globalPaletteNames[gei];
-    for (var geIdx = 0; geIdx < globalPrimitives[gePalette].length; geIdx++) {
-      var expectedName = gePalette === "transparent" ? "transparent" : (gePalette + "/" + geIdx);
-      globalExpected[expectedName] = true;
+  if (!preserveExistingVariables) {
+    // Remove stale global primitive variables (from previous syncs with different palettes)
+    var globalExpected = {};
+    for (var gei = 0; gei < globalPaletteNames.length; gei++) {
+      var gePalette = globalPaletteNames[gei];
+      for (var geIdx = 0; geIdx < globalPrimitives[gePalette].length; geIdx++) {
+        var expectedName = gePalette === "transparent" ? "transparent" : (gePalette + "/" + geIdx);
+        globalExpected[expectedName] = true;
+      }
     }
-  }
-  for (var gex = 0; gex < globalSpacing.length; gex++) {
-    var expectedSpacing = Number(globalSpacing[gex]);
-    if (isFinite(expectedSpacing)) globalExpected["spacing/" + expectedSpacing] = true;
-  }
-  for (var gre = 0; gre < globalRadii.length; gre++) {
-    var expectedRadiusEntry = globalRadii[gre];
-    if (!expectedRadiusEntry || typeof expectedRadiusEntry !== "object") continue;
-    var expectedRadiusName = String(expectedRadiusEntry.name || "");
-    if (expectedRadiusName) globalExpected["radius/" + expectedRadiusName] = true;
-  }
-  for (var fi = 0; fi < fontKeys.length; fi++) globalExpected["typography/font-family/" + fontKeys[fi]] = true;
-  for (var wi = 0; wi < weightKeys.length; wi++) globalExpected["typography/font-weight/" + weightKeys[wi]] = true;
-  for (var bi = 0; bi < globalBorderWidths.length; bi++) globalExpected["border-width/" + String(globalBorderWidths[bi]).replace('.', '_')] = true;
-  for (var fsi = 0; fsi < globalFontSizes.length; fsi++) globalExpected["font-size-" + String(globalFontSizes[fsi]).replace('.', '_')] = true;
-  for (var lhi = 0; lhi < globalLineHeights.length; lhi++) globalExpected["typography/line-height/" + String(globalLineHeights[lhi]).replace('.', '_')] = true;
-  var globalStale = 0;
-  var globalVarNames = Object.keys(globalPrimVarMap);
-  for (var gsvi = 0; gsvi < globalVarNames.length; gsvi++) {
-    if (!globalExpected[globalVarNames[gsvi]]) {
-      globalPrimVarMap[globalVarNames[gsvi]].remove();
-      delete globalPrimVarMap[globalVarNames[gsvi]];
-      globalStale++;
+    for (var gex = 0; gex < globalSpacing.length; gex++) {
+      var expectedSpacing = Number(globalSpacing[gex]);
+      if (isFinite(expectedSpacing)) globalExpected["spacing/" + expectedSpacing] = true;
     }
+    for (var gre = 0; gre < globalRadii.length; gre++) {
+      var expectedRadiusEntry = globalRadii[gre];
+      if (!expectedRadiusEntry || typeof expectedRadiusEntry !== "object") continue;
+      var expectedRadiusName = String(expectedRadiusEntry.name || "");
+      if (expectedRadiusName) globalExpected["radius/" + expectedRadiusName] = true;
+    }
+    for (var fi = 0; fi < fontKeys.length; fi++) globalExpected["typography/font-family/" + fontKeys[fi]] = true;
+    for (var wi = 0; wi < weightKeys.length; wi++) globalExpected["typography/font-weight/" + weightKeys[wi]] = true;
+    for (var bi = 0; bi < globalBorderWidths.length; bi++) globalExpected["border-width/" + String(globalBorderWidths[bi]).replace('.', '_')] = true;
+    for (var fsi = 0; fsi < globalFontSizes.length; fsi++) globalExpected["font-size-" + String(globalFontSizes[fsi]).replace('.', '_')] = true;
+    for (var lhi = 0; lhi < globalLineHeights.length; lhi++) globalExpected["typography/line-height/" + String(globalLineHeights[lhi]).replace('.', '_')] = true;
+    var globalStale = 0;
+    var globalVarNames = Object.keys(globalPrimVarMap);
+    for (var gsvi = 0; gsvi < globalVarNames.length; gsvi++) {
+      if (!globalExpected[globalVarNames[gsvi]]) {
+        globalPrimVarMap[globalVarNames[gsvi]].remove();
+        delete globalPrimVarMap[globalVarNames[gsvi]];
+        globalStale++;
+      }
+    }
+    if (globalStale > 0) progress("  Removed " + globalStale + " stale Primitive/Global variables");
   }
-  if (globalStale > 0) progress("  Removed " + globalStale + " stale Primitive/Global variables");
   progress("Primitive/Global: " + Object.keys(globalPrimVarMap).length + " variables");
 
   // ══════════════════════════════════════════════════════════════
@@ -522,24 +525,26 @@ async function syncTokens(payload) {
         bpVar.setValueForMode(bpModeId, hexToFigmaRgb(bpArr[bpIdx]));
       }
     }
-    // Remove stale brand primitive variables (e.g. old white/gray from previous syncs)
-    var bpExpected = {};
-    for (var bei = 0; bei < bpPaletteNames.length; bei++) {
-      var bePalette = bpPaletteNames[bei];
-      for (var beIdx = 0; beIdx < bpPalettes[bePalette].length; beIdx++) {
-        bpExpected[bePalette + "/" + beIdx] = true;
+    if (!preserveExistingVariables) {
+      // Remove stale brand primitive variables (e.g. old white/gray from previous syncs)
+      var bpExpected = {};
+      for (var bei = 0; bei < bpPaletteNames.length; bei++) {
+        var bePalette = bpPaletteNames[bei];
+        for (var beIdx = 0; beIdx < bpPalettes[bePalette].length; beIdx++) {
+          bpExpected[bePalette + "/" + beIdx] = true;
+        }
       }
-    }
-    var bpStale = 0;
-    var bpVarNames = Object.keys(brandPrimVarMaps[bpId]);
-    for (var bsi = 0; bsi < bpVarNames.length; bsi++) {
-      if (!bpExpected[bpVarNames[bsi]]) {
-        brandPrimVarMaps[bpId][bpVarNames[bsi]].remove();
-        delete brandPrimVarMaps[bpId][bpVarNames[bsi]];
-        bpStale++;
+      var bpStale = 0;
+      var bpVarNames = Object.keys(brandPrimVarMaps[bpId]);
+      for (var bsi = 0; bsi < bpVarNames.length; bsi++) {
+        if (!bpExpected[bpVarNames[bsi]]) {
+          brandPrimVarMaps[bpId][bpVarNames[bsi]].remove();
+          delete brandPrimVarMaps[bpId][bpVarNames[bsi]];
+          bpStale++;
+        }
       }
+      if (bpStale > 0) progress("  Removed " + bpStale + " stale Primitive/" + bpName + " variables");
     }
-    if (bpStale > 0) progress("  Removed " + bpStale + " stale Primitive/" + bpName + " variables");
     progress("Primitive/" + bpName + ": " + Object.keys(brandPrimVarMaps[bpId]).length + " variables");
   }
 
@@ -668,25 +673,27 @@ async function syncTokens(payload) {
   var semanticTypographyKeys = syncSemanticScalars("semanticTypography", "STRING");
   // Remove stale semantic variables from previous syncs.
   // Also explicitly purge any legacy component/* semantic bridge tokens.
-  var semanticExpected = {};
-  for (var sei = 0; sei < semanticKeys.length; sei++) {
-    semanticExpected[semanticKeys[sei]] = true;
-  }
-  for (var srei = 0; srei < semanticRadiusKeys.length; srei++) semanticExpected[semanticRadiusKeys[srei]] = true;
-  for (var ssei = 0; ssei < semanticSpacingKeys.length; ssei++) semanticExpected[semanticSpacingKeys[ssei]] = true;
-  for (var stei = 0; stei < semanticTypographyKeys.length; stei++) semanticExpected[semanticTypographyKeys[stei]] = true;
-  var semanticStale = 0;
-  var semanticVarNames = Object.keys(semanticVarMap);
-  for (var ssi = 0; ssi < semanticVarNames.length; ssi++) {
-    var existingSemName = semanticVarNames[ssi];
-    var isLegacyComponentBridge = existingSemName.indexOf("component/") === 0;
-    if (!semanticExpected[existingSemName] || isLegacyComponentBridge) {
-      semanticVarMap[existingSemName].remove();
-      delete semanticVarMap[existingSemName];
-      semanticStale++;
+  if (!preserveExistingVariables) {
+    var semanticExpected = {};
+    for (var sei = 0; sei < semanticKeys.length; sei++) {
+      semanticExpected[semanticKeys[sei]] = true;
     }
+    for (var srei = 0; srei < semanticRadiusKeys.length; srei++) semanticExpected[semanticRadiusKeys[srei]] = true;
+    for (var ssei = 0; ssei < semanticSpacingKeys.length; ssei++) semanticExpected[semanticSpacingKeys[ssei]] = true;
+    for (var stei = 0; stei < semanticTypographyKeys.length; stei++) semanticExpected[semanticTypographyKeys[stei]] = true;
+    var semanticStale = 0;
+    var semanticVarNames = Object.keys(semanticVarMap);
+    for (var ssi = 0; ssi < semanticVarNames.length; ssi++) {
+      var existingSemName = semanticVarNames[ssi];
+      var isLegacyComponentBridge = existingSemName.indexOf("component/") === 0;
+      if (!semanticExpected[existingSemName] || isLegacyComponentBridge) {
+        semanticVarMap[existingSemName].remove();
+        delete semanticVarMap[existingSemName];
+        semanticStale++;
+      }
+    }
+    if (semanticStale > 0) progress("  Removed " + semanticStale + " stale Semantic variables");
   }
-  if (semanticStale > 0) progress("  Removed " + semanticStale + " stale Semantic variables");
   progress("Semantic: " + Object.keys(semanticVarMap).length + " variables, " + totalAliases + " aliases");
 
   // ══════════════════════════════════════════════════════════════
@@ -836,21 +843,23 @@ async function syncTokens(payload) {
 
   // Remove stale component variables (covers renamed figmaPath entries,
   // including legacy button/ghost-* paths).
-  var componentExpected = {};
-  for (var cei = 0; cei < componentKeys.length; cei++) {
-    componentExpected[componentKeys[cei]] = true;
-  }
-  var componentStale = 0;
-  var componentVarNames = Object.keys(componentVarMap);
-  for (var csi = 0; csi < componentVarNames.length; csi++) {
-    var existingCompName = componentVarNames[csi];
-    if (!componentExpected[existingCompName]) {
-      componentVarMap[existingCompName].remove();
-      delete componentVarMap[existingCompName];
-      componentStale++;
+  if (!preserveExistingVariables) {
+    var componentExpected = {};
+    for (var cei = 0; cei < componentKeys.length; cei++) {
+      componentExpected[componentKeys[cei]] = true;
     }
+    var componentStale = 0;
+    var componentVarNames = Object.keys(componentVarMap);
+    for (var csi = 0; csi < componentVarNames.length; csi++) {
+      var existingCompName = componentVarNames[csi];
+      if (!componentExpected[existingCompName]) {
+        componentVarMap[existingCompName].remove();
+        delete componentVarMap[existingCompName];
+        componentStale++;
+      }
+    }
+    if (componentStale > 0) progress("  Removed " + componentStale + " stale Components variables");
   }
-  if (componentStale > 0) progress("  Removed " + componentStale + " stale Components variables");
 
   totalCreated += compCreated;
   totalAliases += compAliases;
@@ -1279,7 +1288,12 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     );
   });
   var selectSet = await buildSet("Select", function () {
-    return buildSelectComponentSet(varMap, page, font);
+    return buildSelectComponentSet(
+      varMap,
+      page,
+      font,
+      Boolean(buildOptions && buildOptions.selectDebugDefaultOnly)
+    );
   });
   var cardSet = await buildSet("Card", function () {
     return buildCardComponentSet(varMap, page, font, { compact: true });
@@ -5272,6 +5286,7 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
             bindVar(buttonNode, "paddingRight", varMap["button/padding-x-" + size]);
             bindVar(buttonNode, "paddingTop", varMap["button/padding-y-" + size]);
             bindVar(buttonNode, "paddingBottom", varMap["button/padding-y-" + size]);
+            bindVar(buttonNode, "itemSpacing", varMap["button/icon-spacing-" + size]);
             bindVar(buttonNode, "topLeftRadius", varMap["button/border-radius"]);
             bindVar(buttonNode, "topRightRadius", varMap["button/border-radius"]);
             bindVar(buttonNode, "bottomLeftRadius", varMap["button/border-radius"]);
@@ -12488,10 +12503,10 @@ async function findTextInputIconComponents() {
 // Select
 // ---------------------------------------------------------------------------
 
-async function buildSelectComponentSet(varMap, page, font) {
+async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
   var variants = ["default", "filled"];
-  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
-  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var sizes = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "error", "disabled"];
   var dropdownModes = ["closed", "open"];
   var labelModes = ["none", "label", "required"];
@@ -12541,7 +12556,7 @@ async function buildSelectComponentSet(varMap, page, font) {
                 // Keep previous default look first: no active row + hover on option two.
                 hoverOptionIndices = [1];
                 // Memory guard: full Active/Hover controls only on default size + default radius.
-                if (size === "default" && rad === "default") {
+                if (!debugDefaultOnly && size === "default" && rad === "default") {
                   activeOptionIndices = [-1, 0, 1, 2];
                   hoverOptionIndices = [1, -1, 0, 2];
                 }
@@ -12635,20 +12650,22 @@ async function buildSelectComponentSet(varMap, page, font) {
             input.counterAxisSizingMode = "AUTO";
             input.primaryAxisAlignItems = "SPACE_BETWEEN";
             input.counterAxisAlignItems = "CENTER";
-            input.resize(200, sizeHeights[size]);
+            input.resize(200, 8);
             input.cornerRadius = 4;
             input.paddingLeft = 10;
             input.paddingRight = 10;
-            input.minHeight = sizeHeights[size];
             input.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
             input.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
             input.strokeWeight = 1;
             input.strokeAlign = "INSIDE";
 
-            if (varMap["select/height-" + size]) bindVar(input, "minHeight", varMap["select/height-" + size]);
             if (varMap["select/padding-x-" + size]) {
               bindVar(input, "paddingLeft", varMap["select/padding-x-" + size]);
               bindVar(input, "paddingRight", varMap["select/padding-x-" + size]);
+            }
+            if (varMap["select/padding-y-" + size]) {
+              bindVar(input, "paddingTop", varMap["select/padding-y-" + size]);
+              bindVar(input, "paddingBottom", varMap["select/padding-y-" + size]);
             }
             if (varMap["select/radius-" + rad]) {
               bindVar(input, "topLeftRadius", varMap["select/radius-" + rad]);
@@ -12861,12 +12878,34 @@ async function buildSelectComponentSet(varMap, page, font) {
 
             if (state === "disabled") comp.opacity = 0.6;
 
-            var colIndex = vi * labelModes.length + li;
-            var comboCountForState = (dropdownMode === "open" && state === "default") ? (4 * 4) : 1;
-            var rowIndexBase = (si * radii.length + ri) * ((states.length - 1) + (1 * 4 * 4));
-            var stateOffset = (state === "default") ? 0 : (4 * 4) + (sti - 1);
+            // Pack radius variants horizontally to prevent excessively tall stacks.
+            var columnsPerRadius = variants.length * labelModes.length;
+            var colIndex = (ri * columnsPerRadius) + (vi * labelModes.length + li);
+            // Use explicit row packing by state + dropdown mode to avoid large
+            // empty vertical blocks when Select has many variant permutations.
+            var defaultOpenRows = debugDefaultOnly ? 1 : (4 * 4);
+            var defaultRows = 1 + defaultOpenRows; // closed + open rows for default state
+            var rowsPerSizeRadius = defaultRows + ((states.length - 1) * 2); // non-default: closed + open
+            // Keep size progression vertical; radius is now represented in columns.
+            var rowIndexBase = si * rowsPerSizeRadius;
+
             var comboIndex = aoi * hoverOptionIndices.length + hoi;
-            var rowIndex = rowIndexBase + stateOffset + comboIndex;
+            var stateBase = 0;
+            var comboOffset = 0;
+            if (state === "default") {
+              if (dropdownMode === "open") {
+                stateBase = 1;
+                comboOffset = comboIndex;
+              } else {
+                stateBase = 0;
+                comboOffset = 0;
+              }
+            } else {
+              var stateOrder = Math.max(0, sti - 1);
+              stateBase = defaultRows + (stateOrder * 2) + (dropdownMode === "open" ? 1 : 0);
+              comboOffset = 0;
+            }
+            var rowIndex = rowIndexBase + stateBase + comboOffset;
             comp.x = colIndex * (colWidth + gap);
             comp.y = rowIndex * 190;
             page.appendChild(comp);

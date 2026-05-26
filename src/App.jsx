@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import {
   Switch as MantineSwitch,
   Modal,
@@ -9,6 +9,7 @@ import {
   Group,
 } from "@mantine/core";
 import { INITIAL_BRANDS, BRAND_STARTER_SEMANTIC_MAP } from "./data/brands";
+import { STORYBOOK_BRANDS } from "./data/storybookBrands";
 import { createNewBrand } from "./utils/createNewBrand";
 import {
   COMPONENT_NAMES,
@@ -291,6 +292,18 @@ function enforceTextDefaultMappings(brandsInput) {
   return next;
 }
 
+function mergeRecoveredBrands(brandsInput) {
+  if (!brandsInput || typeof brandsInput !== "object") return brandsInput;
+  const snapshot = STORYBOOK_BRANDS && typeof STORYBOOK_BRANDS === "object" ? STORYBOOK_BRANDS : null;
+  if (!snapshot) return brandsInput;
+  const merged = { ...snapshot, ...brandsInput };
+  // If local persisted state for core brands got reset/degraded, force-restore
+  // from the last known Storybook snapshot for these critical brands.
+  if (snapshot.theia) merged.theia = JSON.parse(JSON.stringify(snapshot.theia));
+  if (snapshot.hyperion) merged.hyperion = JSON.parse(JSON.stringify(snapshot.hyperion));
+  return merged;
+}
+
 export default function App() {
   const COMPONENT_LABELS = {
     actionicon: "ActionIcon",
@@ -303,7 +316,8 @@ export default function App() {
 
   const [brands, setBrands] = useState(() => {
     const persisted = loadPersistedAppState();
-    return enforceTextDefaultMappings(persisted?.brands || INITIAL_BRANDS);
+    const source = persisted?.brands || INITIAL_BRANDS;
+    return enforceTextDefaultMappings(mergeRecoveredBrands(source));
   });
   useEffect(() => {
     setBrands((prev) => enforceTextDefaultMappings(prev));
@@ -322,6 +336,8 @@ export default function App() {
   const [brandDeleteModalOpened, setBrandDeleteModalOpened] = useState(false);
   const [brandDeleteTargetId, setBrandDeleteTargetId] = useState(null);
   const [brandDeleteConfirmInput, setBrandDeleteConfirmInput] = useState("");
+  const importBrandsInputRef = useRef(null);
+  const [localDataMessage, setLocalDataMessage] = useState(null);
   if (typeof window !== "undefined") {
     window.__DSG_PREVIEW_THEME = previewTheme;
     window.__DSG_PREVIEW_BRAND = activeBrand;
@@ -1736,6 +1752,70 @@ export default function App() {
     setPreviewTheme("dark");
     setActiveColorToken(null);
     setActiveDimensionToken(null);
+    setLocalDataMessage({ type: "success", text: "Local data reset to defaults." });
+  };
+
+  const handleBrandsExport = () => {
+    const payload = {
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      activeBrand,
+      previewTheme,
+      brands,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "design-system-brands-backup.json";
+    a.click();
+    URL.revokeObjectURL(url);
+    setLocalDataMessage({ type: "success", text: "Brands backup downloaded." });
+  };
+
+  const handleBrandsImportClick = () => {
+    if (importBrandsInputRef.current) importBrandsInputRef.current.click();
+  };
+
+  const handleBrandsImport = (event) => {
+    const file = event.target?.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const raw = JSON.parse(String(reader.result || "{}"));
+        const importedBrands = raw && typeof raw === "object" && raw.brands && typeof raw.brands === "object"
+          ? raw.brands
+          : raw;
+        if (!importedBrands || typeof importedBrands !== "object" || Array.isArray(importedBrands)) {
+          throw new Error("Invalid file format");
+        }
+        const importedIds = Object.keys(importedBrands);
+        if (importedIds.length === 0) throw new Error("No brands found");
+        const normalizedBrands = enforceTextDefaultMappings(mergeRecoveredBrands(importedBrands));
+        setBrands(normalizedBrands);
+        const preferredBrand = typeof raw.activeBrand === "string" && normalizedBrands[raw.activeBrand]
+          ? raw.activeBrand
+          : (normalizedBrands[activeBrand] ? activeBrand : importedIds[0]);
+        if (preferredBrand) setActiveBrand(preferredBrand);
+        if (raw.previewTheme === "light" || raw.previewTheme === "dark") {
+          setPreviewTheme(raw.previewTheme);
+        }
+        setLocalDataMessage({ type: "success", text: "Brands imported successfully." });
+      } catch (err) {
+        setLocalDataMessage({
+          type: "error",
+          text: "Import failed: " + (err && err.message ? err.message : "Invalid JSON file"),
+        });
+      } finally {
+        if (event.target) event.target.value = "";
+      }
+    };
+    reader.onerror = () => {
+      setLocalDataMessage({ type: "error", text: "Import failed: unable to read file." });
+      if (event.target) event.target.value = "";
+    };
+    reader.readAsText(file);
   };
 
   const handleStorybookExport = async () => {
@@ -3077,15 +3157,42 @@ export default function App() {
                   Local Data
                 </div>
                 <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
-                  Clear locally cached token edits and restore defaults.
+                  Export/import your brand state backup and restore from JSON to prevent accidental loss.
                 </p>
-                <button
-                disabled
-                  onClick={handleResetLocalData}
-                  style={{  borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600,  cursor: "pointer", }}
-                >
-                  Reset Local Data
-                </button>
+                <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+                  <button
+                    onClick={handleBrandsExport}
+                    style={{ background: "#25262B", border: "1px solid #373A40", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#C1C2C5", cursor: "pointer", fontFamily: "monospace" }}
+                  >
+                    Export Brands JSON
+                  </button>
+                  <button
+                    onClick={handleBrandsImportClick}
+                    disabled
+                    style={{ background: "#1F2125", border: "1px solid #2C2E33", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#5C5F66", cursor: "not-allowed", fontFamily: "monospace", opacity: 0.75 }}
+                  >
+                    Import Brands JSON
+                  </button>
+                  <button
+                    onClick={handleResetLocalData}
+                    disabled
+                    style={{ background: "#1F2125", border: "1px solid #2C2E33", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#5C5F66", cursor: "not-allowed", fontFamily: "monospace", opacity: 0.75 }}
+                  >
+                    Reset Local Data
+                  </button>
+                </div>
+                <input
+                  ref={importBrandsInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleBrandsImport}
+                  style={{ display: "none" }}
+                />
+                {localDataMessage && (
+                  <p style={{ fontSize: 12, color: localDataMessage.type === "error" ? "#FA5252" : "#40C057", marginTop: 8 }}>
+                    {localDataMessage.text}
+                  </p>
+                )}
               </div>
 
               <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
