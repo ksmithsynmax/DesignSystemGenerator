@@ -137,6 +137,7 @@ export default function NotificationPreview({
   const showAccentBar = effectiveWithAccent;
   const effectiveWithBorder = Boolean(withBorder);
   const mantineColor = notificationSemanticToMantineColor(color);
+  const effectiveMantineColor = showAccentBar ? mantineColor : undefined;
 
   const bw = Number(borderWidth);
   const borderW = Number.isFinite(bw) && bw > 0 ? bw : 1;
@@ -177,19 +178,34 @@ export default function NotificationPreview({
   const notification = (
     <Notification
       title={title}
-      color={mantineColor}
+      color={effectiveMantineColor}
       icon={iconNode}
       loading={loading}
       withCloseButton={withCloseButton}
       withBorder={false}
       styles={{
         root: {
+          // Always neutralize Mantine's built-in accent rail so preview
+          // only reflects our token-driven accent toggle logic.
+          "--notification-color": "transparent",
           background: background,
           boxSizing: "border-box",
+          borderInlineStart: "0 solid transparent",
           borderRadius: radiusPx,
           width: 360,
           ...rootPadding,
-          ...(accentBarBefore ? { "&::before": accentBarBefore } : !showAccentBar ? { "&::before": { display: "none" } } : {}),
+          ...(accentBarBefore
+            ? { "&::before": accentBarBefore }
+            : !showAccentBar
+              ? {
+                  "&::before": {
+                    display: "none",
+                    content: "none",
+                    width: 0,
+                    opacity: 0,
+                  },
+                }
+              : {}),
         },
         title: {
           color: titleColor,

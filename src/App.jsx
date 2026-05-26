@@ -204,7 +204,10 @@ function enforceTextDefaultMappings(brandsInput) {
     if (!next[brandId].darkSemanticOverrides) next[brandId].darkSemanticOverrides = {};
     Object.entries(mappings).forEach(([semantic, mapping]) => {
       next[brandId].semanticMap[semantic] = { ...mapping };
-      next[brandId].darkSemanticOverrides[semantic] = { ...mapping };
+      // Preserve any explicit dark override; only backfill if missing.
+      if (!next[brandId].darkSemanticOverrides[semantic]) {
+        next[brandId].darkSemanticOverrides[semantic] = { ...mapping };
+      }
     });
   };
 
@@ -336,6 +339,9 @@ export default function App() {
   const [brandDeleteModalOpened, setBrandDeleteModalOpened] = useState(false);
   const [brandDeleteTargetId, setBrandDeleteTargetId] = useState(null);
   const [brandDeleteConfirmInput, setBrandDeleteConfirmInput] = useState("");
+  const [paletteDeleteModalOpened, setPaletteDeleteModalOpened] = useState(false);
+  const [paletteDeleteTargetName, setPaletteDeleteTargetName] = useState("");
+  const [paletteDeleteConfirmInput, setPaletteDeleteConfirmInput] = useState("");
   const importBrandsInputRef = useRef(null);
   const [localDataMessage, setLocalDataMessage] = useState(null);
   if (typeof window !== "undefined") {
@@ -987,14 +993,15 @@ export default function App() {
         const brand = next[activeBrand];
         if (!brand.componentOverrides) brand.componentOverrides = {};
         if (!brand.componentOverridesDark) brand.componentOverridesDark = {};
-        brand.componentOverrides[componentToken] = mapping;
-        // Temporary behavior while light/dark token sets are not finalized:
-        // keep both theme buckets in sync so preview edits match Figma modes.
-        brand.componentOverridesDark[componentToken] = mapping;
+        if (previewTheme === "dark") {
+          brand.componentOverridesDark[componentToken] = mapping;
+        } else {
+          brand.componentOverrides[componentToken] = mapping;
+        }
         return next;
       });
     },
-    [activeBrand]
+    [activeBrand, previewTheme]
   );
 
   const updateDimensionOverride = useCallback(
@@ -1082,6 +1089,103 @@ export default function App() {
     closeBrandDeleteModal,
     handleBrandChange,
   ]);
+
+  const countPaletteReferences = useCallback((brandData, paletteName) => {
+    if (!brandData || !paletteName) return { semantic: 0, component: 0, total: 0 };
+    let semantic = 0;
+    let component = 0;
+    Object.values(brandData.semanticMap || {}).forEach((mapping) => {
+      if (mapping && mapping.color === paletteName) semantic += 1;
+    });
+    Object.values(brandData.darkSemanticOverrides || {}).forEach((mapping) => {
+      if (mapping && mapping.color === paletteName) semantic += 1;
+    });
+    Object.values(brandData.componentOverrides || {}).forEach((mapping) => {
+      if (mapping && mapping.color === paletteName) component += 1;
+    });
+    Object.values(brandData.componentOverridesDark || {}).forEach((mapping) => {
+      if (mapping && mapping.color === paletteName) component += 1;
+    });
+    return { semantic, component, total: semantic + component };
+  }, []);
+
+  const openPaletteDeleteModal = useCallback((paletteName) => {
+    if (!paletteName) return;
+    setPaletteDeleteTargetName(String(paletteName));
+    setPaletteDeleteConfirmInput("");
+    setPaletteDeleteModalOpened(true);
+  }, []);
+
+  const closePaletteDeleteModal = useCallback(() => {
+    setPaletteDeleteModalOpened(false);
+    setPaletteDeleteTargetName("");
+    setPaletteDeleteConfirmInput("");
+  }, []);
+
+  const canSubmitPaletteDelete =
+    Boolean(paletteDeleteTargetName) &&
+    paletteDeleteConfirmInput.trim().toLowerCase() === String(paletteDeleteTargetName).trim().toLowerCase();
+
+  const executePaletteDelete = useCallback(() => {
+    const target = String(paletteDeleteTargetName || "").trim();
+    if (!target) return;
+    if (paletteDeleteConfirmInput.trim().toLowerCase() !== target.toLowerCase()) return;
+    setBrands((prev) => {
+      const brandData = prev[activeBrand];
+      if (!brandData || !brandData.primitives || !brandData.primitives[target]) return prev;
+      const next = JSON.parse(JSON.stringify(prev));
+      const nextBrand = next[activeBrand];
+      delete nextBrand.primitives[target];
+
+      const initialBrand = INITIAL_BRANDS[activeBrand] || {};
+      const fallbackStarter = BRAND_STARTER_SEMANTIC_MAP || {};
+
+      const resetSemanticEntry = (mapObj, semanticKey, darkMode) => {
+        if (!mapObj || !mapObj[semanticKey]) return;
+        const fallback =
+          (darkMode
+            ? initialBrand.darkSemanticOverrides?.[semanticKey]
+            : initialBrand.semanticMap?.[semanticKey]) ||
+          initialBrand.semanticMap?.[semanticKey] ||
+          fallbackStarter[semanticKey] ||
+          null;
+        if (fallback) {
+          mapObj[semanticKey] = { ...fallback };
+        } else {
+          delete mapObj[semanticKey];
+        }
+      };
+
+      Object.keys(nextBrand.semanticMap || {}).forEach((semanticKey) => {
+        const mapping = nextBrand.semanticMap?.[semanticKey];
+        if (mapping && mapping.color === target) {
+          resetSemanticEntry(nextBrand.semanticMap, semanticKey, false);
+        }
+      });
+
+      Object.keys(nextBrand.darkSemanticOverrides || {}).forEach((semanticKey) => {
+        const mapping = nextBrand.darkSemanticOverrides?.[semanticKey];
+        if (mapping && mapping.color === target) {
+          resetSemanticEntry(nextBrand.darkSemanticOverrides, semanticKey, true);
+        }
+      });
+
+      ["componentOverrides", "componentOverridesDark"].forEach((bucket) => {
+        const overrideMap = nextBrand[bucket] || {};
+        Object.keys(overrideMap).forEach((tokenKey) => {
+          const mapping = overrideMap[tokenKey];
+          if (mapping && mapping.color === target) {
+            delete overrideMap[tokenKey];
+          }
+        });
+      });
+
+      return next;
+    });
+    closePaletteDeleteModal();
+  }, [activeBrand, closePaletteDeleteModal, paletteDeleteConfirmInput, paletteDeleteTargetName]);
+
+  const paletteDeleteUsageSummary = countPaletteReferences(brand, paletteDeleteTargetName);
 
   const brandNames = Object.keys(brands);
   const colorTokens = getColorTokens(activeComponent);
@@ -1892,6 +1996,54 @@ export default function App() {
           </Group>
         </Stack>
       </Modal>
+      <Modal
+        opened={paletteDeleteModalOpened}
+        onClose={closePaletteDeleteModal}
+        title="Delete color scale"
+        centered
+        overlayProps={{ backgroundOpacity: 0.55 }}
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            This removes the full{" "}
+            <Text component="span" fw={700} ff="monospace">
+              {paletteDeleteTargetName}
+            </Text>{" "}
+            0-9 palette from this brand.
+          </Text>
+          {paletteDeleteUsageSummary.total > 0 ? (
+            <Text size="sm" c="orange.4">
+              This palette is currently referenced by {paletteDeleteUsageSummary.total} mappings ({paletteDeleteUsageSummary.semantic} semantic, {paletteDeleteUsageSummary.component} component). You may need to remap tokens after delete.
+            </Text>
+          ) : (
+            <Text size="sm" c="dimmed">
+              No semantic/component mappings currently reference this palette.
+            </Text>
+          )}
+          <Text size="sm">
+            Type the palette name{" "}
+            <Text component="span" fw={700} c="red.4" ff="monospace">
+              {paletteDeleteTargetName}
+            </Text>{" "}
+            to confirm.
+          </Text>
+          <TextInput
+            label="Palette name"
+            placeholder={paletteDeleteTargetName || "…"}
+            value={paletteDeleteConfirmInput}
+            onChange={(e) => setPaletteDeleteConfirmInput(e.currentTarget.value)}
+            autoComplete="off"
+          />
+          <Group justify="flex-end" mt="xs">
+            <Button variant="default" onClick={closePaletteDeleteModal}>
+              Cancel
+            </Button>
+            <Button color="red" disabled={!canSubmitPaletteDelete} onClick={executePaletteDelete}>
+              Delete scale
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
 
       {/* Header */}
       <div
@@ -2000,6 +2152,7 @@ export default function App() {
                   name={c}
                   scale={brand.primitives[c]}
                   onUpdate={updatePrimitive}
+                  onDelete={openPaletteDeleteModal}
                 />
               ))}
               <AddPrimitiveForm existingNames={colorNames} onAdd={addPrimitive} />

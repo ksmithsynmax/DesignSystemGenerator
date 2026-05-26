@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function PrimitiveScale({ name, scale, onUpdate, readOnly }) {
+export default function PrimitiveScale({ name, scale, onUpdate, readOnly, onDelete }) {
   const [editing, setEditing] = useState(null);
   const [val, setVal] = useState("");
   const normalizeHex = (raw) => {
@@ -23,16 +23,34 @@ export default function PrimitiveScale({ name, scale, onUpdate, readOnly }) {
 
   return (
     <div style={{ marginBottom: 12 }}>
-      <div
-        style={{
-          fontSize: 12,
-          fontWeight: 600,
-          color: "#C1C2C5",
-          marginBottom: 6,
-          fontFamily: "monospace",
-        }}
-      >
-        {name}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+        <div
+          style={{
+            fontSize: 12,
+            fontWeight: 600,
+            color: "#C1C2C5",
+            fontFamily: "monospace",
+          }}
+        >
+          {name}
+        </div>
+        {!readOnly && typeof onDelete === "function" ? (
+          <button
+            onClick={() => onDelete(name)}
+            style={{
+              background: "none",
+              border: "none",
+              color: "#FA5252",
+              fontSize: 11,
+              fontFamily: "monospace",
+              cursor: "pointer",
+              padding: 0,
+            }}
+            title={`Delete ${name} scale`}
+          >
+            Delete
+          </button>
+        ) : null}
       </div>
       <div style={{ display: "flex", gap: 2, flexWrap: "wrap" }}>
         {scale.map((c, i) => (
