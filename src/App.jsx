@@ -292,6 +292,36 @@ function enforceTextDefaultMappings(brandsInput) {
     }
   });
 
+  // Migrate legacy/oversized Select icon sizes to Button-aligned defaults.
+  // Some persisted snapshots include partial overrides (e.g. default: 31), so
+  // migrate whenever we detect old or clearly oversized values.
+  const legacySelectSectionSizes = { default: 32, xs: 28, sm: 32, md: 36, lg: 40, xl: 44 };
+  const nextSelectSectionSizes = { default: 14, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 };
+  Object.keys(next).forEach((brandId) => {
+    const b = next[brandId];
+    if (!b || !b.dimensionOverrides) return;
+    if (b.dimensionOverrides["select-section-size"] && !b.dimensionOverrides["select-icon-size"]) {
+      b.dimensionOverrides["select-icon-size"] = { ...b.dimensionOverrides["select-section-size"] };
+    }
+    if (b.dimensionOverrides["select-section-size"]) {
+      delete b.dimensionOverrides["select-section-size"];
+    }
+    if (!b.dimensionOverrides["select-icon-size"]) return;
+    const override = b.dimensionOverrides["select-icon-size"];
+    const keys = Object.keys(legacySelectSectionSizes);
+    const hasAnyLegacyValue = keys.some((k) => {
+      if (override[k] === undefined) return false;
+      return Number(override[k]) === Number(legacySelectSectionSizes[k]);
+    });
+    const hasOversizedValue = keys.some((k) => {
+      if (override[k] === undefined) return false;
+      return Number(override[k]) > 24;
+    });
+    if (hasAnyLegacyValue || hasOversizedValue) {
+      b.dimensionOverrides["select-icon-size"] = { ...nextSelectSectionSizes };
+    }
+  });
+
   return next;
 }
 
@@ -300,10 +330,6 @@ function mergeRecoveredBrands(brandsInput) {
   const snapshot = STORYBOOK_BRANDS && typeof STORYBOOK_BRANDS === "object" ? STORYBOOK_BRANDS : null;
   if (!snapshot) return brandsInput;
   const merged = { ...snapshot, ...brandsInput };
-  // If local persisted state for core brands got reset/degraded, force-restore
-  // from the last known Storybook snapshot for these critical brands.
-  if (snapshot.theia) merged.theia = JSON.parse(JSON.stringify(snapshot.theia));
-  if (snapshot.hyperion) merged.hyperion = JSON.parse(JSON.stringify(snapshot.hyperion));
   return merged;
 }
 
@@ -1490,6 +1516,31 @@ export default function App() {
       return false;
     }
 
+    if (activeComponent === "select") {
+      const targetState = effectiveComponentState || "default";
+      if (
+        token === "select-default-placeholder" ||
+        token === "select-filled-placeholder"
+      ) {
+        return targetState !== "error";
+      }
+      if (
+        token === "select-error-color" ||
+        token === "select-icon-error" ||
+        token === "select-placeholder-error" ||
+        token === "select-default-placeholder-error" ||
+        token === "select-filled-placeholder-error"
+      ) {
+        return targetState === "error";
+      }
+      if (token === "select-icon-disabled") {
+        return targetState === "disabled";
+      }
+      if (token === "select-icon" && (targetState === "error" || targetState === "disabled")) {
+        return false;
+      }
+    }
+
     const variantsByComponent = {
       button: ["filled", "outlined", "ghost"],
       actionicon: ["default", "filled", "light", "outlined", "transparent"],
@@ -1606,6 +1657,22 @@ export default function App() {
       }
       return true;
     }
+    if (activeComponent === "select") {
+      const targetState = effectiveComponentState || "default";
+      if (token.startsWith("select-error-")) return targetState === "error";
+      const defaultPadMatch = token.match(/^select-default-padding-(x|y)$/);
+      if (defaultPadMatch) return activeVariant === "default";
+      const filledPadMatch = token.match(/^select-filled-padding-(x|y)$/);
+      if (filledPadMatch) return activeVariant === "filled";
+      const variantFontMatch = token.match(/^select-(default|filled)-font-(family|weight)$/);
+      if (variantFontMatch) return variantFontMatch[1] === activeVariant;
+      const selectRadiusMatch = token.match(/^select-radius-(default|xs|sm|md|lg|xl)$/);
+      if (selectRadiusMatch) {
+        if (activeVariant === "default") return selectRadiusMatch[1] === "default";
+        return true;
+      }
+      return true;
+    }
     if (activeComponent !== "tabs") return true;
     if (activeVariant === "default") {
       if (/^tabs-(default|outlined|pills)-radius$/.test(token)) return false;
@@ -1628,6 +1695,26 @@ export default function App() {
   useEffect(() => {
     if (!activeColorToken) return;
     const parts = activeColorToken.split("-");
+    if (activeComponent === "select") {
+      const targetState = effectiveComponentState || "default";
+      if (
+        (activeColorToken === "select-default-placeholder" ||
+          activeColorToken === "select-filled-placeholder") &&
+        targetState === "error"
+      ) {
+        setActiveColorToken(null);
+        return;
+      }
+      if (
+        (activeColorToken === "select-placeholder-error" ||
+          activeColorToken === "select-default-placeholder-error" ||
+          activeColorToken === "select-filled-placeholder-error") &&
+        targetState !== "error"
+      ) {
+        setActiveColorToken(null);
+        return;
+      }
+    }
     const variantSegment = parts[1];
     const variantsByComponent = {
       button: ["filled", "outlined", "ghost"],
@@ -1652,7 +1739,7 @@ export default function App() {
     if (variants.includes(variantSegment) && variantSegment !== expectedVariantSegment) {
       setActiveColorToken(null);
     }
-  }, [activeAccordionVariant, activeComponent, activeColorToken, activeVariant, activeTabsTokenVariant]);
+  }, [activeAccordionVariant, activeComponent, activeColorToken, activeVariant, activeTabsTokenVariant, effectiveComponentState]);
 
   useEffect(() => {
     if (!activeDimensionToken) return;
@@ -1696,6 +1783,27 @@ export default function App() {
       }
       return;
     }
+    if (activeComponent === "select") {
+      const targetState = effectiveComponentState || "default";
+      if (activeDimensionToken.startsWith("select-error-") && targetState !== "error") {
+        setActiveDimensionToken(null);
+        return;
+      }
+      const selectVariantDimensionMatch = activeDimensionToken.match(
+        /^select-(default|filled)-(padding-(x|y)|font-(family|weight))$/,
+      );
+      if (selectVariantDimensionMatch && selectVariantDimensionMatch[1] !== activeVariant) {
+        setActiveDimensionToken(null);
+        return;
+      }
+      if (
+        activeVariant === "default" &&
+        /^select-radius-(xs|sm|md|lg|xl)$/.test(activeDimensionToken)
+      ) {
+        setActiveDimensionToken(null);
+      }
+      return;
+    }
     if (activeComponent !== "tabs") return;
     if (
       activeVariant === "default" &&
@@ -1715,7 +1823,15 @@ export default function App() {
     if (!match[1] && activeTabsTokenVariant !== "outlined") {
       setActiveDimensionToken(null);
     }
-  }, [activeBadgeRadius, activeProgressRadius, activeAvatarRadius, activeChipRadius, activeComponent, activeDimensionToken, activeVariant, activeTabsRadius, dimensionTokens, activeTabsTokenVariant]);
+  }, [activeBadgeRadius, activeProgressRadius, activeAvatarRadius, activeChipRadius, activeComponent, activeDimensionToken, activeVariant, activeTabsRadius, dimensionTokens, activeTabsTokenVariant, effectiveComponentState]);
+
+  useEffect(() => {
+    if (activeComponent !== "select") return;
+    if (activeVariant !== "default") return;
+    if (activeSelectRadius !== "default") {
+      setActiveSelectRadius("default");
+    }
+  }, [activeComponent, activeVariant, activeSelectRadius]);
 
   const tabStyle = (t) => ({
     background: activeTab === t ? "#25262B" : "transparent",

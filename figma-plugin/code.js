@@ -1174,6 +1174,13 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     return Number.isFinite(n) ? n : fallback;
   }
 
+  function resolvedComponentColor(figmaPathKey, fallback) {
+    if (!componentPayload || !figmaPathKey) return fallback;
+    var t = componentPayload[figmaPathKey];
+    if (!t || !t.value) return fallback;
+    return hexToFigmaRgb(String(t.value));
+  }
+
   var compSetGap = 300;
   var buttonFocusRingStyle = (buildOptions && buildOptions.buttonFocusRingStyle === "attached") ? "attached" : "offset";
   var actionIconFocusRingStyle = (buildOptions && buildOptions.actionIconFocusRingStyle === "attached") ? "attached" : "offset";
@@ -1516,6 +1523,57 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     progress("Failed to build usage docs: " + String(docsErr));
     docsBuildSummary = { created: 0, skipped: (docsSourceSets && docsSourceSets.length) ? docsSourceSets.length : 0 };
   }
+
+  // Keep docs page in the same brand/theme mode as preview.
+  try {
+    var docsPageForModes = null;
+    for (var dpi = 0; dpi < figma.root.children.length; dpi++) {
+      var docsRootPage = figma.root.children[dpi];
+      if (docsRootPage && docsRootPage.type === "PAGE" && docsRootPage.name === "Component Documentation") {
+        docsPageForModes = docsRootPage;
+        break;
+      }
+    }
+    var docsCtx = collectionsCtx || {};
+    if (docsPageForModes && docsCtx.compModes && docsCtx.semModes && docsCtx.componentsCol && docsCtx.semanticCol) {
+      var docsSyncBrands = docsCtx.syncBrands || [];
+      if (docsSyncBrands.length > 0) {
+        var docsPreferredTheme = (buildOptions && buildOptions.previewTheme === "dark") ? "dark" : "light";
+        var docsPreferredBrand = buildOptions && typeof buildOptions.activeBrand === "string"
+          ? String(buildOptions.activeBrand).toLowerCase()
+          : docsSyncBrands[0];
+        var docsPreferredModeKey = docsPreferredBrand + "-" + docsPreferredTheme;
+        var docsPreferredCompModeId = docsCtx.compModes.modeMap[docsPreferredModeKey];
+        var docsPreferredSemModeId = docsCtx.semModes.modeMap[docsPreferredModeKey];
+
+        if (docsPreferredCompModeId || docsPreferredSemModeId) {
+          if (typeof docsPageForModes.setExplicitVariableModeForCollection === "function") {
+            if (docsPreferredCompModeId) {
+              try { docsPageForModes.setExplicitVariableModeForCollection(docsCtx.componentsCol.id, docsPreferredCompModeId); } catch (_docsModeCompErr) {}
+            }
+            if (docsPreferredSemModeId) {
+              try { docsPageForModes.setExplicitVariableModeForCollection(docsCtx.semanticCol.id, docsPreferredSemModeId); } catch (_docsModeSemErr) {}
+            }
+          }
+          if (typeof docsPageForModes.findAll === "function") {
+            var docsNodes = [];
+            try { docsNodes = docsPageForModes.findAll(function () { return true; }); } catch (_docsScanErr) { docsNodes = []; }
+            for (var dni = 0; dni < docsNodes.length; dni++) {
+              var docsNode = docsNodes[dni];
+              if (!docsNode || typeof docsNode.setExplicitVariableModeForCollection !== "function") continue;
+              if (docsPreferredCompModeId) {
+                try { docsNode.setExplicitVariableModeForCollection(docsCtx.componentsCol.id, docsPreferredCompModeId); } catch (_docsNodeCompErr) {}
+              }
+              if (docsPreferredSemModeId) {
+                try { docsNode.setExplicitVariableModeForCollection(docsCtx.semanticCol.id, docsPreferredSemModeId); } catch (_docsNodeSemErr) {}
+              }
+            }
+          }
+          progress("Applied docs mode: " + docsPreferredModeKey);
+        }
+      }
+    }
+  } catch (_applyDocsModesErr) {}
 
   // Scroll viewport to show all component sets
   if (validSets.length > 0) {
@@ -12130,8 +12188,9 @@ async function buildTextInputComponentSet(varMap, page, font, debugDefaultOnly) 
         var size = sizes[si];
         var capSize = size === "default" ? "Default" : size.toUpperCase();
 
-        for (var ri = 0; ri < radii.length; ri++) {
-          var rad = radii[ri];
+      var variantRadii = variant === "default" ? ["default"] : radii;
+      for (var ri = 0; ri < variantRadii.length; ri++) {
+        var rad = variantRadii[ri];
           var capRad = rad === "default" ? "Default" : rad.toUpperCase();
 
           for (var sti = 0; sti < states.length; sti++) {
@@ -12504,6 +12563,18 @@ async function findTextInputIconComponents() {
 // ---------------------------------------------------------------------------
 
 async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
+  function createSelectSwapRefs(iconComp) {
+    var refs = [];
+    if (!iconComp) return refs;
+    try {
+      var mainComp = iconComp.mainComponent || iconComp;
+      if (mainComp && mainComp.key) refs.push(mainComp.key);
+    } catch (_err) {}
+    if (iconComp.key) refs.push(iconComp.key);
+    if (iconComp.id) refs.push(iconComp.id);
+    return refs;
+  }
+
   var variants = ["default", "filled"];
   var sizes = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
@@ -12549,16 +12620,18 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
             var capState = state.charAt(0).toUpperCase() + state.slice(1);
             for (var dmi = 0; dmi < dropdownModes.length; dmi++) {
               var dropdownMode = dropdownModes[dmi];
+              if ((state === "disabled" || state === "error") && dropdownMode === "open") continue;
               var capDropdown = dropdownMode === "open" ? "Open" : "Closed";
               var activeOptionIndices = [-1];
               var hoverOptionIndices = [-1];
               if (dropdownMode === "open" && state === "default") {
-                // Keep previous default look first: no active row + hover on option two.
-                hoverOptionIndices = [1];
+                // Figma default open state: option one is active; no hover row.
+                activeOptionIndices = [0];
+                hoverOptionIndices = [-1];
                 // Memory guard: full Active/Hover controls only on default size + default radius.
                 if (!debugDefaultOnly && size === "default" && rad === "default") {
-                  activeOptionIndices = [-1, 0, 1, 2];
-                  hoverOptionIndices = [1, -1, 0, 2];
+                  activeOptionIndices = [0, -1, 1, 2];
+                  hoverOptionIndices = [-1, 0, 1, 2];
                 }
               }
               for (var aoi = 0; aoi < activeOptionIndices.length; aoi++) {
@@ -12648,24 +12721,42 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
             input.layoutMode = "HORIZONTAL";
             input.primaryAxisSizingMode = "FIXED";
             input.counterAxisSizingMode = "AUTO";
-            input.primaryAxisAlignItems = "SPACE_BETWEEN";
+            input.primaryAxisAlignItems = variant === "default" ? "MIN" : "SPACE_BETWEEN";
             input.counterAxisAlignItems = "CENTER";
-            input.resize(200, 8);
+            input.resize(200, sizeHeights[size] || 36);
             input.cornerRadius = 4;
             input.paddingLeft = 10;
             input.paddingRight = 10;
+            input.paddingTop = 8;
+            input.paddingBottom = 8;
             input.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
             input.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
             input.strokeWeight = 1;
             input.strokeAlign = "INSIDE";
 
-            if (varMap["select/padding-x-" + size]) {
-              bindVar(input, "paddingLeft", varMap["select/padding-x-" + size]);
-              bindVar(input, "paddingRight", varMap["select/padding-x-" + size]);
+            var selectPaddingXVar =
+              varMap["select/" + variant + "-padding-x-" + size] ||
+              varMap["select/" + variant + "-padding-x-default"] ||
+              varMap["select/" + variant + "-padding-x"];
+            var selectPaddingYVar =
+              varMap["select/" + variant + "-padding-y-" + size] ||
+              varMap["select/" + variant + "-padding-y-default"] ||
+              varMap["select/" + variant + "-padding-y"];
+            var selectSectionSizeVar =
+              varMap["select/icon-size-" + size] ||
+              varMap["select/icon-size-default"] ||
+              varMap["select/icon-size"] ||
+              varMap["select/section-size-" + size] ||
+              varMap["select/section-size-default"] ||
+              varMap["select/section-size"];
+
+            if (selectPaddingXVar) {
+              bindVar(input, "paddingLeft", selectPaddingXVar);
+              bindVar(input, "paddingRight", selectPaddingXVar);
             }
-            if (varMap["select/padding-y-" + size]) {
-              bindVar(input, "paddingTop", varMap["select/padding-y-" + size]);
-              bindVar(input, "paddingBottom", varMap["select/padding-y-" + size]);
+            if (selectPaddingYVar) {
+              bindVar(input, "paddingTop", selectPaddingYVar);
+              bindVar(input, "paddingBottom", selectPaddingYVar);
             }
             if (varMap["select/radius-" + rad]) {
               bindVar(input, "topLeftRadius", varMap["select/radius-" + rad]);
@@ -12691,16 +12782,43 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
             } else if (state === "disabled") {
               if (varMap["select/text-disabled"]) bindPaintVar(valueNode, "fills", 0, varMap["select/text-disabled"]);
             } else {
-              if (varMap["select/placeholder"]) bindPaintVar(valueNode, "fills", 0, varMap["select/placeholder"]);
+              var placeholderPath = "select/" + variant + "-placeholder" + (state === "error" ? "-error" : "");
+              var placeholderVar = selectVarWithFallback(varMap, [
+                placeholderPath,
+                state === "error" ? "select/placeholder-error" : null,
+                "select/" + variant + "-placeholder",
+              ]);
+              if (placeholderVar) {
+                bindPaintVar(valueNode, "fills", 0, placeholderVar);
+              } else {
+                var placeholderFallback = resolvedComponentColor(
+                  placeholderPath,
+                  resolvedComponentColor(
+                    state === "error" ? "select/placeholder-error" : null,
+                    { r: 0.6, g: 0.6, b: 0.6, a: 1 }
+                  )
+                );
+                valueNode.fills = [{
+                  type: "SOLID",
+                  color: {
+                    r: placeholderFallback.r,
+                    g: placeholderFallback.g,
+                    b: placeholderFallback.b,
+                  },
+                  opacity: placeholderFallback.a,
+                }];
+              }
             }
-            var selectFontFamilyVar =
-              varMap["select/font-family-" + size] ||
-              varMap["select/font-family-default"] ||
-              varMap["select/font-family"];
-            var selectFontWeightVar =
-              varMap["select/font-weight-" + size] ||
-              varMap["select/font-weight-default"] ||
-              varMap["select/font-weight"];
+            var selectFontFamilyVar = selectVarWithFallback(varMap, [
+              "select/" + variant + "-font-family",
+              "select/font-family-default",
+              "select/font-family",
+            ]);
+            var selectFontWeightVar = selectVarWithFallback(varMap, [
+              "select/" + variant + "-font-weight",
+              "select/font-weight-default",
+              "select/font-weight",
+            ]);
             var selectLineHeightVar =
               varMap["select/line-height-" + size] ||
               varMap["select/line-height-default"] ||
@@ -12711,42 +12829,94 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
               if (selectFontWeightVar) bindVar(valueNode, "fontStyle", selectFontWeightVar);
               if (selectLineHeightVar) bindVar(valueNode, "lineHeight", selectLineHeightVar);
             }
-            input.appendChild(valueNode);
+            var isDefaultVariant = variant === "default";
+            var triggerContent = null;
+            if (isDefaultVariant) {
+              triggerContent = figma.createFrame();
+              triggerContent.name = "TriggerContent";
+              triggerContent.layoutMode = "HORIZONTAL";
+              triggerContent.primaryAxisSizingMode = "AUTO";
+              triggerContent.counterAxisSizingMode = "AUTO";
+              triggerContent.primaryAxisAlignItems = "MIN";
+              triggerContent.counterAxisAlignItems = "CENTER";
+              triggerContent.itemSpacing = 8;
+              triggerContent.fills = [];
+              triggerContent.strokes = [];
+              input.appendChild(triggerContent);
+              triggerContent.appendChild(valueNode);
+            } else {
+              input.appendChild(valueNode);
+            }
 
             var chevronSlot = figma.createFrame();
             chevronSlot.name = "ChevronSlot";
             chevronSlot.layoutMode = "HORIZONTAL";
-            chevronSlot.primaryAxisSizingMode = "FIXED";
-            chevronSlot.counterAxisSizingMode = "FIXED";
+            chevronSlot.primaryAxisSizingMode = "AUTO";
+            chevronSlot.counterAxisSizingMode = "AUTO";
             chevronSlot.primaryAxisAlignItems = "CENTER";
             chevronSlot.counterAxisAlignItems = "CENTER";
             chevronSlot.fills = [];
             chevronSlot.strokes = [];
-            chevronSlot.resize(20, 20);
-            input.appendChild(chevronSlot);
+            if (isDefaultVariant && triggerContent) triggerContent.appendChild(chevronSlot);
+            else input.appendChild(chevronSlot);
 
             var selectIconPaintVar =
               state === "disabled" && varMap["select/icon-disabled"]
                 ? varMap["select/icon-disabled"]
                 : state === "error" && varMap["select/icon-error"]
                   ? varMap["select/icon-error"]
-                  : varMap["select/icon"] || varMap["select/chevron-color"];
+                  : varMap["select/icon"];
+            var selectIconStrokeVar =
+              varMap["select/icon-stroke-width-" + size] ||
+              varMap["select/icon-stroke-width-default"] ||
+              varMap["select/icon-stroke-width"];
 
             if (chevronIconComp) {
               var chevronInstance = chevronIconComp.createInstance();
               chevronInstance.name = "Chevron";
               try {
-                chevronInstance.resize(12, 12);
+                chevronInstance.resizeWithoutConstraints(12, 12);
               } catch (e) {
                 // Keep default icon size if resize is not allowed.
               }
+              if (selectSectionSizeVar) {
+                bindVar(chevronInstance, "width", selectSectionSizeVar);
+                bindVar(chevronInstance, "height", selectSectionSizeVar);
+              }
               chevronSlot.appendChild(chevronInstance);
+              try { chevronInstance.layoutGrow = 0; } catch (_growErr) {}
+              try { chevronInstance.layoutAlign = "CENTER"; } catch (_alignErr) {}
+
+              // Mirror other components: expose icon as INSTANCE_SWAP on each Select variant.
+              if (typeof comp.addComponentProperty === "function") {
+                var selectSwapRefs = createSelectSwapRefs(chevronIconComp);
+                var selectSwapProp = null;
+                var selectSwapErr = null;
+                for (var ssri = 0; ssri < selectSwapRefs.length; ssri++) {
+                  try {
+                    selectSwapProp = comp.addComponentProperty("Chevron", "INSTANCE_SWAP", selectSwapRefs[ssri]);
+                    break;
+                  } catch (eSwap) {
+                    selectSwapErr = eSwap;
+                  }
+                }
+                if (selectSwapProp) {
+                  try {
+                    chevronInstance.componentPropertyReferences = { mainComponent: selectSwapProp };
+                  } catch (_swapRefErr) {}
+                } else if (selectSwapErr) {
+                  progress("[Select] Chevron INSTANCE_SWAP create failed: " + String(selectSwapErr));
+                }
+              }
               if (selectIconPaintVar && typeof chevronInstance.findAll === "function") {
                 var chevronVectors = chevronInstance.findAll(function (n) {
                   return n.type === "VECTOR";
                 });
                 for (var cvi = 0; cvi < chevronVectors.length; cvi++) {
                   try {
+                    if (selectIconStrokeVar) {
+                      bindVar(chevronVectors[cvi], "strokeWeight", selectIconStrokeVar);
+                    }
                     if (chevronVectors[cvi].strokes && chevronVectors[cvi].strokes.length > 0) {
                       bindPaintVar(chevronVectors[cvi], "strokes", 0, selectIconPaintVar);
                     }
@@ -12758,13 +12928,31 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
               chevronVector.name = "Chevron";
               chevronVector.vectorPaths = [{ windingRule: "NONZERO", data: "M 1 1 L 6 6 L 11 1" }];
               chevronVector.resize(12, 6);
+              if (selectSectionSizeVar) {
+                bindVar(chevronVector, "width", selectSectionSizeVar);
+                bindVar(chevronVector, "height", selectSectionSizeVar);
+              }
               chevronVector.fills = [];
               chevronVector.strokes = [{ type: "SOLID", color: { r: 0.45, g: 0.45, b: 0.45 } }];
               chevronVector.strokeWeight = 1.5;
+              if (selectIconStrokeVar) bindVar(chevronVector, "strokeWeight", selectIconStrokeVar);
               chevronVector.strokeJoin = "ROUND";
               chevronVector.strokeCap = "ROUND";
               if (selectIconPaintVar) bindPaintVar(chevronVector, "strokes", 0, selectIconPaintVar);
               chevronSlot.appendChild(chevronVector);
+            }
+
+            if (isDefaultVariant) {
+              var trailingSpacer = figma.createFrame();
+              trailingSpacer.name = "Spacer";
+              trailingSpacer.layoutMode = "NONE";
+              trailingSpacer.primaryAxisSizingMode = "FIXED";
+              trailingSpacer.counterAxisSizingMode = "AUTO";
+              trailingSpacer.fills = [];
+              trailingSpacer.strokes = [];
+              trailingSpacer.resize(1, 1);
+              try { trailingSpacer.layoutGrow = 1; } catch (_selectSpacerGrowErr) {}
+              input.appendChild(trailingSpacer);
             }
 
             if (state === "focus") {
@@ -12789,16 +12977,25 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
               dropdown.counterAxisSizingMode = "FIXED";
               dropdown.counterAxisAlignItems = "MIN";
               dropdown.itemSpacing = 0;
-              dropdown.paddingTop = 4;
-              dropdown.paddingBottom = 4;
+              dropdown.paddingLeft = 8;
+              dropdown.paddingRight = 8;
+              dropdown.paddingTop = 8;
+              dropdown.paddingBottom = 8;
               dropdown.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
               dropdown.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
               dropdown.strokeWeight = 1;
               dropdown.strokeAlign = "INSIDE";
               dropdown.cornerRadius = 4;
-              dropdown.resize(200, 120);
-              if (varMap["select/dropdown-background"]) bindPaintVar(dropdown, "fills", 0, varMap["select/dropdown-background"]);
-              if (varMap["select/dropdown-border"]) bindPaintVar(dropdown, "strokes", 0, varMap["select/dropdown-border"]);
+              dropdown.resize(200, 1);
+              try { dropdown.layoutSizingVertical = "HUG"; } catch (_selectDropdownHugErr) {}
+              var dropdownBackgroundVar = selectVarWithFallback(varMap, [
+                "select/" + variant + "-dropdown-background",
+              ]);
+              var dropdownBorderVar = selectVarWithFallback(varMap, [
+                "select/" + variant + "-dropdown-border",
+              ]);
+              if (dropdownBackgroundVar) bindPaintVar(dropdown, "fills", 0, dropdownBackgroundVar);
+              if (dropdownBorderVar) bindPaintVar(dropdown, "strokes", 0, dropdownBorderVar);
               if (varMap["select/radius-" + rad]) {
                 bindVar(dropdown, "topLeftRadius", varMap["select/radius-" + rad]);
                 bindVar(dropdown, "topRightRadius", varMap["select/radius-" + rad]);
@@ -12819,16 +13016,27 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
                 option.itemSpacing = 8;
                 option.paddingLeft = 10;
                 option.paddingRight = 10;
-                option.resize(200, optionHeight);
+                option.cornerRadius = 4;
+                if (varMap["select/radius-" + rad]) {
+                  bindVar(option, "topLeftRadius", varMap["select/radius-" + rad]);
+                  bindVar(option, "topRightRadius", varMap["select/radius-" + rad]);
+                  bindVar(option, "bottomLeftRadius", varMap["select/radius-" + rad]);
+                  bindVar(option, "bottomRightRadius", varMap["select/radius-" + rad]);
+                }
+                option.resize(184, optionHeight);
                 option.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0 }];
 
                 var isSelectedOption = oi === activeOptionIndex;
                 var isHoverOption = oi === hoverOptionIndex;
                 var optionBgVar = null;
-                if (isSelectedOption && varMap["select/option-selected-background"]) {
-                  optionBgVar = varMap["select/option-selected-background"];
-                } else if (isHoverOption && varMap["select/option-hover-background"]) {
-                  optionBgVar = varMap["select/option-hover-background"];
+                if (isSelectedOption) {
+                  optionBgVar = selectVarWithFallback(varMap, [
+                    "select/" + variant + "-option-selected-background",
+                  ]);
+                } else if (isHoverOption) {
+                  optionBgVar = selectVarWithFallback(varMap, [
+                    "select/" + variant + "-option-hover-background",
+                  ]);
                 }
                 if (optionBgVar) {
                   option.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
@@ -12841,8 +13049,11 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
                 optionText.characters = optionLabels[oi];
                 optionText.fontSize = 14;
                 optionText.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
-                if (isHoverOption && varMap["select/option-hover-text"]) {
-                  bindPaintVar(optionText, "fills", 0, varMap["select/option-hover-text"]);
+                if (isHoverOption) {
+                  var optionHoverTextVar = selectVarWithFallback(varMap, [
+                    "select/" + variant + "-option-hover-text",
+                  ]);
+                  if (optionHoverTextVar) bindPaintVar(optionText, "fills", 0, optionHoverTextVar);
                 } else if (varMap["select/text"]) {
                   bindPaintVar(optionText, "fills", 0, varMap["select/text"]);
                 }
@@ -12928,6 +13139,15 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
 function selectColorPath(variant, property, state) {
   if (state === "default") return "select/" + variant + "-" + property;
   return "select/" + variant + "-" + property + "-" + state;
+}
+
+function selectVarWithFallback(varMap, paths) {
+  for (var i = 0; i < paths.length; i++) {
+    var path = paths[i];
+    if (!path) continue;
+    if (varMap[path]) return varMap[path];
+  }
+  return null;
 }
 
 async function findSelectChevronIconComponent() {

@@ -1609,57 +1609,74 @@ export const COMPONENT_TOKENS = {
     // ── SHARED COLOR TOKENS ──
     "select-text":           { type: "COLOR", semantic: "text-default",     figmaPath: "select/text" },
     "select-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "select/text-disabled" },
-    "select-placeholder":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "select/placeholder" },
+    "select-default-placeholder": { type: "COLOR", semantic: "text-placeholder", figmaPath: "select/default-placeholder" },
+    "select-filled-placeholder": { type: "COLOR", semantic: "text-placeholder", figmaPath: "select/filled-placeholder" },
+    "select-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "select/placeholder-error" },
+    "select-default-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "select/default-placeholder-error" },
+    "select-filled-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "select/filled-placeholder-error" },
     "select-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "select/label-color" },
     "select-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/asterisk-color" },
     "select-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/error-color" },
-    "select-chevron-color":  { type: "COLOR", semantic: "text-default",     figmaPath: "select/chevron-color" },
-    /** Right-slot / chevron icon tint (Mantine `section`); preferred over `select-chevron-color` for new files. */
+    /** Right-slot / chevron icon tint (Mantine `section`). */
     "select-icon":           { type: "COLOR", semantic: "text-default",     figmaPath: "select/icon" },
     "select-icon-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "select/icon-disabled" },
     "select-icon-error":     { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/icon-error" },
     "select-focus-ring":     { type: "COLOR", semantic: "border-focus",     figmaPath: "select/focus-ring" },
     /** Listbox panel (open dropdown behind the trigger). */
-    "select-dropdown-background": { type: "COLOR", semantic: "surface-default", figmaPath: "select/dropdown-background" },
-    "select-dropdown-border":     { type: "COLOR", semantic: "border-default",  figmaPath: "select/dropdown-border" },
+    "select-default-dropdown-background": { type: "COLOR", semantic: "surface-default", figmaPath: "select/default-dropdown-background" },
+    "select-default-dropdown-border":     { type: "COLOR", semantic: "border-default",  figmaPath: "select/default-dropdown-border" },
+    "select-filled-dropdown-background":  { type: "COLOR", semantic: "interactive-secondary", figmaPath: "select/filled-dropdown-background" },
+    "select-filled-dropdown-border":      { type: "COLOR", semantic: "border-default",  figmaPath: "select/filled-dropdown-border" },
     /** Highlight for the checked row (check icon / current value row). */
-    "select-option-selected-background": {
+    "select-default-option-selected-background": {
       type: "COLOR",
       semantic: "subtle-primary",
-      figmaPath: "select/option-selected-background",
+      figmaPath: "select/default-option-selected-background",
+    },
+    "select-filled-option-selected-background": {
+      type: "COLOR",
+      semantic: "subtle-primary",
+      figmaPath: "select/filled-option-selected-background",
     },
     /**
      * Hovered row (pointer) and keyboard-highlighted row (`data-combobox-selected`).
      * Default semantic is subdued so it stays off pure white vs the menu; remap in semantics as needed.
      */
-    "select-option-hover-background": {
+    "select-default-option-hover-background": {
       type: "COLOR",
       semantic: "subtle-secondary",
-      figmaPath: "select/option-hover-background",
+      figmaPath: "select/default-option-hover-background",
+    },
+    "select-filled-option-hover-background": {
+      type: "COLOR",
+      semantic: "subtle-secondary",
+      figmaPath: "select/filled-option-hover-background",
     },
     /** Label text when an option is hovered / keyboard-highlighted (readability vs hover BG). */
-    "select-option-hover-text": {
+    "select-default-option-hover-text": {
       type: "COLOR",
       semantic: "text-default",
-      figmaPath: "select/option-hover-text",
+      figmaPath: "select/default-option-hover-text",
+    },
+    "select-filled-option-hover-text": {
+      type: "COLOR",
+      semantic: "text-default",
+      figmaPath: "select/filled-option-hover-text",
     },
 
     // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
     "select-font-size":    { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "select/font-size" },
-    "select-font-family": {
-      type: "STRING",
-      sizes: { default: "Inter", xs: "Inter", sm: "Inter", md: "Inter", lg: "Inter", xl: "Inter" },
-      figmaPath: "select/font-family",
-    },
-    "select-font-weight": {
-      type: "STRING",
-      sizes: { default: "Regular", xs: "Regular", sm: "Regular", md: "Regular", lg: "Regular", xl: "Regular" },
-      figmaPath: "select/font-weight",
-    },
-    "select-line-height": { type: "FLOAT", unit: "px", sizes: { default: 20, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "select/line-height" },
-    "select-padding-x":    { type: "FLOAT", unit: "px", sizes: { default: 10, xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "select/padding-x" },
-    "select-padding-y":    { type: "FLOAT", unit: "px", sizes: { default: 8,  xs: 7,  sm: 8,  md: 9,  lg: 11, xl: 14 }, figmaPath: "select/padding-y" },
-    "select-section-size": { type: "FLOAT", unit: "px", sizes: { default: 32, xs: 28, sm: 32, md: 36, lg: 40, xl: 44 }, figmaPath: "select/section-size" },
+    "select-default-font-family": { type: "STRING", value: "Inter", figmaPath: "select/default-font-family" },
+    "select-default-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "select/default-font-weight" },
+    "select-filled-font-family": { type: "STRING", value: "Inter", figmaPath: "select/filled-font-family" },
+    "select-filled-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "select/filled-font-weight" },
+    "select-line-height": { type: "FLOAT", unit: "px", sizes: { default: 18, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "select/line-height" },
+    "select-default-padding-x": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "select/default-padding-x" },
+    "select-default-padding-y": { type: "FLOAT", unit: "px", sizes: { default: 8,  xs: 7,  sm: 8,  md: 9,  lg: 11, xl: 14 }, figmaPath: "select/default-padding-y" },
+    "select-filled-padding-x":  { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "select/filled-padding-x" },
+    "select-filled-padding-y":  { type: "FLOAT", unit: "px", sizes: { default: 8,  xs: 7,  sm: 8,  md: 9,  lg: 11, xl: 14 }, figmaPath: "select/filled-padding-y" },
+    "select-icon-size": { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "select/icon-size" },
+    "select-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, figmaPath: "select/icon-stroke-width" },
 
     // ── FLOAT TOKENS (radius variants: default, xs, sm, md, lg, xl — independent from size) ──
     "select-radius": { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "select/radius" },

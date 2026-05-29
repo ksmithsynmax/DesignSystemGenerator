@@ -800,15 +800,19 @@ export const STORYBOOK_BRANDS = {
         "sm": 2,
         "default": 12
       },
-      "select-font-weight": {
-        "sm": "Regular",
-        "default": "Semi Bold"
+      "select-default-font-weight": {
+        "_value": "Semi Bold"
       },
-      "select-font-family": {
-        "sm": "Inter",
-        "xs": "Roboto Mono"
+      "select-filled-font-weight": {
+        "_value": "Semi Bold"
       },
-      "select-section-size": {
+      "select-default-font-family": {
+        "_value": "Inter"
+      },
+      "select-filled-font-family": {
+        "_value": "Inter"
+      },
+      "select-icon-size": {
         "default": 31
       },
       "select-font-size": {
@@ -2300,21 +2304,6 @@ export const STORYBOOK_BRANDS = {
         "index": 0,
         "opacity": 0
       },
-      "select-dropdown-background": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
-      },
-      "select-dropdown-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "select-option-hover-background": {
-        "color": "blue",
-        "index": 6,
-        "opacity": 100
-      },
       "select-filled-background": {
         "color": "navy",
         "index": 9,
@@ -2416,26 +2405,6 @@ export const STORYBOOK_BRANDS = {
       "select-filled-background-disabled": {
         "color": "slate-gray",
         "index": 3,
-        "opacity": 100
-      },
-      "select-chevron-color": {
-        "color": "green",
-        "index": 5,
-        "opacity": 100
-      },
-      "select-option-hover-text": {
-        "color": "neutral",
-        "index": 0,
-        "opacity": 100
-      },
-      "select-option-selected-background": {
-        "color": "blue",
-        "index": 6,
-        "opacity": 100
-      },
-      "select-placeholder": {
-        "color": "steel",
-        "index": 7,
         "opacity": 100
       },
       "card-default-background": {
@@ -5277,21 +5246,6 @@ export const STORYBOOK_BRANDS = {
         "index": 0,
         "opacity": 0
       },
-      "select-dropdown-background": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
-      },
-      "select-dropdown-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "select-option-hover-background": {
-        "color": "blue",
-        "index": 6,
-        "opacity": 100
-      },
       "select-filled-background": {
         "color": "navy",
         "index": 9,
@@ -5393,26 +5347,6 @@ export const STORYBOOK_BRANDS = {
       "select-filled-background-disabled": {
         "color": "slate-gray",
         "index": 3,
-        "opacity": 100
-      },
-      "select-chevron-color": {
-        "color": "green",
-        "index": 5,
-        "opacity": 100
-      },
-      "select-option-hover-text": {
-        "color": "neutral",
-        "index": 0,
-        "opacity": 100
-      },
-      "select-option-selected-background": {
-        "color": "blue",
-        "index": 6,
-        "opacity": 100
-      },
-      "select-placeholder": {
-        "color": "steel",
-        "index": 7,
         "opacity": 100
       },
       "card-dark-title": {

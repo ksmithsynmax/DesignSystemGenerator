@@ -158,7 +158,13 @@ export function SelectPropertiesPanel({
     <div style={{ display: "grid", gap: 10 }}>
       <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={SELECT_VARIANTS} />
       <PropertyRow label="Size" value={activeSelectSize} onChange={setActiveSelectSize} options={sizeKeys} />
-      <PropertyRow label="Radius" value={activeSelectRadius} onChange={setActiveSelectRadius} options={SELECT_RADIUS_KEYS} />
+      <PropertyRow
+        label="Radius"
+        value={activeSelectRadius}
+        onChange={setActiveSelectRadius}
+        options={SELECT_RADIUS_KEYS}
+        disabled={activeVariant === "default"}
+      />
       <PropertyRow
         label="State"
         value={selectedState}
