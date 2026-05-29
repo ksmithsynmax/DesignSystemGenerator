@@ -504,6 +504,34 @@ export const COMPONENT_TOKENS = {
     "switch-track-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "switch/track-border-width" },
   },
 
+  burger: {
+    // ── BUTTON BACKGROUND (per state) ──
+    "burger-background":          { type: "COLOR", semantic: "transparent",                figmaPath: "burger/background" },
+    "burger-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "burger/background-hover" },
+    "burger-background-focus":    { type: "COLOR", semantic: "transparent",                figmaPath: "burger/background-focus" },
+    "burger-background-disabled": { type: "COLOR", semantic: "transparent",                figmaPath: "burger/background-disabled" },
+
+    // ── LINE COLOR (per state) ──
+    "burger-color":          { type: "COLOR", semantic: "text-default",  figmaPath: "burger/color" },
+    "burger-color-hover":    { type: "COLOR", semantic: "text-default",  figmaPath: "burger/color-hover" },
+    "burger-color-focus":    { type: "COLOR", semantic: "text-default",  figmaPath: "burger/color-focus" },
+    "burger-color-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "burger/color-disabled" },
+
+    // ── SHARED COLOR TOKEN ──
+    "burger-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "burger/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
+    "burger-size":      { type: "FLOAT", unit: "px", sizes: { default: 24, xs: 12, sm: 18, md: 24, lg: 34, xl: 42 }, figmaPath: "burger/size" },
+    "burger-line-size": { type: "FLOAT", unit: "px", sizes: { default: 2,  xs: 1,  sm: 2,  md: 2,  lg: 3,  xl: 4 },  figmaPath: "burger/line-size" },
+    "burger-line-gap":  { type: "FLOAT", unit: "px", sizes: { default: 6,  xs: 3,  sm: 5,  md: 6,  lg: 9,  xl: 11 }, figmaPath: "burger/line-gap" },
+    "burger-padding":   { type: "FLOAT", unit: "px", sizes: { default: 8,  xs: 4,  sm: 6,  md: 8,  lg: 10, xl: 12 }, figmaPath: "burger/padding" },
+    "burger-radius":    { type: "FLOAT", unit: "px", sizes: { default: 8,  xs: 4,  sm: 6,  md: 8,  lg: 12, xl: 16 }, figmaPath: "burger/radius" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "burger-line-radius":      { type: "FLOAT", unit: "px", value: 2, figmaPath: "burger/line-radius" },
+    "burger-focus-ring-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "burger/focus-ring-width" },
+  },
+
   checkbox: {
     // ── FILLED VARIANT ──
     "checkbox-filled-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "checkbox/filled-background" },
@@ -1695,6 +1723,131 @@ export const COMPONENT_TOKENS = {
     "select-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "select/error-gap" },
   },
 
+  multiselect: {
+    // ── DEFAULT VARIANT — BACKGROUND (per state) ──
+    "multiselect-default-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "multiselect/default-background" },
+    "multiselect-default-background-hover":    { type: "COLOR", semantic: "surface-default",      figmaPath: "multiselect/default-background-hover" },
+    "multiselect-default-background-focus":    { type: "COLOR", semantic: "surface-default",      figmaPath: "multiselect/default-background-focus" },
+    "multiselect-default-background-error":    { type: "COLOR", semantic: "surface-default",      figmaPath: "multiselect/default-background-error" },
+    "multiselect-default-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "multiselect/default-background-disabled" },
+
+    // ── DEFAULT VARIANT — BORDER (per state) ──
+    "multiselect-default-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "multiselect/default-border" },
+    "multiselect-default-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "multiselect/default-border-hover" },
+    "multiselect-default-border-focus":    { type: "COLOR", semantic: "border-focus",    figmaPath: "multiselect/default-border-focus" },
+    "multiselect-default-border-error":    { type: "COLOR", semantic: "feedback-error",  figmaPath: "multiselect/default-border-error" },
+    "multiselect-default-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "multiselect/default-border-disabled" },
+
+    // ── FILLED VARIANT — BACKGROUND (per state) ──
+    "multiselect-filled-background":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "multiselect/filled-background" },
+    "multiselect-filled-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "multiselect/filled-background-hover" },
+    "multiselect-filled-background-focus":    { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "multiselect/filled-background-focus" },
+    "multiselect-filled-background-error":    { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "multiselect/filled-background-error" },
+    "multiselect-filled-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "multiselect/filled-background-disabled" },
+
+    // ── FILLED VARIANT — BORDER (per state) ──
+    "multiselect-filled-border":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "multiselect/filled-border" },
+    "multiselect-filled-border-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "multiselect/filled-border-hover" },
+    "multiselect-filled-border-focus":    { type: "COLOR", semantic: "border-focus",                figmaPath: "multiselect/filled-border-focus" },
+    "multiselect-filled-border-error":    { type: "COLOR", semantic: "feedback-error",              figmaPath: "multiselect/filled-border-error" },
+    "multiselect-filled-border-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "multiselect/filled-border-disabled" },
+
+    // ── SHARED COLOR TOKENS ──
+    "multiselect-text":           { type: "COLOR", semantic: "text-default",     figmaPath: "multiselect/text" },
+    "multiselect-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "multiselect/text-disabled" },
+    "multiselect-default-placeholder": { type: "COLOR", semantic: "text-placeholder", figmaPath: "multiselect/default-placeholder" },
+    "multiselect-filled-placeholder": { type: "COLOR", semantic: "text-placeholder", figmaPath: "multiselect/filled-placeholder" },
+    "multiselect-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "multiselect/placeholder-error" },
+    "multiselect-default-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "multiselect/default-placeholder-error" },
+    "multiselect-filled-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "multiselect/filled-placeholder-error" },
+    "multiselect-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "multiselect/label-color" },
+    "multiselect-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "multiselect/asterisk-color" },
+    "multiselect-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "multiselect/error-color" },
+    /** Right-slot / chevron icon tint (Mantine `section`). */
+    "multiselect-icon":           { type: "COLOR", semantic: "text-default",     figmaPath: "multiselect/icon" },
+    "multiselect-icon-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "multiselect/icon-disabled" },
+    "multiselect-icon-error":     { type: "COLOR", semantic: "feedback-error",   figmaPath: "multiselect/icon-error" },
+    "multiselect-focus-ring":     { type: "COLOR", semantic: "border-focus",     figmaPath: "multiselect/focus-ring" },
+    /** Selected-value pill (tag) shown inside the trigger. */
+    "multiselect-pill-background":   { type: "COLOR", semantic: "subtle-secondary", figmaPath: "multiselect/pill-background" },
+    "multiselect-pill-text":         { type: "COLOR", semantic: "text-default",     figmaPath: "multiselect/pill-text" },
+    "multiselect-pill-remove-icon":  { type: "COLOR", semantic: "text-placeholder", figmaPath: "multiselect/pill-remove-icon" },
+    /** Listbox panel (open dropdown behind the trigger). */
+    "multiselect-default-dropdown-background": { type: "COLOR", semantic: "surface-default", figmaPath: "multiselect/default-dropdown-background" },
+    "multiselect-default-dropdown-border":     { type: "COLOR", semantic: "border-default",  figmaPath: "multiselect/default-dropdown-border" },
+    "multiselect-filled-dropdown-background":  { type: "COLOR", semantic: "interactive-secondary", figmaPath: "multiselect/filled-dropdown-background" },
+    "multiselect-filled-dropdown-border":      { type: "COLOR", semantic: "border-default",  figmaPath: "multiselect/filled-dropdown-border" },
+    /** Highlight for the checked row (selected options in the open list). */
+    "multiselect-default-option-selected-background": {
+      type: "COLOR",
+      semantic: "subtle-primary",
+      figmaPath: "multiselect/default-option-selected-background",
+    },
+    "multiselect-filled-option-selected-background": {
+      type: "COLOR",
+      semantic: "subtle-primary",
+      figmaPath: "multiselect/filled-option-selected-background",
+    },
+    /**
+     * Hovered row (pointer) and keyboard-highlighted row (`data-combobox-selected`).
+     * Default semantic is subdued so it stays off pure white vs the menu; remap in semantics as needed.
+     */
+    "multiselect-default-option-hover-background": {
+      type: "COLOR",
+      semantic: "subtle-secondary",
+      figmaPath: "multiselect/default-option-hover-background",
+    },
+    "multiselect-filled-option-hover-background": {
+      type: "COLOR",
+      semantic: "subtle-secondary",
+      figmaPath: "multiselect/filled-option-hover-background",
+    },
+    /** Label text when an option is hovered / keyboard-highlighted (readability vs hover BG). */
+    "multiselect-default-option-hover-text": {
+      type: "COLOR",
+      semantic: "text-default",
+      figmaPath: "multiselect/default-option-hover-text",
+    },
+    "multiselect-filled-option-hover-text": {
+      type: "COLOR",
+      semantic: "text-default",
+      figmaPath: "multiselect/filled-option-hover-text",
+    },
+
+    // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
+    "multiselect-font-size":    { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "multiselect/font-size" },
+    "multiselect-default-font-family": { type: "STRING", value: "Inter", figmaPath: "multiselect/default-font-family" },
+    "multiselect-default-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "multiselect/default-font-weight" },
+    "multiselect-filled-font-family": { type: "STRING", value: "Inter", figmaPath: "multiselect/filled-font-family" },
+    "multiselect-filled-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "multiselect/filled-font-weight" },
+    "multiselect-line-height": { type: "FLOAT", unit: "px", sizes: { default: 18, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "multiselect/line-height" },
+    "multiselect-default-padding-x": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "multiselect/default-padding-x" },
+    "multiselect-default-padding-y": { type: "FLOAT", unit: "px", sizes: { default: 8,  xs: 7,  sm: 8,  md: 9,  lg: 11, xl: 14 }, figmaPath: "multiselect/default-padding-y" },
+    "multiselect-filled-padding-x":  { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "multiselect/filled-padding-x" },
+    "multiselect-filled-padding-y":  { type: "FLOAT", unit: "px", sizes: { default: 8,  xs: 7,  sm: 8,  md: 9,  lg: 11, xl: 14 }, figmaPath: "multiselect/filled-padding-y" },
+    "multiselect-icon-size": { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "multiselect/icon-size" },
+    "multiselect-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, figmaPath: "multiselect/icon-stroke-width" },
+    "multiselect-pill-font-size": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 10, sm: 12, md: 14, lg: 16, xl: 18 }, figmaPath: "multiselect/pill-font-size" },
+    "multiselect-pill-gap":       { type: "FLOAT", unit: "px", value: 4, figmaPath: "multiselect/pill-gap" },
+
+    // ── FLOAT TOKENS (radius variants: default, xs, sm, md, lg, xl — independent from size) ──
+    "multiselect-radius": { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "multiselect/radius" },
+    "multiselect-pill-radius": { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "multiselect/pill-radius" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "multiselect-border-width":    { type: "FLOAT", unit: "px", value: 1,  figmaPath: "multiselect/border-width" },
+    "multiselect-label-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "multiselect/label-font-size" },
+    "multiselect-label-font-family": { type: "STRING", value: "Inter", figmaPath: "multiselect/label-font-family" },
+    "multiselect-label-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "multiselect/label-font-weight" },
+    "multiselect-label-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "multiselect/label-line-height" },
+    "multiselect-label-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "multiselect/label-gap" },
+    "multiselect-error-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "multiselect/error-font-size" },
+    "multiselect-error-font-family": { type: "STRING", value: "Inter", figmaPath: "multiselect/error-font-family" },
+    "multiselect-error-font-weight": { type: "STRING", value: "Regular", figmaPath: "multiselect/error-font-weight" },
+    "multiselect-error-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "multiselect/error-line-height" },
+    "multiselect-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "multiselect/error-gap" },
+  },
+
   image: {
     // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
     "image-width": {
@@ -1885,7 +2038,6 @@ const PLACEHOLDER_COMPONENTS = [
   "anchor",
   "text",
   "title",
-  "multiselect",
   "alert",
 ];
 
@@ -1897,6 +2049,7 @@ export const COMPONENT_SIZE_KEYS = {
   tabs: ["xs", "sm", "md", "lg", "xl"],
   accordion: ["default", "xs", "sm", "md", "lg", "xl"],
   switch: ["default", "xs", "sm", "md", "lg", "xl"],
+  burger: ["default", "xs", "sm", "md", "lg", "xl"],
   checkbox: ["xs", "sm", "md", "lg", "xl"],
   radio: ["xs", "sm", "md", "lg", "xl"],
   chip: ["default", "xs", "sm", "md", "lg", "xl"],
@@ -1917,6 +2070,7 @@ export const COMPONENT_SIZE_KEYS = {
   anchor: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["default", "xs", "sm", "md", "lg", "xl"],
   select: ["default", "xs", "sm", "md", "lg", "xl"],
+  multiselect: ["default", "xs", "sm", "md", "lg", "xl"],
   menu: ["default", "xs", "sm", "md", "lg", "xl"],
   divider: ["default", "xs", "sm", "md", "lg", "xl"],
   list: ["default", "xs", "sm", "md", "lg", "xl"],

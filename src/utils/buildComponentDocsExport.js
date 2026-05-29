@@ -100,6 +100,13 @@ const EXTRA_FIGMA_PROPERTIES = {
     { name: "Searchable", values: ["Off", "On"], notes: "Search field behavior." },
     { name: "Clearable", values: ["Off", "On"], notes: "Clear action visibility." },
   ],
+  multiselect: [
+    { name: "ShowLabel", values: ["Off", "On"], notes: "Label visibility." },
+    { name: "WithAsterisk", values: ["Off", "On"], notes: "Required indicator visibility." },
+    { name: "ShowError", values: ["Off", "On"], notes: "Error message visibility." },
+    { name: "Searchable", values: ["Off", "On"], notes: "Search field behavior." },
+    { name: "Clearable", values: ["Off", "On"], notes: "Clear action visibility." },
+  ],
 };
 
 function toTitleCase(value) {

@@ -990,11 +990,11 @@ function resolveManagedComponentKeyFromName(name) {
   if (!normalized) return null;
   if (normalized === "popup") return "popover";
   var managedKeys = [
-    "button", "switch", "slider", "rangeslider", "checkbox", "radio",
+    "button", "switch", "burger", "slider", "rangeslider", "checkbox", "radio",
     "chip", "notification", "alert", "modal", "tooltip", "popover", "menu", "divider", "list", "loader",
     "progress",
     "avatar",
-    "pill", "badge", "textinput", "select", "card", "actionicon",
+    "pill", "badge", "textinput", "multiselect", "select", "card", "actionicon",
     "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image",
     "table"
   ];
@@ -1238,6 +1238,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var switchSet = await buildSet("Switch", function () {
     return buildSwitchComponentSet(varMap, page, font);
   });
+  var burgerSet = await buildSet("Burger", function () {
+    return buildBurgerComponentSet(varMap, page, font);
+  });
   var sliderSet = await buildSet("Slider", function () {
     return buildSliderComponentSet(varMap, page, font);
   });
@@ -1300,6 +1303,14 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
       page,
       font,
       Boolean(buildOptions && buildOptions.selectDebugDefaultOnly)
+    );
+  });
+  var multiSelectSet = await buildSet("MultiSelect", function () {
+    return buildMultiSelectComponentSet(
+      varMap,
+      page,
+      font,
+      Boolean(buildOptions && buildOptions.multiSelectDebugDefaultOnly)
     );
   });
   var cardSet = await buildSet("Card", function () {
@@ -1365,6 +1376,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var generatedSets = [
     buttonSet,
     switchSet,
+    burgerSet,
     sliderSet,
     rangeSliderSet,
     checkboxSet,
@@ -1384,6 +1396,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     badgeSet,
     textInputSet,
     selectSet,
+    multiSelectSet,
     cardSet,
     actionIconSet,
     tabsItemSet,
@@ -5760,6 +5773,198 @@ function switchThumbBgPath(state) {
 function switchLabelTextPath(state) {
   if (state === "disabled") return "switch/label-text-disabled";
   return "switch/label-text";
+}
+
+// ---------------------------------------------------------------------------
+// Burger
+// ---------------------------------------------------------------------------
+function buildBurgerComponentSet(varMap, page, font) {
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var openedStates = [false, true];
+  var states = ["default", "hover", "focus", "disabled"];
+  var components = [];
+
+  // Static geometry snapshots per size (variables drive the live values).
+  var burgerSizes = { default: 24, xs: 12, sm: 18, md: 24, lg: 34, xl: 42 };
+  var lineSizes = { default: 2, xs: 1, sm: 2, md: 2, lg: 3, xl: 4 };
+  var lineGaps = { default: 6, xs: 3, sm: 5, md: 6, lg: 9, xl: 11 };
+  var paddings = { default: 8, xs: 4, sm: 6, md: 8, lg: 10, xl: 12 };
+  var radii = { default: 8, xs: 4, sm: 6, md: 8, lg: 12, xl: 16 };
+
+  var cellW = 96;
+  var cellH = 96;
+
+  for (var oi = 0; oi < openedStates.length; oi++) {
+    var isOpened = openedStates[oi];
+    var capOpened = isOpened ? "True" : "False";
+
+    for (var si = 0; si < sizes.length; si++) {
+      var size = sizes[si];
+      var capSize = size === "default" ? "Default" : size.toUpperCase();
+      var sizePx = burgerSizes[size];
+      var lineSz = lineSizes[size];
+      var gapPx = lineGaps[size];
+      var pad = paddings[size];
+      var rad = radii[size];
+      // Square content box so the X and hover background are not stretched.
+      var box = sizePx;
+
+      for (var sti = 0; sti < states.length; sti++) {
+        var state = states[sti];
+        var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+        var comp = figma.createComponent();
+        comp.name = "Size=" + capSize + ", Opened=" + capOpened + ", State=" + capState;
+        // Auto-layout so the frame hugs the (size-driven) content + padding.
+        comp.layoutMode = "HORIZONTAL";
+        comp.primaryAxisSizingMode = "AUTO";
+        comp.counterAxisSizingMode = "AUTO";
+        comp.primaryAxisAlignItems = "CENTER";
+        comp.counterAxisAlignItems = "CENTER";
+        comp.paddingLeft = pad;
+        comp.paddingRight = pad;
+        comp.paddingTop = pad;
+        comp.paddingBottom = pad;
+        comp.cornerRadius = rad;
+        comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0 }];
+
+        var bgPath = state === "default" ? "burger/background" : "burger/background-" + state;
+        if (varMap[bgPath]) bindPaintVar(comp, "fills", 0, varMap[bgPath]);
+        if (varMap["burger/radius-" + size]) {
+          bindVar(comp, "topLeftRadius", varMap["burger/radius-" + size]);
+          bindVar(comp, "topRightRadius", varMap["burger/radius-" + size]);
+          bindVar(comp, "bottomLeftRadius", varMap["burger/radius-" + size]);
+          bindVar(comp, "bottomRightRadius", varMap["burger/radius-" + size]);
+        }
+        if (varMap["burger/padding-" + size]) {
+          bindVar(comp, "paddingLeft", varMap["burger/padding-" + size]);
+          bindVar(comp, "paddingRight", varMap["burger/padding-" + size]);
+          bindVar(comp, "paddingTop", varMap["burger/padding-" + size]);
+          bindVar(comp, "paddingBottom", varMap["burger/padding-" + size]);
+        }
+
+        var colorPath = state === "default" ? "burger/color" : "burger/color-" + state;
+        var sizeVar = varMap["burger/size-" + size];
+        var lineVar = varMap["burger/line-size-" + size];
+        var gapVar = varMap["burger/line-gap-" + size];
+        var lineRadiusVar = varMap["burger/line-radius"];
+        var colorVar = varMap[colorPath];
+
+        // Each bar is a real rectangle shape (not a vector stroke).
+        // bindDims=false for rotated (X) bars: binding width/height to a
+        // variable re-applies sizing and resets the node's position, which
+        // clobbers the center-pivot rotation and bends the X back into a "<".
+        function makeBurgerBar(bindDims) {
+          var bar = figma.createRectangle();
+          bar.name = "Bar";
+          bar.resize(box, lineSz);
+          bar.cornerRadius = lineSz / 2;
+          bar.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+          if (colorVar) bindPaintVar(bar, "fills", 0, colorVar);
+          if (bindDims && sizeVar) bindVar(bar, "width", sizeVar);
+          if (bindDims && lineVar) bindVar(bar, "height", lineVar);
+          if (lineRadiusVar) {
+            bindVar(bar, "topLeftRadius", lineRadiusVar);
+            bindVar(bar, "topRightRadius", lineRadiusVar);
+            bindVar(bar, "bottomLeftRadius", lineRadiusVar);
+            bindVar(bar, "bottomRightRadius", lineRadiusVar);
+          }
+          return bar;
+        }
+
+        var lines;
+        if (isOpened) {
+          // X: two rectangles crossed at the center.
+          lines = figma.createFrame();
+          lines.name = "Lines";
+          lines.layoutMode = "NONE";
+          lines.clipsContent = false;
+          lines.resize(box, box);
+          lines.fills = [];
+          // NOTE: do not bind the open-state frame size to the size variable.
+          // The rotated bars use static dimensions, so if the resolved variable
+          // differs from the static snapshot the frame would be smaller than the
+          // bars and the X would overflow ("break out") of the bounding box.
+          // Figma's `rotation` setter pivots around the node origin (corner),
+          // which fans the two bars into a "<" shape. Set the transform matrix
+          // explicitly so each bar rotates around its own center, pinned to the
+          // middle of the square content box -> a true X. Dimensions are kept
+          // static (bindDims=false) so a bound size variable can't reset the
+          // position and undo the rotation.
+          var rotateBarAroundCenter = function (bar, deg) {
+            var radv = (deg * Math.PI) / 180;
+            var cos = Math.cos(radv);
+            var sin = Math.sin(radv);
+            var halfW = box / 2;
+            var halfH = lineSz / 2;
+            var cx = box / 2;
+            var cy = box / 2;
+            var e = cx - cos * halfW + sin * halfH;
+            var f = cy - sin * halfW - cos * halfH;
+            bar.relativeTransform = [
+              [cos, -sin, e],
+              [sin, cos, f],
+            ];
+          };
+          var barA = makeBurgerBar(false);
+          lines.appendChild(barA);
+          rotateBarAroundCenter(barA, 45);
+          var barB = makeBurgerBar(false);
+          lines.appendChild(barB);
+          rotateBarAroundCenter(barB, -45);
+        } else {
+          // Hamburger: three stacked bars centered in a fixed square frame.
+          // Use the same static box x box size as the open (X) state so both
+          // variants share an identical bounding box.
+          lines = figma.createFrame();
+          lines.name = "Lines";
+          lines.layoutMode = "VERTICAL";
+          lines.primaryAxisSizingMode = "FIXED";
+          lines.counterAxisSizingMode = "FIXED";
+          lines.primaryAxisAlignItems = "CENTER";
+          lines.counterAxisAlignItems = "CENTER";
+          lines.itemSpacing = gapPx;
+          lines.clipsContent = false;
+          lines.fills = [];
+          lines.resize(box, box);
+          if (gapVar) bindVar(lines, "itemSpacing", gapVar);
+          for (var bi = 0; bi < 3; bi++) {
+            var bar = makeBurgerBar(true);
+            lines.appendChild(bar);
+            try { bar.layoutGrow = 0; } catch (_burgerBarGrowErr) {}
+          }
+        }
+
+        comp.appendChild(lines);
+        try { lines.layoutGrow = 0; } catch (_burgerGrowErr) {}
+        try { lines.layoutAlign = "INHERIT"; } catch (_burgerAlignErr) {}
+
+        if (state === "focus") {
+          comp.effects = [{
+            type: "DROP_SHADOW",
+            color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+            offset: { x: 0, y: 0 },
+            radius: 0,
+            spread: 3,
+            visible: true,
+            blendMode: "NORMAL",
+          }];
+        }
+        if (state === "disabled") comp.opacity = 0.6;
+
+        var colIndex = oi * states.length + sti;
+        comp.x = colIndex * cellW;
+        comp.y = si * cellH;
+        page.appendChild(comp);
+        components.push(comp);
+      }
+    }
+  }
+
+  progress("Created " + components.length + " burger variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Burger";
+  return componentSet;
 }
 
 // ---------------------------------------------------------------------------
@@ -13134,6 +13339,559 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Select";
   return componentSet;
+}
+
+async function buildMultiSelectComponentSet(varMap, page, font, debugDefaultOnly) {
+  function createMultiSelectSwapRefs(iconComp) {
+    var refs = [];
+    if (!iconComp) return refs;
+    try {
+      var mainComp = iconComp.mainComponent || iconComp;
+      if (mainComp && mainComp.key) refs.push(mainComp.key);
+    } catch (_err) {}
+    if (iconComp.key) refs.push(iconComp.key);
+    if (iconComp.id) refs.push(iconComp.id);
+    return refs;
+  }
+
+  function msColorPath(variant, property, state) {
+    if (state === "default") return "multiselect/" + variant + "-" + property;
+    return "multiselect/" + variant + "-" + property + "-" + state;
+  }
+
+  var variants = ["default", "filled"];
+  var sizes = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "error", "disabled"];
+  var dropdownModes = ["closed", "open"];
+  var labelModes = ["none", "label", "required"];
+  var pillLabels = ["Option one", "Option two"];
+  var optionLabels = ["Option one", "Option two", "Option three"];
+  var selectedOptionIndices = { 0: true, 1: true };
+  var hoverOptionIndex = 2;
+  var components = [];
+
+  var chevronIconComp = await findSelectChevronIconComponent();
+  if (chevronIconComp) {
+    progress("[MultiSelect] Right icon source: " + chevronIconComp.name);
+  } else {
+    progress("[MultiSelect] Warning: no icon component found, using vector fallback");
+  }
+
+  var sizeHeights = { default: 36, xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
+  var gap = 20;
+  var colWidth = 220;
+  var rowHeight = 220;
+
+  function stateDropdownRow(state, dropdownMode) {
+    if (state === "default") return dropdownMode === "open" ? 1 : 0;
+    if (state === "hover") return dropdownMode === "open" ? 3 : 2;
+    if (state === "focus") return dropdownMode === "open" ? 5 : 4;
+    if (state === "error") return 6;
+    if (state === "disabled") return 7;
+    return 0;
+  }
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+    var isDefaultVariant = variant === "default";
+
+    for (var li = 0; li < labelModes.length; li++) {
+      var labelMode = labelModes[li];
+      var capLabelMode = labelMode.charAt(0).toUpperCase() + labelMode.slice(1);
+      var hasLabel = (labelMode !== "none");
+      var hasAsterisk = (labelMode === "required");
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
+
+        for (var ri = 0; ri < radii.length; ri++) {
+          var rad = radii[ri];
+          var capRad = rad === "default" ? "Default" : rad.toUpperCase();
+          var effectiveRad = isDefaultVariant ? "default" : rad;
+
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+            for (var dmi = 0; dmi < dropdownModes.length; dmi++) {
+              var dropdownMode = dropdownModes[dmi];
+              if ((state === "disabled" || state === "error") && dropdownMode === "open") continue;
+              var capDropdown = dropdownMode === "open" ? "Open" : "Closed";
+
+              var comp = figma.createComponent();
+              comp.name =
+                "Variant=" + capVariant +
+                ", Size=" + capSize +
+                ", Radius=" + capRad +
+                ", State=" + capState +
+                ", Label=" + capLabelMode +
+                ", Dropdown=" + capDropdown;
+              comp.layoutMode = "VERTICAL";
+              comp.primaryAxisSizingMode = "AUTO";
+              comp.counterAxisSizingMode = "AUTO";
+              comp.itemSpacing = 4;
+              comp.fills = [];
+
+              var labelGapVar =
+                varMap["multiselect/label-gap-" + size] ||
+                varMap["multiselect/label-gap-default"] ||
+                varMap["multiselect/label-gap"];
+              if (labelGapVar) bindVar(comp, "itemSpacing", labelGapVar);
+
+              if (hasLabel) {
+                var labelRow = figma.createFrame();
+                labelRow.name = "LabelRow";
+                labelRow.layoutMode = "HORIZONTAL";
+                labelRow.primaryAxisSizingMode = "AUTO";
+                labelRow.counterAxisSizingMode = "AUTO";
+                labelRow.itemSpacing = 2;
+                labelRow.fills = [];
+
+                var labelNode = figma.createText();
+                labelNode.name = "Label";
+                labelNode.fontName = font;
+                labelNode.characters = "Label";
+                labelNode.fontSize = 14;
+                labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                if (varMap["multiselect/label-color"]) {
+                  bindPaintVar(labelNode, "fills", 0, varMap["multiselect/label-color"]);
+                }
+                var labelFontSizeVar =
+                  varMap["multiselect/label-font-size-" + size] ||
+                  varMap["multiselect/label-font-size-default"] ||
+                  varMap["multiselect/label-font-size"];
+                if (labelFontSizeVar) {
+                  bindVar(labelNode, "fontSize", labelFontSizeVar);
+                  bindVar(labelNode, "fontFamily", varMap["multiselect/label-font-family"]);
+                  bindVar(labelNode, "fontStyle", varMap["multiselect/label-font-weight"]);
+                  bindVar(labelNode, "lineHeight", varMap["multiselect/label-line-height"]);
+                }
+                labelRow.appendChild(labelNode);
+
+                if (hasAsterisk) {
+                  var asteriskNode = figma.createText();
+                  asteriskNode.name = "Asterisk";
+                  asteriskNode.fontName = font;
+                  asteriskNode.characters = " *";
+                  asteriskNode.fontSize = 14;
+                  asteriskNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+                  if (varMap["multiselect/asterisk-color"]) {
+                    bindPaintVar(asteriskNode, "fills", 0, varMap["multiselect/asterisk-color"]);
+                  }
+                  if (labelFontSizeVar) {
+                    bindVar(asteriskNode, "fontSize", labelFontSizeVar);
+                    bindVar(asteriskNode, "fontFamily", varMap["multiselect/label-font-family"]);
+                    bindVar(asteriskNode, "fontStyle", varMap["multiselect/label-font-weight"]);
+                    bindVar(asteriskNode, "lineHeight", varMap["multiselect/label-line-height"]);
+                  }
+                  labelRow.appendChild(asteriskNode);
+                }
+                comp.appendChild(labelRow);
+              }
+
+              var input = figma.createFrame();
+              input.name = "MultiSelectInput";
+              input.layoutMode = "HORIZONTAL";
+              input.primaryAxisSizingMode = "FIXED";
+              input.counterAxisSizingMode = "AUTO";
+              input.primaryAxisAlignItems = isDefaultVariant ? "MIN" : "SPACE_BETWEEN";
+              input.counterAxisAlignItems = "CENTER";
+              input.resize(200, sizeHeights[size] || 36);
+              input.cornerRadius = 4;
+              input.paddingLeft = 10;
+              input.paddingRight = 10;
+              input.paddingTop = 8;
+              input.paddingBottom = 8;
+              input.itemSpacing = 8;
+              input.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              input.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+              input.strokeWeight = 1;
+              input.strokeAlign = "INSIDE";
+
+              var paddingXVar =
+                varMap["multiselect/" + variant + "-padding-x-" + size] ||
+                varMap["multiselect/" + variant + "-padding-x-default"] ||
+                varMap["multiselect/" + variant + "-padding-x"];
+              var paddingYVar =
+                varMap["multiselect/" + variant + "-padding-y-" + size] ||
+                varMap["multiselect/" + variant + "-padding-y-default"] ||
+                varMap["multiselect/" + variant + "-padding-y"];
+              var sectionSizeVar =
+                varMap["multiselect/icon-size-" + size] ||
+                varMap["multiselect/icon-size-default"] ||
+                varMap["multiselect/icon-size"];
+              if (paddingXVar) {
+                bindVar(input, "paddingLeft", paddingXVar);
+                bindVar(input, "paddingRight", paddingXVar);
+              }
+              if (paddingYVar) {
+                bindVar(input, "paddingTop", paddingYVar);
+                bindVar(input, "paddingBottom", paddingYVar);
+              }
+              if (varMap["multiselect/radius-" + effectiveRad]) {
+                bindVar(input, "topLeftRadius", varMap["multiselect/radius-" + effectiveRad]);
+                bindVar(input, "topRightRadius", varMap["multiselect/radius-" + effectiveRad]);
+                bindVar(input, "bottomLeftRadius", varMap["multiselect/radius-" + effectiveRad]);
+                bindVar(input, "bottomRightRadius", varMap["multiselect/radius-" + effectiveRad]);
+              }
+              if (varMap["multiselect/border-width"]) bindVar(input, "strokeWeight", varMap["multiselect/border-width"]);
+
+              var bgPath = msColorPath(variant, "background", state);
+              if (varMap[bgPath]) bindPaintVar(input, "fills", 0, varMap[bgPath]);
+              var borderPath = msColorPath(variant, "border", state);
+              if (varMap[borderPath]) bindPaintVar(input, "strokes", 0, varMap[borderPath]);
+
+              var fontFamilyVar = selectVarWithFallback(varMap, [
+                "multiselect/" + variant + "-font-family",
+                "multiselect/font-family-default",
+                "multiselect/font-family",
+              ]);
+              var fontWeightVar = selectVarWithFallback(varMap, [
+                "multiselect/" + variant + "-font-weight",
+                "multiselect/font-weight-default",
+                "multiselect/font-weight",
+              ]);
+              var lineHeightVar =
+                varMap["multiselect/line-height-" + size] ||
+                varMap["multiselect/line-height-default"] ||
+                varMap["multiselect/line-height"];
+              var pillFontSizeVar =
+                varMap["multiselect/pill-font-size-" + size] ||
+                varMap["multiselect/pill-font-size-default"] ||
+                varMap["multiselect/pill-font-size"];
+              var pillGapVar =
+                varMap["multiselect/pill-gap-" + size] ||
+                varMap["multiselect/pill-gap-default"] ||
+                varMap["multiselect/pill-gap"];
+              var pillRadiusVar =
+                varMap["multiselect/pill-radius-" + effectiveRad] ||
+                varMap["multiselect/pill-radius-default"] ||
+                varMap["multiselect/pill-radius"];
+              var pillBackgroundVar = varMap["multiselect/pill-background"];
+              var pillTextVar = varMap["multiselect/pill-text"];
+              var pillRemoveIconVar = varMap["multiselect/pill-remove-icon"];
+
+              // Selected-value pills shown in the trigger.
+              var pillsFrame = figma.createFrame();
+              pillsFrame.name = "Pills";
+              pillsFrame.layoutMode = "HORIZONTAL";
+              pillsFrame.primaryAxisSizingMode = "AUTO";
+              pillsFrame.counterAxisSizingMode = "AUTO";
+              pillsFrame.counterAxisAlignItems = "CENTER";
+              pillsFrame.itemSpacing = 4;
+              pillsFrame.fills = [];
+              if (pillGapVar) bindVar(pillsFrame, "itemSpacing", pillGapVar);
+
+              for (var pli = 0; pli < pillLabels.length; pli++) {
+                var pill = figma.createFrame();
+                pill.name = "Pill/" + pillLabels[pli];
+                pill.layoutMode = "HORIZONTAL";
+                pill.primaryAxisSizingMode = "AUTO";
+                pill.counterAxisSizingMode = "AUTO";
+                pill.counterAxisAlignItems = "CENTER";
+                pill.itemSpacing = 4;
+                pill.paddingLeft = 6;
+                pill.paddingRight = 6;
+                pill.paddingTop = 3;
+                pill.paddingBottom = 3;
+                pill.cornerRadius = 4;
+                pill.fills = [{ type: "SOLID", color: { r: 0.9, g: 0.9, b: 0.92 } }];
+                if (pillBackgroundVar) bindPaintVar(pill, "fills", 0, pillBackgroundVar);
+                if (pillRadiusVar) {
+                  bindVar(pill, "topLeftRadius", pillRadiusVar);
+                  bindVar(pill, "topRightRadius", pillRadiusVar);
+                  bindVar(pill, "bottomLeftRadius", pillRadiusVar);
+                  bindVar(pill, "bottomRightRadius", pillRadiusVar);
+                }
+
+                var pillTextNode = figma.createText();
+                pillTextNode.name = "Label";
+                pillTextNode.fontName = font;
+                pillTextNode.characters = pillLabels[pli];
+                pillTextNode.fontSize = 12;
+                pillTextNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                if (pillTextVar) bindPaintVar(pillTextNode, "fills", 0, pillTextVar);
+                if (pillFontSizeVar) {
+                  bindVar(pillTextNode, "fontSize", pillFontSizeVar);
+                  if (fontFamilyVar) bindVar(pillTextNode, "fontFamily", fontFamilyVar);
+                  if (fontWeightVar) bindVar(pillTextNode, "fontStyle", fontWeightVar);
+                }
+                pill.appendChild(pillTextNode);
+
+                var pillRemoveNode = figma.createText();
+                pillRemoveNode.name = "Remove";
+                pillRemoveNode.fontName = font;
+                pillRemoveNode.characters = "\u00d7";
+                pillRemoveNode.fontSize = 12;
+                pillRemoveNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+                if (pillRemoveIconVar) bindPaintVar(pillRemoveNode, "fills", 0, pillRemoveIconVar);
+                if (pillFontSizeVar) bindVar(pillRemoveNode, "fontSize", pillFontSizeVar);
+                pill.appendChild(pillRemoveNode);
+
+                pillsFrame.appendChild(pill);
+              }
+
+              var triggerContent = null;
+              if (isDefaultVariant) {
+                triggerContent = figma.createFrame();
+                triggerContent.name = "TriggerContent";
+                triggerContent.layoutMode = "HORIZONTAL";
+                triggerContent.primaryAxisSizingMode = "AUTO";
+                triggerContent.counterAxisSizingMode = "AUTO";
+                triggerContent.primaryAxisAlignItems = "MIN";
+                triggerContent.counterAxisAlignItems = "CENTER";
+                triggerContent.itemSpacing = 8;
+                triggerContent.fills = [];
+                triggerContent.strokes = [];
+                input.appendChild(triggerContent);
+                triggerContent.appendChild(pillsFrame);
+              } else {
+                input.appendChild(pillsFrame);
+              }
+
+              var chevronSlot = figma.createFrame();
+              chevronSlot.name = "ChevronSlot";
+              chevronSlot.layoutMode = "HORIZONTAL";
+              chevronSlot.primaryAxisSizingMode = "AUTO";
+              chevronSlot.counterAxisSizingMode = "AUTO";
+              chevronSlot.primaryAxisAlignItems = "CENTER";
+              chevronSlot.counterAxisAlignItems = "CENTER";
+              chevronSlot.fills = [];
+              chevronSlot.strokes = [];
+              if (isDefaultVariant && triggerContent) triggerContent.appendChild(chevronSlot);
+              else input.appendChild(chevronSlot);
+
+              var iconPaintVar =
+                state === "disabled" && varMap["multiselect/icon-disabled"]
+                  ? varMap["multiselect/icon-disabled"]
+                  : state === "error" && varMap["multiselect/icon-error"]
+                    ? varMap["multiselect/icon-error"]
+                    : varMap["multiselect/icon"];
+              var iconStrokeVar =
+                varMap["multiselect/icon-stroke-width-" + size] ||
+                varMap["multiselect/icon-stroke-width-default"] ||
+                varMap["multiselect/icon-stroke-width"];
+
+              if (chevronIconComp) {
+                var chevronInstance = chevronIconComp.createInstance();
+                chevronInstance.name = "Chevron";
+                try { chevronInstance.resizeWithoutConstraints(12, 12); } catch (e) {}
+                if (sectionSizeVar) {
+                  bindVar(chevronInstance, "width", sectionSizeVar);
+                  bindVar(chevronInstance, "height", sectionSizeVar);
+                }
+                chevronSlot.appendChild(chevronInstance);
+                try { chevronInstance.layoutGrow = 0; } catch (_growErr) {}
+                try { chevronInstance.layoutAlign = "CENTER"; } catch (_alignErr) {}
+
+                if (typeof comp.addComponentProperty === "function") {
+                  var swapRefs = createMultiSelectSwapRefs(chevronIconComp);
+                  var swapProp = null;
+                  var swapErr = null;
+                  for (var ssri = 0; ssri < swapRefs.length; ssri++) {
+                    try {
+                      swapProp = comp.addComponentProperty("Chevron", "INSTANCE_SWAP", swapRefs[ssri]);
+                      break;
+                    } catch (eSwap) {
+                      swapErr = eSwap;
+                    }
+                  }
+                  if (swapProp) {
+                    try {
+                      chevronInstance.componentPropertyReferences = { mainComponent: swapProp };
+                    } catch (_swapRefErr) {}
+                  } else if (swapErr) {
+                    progress("[MultiSelect] Chevron INSTANCE_SWAP create failed: " + String(swapErr));
+                  }
+                }
+                if (iconPaintVar && typeof chevronInstance.findAll === "function") {
+                  var chevronVectors = chevronInstance.findAll(function (n) {
+                    return n.type === "VECTOR";
+                  });
+                  for (var cvi = 0; cvi < chevronVectors.length; cvi++) {
+                    try {
+                      if (iconStrokeVar) bindVar(chevronVectors[cvi], "strokeWeight", iconStrokeVar);
+                      if (chevronVectors[cvi].strokes && chevronVectors[cvi].strokes.length > 0) {
+                        bindPaintVar(chevronVectors[cvi], "strokes", 0, iconPaintVar);
+                      }
+                    } catch (_cv) {}
+                  }
+                }
+              } else {
+                var chevronVector = figma.createVector();
+                chevronVector.name = "Chevron";
+                chevronVector.vectorPaths = [{ windingRule: "NONZERO", data: "M 1 1 L 6 6 L 11 1" }];
+                chevronVector.resize(12, 6);
+                if (sectionSizeVar) {
+                  bindVar(chevronVector, "width", sectionSizeVar);
+                  bindVar(chevronVector, "height", sectionSizeVar);
+                }
+                chevronVector.fills = [];
+                chevronVector.strokes = [{ type: "SOLID", color: { r: 0.45, g: 0.45, b: 0.45 } }];
+                chevronVector.strokeWeight = 1.5;
+                if (iconStrokeVar) bindVar(chevronVector, "strokeWeight", iconStrokeVar);
+                chevronVector.strokeJoin = "ROUND";
+                chevronVector.strokeCap = "ROUND";
+                if (iconPaintVar) bindPaintVar(chevronVector, "strokes", 0, iconPaintVar);
+                chevronSlot.appendChild(chevronVector);
+              }
+
+              if (isDefaultVariant) {
+                var trailingSpacer = figma.createFrame();
+                trailingSpacer.name = "Spacer";
+                trailingSpacer.layoutMode = "NONE";
+                trailingSpacer.primaryAxisSizingMode = "FIXED";
+                trailingSpacer.counterAxisSizingMode = "AUTO";
+                trailingSpacer.fills = [];
+                trailingSpacer.strokes = [];
+                trailingSpacer.resize(1, 1);
+                try { trailingSpacer.layoutGrow = 1; } catch (_spacerGrowErr) {}
+                input.appendChild(trailingSpacer);
+              }
+
+              if (state === "focus") {
+                input.effects = [{
+                  type: "DROP_SHADOW",
+                  color: { r: 0.2, g: 0.53, b: 0.87, a: 0.25 },
+                  offset: { x: 0, y: 0 },
+                  radius: 0,
+                  spread: 3,
+                  visible: true,
+                  blendMode: "NORMAL"
+                }];
+              }
+
+              comp.appendChild(input);
+
+              if (dropdownMode === "open") {
+                var dropdown = figma.createFrame();
+                dropdown.name = "Dropdown";
+                dropdown.layoutMode = "VERTICAL";
+                dropdown.primaryAxisSizingMode = "AUTO";
+                dropdown.counterAxisSizingMode = "FIXED";
+                dropdown.counterAxisAlignItems = "MIN";
+                dropdown.itemSpacing = 0;
+                dropdown.paddingLeft = 8;
+                dropdown.paddingRight = 8;
+                dropdown.paddingTop = 8;
+                dropdown.paddingBottom = 8;
+                dropdown.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                dropdown.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+                dropdown.strokeWeight = 1;
+                dropdown.strokeAlign = "INSIDE";
+                dropdown.cornerRadius = 4;
+                dropdown.resize(200, 1);
+                try { dropdown.layoutSizingVertical = "HUG"; } catch (_dropdownHugErr) {}
+                var dropdownBackgroundVar = varMap["multiselect/" + variant + "-dropdown-background"];
+                var dropdownBorderVar = varMap["multiselect/" + variant + "-dropdown-border"];
+                if (dropdownBackgroundVar) bindPaintVar(dropdown, "fills", 0, dropdownBackgroundVar);
+                if (dropdownBorderVar) bindPaintVar(dropdown, "strokes", 0, dropdownBorderVar);
+                if (varMap["multiselect/radius-" + effectiveRad]) {
+                  bindVar(dropdown, "topLeftRadius", varMap["multiselect/radius-" + effectiveRad]);
+                  bindVar(dropdown, "topRightRadius", varMap["multiselect/radius-" + effectiveRad]);
+                  bindVar(dropdown, "bottomLeftRadius", varMap["multiselect/radius-" + effectiveRad]);
+                  bindVar(dropdown, "bottomRightRadius", varMap["multiselect/radius-" + effectiveRad]);
+                }
+
+                var optionHeight = sizeHeights[size] || 36;
+                for (var oi = 0; oi < optionLabels.length; oi++) {
+                  var option = figma.createFrame();
+                  option.name = "Option/" + optionLabels[oi];
+                  option.layoutMode = "HORIZONTAL";
+                  option.primaryAxisSizingMode = "FIXED";
+                  option.counterAxisSizingMode = "FIXED";
+                  option.primaryAxisAlignItems = "MIN";
+                  option.counterAxisAlignItems = "CENTER";
+                  option.itemSpacing = 8;
+                  option.paddingLeft = 10;
+                  option.paddingRight = 10;
+                  option.cornerRadius = 4;
+                  if (varMap["multiselect/radius-" + effectiveRad]) {
+                    bindVar(option, "topLeftRadius", varMap["multiselect/radius-" + effectiveRad]);
+                    bindVar(option, "topRightRadius", varMap["multiselect/radius-" + effectiveRad]);
+                    bindVar(option, "bottomLeftRadius", varMap["multiselect/radius-" + effectiveRad]);
+                    bindVar(option, "bottomRightRadius", varMap["multiselect/radius-" + effectiveRad]);
+                  }
+                  option.resize(184, optionHeight);
+                  option.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0 }];
+
+                  var isSelectedOption = selectedOptionIndices[oi] === true;
+                  var isHoverOption = oi === hoverOptionIndex;
+                  var optionBgVar = null;
+                  if (isSelectedOption) {
+                    optionBgVar = varMap["multiselect/" + variant + "-option-selected-background"];
+                  } else if (isHoverOption) {
+                    optionBgVar = varMap["multiselect/" + variant + "-option-hover-background"];
+                  }
+                  if (optionBgVar) {
+                    option.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                    bindPaintVar(option, "fills", 0, optionBgVar);
+                  }
+
+                  var optionText = figma.createText();
+                  optionText.name = "Label";
+                  optionText.fontName = font;
+                  optionText.characters = optionLabels[oi];
+                  optionText.fontSize = 14;
+                  optionText.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
+                  if (isHoverOption && varMap["multiselect/" + variant + "-option-hover-text"]) {
+                    bindPaintVar(optionText, "fills", 0, varMap["multiselect/" + variant + "-option-hover-text"]);
+                  } else if (varMap["multiselect/text"]) {
+                    bindPaintVar(optionText, "fills", 0, varMap["multiselect/text"]);
+                  }
+                  if (varMap["multiselect/font-size-" + size]) {
+                    bindVar(optionText, "fontSize", varMap["multiselect/font-size-" + size]);
+                    if (fontFamilyVar) bindVar(optionText, "fontFamily", fontFamilyVar);
+                    if (fontWeightVar) bindVar(optionText, "fontStyle", fontWeightVar);
+                    if (lineHeightVar) bindVar(optionText, "lineHeight", lineHeightVar);
+                  }
+                  option.appendChild(optionText);
+                  dropdown.appendChild(option);
+                }
+
+                comp.appendChild(dropdown);
+              }
+
+              if (state === "error") {
+                var errorNode = figma.createText();
+                errorNode.name = "Error";
+                errorNode.fontName = font;
+                errorNode.characters = "Error message";
+                errorNode.fontSize = 12;
+                errorNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+                if (varMap["multiselect/error-color"]) bindPaintVar(errorNode, "fills", 0, varMap["multiselect/error-color"]);
+                if (varMap["multiselect/error-font-size"]) {
+                  bindVar(errorNode, "fontSize", varMap["multiselect/error-font-size"]);
+                  bindVar(errorNode, "fontFamily", varMap["multiselect/error-font-family"]);
+                  bindVar(errorNode, "fontStyle", varMap["multiselect/error-font-weight"]);
+                  bindVar(errorNode, "lineHeight", varMap["multiselect/error-line-height"]);
+                }
+                comp.appendChild(errorNode);
+              }
+
+              if (state === "disabled") comp.opacity = 0.6;
+
+              var columnsPerRadius = variants.length * labelModes.length;
+              var colIndex = (ri * columnsPerRadius) + (vi * labelModes.length + li);
+              var rowIndex = (si * 8) + stateDropdownRow(state, dropdownMode);
+              comp.x = colIndex * (colWidth + gap);
+              comp.y = rowIndex * rowHeight;
+              page.appendChild(comp);
+              components.push(comp);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " multiselect variants");
+  var multiSelectComponentSet = figma.combineAsVariants(components, page);
+  multiSelectComponentSet.name = "MultiSelect";
+  return multiSelectComponentSet;
 }
 
 function selectColorPath(variant, property, state) {

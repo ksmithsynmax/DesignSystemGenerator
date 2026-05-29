@@ -49,6 +49,10 @@ import {
   SwitchPropertiesPanel,
 } from "./components/panels/SwitchPreviewPanel";
 import {
+  BurgerPreviewContent,
+  BurgerPropertiesPanel,
+} from "./components/panels/BurgerPreviewPanel";
+import {
   CheckboxPreviewContent,
   CheckboxPropertiesPanel,
 } from "./components/panels/CheckboxPreviewPanel";
@@ -104,6 +108,10 @@ import {
   SelectPreviewContent,
   SelectPropertiesPanel,
 } from "./components/panels/SelectPreviewPanel";
+import {
+  MultiSelectPreviewContent,
+  MultiSelectPropertiesPanel,
+} from "./components/panels/MultiSelectPreviewPanel";
 import {
   NotificationPreviewContent,
   NotificationPropertiesPanel,
@@ -172,6 +180,7 @@ const VARIANTS_BY_COMPONENT = {
   radio: ["filled", "outline"],
   textinput: ["default", "filled"],
   select: ["default", "filled"],
+  multiselect: ["default", "filled"],
   table: ["default"],
   progress: ["default"],
   avatar: ["filled"],
@@ -442,6 +451,7 @@ export default function App() {
   const actionIconDefault = getComponentDefaultSize(brands, activeBrand, "actionicon") || "sm";
   const tabsDefault = getComponentDefaultSize(brands, activeBrand, "tabs") || "sm";
   const switchDefault = getComponentDefaultSize(brands, activeBrand, "switch") || "md";
+  const burgerDefault = getComponentDefaultSize(brands, activeBrand, "burger") || "md";
   const sliderDefault = getComponentDefaultSize(brands, activeBrand, "slider") || "md";
   const rangeSliderDefault = getComponentDefaultSize(brands, activeBrand, "rangeslider") || "md";
   const checkboxDefault = getComponentDefaultSize(brands, activeBrand, "checkbox") || "md";
@@ -449,6 +459,7 @@ export default function App() {
   const chipDefault = getComponentDefaultSize(brands, activeBrand, "chip") || "md";
   const textInputDefault = getComponentDefaultSize(brands, activeBrand, "textinput") || "sm";
   const selectDefault = getComponentDefaultSize(brands, activeBrand, "select") || "sm";
+  const multiSelectDefault = getComponentDefaultSize(brands, activeBrand, "multiselect") || "sm";
   const cardDefault = getComponentDefaultSize(brands, activeBrand, "card") || "default";
   const pillDefault = getComponentDefaultSize(brands, activeBrand, "pill") || "default";
   const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "default";
@@ -488,6 +499,9 @@ export default function App() {
   const [activeSwitchSize, setActiveSwitchSize] = useState(switchDefault);
   const [activeSwitchChecked, setActiveSwitchChecked] = useState(false);
   const [activeSwitchState, setActiveSwitchState] = useState("default");
+  const [activeBurgerSize, setActiveBurgerSize] = useState(burgerDefault);
+  const [activeBurgerOpened, setActiveBurgerOpened] = useState(false);
+  const [activeBurgerState, setActiveBurgerState] = useState("default");
   const [activeSliderSize, setActiveSliderSize] = useState(sliderDefault);
   const [activeSliderRadius, setActiveSliderRadius] = useState(sliderDefault);
   const [activeSliderState, setActiveSliderState] = useState("default");
@@ -591,6 +605,18 @@ export default function App() {
   const [activeSelectErrorText, setActiveSelectErrorText] = useState("Error message");
   const [activeSelectSearchable, setActiveSelectSearchable] = useState(false);
   const [activeSelectClearable, setActiveSelectClearable] = useState(false);
+  const [activeSelectShowDropdown, setActiveSelectShowDropdown] = useState(true);
+  const [activeMultiSelectSize, setActiveMultiSelectSize] = useState(multiSelectDefault);
+  const [activeMultiSelectRadius, setActiveMultiSelectRadius] = useState(multiSelectDefault);
+  const [activeMultiSelectState, setActiveMultiSelectState] = useState("default");
+  const [activeMultiSelectShowLabel, setActiveMultiSelectShowLabel] = useState(true);
+  const [activeMultiSelectLabelText, setActiveMultiSelectLabelText] = useState("Label");
+  const [activeMultiSelectWithAsterisk, setActiveMultiSelectWithAsterisk] = useState(false);
+  const [activeMultiSelectShowError, setActiveMultiSelectShowError] = useState(false);
+  const [activeMultiSelectErrorText, setActiveMultiSelectErrorText] = useState("Error message");
+  const [activeMultiSelectSearchable, setActiveMultiSelectSearchable] = useState(false);
+  const [activeMultiSelectClearable, setActiveMultiSelectClearable] = useState(false);
+  const [activeMultiSelectShowDropdown, setActiveMultiSelectShowDropdown] = useState(true);
   const [activeCardSize, setActiveCardSize] = useState(cardDefault);
   const [activeCardRadius, setActiveCardRadius] = useState(cardDefault);
   const [activeCardWithBorder, setActiveCardWithBorder] = useState(true);
@@ -651,6 +677,7 @@ export default function App() {
     const aiDef = getComponentDefaultSize(brands, newBrand, "actionicon") || "sm";
     const tbDef = getComponentDefaultSize(brands, newBrand, "tabs") || "sm";
     const swDef = getComponentDefaultSize(brands, newBrand, "switch") || "md";
+    const bgDef = getComponentDefaultSize(brands, newBrand, "burger") || "md";
     const slDef = getComponentDefaultSize(brands, newBrand, "slider") || "md";
     const rslDef = getComponentDefaultSize(brands, newBrand, "rangeslider") || "md";
     const cbDef = getComponentDefaultSize(brands, newBrand, "checkbox") || "md";
@@ -668,6 +695,7 @@ export default function App() {
     setActiveActionIconRadius(aiDef);
     setActiveTabsRadius(tbDef);
     setActiveSwitchSize(swDef);
+    setActiveBurgerSize(bgDef);
     setActiveSliderSize(slDef);
     setActiveSliderRadius(slDef);
     setActiveRangeSliderSize(rslDef);
@@ -679,10 +707,13 @@ export default function App() {
     setActiveChipRadius(chDef);
     const tiDef = getComponentDefaultSize(brands, newBrand, "textinput") || "sm";
     const seDef = getComponentDefaultSize(brands, newBrand, "select") || "sm";
+    const mseDef = getComponentDefaultSize(brands, newBrand, "multiselect") || "sm";
     setActiveTextInputSize(tiDef);
     setActiveTextInputRadius(tiDef);
     setActiveSelectSize(seDef);
     setActiveSelectRadius(seDef);
+    setActiveMultiSelectSize(mseDef);
+    setActiveMultiSelectRadius(mseDef);
     setActiveCardSize(caDef);
     setActiveCardRadius(caDef);
     setActiveLoaderSize("default");
@@ -752,6 +783,10 @@ export default function App() {
       setActiveSwitchSize(switchDefault);
       setActiveSwitchChecked(false);
       setActiveSwitchState("default");
+    } else if (newComp === "burger") {
+      setActiveBurgerSize(burgerDefault);
+      setActiveBurgerOpened(false);
+      setActiveBurgerState("default");
     } else if (newComp === "slider") {
       setActiveSliderSize(sliderDefault);
       setActiveSliderRadius(sliderDefault);
@@ -859,6 +894,19 @@ export default function App() {
       setActiveSelectErrorText("Error message");
       setActiveSelectSearchable(false);
       setActiveSelectClearable(false);
+      setActiveSelectShowDropdown(true);
+    } else if (newComp === "multiselect") {
+      setActiveMultiSelectSize(multiSelectDefault);
+      setActiveMultiSelectRadius(multiSelectDefault);
+      setActiveMultiSelectState("default");
+      setActiveMultiSelectShowLabel(true);
+      setActiveMultiSelectLabelText("Label");
+      setActiveMultiSelectWithAsterisk(false);
+      setActiveMultiSelectShowError(false);
+      setActiveMultiSelectErrorText("Error message");
+      setActiveMultiSelectSearchable(false);
+      setActiveMultiSelectClearable(false);
+      setActiveMultiSelectShowDropdown(true);
       setActiveVariant("default");
     } else if (newComp === "card") {
       setActiveCardSize(cardDefault);
@@ -933,7 +981,7 @@ export default function App() {
       setActiveVariant("default");
       setActiveTableShowRowHover(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, burgerDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, multiSelectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -1273,7 +1321,7 @@ export default function App() {
       forcedIndeterminate = true;
     }
 
-    if (["button", "actionicon", "tabs", "accordion", "checkbox", "chip", "badge", "alert", "radio", "textinput", "select", "card"].includes(activeComponent)) {
+    if (["button", "actionicon", "tabs", "accordion", "checkbox", "chip", "badge", "alert", "radio", "textinput", "select", "multiselect", "card"].includes(activeComponent)) {
       const variantSegment = parts[1];
       const knownVariants = {
         button: ["filled", "outlined", "ghost"],
@@ -1288,6 +1336,7 @@ export default function App() {
         radio: ["filled", "outline"],
         textinput: ["default", "filled"],
         select: ["default", "filled"],
+        multiselect: ["default", "filled"],
       };
       if (knownVariants[activeComponent]?.includes(variantSegment)) {
         forcedVariant = activeComponent === "tabs" ? fromTabsTokenVariant(variantSegment) : variantSegment;
@@ -1311,6 +1360,8 @@ export default function App() {
           ? forcedState || activeAccordionState
         : activeComponent === "switch"
           ? forcedState || activeSwitchState
+          : activeComponent === "burger"
+          ? forcedState || activeBurgerState
           : activeComponent === "slider"
             ? forcedState || activeSliderState
             : activeComponent === "rangeslider"
@@ -1327,6 +1378,8 @@ export default function App() {
             ? forcedState || activeTextInputState
           : activeComponent === "select"
             ? forcedState || activeSelectState
+          : activeComponent === "multiselect"
+            ? forcedState || activeMultiSelectState
           : forcedState;
 
   const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token]) => {
@@ -1351,6 +1404,16 @@ export default function App() {
         return isCheckedToken === Boolean(targetChecked);
       }
       return !isCheckedToken || Boolean(targetChecked);
+    }
+
+    if (activeComponent === "burger") {
+      if (token === "burger-focus-ring") return true;
+
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      const targetState = effectiveComponentState || "default";
+      return tokenState === targetState;
     }
 
     if (activeComponent === "slider") {
@@ -1516,27 +1579,28 @@ export default function App() {
       return false;
     }
 
-    if (activeComponent === "select") {
+    if (activeComponent === "select" || activeComponent === "multiselect") {
+      const cp = activeComponent;
       const targetState = effectiveComponentState || "default";
       if (
-        token === "select-default-placeholder" ||
-        token === "select-filled-placeholder"
+        token === `${cp}-default-placeholder` ||
+        token === `${cp}-filled-placeholder`
       ) {
         return targetState !== "error";
       }
       if (
-        token === "select-error-color" ||
-        token === "select-icon-error" ||
-        token === "select-placeholder-error" ||
-        token === "select-default-placeholder-error" ||
-        token === "select-filled-placeholder-error"
+        token === `${cp}-error-color` ||
+        token === `${cp}-icon-error` ||
+        token === `${cp}-placeholder-error` ||
+        token === `${cp}-default-placeholder-error` ||
+        token === `${cp}-filled-placeholder-error`
       ) {
         return targetState === "error";
       }
-      if (token === "select-icon-disabled") {
+      if (token === `${cp}-icon-disabled`) {
         return targetState === "disabled";
       }
-      if (token === "select-icon" && (targetState === "error" || targetState === "disabled")) {
+      if (token === `${cp}-icon` && (targetState === "error" || targetState === "disabled")) {
         return false;
       }
     }
@@ -1554,6 +1618,7 @@ export default function App() {
       alert: ["default", "filled", "light", "outline", "transparent", "white"],
       textinput: ["default", "filled"],
       select: ["default", "filled"],
+      multiselect: ["default", "filled"],
     };
     const variants = variantsByComponent[activeComponent];
 
@@ -1622,6 +1687,7 @@ export default function App() {
       activeComponent === "accordion" ||
       activeComponent === "textinput"
       || activeComponent === "select"
+      || activeComponent === "multiselect"
       || activeComponent === "alert"
     ) {
       if (!variants.includes(variantSegment)) return true;
@@ -1657,18 +1723,19 @@ export default function App() {
       }
       return true;
     }
-    if (activeComponent === "select") {
+    if (activeComponent === "select" || activeComponent === "multiselect") {
+      const cp = activeComponent;
       const targetState = effectiveComponentState || "default";
-      if (token.startsWith("select-error-")) return targetState === "error";
-      const defaultPadMatch = token.match(/^select-default-padding-(x|y)$/);
+      if (token.startsWith(`${cp}-error-`)) return targetState === "error";
+      const defaultPadMatch = token.match(new RegExp(`^${cp}-default-padding-(x|y)$`));
       if (defaultPadMatch) return activeVariant === "default";
-      const filledPadMatch = token.match(/^select-filled-padding-(x|y)$/);
+      const filledPadMatch = token.match(new RegExp(`^${cp}-filled-padding-(x|y)$`));
       if (filledPadMatch) return activeVariant === "filled";
-      const variantFontMatch = token.match(/^select-(default|filled)-font-(family|weight)$/);
+      const variantFontMatch = token.match(new RegExp(`^${cp}-(default|filled)-font-(family|weight)$`));
       if (variantFontMatch) return variantFontMatch[1] === activeVariant;
-      const selectRadiusMatch = token.match(/^select-radius-(default|xs|sm|md|lg|xl)$/);
-      if (selectRadiusMatch) {
-        if (activeVariant === "default") return selectRadiusMatch[1] === "default";
+      const radiusMatch = token.match(new RegExp(`^${cp}-radius-(default|xs|sm|md|lg|xl)$`));
+      if (radiusMatch) {
+        if (activeVariant === "default") return radiusMatch[1] === "default";
         return true;
       }
       return true;
@@ -1695,20 +1762,21 @@ export default function App() {
   useEffect(() => {
     if (!activeColorToken) return;
     const parts = activeColorToken.split("-");
-    if (activeComponent === "select") {
+    if (activeComponent === "select" || activeComponent === "multiselect") {
+      const cp = activeComponent;
       const targetState = effectiveComponentState || "default";
       if (
-        (activeColorToken === "select-default-placeholder" ||
-          activeColorToken === "select-filled-placeholder") &&
+        (activeColorToken === `${cp}-default-placeholder` ||
+          activeColorToken === `${cp}-filled-placeholder`) &&
         targetState === "error"
       ) {
         setActiveColorToken(null);
         return;
       }
       if (
-        (activeColorToken === "select-placeholder-error" ||
-          activeColorToken === "select-default-placeholder-error" ||
-          activeColorToken === "select-filled-placeholder-error") &&
+        (activeColorToken === `${cp}-placeholder-error` ||
+          activeColorToken === `${cp}-default-placeholder-error` ||
+          activeColorToken === `${cp}-filled-placeholder-error`) &&
         targetState !== "error"
       ) {
         setActiveColorToken(null);
@@ -1727,6 +1795,7 @@ export default function App() {
       alert: ["default", "filled", "light", "outline", "transparent", "white"],
       textinput: ["default", "filled"],
       select: ["default", "filled"],
+      multiselect: ["default", "filled"],
     };
     const variants = variantsByComponent[activeComponent];
     if (!variants) return;
@@ -1783,22 +1852,23 @@ export default function App() {
       }
       return;
     }
-    if (activeComponent === "select") {
+    if (activeComponent === "select" || activeComponent === "multiselect") {
+      const cp = activeComponent;
       const targetState = effectiveComponentState || "default";
-      if (activeDimensionToken.startsWith("select-error-") && targetState !== "error") {
+      if (activeDimensionToken.startsWith(`${cp}-error-`) && targetState !== "error") {
         setActiveDimensionToken(null);
         return;
       }
-      const selectVariantDimensionMatch = activeDimensionToken.match(
-        /^select-(default|filled)-(padding-(x|y)|font-(family|weight))$/,
+      const variantDimensionMatch = activeDimensionToken.match(
+        new RegExp(`^${cp}-(default|filled)-(padding-(x|y)|font-(family|weight))$`),
       );
-      if (selectVariantDimensionMatch && selectVariantDimensionMatch[1] !== activeVariant) {
+      if (variantDimensionMatch && variantDimensionMatch[1] !== activeVariant) {
         setActiveDimensionToken(null);
         return;
       }
       if (
         activeVariant === "default" &&
-        /^select-radius-(xs|sm|md|lg|xl)$/.test(activeDimensionToken)
+        new RegExp(`^${cp}-radius-(xs|sm|md|lg|xl)$`).test(activeDimensionToken)
       ) {
         setActiveDimensionToken(null);
       }
@@ -1833,6 +1903,14 @@ export default function App() {
     }
   }, [activeComponent, activeVariant, activeSelectRadius]);
 
+  useEffect(() => {
+    if (activeComponent !== "multiselect") return;
+    if (activeVariant !== "default") return;
+    if (activeMultiSelectRadius !== "default") {
+      setActiveMultiSelectRadius("default");
+    }
+  }, [activeComponent, activeVariant, activeMultiSelectRadius]);
+
   const tabStyle = (t) => ({
     background: activeTab === t ? "#25262B" : "transparent",
     color: activeTab === t ? "#C1C2C5" : "#5C5F66",
@@ -1848,6 +1926,7 @@ export default function App() {
     button: activeSize,
     actionicon: activeActionIconSize,
     switch: activeSwitchSize,
+    burger: activeBurgerSize,
     slider: activeSliderSize,
     rangeslider: activeRangeSliderSize,
     title: activeTitleSize,
@@ -1858,6 +1937,7 @@ export default function App() {
     chip: activeChipSize,
     textinput: activeTextInputSize,
     select: activeSelectSize,
+    multiselect: activeMultiSelectSize,
     card: activeCardSize,
     loader: activeLoaderSize,
     divider: activeDividerSize,
@@ -1892,6 +1972,10 @@ export default function App() {
     }
     if (activeComponent === "select" && tokenName === "select-radius") {
       return activeSelectRadius;
+    }
+    if (activeComponent === "multiselect") {
+      if (tokenName === "multiselect-radius") return activeMultiSelectRadius;
+      if (tokenName === "multiselect-pill-radius") return activeMultiSelectRadius;
     }
     if (activeComponent === "card" && tokenName === "card-radius") {
       return activeCardRadius;
@@ -2431,6 +2515,19 @@ export default function App() {
                 />
               )}
 
+              {activeComponent === "burger" && (
+                <BurgerPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  previewTheme={previewTheme}
+                  activeBurgerSize={activeBurgerSize}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedOpened={activeBurgerOpened}
+                  selectedState={forcedState || activeBurgerState}
+                />
+              )}
+
               {activeComponent === "slider" && (
                 <SliderPreviewContent
                   brands={brands}
@@ -2687,6 +2784,30 @@ export default function App() {
                   errorText={activeSelectErrorText}
                   searchable={activeSelectSearchable}
                   clearable={activeSelectClearable}
+                  showDropdown={activeSelectShowDropdown}
+                  onToggleDropdown={() => setActiveSelectShowDropdown((v) => !v)}
+                  onCloseDropdown={() => setActiveSelectShowDropdown(false)}
+                />
+              )}
+              {activeComponent === "multiselect" && (
+                <MultiSelectPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  activeMultiSelectSize={activeMultiSelectSize}
+                  activeMultiSelectRadius={activeMultiSelectRadius}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedState={forcedState || activeMultiSelectState}
+                  showLabel={activeMultiSelectShowLabel}
+                  labelText={activeMultiSelectLabelText}
+                  withAsterisk={activeMultiSelectWithAsterisk}
+                  showError={activeMultiSelectShowError}
+                  errorText={activeMultiSelectErrorText}
+                  searchable={activeMultiSelectSearchable}
+                  clearable={activeMultiSelectClearable}
+                  showDropdown={activeMultiSelectShowDropdown}
+                  onToggleDropdown={() => setActiveMultiSelectShowDropdown((v) => !v)}
                 />
               )}
               {activeComponent === "card" && (
@@ -2896,6 +3017,18 @@ export default function App() {
                   selectedState={forcedState || activeSwitchState}
                   setSelectedState={setActiveSwitchState}
                   forcedChecked={forcedChecked}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "burger" && (
+                <BurgerPropertiesPanel
+                  activeBurgerSize={activeBurgerSize}
+                  setActiveBurgerSize={setActiveBurgerSize}
+                  sizeKeys={sizeKeys}
+                  selectedOpened={activeBurgerOpened}
+                  setSelectedOpened={setActiveBurgerOpened}
+                  selectedState={forcedState || activeBurgerState}
+                  setSelectedState={setActiveBurgerState}
                   forcedState={forcedState}
                 />
               )}
@@ -3221,6 +3354,38 @@ export default function App() {
                   setSearchable={setActiveSelectSearchable}
                   clearable={activeSelectClearable}
                   setClearable={setActiveSelectClearable}
+                  showDropdown={activeSelectShowDropdown}
+                  setShowDropdown={setActiveSelectShowDropdown}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "multiselect" && (
+                <MultiSelectPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeMultiSelectSize={activeMultiSelectSize}
+                  setActiveMultiSelectSize={setActiveMultiSelectSize}
+                  activeMultiSelectRadius={activeMultiSelectRadius}
+                  setActiveMultiSelectRadius={setActiveMultiSelectRadius}
+                  sizeKeys={sizeKeys}
+                  selectedState={forcedState || activeMultiSelectState}
+                  setSelectedState={setActiveMultiSelectState}
+                  showLabel={activeMultiSelectShowLabel}
+                  setShowLabel={setActiveMultiSelectShowLabel}
+                  labelText={activeMultiSelectLabelText}
+                  setLabelText={setActiveMultiSelectLabelText}
+                  withAsterisk={activeMultiSelectWithAsterisk}
+                  setWithAsterisk={setActiveMultiSelectWithAsterisk}
+                  showError={activeMultiSelectShowError}
+                  setShowError={setActiveMultiSelectShowError}
+                  errorText={activeMultiSelectErrorText}
+                  setErrorText={setActiveMultiSelectErrorText}
+                  searchable={activeMultiSelectSearchable}
+                  setSearchable={setActiveMultiSelectSearchable}
+                  clearable={activeMultiSelectClearable}
+                  setClearable={setActiveMultiSelectClearable}
+                  showDropdown={activeMultiSelectShowDropdown}
+                  setShowDropdown={setActiveMultiSelectShowDropdown}
                   forcedState={forcedState}
                 />
               )}
@@ -3332,7 +3497,7 @@ export default function App() {
                   setShowRowHover={setActiveTableShowRowHover}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "card", "loader", "progress", "pill", "badge", "image", "avatar", "table"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "pill", "badge", "image", "avatar", "table"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

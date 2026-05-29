@@ -5,6 +5,7 @@ import { useFigmaSync } from "../hooks/useFigmaSync";
 const BUILDABLE_COMPONENTS = [
   "button",
   "switch",
+  "burger",
   "slider",
   "rangeslider",
   "checkbox",
@@ -24,6 +25,7 @@ const BUILDABLE_COMPONENTS = [
   "badge",
   "textinput",
   "select",
+  "multiselect",
   "card",
   "actionicon",
   "tabs",
@@ -40,6 +42,7 @@ const COMPONENT_LABELS = {
   actionicon: "ActionIcon",
   rangeslider: "RangeSlider",
   textinput: "TextInput",
+  multiselect: "MultiSelect",
   popover: "Popover",
   menu: "Menu",
   divider: "Divider",
@@ -52,6 +55,7 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
   const [selectedComponents, setSelectedComponents] = useState(BUILDABLE_COMPONENTS);
   const [textInputDebugDefaultOnly, setTextInputDebugDefaultOnly] = useState(false);
   const [selectDebugDefaultOnly, setSelectDebugDefaultOnly] = useState(false);
+  const [multiSelectDebugDefaultOnly, setMultiSelectDebugDefaultOnly] = useState(false);
   const [preserveExistingVariables, setPreserveExistingVariables] = useState(true);
 
   const selectedCount = selectedComponents.length;
@@ -73,6 +77,7 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
     var buildOptions = Object.assign({}, syncBuildOptions || {});
     buildOptions.textInputDebugDefaultOnly = textInputDebugDefaultOnly;
     buildOptions.selectDebugDefaultOnly = selectDebugDefaultOnly;
+    buildOptions.multiSelectDebugDefaultOnly = multiSelectDebugDefaultOnly;
     buildOptions.preserveExistingVariables = preserveExistingVariables;
     if (buildMode === "selected") {
       buildOptions.componentsToBuild = selectedComponents.slice();
@@ -80,7 +85,7 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
     if (Object.keys(buildOptions).length === 0) buildOptions = null;
     const payload = buildExportPayload(brands, buildOptions);
     sync(payload);
-  }, [brands, buildMode, selectedComponents, sync, syncBuildOptions, textInputDebugDefaultOnly, selectDebugDefaultOnly, preserveExistingVariables]);
+  }, [brands, buildMode, selectedComponents, sync, syncBuildOptions, textInputDebugDefaultOnly, selectDebugDefaultOnly, multiSelectDebugDefaultOnly, preserveExistingVariables]);
 
   const toggleComponent = useCallback((name) => {
     setSelectedComponents((curr) => {
@@ -253,6 +258,14 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
             onChange={(e) => setSelectDebugDefaultOnly(e.target.checked)}
           />
           Select debug: only Default size/radius
+        </label>
+        <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#CED4DA" }}>
+          <input
+            type="checkbox"
+            checked={multiSelectDebugDefaultOnly}
+            onChange={(e) => setMultiSelectDebugDefaultOnly(e.target.checked)}
+          />
+          MultiSelect debug: only Default size/radius
         </label>
         <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#CED4DA" }}>
           <input

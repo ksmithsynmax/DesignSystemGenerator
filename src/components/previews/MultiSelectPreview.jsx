@@ -5,7 +5,7 @@ import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
 const ALL_OPTIONS = ["Option one", "Option two", "Option three"];
 
-export default function SelectPreview({
+export default function MultiSelectPreview({
   brands,
   brandId,
   variant = "default",
@@ -16,16 +16,15 @@ export default function SelectPreview({
   withAsterisk = false,
   showError = false,
   errorText = "Error message",
-  placeholder = "Pick one",
+  placeholder = "Pick options",
   state,
   disabled,
   showDropdown = false,
   onToggleDropdown,
-  onCloseDropdown,
   interactive = false,
 }) {
-  const tokens = COMPONENT_TOKENS.select;
-  const prefix = `select-${variant}`;
+  const tokens = COMPONENT_TOKENS.multiselect;
+  const prefix = `multiselect-${variant}`;
   const effectiveRadius = variant === "default" ? "default" : radius;
 
   const isDisabled = disabled || state === "disabled";
@@ -48,7 +47,7 @@ export default function SelectPreview({
 
   const bg = resolveColor(brands, brandId, tokens[bgKey]?.semantic, "light", bgKey);
   const borderColor = resolveColor(brands, brandId, tokens[borderKey]?.semantic, "light", borderKey);
-  const resolveSelectColorToken = (tokenNames, fallback = "transparent") => {
+  const resolveMultiSelectColorToken = (tokenNames, fallback = "transparent") => {
     for (const tokenName of tokenNames) {
       const semantic = tokens[tokenName]?.semantic;
       if (!semantic) continue;
@@ -58,57 +57,63 @@ export default function SelectPreview({
   };
 
   const textColor = isDisabled
-    ? resolveColor(brands, brandId, tokens["select-text-disabled"]?.semantic, "light", "select-text-disabled")
-    : resolveColor(brands, brandId, tokens["select-text"]?.semantic, "light", "select-text");
-  const placeholderColor = resolveSelectColorToken(
+    ? resolveColor(brands, brandId, tokens["multiselect-text-disabled"]?.semantic, "light", "multiselect-text-disabled")
+    : resolveColor(brands, brandId, tokens["multiselect-text"]?.semantic, "light", "multiselect-text");
+  const placeholderColor = resolveMultiSelectColorToken(
     isError
       ? [
           `${prefix}-placeholder-error`,
-          "select-placeholder-error",
+          "multiselect-placeholder-error",
           `${prefix}-placeholder`,
         ]
       : [`${prefix}-placeholder`]
   );
-  const labelColor = resolveColor(brands, brandId, tokens["select-label-color"]?.semantic, "light", "select-label-color");
-  const asteriskColor = resolveColor(brands, brandId, tokens["select-asterisk-color"]?.semantic, "light", "select-asterisk-color");
-  const errorColor = resolveColor(brands, brandId, tokens["select-error-color"]?.semantic, "light", "select-error-color");
+  const labelColor = resolveColor(brands, brandId, tokens["multiselect-label-color"]?.semantic, "light", "multiselect-label-color");
+  const asteriskColor = resolveColor(brands, brandId, tokens["multiselect-asterisk-color"]?.semantic, "light", "multiselect-asterisk-color");
+  const errorColor = resolveColor(brands, brandId, tokens["multiselect-error-color"]?.semantic, "light", "multiselect-error-color");
   const iconSemantic = isDisabled
-    ? tokens["select-icon-disabled"]?.semantic
+    ? tokens["multiselect-icon-disabled"]?.semantic
     : isError
-      ? tokens["select-icon-error"]?.semantic ??
-        tokens["select-icon"]?.semantic
-      : tokens["select-icon"]?.semantic;
-  const iconColorKey = isDisabled ? "select-icon-disabled" : isError ? "select-icon-error" : "select-icon";
+      ? tokens["multiselect-icon-error"]?.semantic ??
+        tokens["multiselect-icon"]?.semantic
+      : tokens["multiselect-icon"]?.semantic;
+  const iconColorKey = isDisabled ? "multiselect-icon-disabled" : isError ? "multiselect-icon-error" : "multiselect-icon";
   const chevronColor = resolveColor(brands, brandId, iconSemantic, "light", iconColorKey);
-  const focusRingColor = resolveColor(brands, brandId, tokens["select-focus-ring"]?.semantic, "light", "select-focus-ring");
-  const dropdownBackground = resolveSelectColorToken([`${prefix}-dropdown-background`]);
-  const dropdownBorderColor = resolveSelectColorToken([`${prefix}-dropdown-border`]);
-  const optionSelectedBackground = resolveSelectColorToken([`${prefix}-option-selected-background`]);
-  const optionHoverBackground = resolveSelectColorToken([`${prefix}-option-hover-background`]);
-  const optionHoverText = resolveSelectColorToken([`${prefix}-option-hover-text`]);
+  const focusRingColor = resolveColor(brands, brandId, tokens["multiselect-focus-ring"]?.semantic, "light", "multiselect-focus-ring");
+  const dropdownBackground = resolveMultiSelectColorToken([`${prefix}-dropdown-background`]);
+  const dropdownBorderColor = resolveMultiSelectColorToken([`${prefix}-dropdown-border`]);
+  const optionSelectedBackground = resolveMultiSelectColorToken([`${prefix}-option-selected-background`]);
+  const optionHoverBackground = resolveMultiSelectColorToken([`${prefix}-option-hover-background`]);
+  const optionHoverText = resolveMultiSelectColorToken([`${prefix}-option-hover-text`]);
+  const pillBackground = resolveMultiSelectColorToken(["multiselect-pill-background"]);
+  const pillText = resolveMultiSelectColorToken(["multiselect-pill-text"]);
+  const pillRemoveIcon = resolveMultiSelectColorToken(["multiselect-pill-remove-icon"]);
 
-  const fontSize = resolveDimension(brands, brandId, "select-font-size", size);
+  const fontSize = resolveDimension(brands, brandId, "multiselect-font-size", size);
   const fontFamily = resolveDimension(brands, brandId, `${prefix}-font-family`);
   const fontWeight = resolveDimension(brands, brandId, `${prefix}-font-weight`);
-  const lineHeight = resolveDimension(brands, brandId, "select-line-height", size);
-  const variantPaddingXToken = variant === "filled" ? "select-filled-padding-x" : "select-default-padding-x";
-  const variantPaddingYToken = variant === "filled" ? "select-filled-padding-y" : "select-default-padding-y";
+  const lineHeight = resolveDimension(brands, brandId, "multiselect-line-height", size);
+  const variantPaddingXToken = variant === "filled" ? "multiselect-filled-padding-x" : "multiselect-default-padding-x";
+  const variantPaddingYToken = variant === "filled" ? "multiselect-filled-padding-y" : "multiselect-default-padding-y";
   const paddingX = resolveDimension(brands, brandId, variantPaddingXToken, size);
   const paddingY = resolveDimension(brands, brandId, variantPaddingYToken, size);
-  const borderRadius = resolveDimension(brands, brandId, "select-radius", effectiveRadius);
-  const borderWidth = resolveDimension(brands, brandId, "select-border-width");
-  const labelFontSize = resolveDimension(brands, brandId, "select-label-font-size");
-  const labelFontFamily = resolveDimension(brands, brandId, "select-label-font-family");
-  const labelFontWeight = resolveDimension(brands, brandId, "select-label-font-weight");
-  const labelLineHeight = resolveDimension(brands, brandId, "select-label-line-height");
-  const labelGap = resolveDimension(brands, brandId, "select-label-gap");
-  const errorFontSize = resolveDimension(brands, brandId, "select-error-font-size");
-  const errorFontFamily = resolveDimension(brands, brandId, "select-error-font-family");
-  const errorFontWeight = resolveDimension(brands, brandId, "select-error-font-weight");
-  const errorLineHeight = resolveDimension(brands, brandId, "select-error-line-height");
-  const errorGap = resolveDimension(brands, brandId, "select-error-gap");
-  const sectionSize = resolveDimension(brands, brandId, "select-icon-size", size);
-  const iconStrokeWidth = resolveDimension(brands, brandId, "select-icon-stroke-width", size);
+  const borderRadius = resolveDimension(brands, brandId, "multiselect-radius", effectiveRadius);
+  const borderWidth = resolveDimension(brands, brandId, "multiselect-border-width");
+  const labelFontSize = resolveDimension(brands, brandId, "multiselect-label-font-size");
+  const labelFontFamily = resolveDimension(brands, brandId, "multiselect-label-font-family");
+  const labelFontWeight = resolveDimension(brands, brandId, "multiselect-label-font-weight");
+  const labelLineHeight = resolveDimension(brands, brandId, "multiselect-label-line-height");
+  const labelGap = resolveDimension(brands, brandId, "multiselect-label-gap");
+  const errorFontSize = resolveDimension(brands, brandId, "multiselect-error-font-size");
+  const errorFontFamily = resolveDimension(brands, brandId, "multiselect-error-font-family");
+  const errorFontWeight = resolveDimension(brands, brandId, "multiselect-error-font-weight");
+  const errorLineHeight = resolveDimension(brands, brandId, "multiselect-error-line-height");
+  const errorGap = resolveDimension(brands, brandId, "multiselect-error-gap");
+  const pillFontSize = resolveDimension(brands, brandId, "multiselect-pill-font-size", size);
+  const pillGap = resolveDimension(brands, brandId, "multiselect-pill-gap");
+  const pillRadius = resolveDimension(brands, brandId, "multiselect-pill-radius", effectiveRadius);
+  const sectionSize = resolveDimension(brands, brandId, "multiselect-icon-size", size);
+  const iconStrokeWidth = resolveDimension(brands, brandId, "multiselect-icon-stroke-width", size);
 
   const bdValue = `${borderWidth}px solid ${borderColor}`;
   const dropdownBdValue = `${borderWidth}px solid ${dropdownBorderColor}`;
@@ -117,17 +122,61 @@ export default function SelectPreview({
   const labelFontWeightValue = labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400;
   const errorFontWeightValue = errorFontWeight === "Semi Bold" ? 600 : errorFontWeight === "Bold" ? 700 : 400;
 
-  const [selectedValue, setSelectedValue] = useState("Option one");
+  const [selectedValues, setSelectedValues] = useState(["Option one"]);
   const [hoveredOption, setHoveredOption] = useState(null);
   const canInteract = interactive && !isDisabled;
-  const displayValue = interactive ? selectedValue : "Option one";
-  const triggerTextColor = isError && !displayValue ? placeholderColor : textColor;
+  const displayValues = interactive ? selectedValues : ["Option one", "Option two"];
 
-  const selectOption = (opt) => {
+  const toggleValue = (opt) => {
     if (!canInteract) return;
-    setSelectedValue(opt);
-    if (onCloseDropdown) onCloseDropdown();
+    setSelectedValues((prev) =>
+      prev.includes(opt) ? prev.filter((v) => v !== opt) : [...prev, opt]
+    );
   };
+  const removeValue = (opt) => {
+    if (!canInteract) return;
+    setSelectedValues((prev) => prev.filter((v) => v !== opt));
+  };
+
+  const renderPill = (label) => (
+    <span
+      key={label}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: 4,
+        backgroundColor: pillBackground,
+        color: pillText,
+        borderRadius: pillRadius,
+        fontSize: pillFontSize,
+        lineHeight: 1,
+        padding: "3px 6px",
+        whiteSpace: "nowrap",
+        boxSizing: "border-box",
+      }}
+    >
+      {label}
+      <span
+        aria-hidden
+        onClick={
+          canInteract
+            ? (e) => {
+                e.stopPropagation();
+                removeValue(label);
+              }
+            : undefined
+        }
+        style={{
+          color: pillRemoveIcon,
+          fontSize: pillFontSize,
+          lineHeight: 1,
+          cursor: canInteract ? "pointer" : "default",
+        }}
+      >
+        ×
+      </span>
+    </span>
+  );
 
   const renderDropdown = () => (
     <div
@@ -142,7 +191,7 @@ export default function SelectPreview({
       }}
     >
       {ALL_OPTIONS.map((opt) => {
-        const isSelected = displayValue === opt;
+        const isSelected = displayValues.includes(opt);
         const isOptionHover = canInteract && hoveredOption === opt;
         const rowBackground = isSelected
           ? optionSelectedBackground
@@ -153,7 +202,7 @@ export default function SelectPreview({
         return (
           <div
             key={opt}
-            onClick={() => selectOption(opt)}
+            onClick={() => toggleValue(opt)}
             onMouseEnter={canInteract ? () => setHoveredOption(opt) : undefined}
             onMouseLeave={canInteract ? () => setHoveredOption(null) : undefined}
             style={{
@@ -199,7 +248,7 @@ export default function SelectPreview({
         onClick={isDisabled ? undefined : onToggleDropdown}
         style={{
           backgroundColor: bg,
-          color: triggerTextColor,
+          color: textColor,
           border: bdValue,
           borderRadius: borderRadius,
           paddingLeft: paddingX,
@@ -221,17 +270,13 @@ export default function SelectPreview({
           ...(isFocus ? { boxShadow: `0 0 0 2px ${focusRingColor}40` } : {}),
         }}
       >
-        <span
-          style={{
-            color: displayValue ? triggerTextColor : placeholderColor,
-            whiteSpace: "nowrap",
-            overflow: "hidden",
-            textOverflow: "ellipsis",
-            flex: variant === "default" ? "0 1 auto" : 1,
-          }}
-        >
-          {displayValue || placeholder}
-        </span>
+        <div style={{ display: "flex", alignItems: "center", flexWrap: "wrap", gap: pillGap, flex: 1, minWidth: 0 }}>
+          {displayValues.length > 0 ? (
+            displayValues.map((v) => renderPill(v))
+          ) : (
+            <span style={{ color: placeholderColor, whiteSpace: "nowrap" }}>{placeholder}</span>
+          )}
+        </div>
         <ChevronRightIcon
           width={chevronIconSize}
           height={chevronIconSize}

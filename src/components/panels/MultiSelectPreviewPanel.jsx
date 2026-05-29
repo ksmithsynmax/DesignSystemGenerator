@@ -1,11 +1,11 @@
-import SelectPreview from "../previews/SelectPreview";
+import MultiSelectPreview from "../previews/MultiSelectPreview";
 import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-export const SELECT_VARIANTS = ["default", "filled"];
-export const SELECT_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
-export const SELECT_STATES = ["default", "hover", "focus", "error", "disabled"];
+export const MULTISELECT_VARIANTS = ["default", "filled"];
+export const MULTISELECT_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
+export const MULTISELECT_STATES = ["default", "hover", "focus", "error", "disabled"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -56,12 +56,12 @@ const textFieldStyle = {
   boxSizing: "border-box",
 };
 
-export function SelectPreviewContent({
+export function MultiSelectPreviewContent({
   brands,
   activeBrand,
   activeVariant,
-  activeSelectSize,
-  activeSelectRadius,
+  activeMultiSelectSize,
+  activeMultiSelectRadius,
   sizeKeys,
   activeColorToken,
   selectedState,
@@ -74,9 +74,8 @@ export function SelectPreviewContent({
   clearable,
   showDropdown,
   onToggleDropdown,
-  onCloseDropdown,
 }) {
-  const matrixRows = SELECT_VARIANTS.flatMap((v) => [
+  const matrixRows = MULTISELECT_VARIANTS.flatMap((v) => [
     { label: `${v}`, variant: v, state: "default" },
     { label: `${v} / hover`, variant: v, state: "hover" },
     { label: `${v} / focus`, variant: v, state: "focus" },
@@ -88,12 +87,12 @@ export function SelectPreviewContent({
     <div>
       <PreviewStage label={activeColorToken}>
         <div style={{ width: 280 }}>
-          <SelectPreview
+          <MultiSelectPreview
             brands={brands}
             brandId={activeBrand}
             variant={activeVariant}
-            size={activeSelectSize}
-            radius={activeSelectRadius}
+            size={activeMultiSelectSize}
+            radius={activeMultiSelectRadius}
             showLabel={showLabel}
             labelText={labelText}
             withAsterisk={withAsterisk}
@@ -104,7 +103,6 @@ export function SelectPreviewContent({
             clearable={clearable}
             showDropdown={showDropdown}
             onToggleDropdown={onToggleDropdown}
-            onCloseDropdown={onCloseDropdown}
             interactive
           />
         </div>
@@ -116,13 +114,13 @@ export function SelectPreviewContent({
         sizeKeys={sizeKeys}
         rows={matrixRows}
         renderCell={(row, s) => (
-          <div style={{ width: 160, textAlign: "left", display: "inline-block" }}>
-            <SelectPreview
+          <div style={{ width: 180, textAlign: "left", display: "inline-block" }}>
+            <MultiSelectPreview
               brands={brands}
               brandId={activeBrand}
               variant={row.variant}
               size={s}
-              radius={activeSelectRadius}
+              radius={activeMultiSelectRadius}
               state={row.state}
               showLabel={false}
               showError={row.state === "error"}
@@ -135,13 +133,13 @@ export function SelectPreviewContent({
   );
 }
 
-export function SelectPropertiesPanel({
+export function MultiSelectPropertiesPanel({
   activeVariant,
   setActiveVariant,
-  activeSelectSize,
-  setActiveSelectSize,
-  activeSelectRadius,
-  setActiveSelectRadius,
+  activeMultiSelectSize,
+  setActiveMultiSelectSize,
+  activeMultiSelectRadius,
+  setActiveMultiSelectRadius,
   sizeKeys,
   selectedState,
   setSelectedState,
@@ -165,20 +163,20 @@ export function SelectPropertiesPanel({
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={SELECT_VARIANTS} />
-      <PropertyRow label="Size" value={activeSelectSize} onChange={setActiveSelectSize} options={sizeKeys} />
+      <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={MULTISELECT_VARIANTS} />
+      <PropertyRow label="Size" value={activeMultiSelectSize} onChange={setActiveMultiSelectSize} options={sizeKeys} />
       <PropertyRow
         label="Radius"
-        value={activeSelectRadius}
-        onChange={setActiveSelectRadius}
-        options={SELECT_RADIUS_KEYS}
+        value={activeMultiSelectRadius}
+        onChange={setActiveMultiSelectRadius}
+        options={MULTISELECT_RADIUS_KEYS}
         disabled={activeVariant === "default"}
       />
       <PropertyRow
         label="State"
         value={selectedState}
         onChange={setSelectedState}
-        options={SELECT_STATES}
+        options={MULTISELECT_STATES}
         disabled={Boolean(forcedState)}
       />
       <PropertyRow
