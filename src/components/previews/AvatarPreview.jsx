@@ -9,6 +9,8 @@ function cssFontWeightFromFigmaStyle(weightStr) {
   return 400;
 }
 
+const DEFAULT_PHOTO = "https://picsum.photos/id/64/256/256";
+
 export default function AvatarPreview({
   brands,
   brandId,
@@ -16,14 +18,15 @@ export default function AvatarPreview({
   radiusSize = size,
   name = "Alex Carter",
   src = null,
-  usePhoto = false,
+  content = "initials",
+  colorKey = "default",
   previewTheme = "dark",
 }) {
   const tokens = COMPONENT_TOKENS.avatar;
   const theme = previewTheme === "dark" ? "dark" : "light";
-  const bg = resolveColor(brands, brandId, tokens["avatar-background"]?.semantic, theme, "avatar-background");
-  const border = resolveColor(brands, brandId, tokens["avatar-border"]?.semantic, theme, "avatar-border");
-  const text = resolveColor(brands, brandId, tokens["avatar-text"]?.semantic, theme, "avatar-text");
+  const tokenBg = resolveColor(brands, brandId, tokens["avatar-background"]?.semantic, theme, "avatar-background");
+  const tokenBorder = resolveColor(brands, brandId, tokens["avatar-border"]?.semantic, theme, "avatar-border");
+  const tokenText = resolveColor(brands, brandId, tokens["avatar-text"]?.semantic, theme, "avatar-text");
   const px = Number(resolveDimension(brands, brandId, "avatar-size", size)) || 40;
   const radiusPx = Number(resolveDimension(brands, brandId, "avatar-radius", radiusSize)) || 20;
   const fontPx = Number(resolveDimension(brands, brandId, "avatar-font-size", size)) || 16;
@@ -39,17 +42,27 @@ export default function AvatarPreview({
     typeof fontWeightToken === "string" ? fontWeightToken : "",
   );
 
-  const resolvedSrc = usePhoto && src ? src : null;
-
-  // Mantine 8 Avatar resolves fills via CSS variables (--avatar-bg, --avatar-color, --avatar-bd).
-  // `styles.root` alone loses to those; override vars and set root `style` so token colors always win.
+  // When a palette color is chosen, resolve fill + text through the per-color
+  // tokens (so overrides + auto-contrast apply); otherwise use the neutral tokens.
+  const isPaletteColor = colorKey && colorKey !== "default";
+  const colorBg = isPaletteColor ? resolveColor(brands, brandId, null, theme, `avatar-color-${colorKey}`) : null;
+  const colorText = isPaletteColor ? resolveColor(brands, brandId, null, theme, `avatar-on-color-${colorKey}`) : null;
+  const bg = colorBg || tokenBg;
+  const text = isPaletteColor ? colorText : tokenText;
+  const border = colorBg || tokenBorder;
   const rootBorder = `${borderWidthPx}px solid ${border}`;
+
+  // Content forms: image (src), icon (default placeholder), initials (name).
+  const isImage = content === "image";
+  const isIcon = content === "icon";
+  const resolvedSrc = isImage ? (src || DEFAULT_PHOTO) : null;
+  const resolvedName = isIcon ? undefined : name;
 
   return (
     <Avatar
       src={resolvedSrc}
       alt={name}
-      name={name}
+      name={resolvedName}
       size={px}
       radius={radiusPx}
       variant="filled"

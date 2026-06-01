@@ -4,6 +4,7 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
 export const AVATAR_SIZE_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
+export const AVATAR_CONTENT_KEYS = ["initials", "image", "icon"];
 
 function PropertyRow({ label, value, onChange, options, formatOption }) {
   return (
@@ -53,6 +54,24 @@ const textFieldStyle = {
   boxSizing: "border-box",
 };
 
+function FormLabel({ children }) {
+  return (
+    <div
+      style={{
+        fontSize: 11,
+        fontWeight: 600,
+        color: "#888F9E",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+        marginTop: 8,
+        textAlign: "center",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 export function AvatarPreviewContent({
   brands,
   activeBrand,
@@ -62,23 +81,32 @@ export function AvatarPreviewContent({
   radiusSize,
   name,
   src,
-  usePhoto,
+  content,
+  colorKey,
 }) {
   const rows = AVATAR_SIZE_KEYS.map((s) => ({ label: s, sizeKey: s }));
 
   return (
     <div>
       <PreviewStage label={activeColorToken} padding={48}>
-        <AvatarPreview
-          brands={brands}
-          brandId={activeBrand}
-          size={size}
-          radiusSize={radiusSize}
-          name={name}
-          src={src}
-          usePhoto={usePhoto}
-          previewTheme={previewTheme}
-        />
+        <div style={{ display: "flex", gap: 28, alignItems: "flex-start" }}>
+          {AVATAR_CONTENT_KEYS.map((c) => (
+            <div key={c} style={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <AvatarPreview
+                brands={brands}
+                brandId={activeBrand}
+                size={size}
+                radiusSize={radiusSize}
+                name={name}
+                src={src}
+                content={c}
+                colorKey={colorKey}
+                previewTheme={previewTheme}
+              />
+              <FormLabel>{c}</FormLabel>
+            </div>
+          ))}
+        </div>
       </PreviewStage>
 
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
@@ -95,7 +123,8 @@ export function AvatarPreviewContent({
               radiusSize={r}
               name="Jamie Lee"
               src={src}
-              usePhoto={false}
+              content="initials"
+              colorKey={colorKey}
               previewTheme={previewTheme}
             />
           </div>
@@ -114,11 +143,28 @@ export function AvatarPropertiesPanel({
   setName,
   src,
   setSrc,
-  usePhoto,
-  setUsePhoto,
+  content,
+  setContent,
+  colorKey,
+  setColorKey,
+  colorOptions = ["default"],
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      <PropertyRow
+        label="Content"
+        value={content}
+        onChange={setContent}
+        options={AVATAR_CONTENT_KEYS}
+        formatOption={(opt) => opt.charAt(0).toUpperCase() + opt.slice(1)}
+      />
+      <PropertyRow
+        label="Color"
+        value={colorKey}
+        onChange={setColorKey}
+        options={colorOptions}
+        formatOption={(opt) => (opt === "default" ? "Default (token)" : opt)}
+      />
       <PropertyRow
         label="Size"
         value={size}
@@ -149,15 +195,9 @@ export function AvatarPropertiesPanel({
           value={src}
           onChange={(e) => setSrc(e.target.value)}
           style={textFieldStyle}
-          disabled={!usePhoto}
+          disabled={content !== "image"}
         />
       </div>
-      <PropertyRow
-        label="Photo"
-        value={usePhoto ? "on" : "off"}
-        onChange={(v) => setUsePhoto(String(v) === "on")}
-        options={["off", "on"]}
-      />
     </div>
   );
 }

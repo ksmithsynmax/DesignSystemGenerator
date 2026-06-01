@@ -64,9 +64,80 @@ function applyOpacity(hex, opacity) {
   return `#${normalized}${alpha}`;
 }
 
+// Curated avatar palette colors (only included if they exist in the brand/global palette).
+export const AVATAR_PALETTE_COLORS = [
+  "red",
+  "green",
+  "blue",
+  "purple",
+  "orange",
+  "yellow",
+  "pink",
+  "cyan",
+  "navy",
+];
+// Primitive scale step used for avatar fills.
+export const AVATAR_COLOR_SHADE = 5;
+// Luminance cutoff for choosing dark vs. light text (mirrors Mantine's autoContrast default).
+const AVATAR_CONTRAST_THRESHOLD = 0.3;
+
+function channelToLinear(c) {
+  const s = c / 255;
+  return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4);
+}
+
+/** WCAG relative luminance for a hex color (returns 1 for invalid/transparent). */
+export function relativeLuminance(hex) {
+  const n = normalizeHex(hex);
+  if (!n || n === "transparent") return 1;
+  const r = channelToLinear(parseInt(n.slice(0, 2), 16));
+  const g = channelToLinear(parseInt(n.slice(2, 4), 16));
+  const b = channelToLinear(parseInt(n.slice(4, 6), 16));
+  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
+}
+
+/** Returns the readable text color (white or near-black) for a given background hex. */
+export function readableTextOn(hex) {
+  return relativeLuminance(hex) >= AVATAR_CONTRAST_THRESHOLD ? "#000000" : "#FFFFFF";
+}
+
+/** Curated avatar colors that actually exist in the brand or global palette (with the needed shade). */
+export function availableAvatarColors(brands, brandId) {
+  const brand = brands?.[brandId];
+  return AVATAR_PALETTE_COLORS.filter((name) => {
+    const family = brand?.primitives?.[name] || GLOBAL_PRIMITIVES[name];
+    return Array.isArray(family) && family.length > AVATAR_COLOR_SHADE;
+  });
+}
+
+function mappingToHex(brand, mapping) {
+  if (!mapping) return "#FF00FF";
+  if (mapping.gradient && String(mapping.gradient).trim()) {
+    const g = gradientFirstStopHex(brand, String(mapping.gradient).trim());
+    return g || "#FF00FF";
+  }
+  if (mapping.color === "transparent") return "transparent";
+  const base = brand.primitives[mapping.color]?.[mapping.index]
+    ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
+    ?? "#FF00FF";
+  return applyOpacity(base, mapping.opacity);
+}
+
+/** Resolve a semantic-less component color token via its defaultMapping / autoContrastOf. */
+function resolveComponentTokenDefault(brand, brands, brandId, componentToken, activeTheme) {
+  const def = findTokenDef(componentToken);
+  if (!def) return "transparent";
+  if (def.defaultMapping) return mappingToHex(brand, def.defaultMapping);
+  if (def.autoContrastOf) {
+    const bgHex = resolveColor(brands, brandId, null, activeTheme, def.autoContrastOf);
+    return readableTextOn(bgHex);
+  }
+  return "transparent";
+}
+
 export function resolveColor(brands, brandId, semanticKey, theme = "light", componentToken = null) {
-  if (!semanticKey) return "transparent";
   const brand = brands[brandId];
+  if (!brand) return "transparent";
   const runtimeTheme =
     typeof window !== "undefined" && (window.__DSG_PREVIEW_THEME === "dark" || window.__DSG_PREVIEW_THEME === "light")
       ? window.__DSG_PREVIEW_THEME
@@ -78,27 +149,18 @@ export function resolveColor(brands, brandId, semanticKey, theme = "light", comp
       ? brand.componentOverridesDark?.[componentToken]
       : brand.componentOverrides?.[componentToken];
   if (componentToken && themedComponentOverride) {
-    const mapping = themedComponentOverride;
-    if (mapping.gradient && String(mapping.gradient).trim()) {
-      const g = gradientFirstStopHex(brand, String(mapping.gradient).trim());
-      return g || "#FF00FF";
-    }
-    if (mapping.color === "transparent") return "transparent";
-    const baseColor = brand.primitives[mapping.color]?.[mapping.index]
-      ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
-      ?? "#FF00FF";
-    return applyOpacity(baseColor, mapping.opacity);
+    return mappingToHex(brand, themedComponentOverride);
   }
+  // Semantic-less component token (e.g. per-color avatar tokens) resolve from defaults.
+  if (!semanticKey && componentToken) {
+    return resolveComponentTokenDefault(brand, brands, brandId, componentToken, activeTheme);
+  }
+  if (!semanticKey) return "transparent";
   const map =
     activeTheme === "dark" ? mergeDarkSemanticsForBrand(brand) : mergeLightSemanticsForBrand(brand);
   const mapping = map[semanticKey];
   if (!mapping) return "#FF00FF";
-  if (mapping.color === "transparent") return "transparent";
-  // Check brand primitives first, then global primitives
-  const baseColor = brand.primitives[mapping.color]?.[mapping.index]
-    ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
-    ?? "#FF00FF";
-  return applyOpacity(baseColor, mapping.opacity);
+  return mappingToHex(brand, mapping);
 }
 
 export function resolveDimension(brands, brandId, tokenName, size) {

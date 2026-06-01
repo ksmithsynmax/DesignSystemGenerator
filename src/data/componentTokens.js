@@ -532,6 +532,43 @@ export const COMPONENT_TOKENS = {
     "burger-focus-ring-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "burger/focus-ring-width" },
   },
 
+  segmentedcontrol: {
+    // ── ROOT (TRACK) ──
+    "segmentedcontrol-root-background":          { type: "COLOR", semantic: "interactive-secondary", figmaPath: "segmentedcontrol/root-background" },
+    "segmentedcontrol-root-background-disabled": { type: "COLOR", semantic: "interactive-disabled",  figmaPath: "segmentedcontrol/root-background-disabled" },
+    "segmentedcontrol-root-border":              { type: "COLOR", semantic: "border-subtle",         figmaPath: "segmentedcontrol/root-border" },
+
+    // ── INDICATOR (ACTIVE CONTROL) ──
+    "segmentedcontrol-indicator-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "segmentedcontrol/indicator-background" },
+    "segmentedcontrol-indicator-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "segmentedcontrol/indicator-background-disabled" },
+    "segmentedcontrol-indicator-border":              { type: "COLOR", semantic: "border-default",       figmaPath: "segmentedcontrol/indicator-border" },
+
+    // ── LABEL TEXT (per state) ──
+    "segmentedcontrol-label-text":          { type: "COLOR", semantic: "text-subtle",   figmaPath: "segmentedcontrol/label-text" },
+    "segmentedcontrol-label-text-hover":    { type: "COLOR", semantic: "text-default",  figmaPath: "segmentedcontrol/label-text-hover" },
+    "segmentedcontrol-label-text-active":   { type: "COLOR", semantic: "text-default",  figmaPath: "segmentedcontrol/label-text-active" },
+    "segmentedcontrol-label-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "segmentedcontrol/label-text-disabled" },
+
+    // ── SHARED COLOR TOKEN ──
+    "segmentedcontrol-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "segmentedcontrol/focus-ring" },
+
+    // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
+    "segmentedcontrol-font-size":   { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 12, sm: 13, md: 14, lg: 16, xl: 18 }, figmaPath: "segmentedcontrol/font-size" },
+    "segmentedcontrol-line-height": { type: "FLOAT", unit: "px", sizes: { default: 20, xs: 18, sm: 18, md: 20, lg: 22, xl: 26 }, figmaPath: "segmentedcontrol/line-height" },
+    "segmentedcontrol-padding-x":   { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "segmentedcontrol/padding-x" },
+    "segmentedcontrol-padding-y":        { type: "FLOAT", unit: "px", sizes: { default: 7,  xs: 4,  sm: 6,  md: 7,  lg: 9,  xl: 11 }, figmaPath: "segmentedcontrol/padding-y" },
+    "segmentedcontrol-radius":           { type: "FLOAT", unit: "px", sizes: { default: 8,  xs: 4,  sm: 6,  md: 8,  lg: 12, xl: 16 }, figmaPath: "segmentedcontrol/radius" },
+    "segmentedcontrol-indicator-radius": { type: "FLOAT", unit: "px", sizes: { default: 6,  xs: 2,  sm: 4,  md: 6,  lg: 10, xl: 14 }, figmaPath: "segmentedcontrol/indicator-radius" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "segmentedcontrol-font-family":            { type: "STRING", value: "Inter", figmaPath: "segmentedcontrol/font-family" },
+    "segmentedcontrol-font-weight":            { type: "STRING", value: "Semi Bold", figmaPath: "segmentedcontrol/font-weight" },
+    "segmentedcontrol-root-padding":           { type: "FLOAT", unit: "px", value: 4, figmaPath: "segmentedcontrol/root-padding" },
+    "segmentedcontrol-root-border-width":      { type: "FLOAT", unit: "px", value: 1, figmaPath: "segmentedcontrol/root-border-width" },
+    "segmentedcontrol-indicator-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "segmentedcontrol/indicator-border-width" },
+    "segmentedcontrol-focus-ring-width":       { type: "FLOAT", unit: "px", value: 2, figmaPath: "segmentedcontrol/focus-ring-width" },
+  },
+
   checkbox: {
     // ── FILLED VARIANT ──
     "checkbox-filled-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "checkbox/filled-background" },
@@ -2024,6 +2061,36 @@ export const COMPONENT_TOKENS = {
   },
 };
 
+// Curated, per-color avatar tokens. These are semantic-less (they default to a
+// palette primitive directly) and are fully overridable like any color token.
+// `paletteGate` lets the app/Figma export skip colors that aren't in the palette.
+// `defaultMapping` seeds the fill; `autoContrastOf` derives readable text by default.
+export const AVATAR_PALETTE_COLOR_NAMES = [
+  "red",
+  "green",
+  "blue",
+  "purple",
+  "orange",
+  "yellow",
+  "pink",
+  "cyan",
+  "navy",
+];
+AVATAR_PALETTE_COLOR_NAMES.forEach((c) => {
+  COMPONENT_TOKENS.avatar[`avatar-color-${c}`] = {
+    type: TOKEN_TYPES.COLOR,
+    defaultMapping: { color: c, index: 5, opacity: 100 },
+    paletteGate: c,
+    figmaPath: `avatar/color-${c}`,
+  };
+  COMPONENT_TOKENS.avatar[`avatar-on-color-${c}`] = {
+    type: TOKEN_TYPES.COLOR,
+    autoContrastOf: `avatar-color-${c}`,
+    paletteGate: c,
+    figmaPath: `avatar/on-color-${c}`,
+  };
+});
+
 const PLACEHOLDER_COMPONENTS = [
   "card",
   "notification",
@@ -2050,6 +2117,7 @@ export const COMPONENT_SIZE_KEYS = {
   accordion: ["default", "xs", "sm", "md", "lg", "xl"],
   switch: ["default", "xs", "sm", "md", "lg", "xl"],
   burger: ["default", "xs", "sm", "md", "lg", "xl"],
+  segmentedcontrol: ["default", "xs", "sm", "md", "lg", "xl"],
   checkbox: ["xs", "sm", "md", "lg", "xl"],
   radio: ["xs", "sm", "md", "lg", "xl"],
   chip: ["default", "xs", "sm", "md", "lg", "xl"],

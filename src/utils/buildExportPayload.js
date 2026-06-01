@@ -1,5 +1,12 @@
 import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/componentTokens";
-import { resolveDimension, getDefaultSizeKey, mergeLightSemanticsForBrand, mergeDarkSemanticsForBrand } from "./resolveToken";
+import {
+  resolveDimension,
+  getDefaultSizeKey,
+  mergeLightSemanticsForBrand,
+  mergeDarkSemanticsForBrand,
+  relativeLuminance,
+  availableAvatarColors,
+} from "./resolveToken";
 import { gradientCssFromDef, gradientFirstStopHex, gradientFigmaExport } from "./resolveGradient";
 import {
   GLOBAL_PRIMITIVES,
@@ -216,17 +223,35 @@ export function buildExportPayload(brands, options) {
 
       Object.entries(tokens).forEach(([tokenName, def]) => {
         if (def.type === TOKEN_TYPES.COLOR) {
+          // Skip per-color tokens whose palette color isn't in this brand's palette.
+          if (def.paletteGate && !availableAvatarColors(brands, brandId).includes(def.paletteGate)) return;
+
           const lightSemanticMapping = def.semantic ? lightMerged[def.semantic] || null : null;
           const darkSemanticMapping = def.semantic ? darkMerged[def.semantic] || null : null;
           const lightOverride = brand.componentOverrides?.[tokenName] || null;
           const darkOverride = brand.componentOverridesDark?.[tokenName] || null;
 
-          const lightResolved = lightOverride
-            ? resolveMappingToColor(brand, lightOverride)
-            : resolveMappingToColor(brand, lightSemanticMapping);
-          const darkResolved = darkOverride
-            ? resolveMappingToColor(brand, darkOverride)
-            : resolveMappingToColor(brand, darkSemanticMapping);
+          // Resolve a color token for one theme. Supports semantic-less tokens that
+          // default to a palette primitive (defaultMapping) or to auto-contrast text.
+          const resolveColorTokenTheme = (override, semanticMapping, isDark) => {
+            if (override) return resolveMappingToColor(brand, override);
+            if (def.semantic) return resolveMappingToColor(brand, semanticMapping);
+            if (def.defaultMapping) return resolveMappingToColor(brand, def.defaultMapping);
+            if (def.autoContrastOf) {
+              const bgDef = COMPONENT_TOKENS[compName]?.[def.autoContrastOf];
+              const bgOverride = isDark
+                ? brand.componentOverridesDark?.[def.autoContrastOf]
+                : brand.componentOverrides?.[def.autoContrastOf];
+              const bgMapping = bgOverride || bgDef?.defaultMapping || null;
+              const bgResolved = resolveMappingToColor(brand, bgMapping);
+              const onIndex = relativeLuminance(bgResolved.value) >= 0.3 ? 9 : 0;
+              return resolveMappingToColor(brand, { color: "neutral", index: onIndex });
+            }
+            return resolveMappingToColor(brand, null);
+          };
+
+          const lightResolved = resolveColorTokenTheme(lightOverride, lightSemanticMapping, false);
+          const darkResolved = resolveColorTokenTheme(darkOverride, darkSemanticMapping, true);
 
           const lightHasSemantic = Boolean(def.semantic && lightSemanticMapping);
           const darkHasSemantic = Boolean(def.semantic && darkSemanticMapping);

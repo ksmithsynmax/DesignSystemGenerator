@@ -23,6 +23,8 @@ import {
   getDefaultSizeKey,
   mergeLightSemanticsForBrand,
   mergeDarkSemanticsForBrand,
+  availableAvatarColors,
+  readableTextOn,
 } from "./utils/resolveToken";
 import { resolveGradientCss } from "./utils/resolveGradient";
 import Section from "./components/shared/Section";
@@ -52,6 +54,10 @@ import {
   BurgerPreviewContent,
   BurgerPropertiesPanel,
 } from "./components/panels/BurgerPreviewPanel";
+import {
+  SegmentedControlPreviewContent,
+  SegmentedControlPropertiesPanel,
+} from "./components/panels/SegmentedControlPreviewPanel";
 import {
   CheckboxPreviewContent,
   CheckboxPropertiesPanel,
@@ -348,6 +354,7 @@ export default function App() {
     textinput: "TextInput",
     rangeslider: "RangeSlider",
     multiselect: "MultiSelect",
+    segmentedcontrol: "SegmentedControl",
   };
   const getComponentLabel = (name) =>
     COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
@@ -452,6 +459,7 @@ export default function App() {
   const tabsDefault = getComponentDefaultSize(brands, activeBrand, "tabs") || "sm";
   const switchDefault = getComponentDefaultSize(brands, activeBrand, "switch") || "md";
   const burgerDefault = getComponentDefaultSize(brands, activeBrand, "burger") || "md";
+  const segmentedControlDefault = getComponentDefaultSize(brands, activeBrand, "segmentedcontrol") || "md";
   const sliderDefault = getComponentDefaultSize(brands, activeBrand, "slider") || "md";
   const rangeSliderDefault = getComponentDefaultSize(brands, activeBrand, "rangeslider") || "md";
   const checkboxDefault = getComponentDefaultSize(brands, activeBrand, "checkbox") || "md";
@@ -479,6 +487,7 @@ export default function App() {
     "md";
   const avatarRadiusDefault =
     getDefaultSizeKey(brands, activeBrand, "avatar-radius") || "md";
+  const avatarColorOptions = ["default", ...availableAvatarColors(brands, activeBrand)];
 
   const [activeSize, setActiveSize] = useState(buttonDefault);
   const [activeActionIconSize, setActiveActionIconSize] = useState(actionIconDefault);
@@ -502,6 +511,10 @@ export default function App() {
   const [activeBurgerSize, setActiveBurgerSize] = useState(burgerDefault);
   const [activeBurgerOpened, setActiveBurgerOpened] = useState(false);
   const [activeBurgerState, setActiveBurgerState] = useState("default");
+  const [activeSegmentedControlSize, setActiveSegmentedControlSize] = useState(segmentedControlDefault);
+  const [activeSegmentedControlOrientation, setActiveSegmentedControlOrientation] = useState("horizontal");
+  const [activeSegmentedControlFullWidth, setActiveSegmentedControlFullWidth] = useState(false);
+  const [activeSegmentedControlState, setActiveSegmentedControlState] = useState("default");
   const [activeSliderSize, setActiveSliderSize] = useState(sliderDefault);
   const [activeSliderRadius, setActiveSliderRadius] = useState(sliderDefault);
   const [activeSliderState, setActiveSliderState] = useState("default");
@@ -575,7 +588,8 @@ export default function App() {
   const [activeAvatarRadius, setActiveAvatarRadius] = useState(avatarRadiusDefault);
   const [activeAvatarName, setActiveAvatarName] = useState("Alex Carter");
   const [activeAvatarSrc, setActiveAvatarSrc] = useState("https://picsum.photos/id/64/256/256");
-  const [activeAvatarUsePhoto, setActiveAvatarUsePhoto] = useState(false);
+  const [activeAvatarContent, setActiveAvatarContent] = useState("initials");
+  const [activeAvatarColor, setActiveAvatarColor] = useState("default");
   const [activePillSize, setActivePillSize] = useState(pillDefault);
   const [activePillWithRemoveButton, setActivePillWithRemoveButton] = useState(false);
   const [activePillText, setActivePillText] = useState("React");
@@ -678,6 +692,7 @@ export default function App() {
     const tbDef = getComponentDefaultSize(brands, newBrand, "tabs") || "sm";
     const swDef = getComponentDefaultSize(brands, newBrand, "switch") || "md";
     const bgDef = getComponentDefaultSize(brands, newBrand, "burger") || "md";
+    const scDef = getComponentDefaultSize(brands, newBrand, "segmentedcontrol") || "md";
     const slDef = getComponentDefaultSize(brands, newBrand, "slider") || "md";
     const rslDef = getComponentDefaultSize(brands, newBrand, "rangeslider") || "md";
     const cbDef = getComponentDefaultSize(brands, newBrand, "checkbox") || "md";
@@ -696,6 +711,7 @@ export default function App() {
     setActiveTabsRadius(tbDef);
     setActiveSwitchSize(swDef);
     setActiveBurgerSize(bgDef);
+    setActiveSegmentedControlSize(scDef);
     setActiveSliderSize(slDef);
     setActiveSliderRadius(slDef);
     setActiveRangeSliderSize(rslDef);
@@ -787,6 +803,11 @@ export default function App() {
       setActiveBurgerSize(burgerDefault);
       setActiveBurgerOpened(false);
       setActiveBurgerState("default");
+    } else if (newComp === "segmentedcontrol") {
+      setActiveSegmentedControlSize(segmentedControlDefault);
+      setActiveSegmentedControlOrientation("horizontal");
+      setActiveSegmentedControlFullWidth(false);
+      setActiveSegmentedControlState("default");
     } else if (newComp === "slider") {
       setActiveSliderSize(sliderDefault);
       setActiveSliderRadius(sliderDefault);
@@ -932,7 +953,8 @@ export default function App() {
       setActiveAvatarRadius(avatarRadiusDefault);
       setActiveAvatarName("Alex Carter");
       setActiveAvatarSrc("https://picsum.photos/id/64/256/256");
-      setActiveAvatarUsePhoto(false);
+      setActiveAvatarContent("initials");
+      setActiveAvatarColor("default");
     } else if (newComp === "pill") {
       setActivePillSize(pillDefault);
       setActivePillWithRemoveButton(false);
@@ -981,7 +1003,7 @@ export default function App() {
       setActiveVariant("default");
       setActiveTableShowRowHover(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, burgerDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, multiSelectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, burgerDefault, segmentedControlDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, multiSelectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -1362,6 +1384,8 @@ export default function App() {
           ? forcedState || activeSwitchState
           : activeComponent === "burger"
           ? forcedState || activeBurgerState
+          : activeComponent === "segmentedcontrol"
+          ? forcedState || activeSegmentedControlState
           : activeComponent === "slider"
             ? forcedState || activeSliderState
             : activeComponent === "rangeslider"
@@ -1382,7 +1406,7 @@ export default function App() {
             ? forcedState || activeMultiSelectState
           : forcedState;
 
-  const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token]) => {
+  const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token, def]) => {
     const parts = token.split("-");
     const variantSegment = parts[1];
 
@@ -1414,6 +1438,34 @@ export default function App() {
         : "default";
       const targetState = effectiveComponentState || "default";
       return tokenState === targetState;
+    }
+
+    if (activeComponent === "avatar") {
+      const isBaseColorToken =
+        token === "avatar-background" || token === "avatar-border" || token === "avatar-text";
+      // When a palette color is selected, show only that color's tokens.
+      if (activeAvatarColor && activeAvatarColor !== "default") {
+        return (
+          def.paletteGate === activeAvatarColor &&
+          availableAvatarColors(brands, activeBrand).includes(def.paletteGate)
+        );
+      }
+      // Default color: show only the neutral base tokens.
+      return isBaseColorToken;
+    }
+
+    if (activeComponent === "segmentedcontrol") {
+      if (token === "segmentedcontrol-focus-ring") return true;
+      const targetState = effectiveComponentState || "default";
+      const last = parts[parts.length - 1];
+      const tokenState = ["hover", "active", "disabled"].includes(last) ? last : "default";
+      if (targetState === "disabled") {
+        return tokenState === "disabled" || token === "segmentedcontrol-label-text-active";
+      }
+      if (tokenState === "disabled") return false;
+      if (tokenState === "active") return true;
+      if (tokenState === "hover") return targetState === "hover";
+      return true;
     }
 
     if (activeComponent === "slider") {
@@ -1927,6 +1979,7 @@ export default function App() {
     actionicon: activeActionIconSize,
     switch: activeSwitchSize,
     burger: activeBurgerSize,
+    segmentedcontrol: activeSegmentedControlSize,
     slider: activeSliderSize,
     rangeslider: activeRangeSliderSize,
     title: activeTitleSize,
@@ -2373,23 +2426,38 @@ export default function App() {
             <Section title={`Color Tokens — ${getComponentLabel(activeComponent)}`}>
               {visibleColorTokenEntries.map(([token, def]) => {
                 const semantic = def.semantic;
-                const semanticMapping =
-                  previewTheme === "dark"
-                    ? darkSemanticMerged[semantic]
-                    : lightSemanticMerged[semantic];
-                if (!semanticMapping) return null;
+                const semanticMapping = semantic
+                  ? (previewTheme === "dark" ? darkSemanticMerged[semantic] : lightSemanticMerged[semantic])
+                  : null;
                 const componentOverride =
                   previewTheme === "dark"
                     ? (brand.componentOverridesDark && brand.componentOverridesDark[token]) || null
                     : (brand.componentOverrides && brand.componentOverrides[token]) || null;
+
+                // Semantic-less per-color tokens use a primitive default (or auto-contrast text).
+                let fallbackMapping = null;
+                if (!semantic) {
+                  if (def.defaultMapping) {
+                    fallbackMapping = def.defaultMapping;
+                  } else if (def.autoContrastOf) {
+                    const bgHex = resolveColor(brands, activeBrand, null, previewTheme, def.autoContrastOf);
+                    fallbackMapping =
+                      readableTextOn(bgHex) === "#000000"
+                        ? { color: "neutral", index: 9, opacity: 100 }
+                        : { color: "neutral", index: 0, opacity: 100 };
+                  }
+                }
+                const baseMapping = componentOverride || semanticMapping || fallbackMapping;
+                if (!baseMapping) return null;
+
                 const isActive = activeColorToken === token;
                 return (
                   <TokenChainCard
                     key={token}
                     componentToken={token}
-                    semanticToken={semantic}
-                    mapping={componentOverride || semanticMapping}
-                    resolvedColor={resolveColor(brands, activeBrand, semantic, previewTheme, token)}
+                    semanticToken={semantic || "—"}
+                    mapping={baseMapping}
+                    resolvedColor={resolveColor(brands, activeBrand, semantic || null, previewTheme, token)}
                     isActive={isActive}
                     onClick={() => setActiveColorToken(isActive ? null : token)}
                     onUpdate={updateComponentOverride}
@@ -2525,6 +2593,20 @@ export default function App() {
                   activeColorToken={activeColorToken}
                   selectedOpened={activeBurgerOpened}
                   selectedState={forcedState || activeBurgerState}
+                />
+              )}
+
+              {activeComponent === "segmentedcontrol" && (
+                <SegmentedControlPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  previewTheme={previewTheme}
+                  activeSegmentedControlSize={activeSegmentedControlSize}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedOrientation={activeSegmentedControlOrientation}
+                  selectedFullWidth={activeSegmentedControlFullWidth}
+                  selectedState={forcedState || activeSegmentedControlState}
                 />
               )}
 
@@ -2894,7 +2976,8 @@ export default function App() {
                   radiusSize={activeAvatarRadius}
                   name={activeAvatarName}
                   src={activeAvatarSrc}
-                  usePhoto={activeAvatarUsePhoto}
+                  content={activeAvatarContent}
+                  colorKey={activeAvatarColor}
                 />
               )}
               {activeComponent === "table" && (
@@ -3029,6 +3112,20 @@ export default function App() {
                   setSelectedOpened={setActiveBurgerOpened}
                   selectedState={forcedState || activeBurgerState}
                   setSelectedState={setActiveBurgerState}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "segmentedcontrol" && (
+                <SegmentedControlPropertiesPanel
+                  activeSegmentedControlSize={activeSegmentedControlSize}
+                  setActiveSegmentedControlSize={setActiveSegmentedControlSize}
+                  sizeKeys={sizeKeys}
+                  selectedOrientation={activeSegmentedControlOrientation}
+                  setSelectedOrientation={setActiveSegmentedControlOrientation}
+                  selectedFullWidth={activeSegmentedControlFullWidth}
+                  setSelectedFullWidth={setActiveSegmentedControlFullWidth}
+                  selectedState={forcedState || activeSegmentedControlState}
+                  setSelectedState={setActiveSegmentedControlState}
                   forcedState={forcedState}
                 />
               )}
@@ -3487,8 +3584,11 @@ export default function App() {
                   setName={setActiveAvatarName}
                   src={activeAvatarSrc}
                   setSrc={setActiveAvatarSrc}
-                  usePhoto={activeAvatarUsePhoto}
-                  setUsePhoto={setActiveAvatarUsePhoto}
+                  content={activeAvatarContent}
+                  setContent={setActiveAvatarContent}
+                  colorKey={activeAvatarColor}
+                  setColorKey={setActiveAvatarColor}
+                  colorOptions={avatarColorOptions}
                 />
               )}
               {activeComponent === "table" && (
@@ -3497,7 +3597,7 @@ export default function App() {
                   setShowRowHover={setActiveTableShowRowHover}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "pill", "badge", "image", "avatar", "table"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "pill", "badge", "image", "avatar", "table"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

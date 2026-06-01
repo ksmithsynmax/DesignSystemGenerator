@@ -990,7 +990,7 @@ function resolveManagedComponentKeyFromName(name) {
   if (!normalized) return null;
   if (normalized === "popup") return "popover";
   var managedKeys = [
-    "button", "switch", "burger", "slider", "rangeslider", "checkbox", "radio",
+    "button", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "checkbox", "radio",
     "chip", "notification", "alert", "modal", "tooltip", "popover", "menu", "divider", "list", "loader",
     "progress",
     "avatar",
@@ -1241,6 +1241,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var burgerSet = await buildSet("Burger", function () {
     return buildBurgerComponentSet(varMap, page, font);
   });
+  var segmentedControlSet = await buildSet("SegmentedControl", function () {
+    return buildSegmentedControlComponentSet(varMap, page, font);
+  });
   var sliderSet = await buildSet("Slider", function () {
     return buildSliderComponentSet(varMap, page, font);
   });
@@ -1343,8 +1346,8 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var imageSet = await buildSet("Image", function () {
     return buildImageComponentSet(varMap, page, font);
   });
-  var avatarSet = await buildSet("Avatar", function () {
-    return buildAvatarComponentSet(varMap, page, font);
+  var avatarSet = await buildSet("Avatar", async function () {
+    return await buildAvatarComponentSet(varMap, page, font);
   });
   var tableBuildResult = await buildSet("Table", async function () {
     return await buildTableComponentSet(varMap, page, font, {
@@ -1377,6 +1380,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     buttonSet,
     switchSet,
     burgerSet,
+    segmentedControlSet,
     sliderSet,
     rangeSliderSet,
     checkboxSet,
@@ -3315,6 +3319,40 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           );
         }
 
+        // Avatar documents Radius, Color, and Content in addition to Size.
+        if (lowerSetName === "avatar") {
+          var avatarTplRadii = pickOrdered(getPropValues(variantProps, "Radius"), ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+          if (avatarTplRadii.length > 1) {
+            templatedDoc.appendChild(createSectionHeader("Radius", "Corner radius scale, from circle to square.", DOC_COLORS.subtitle));
+            var avatarTplRadiusPanel = createPanel("avatar-template-radius", 10);
+            avatarTplRadiusPanel.resize(1192, avatarTplRadiusPanel.height);
+            templatedDoc.appendChild(avatarTplRadiusPanel);
+            addInstancesRow(avatarTplRadiusPanel, "Radius", avatarTplRadii, function (rName) {
+              return makeTemplateInstance({ Radius: rName });
+            }, false, { itemsPerRow: 6 });
+          }
+          var avatarTplColors = getPropValues(variantProps, "Color");
+          if (avatarTplColors.length > 1) {
+            templatedDoc.appendChild(createSectionHeader("Color", "Brand palette colors available for the avatar.", DOC_COLORS.subtitle));
+            var avatarTplColorPanel = createPanel("avatar-template-color", 10);
+            avatarTplColorPanel.resize(1192, avatarTplColorPanel.height);
+            templatedDoc.appendChild(avatarTplColorPanel);
+            addInstancesRow(avatarTplColorPanel, "Color", avatarTplColors, function (cName) {
+              return makeTemplateInstance({ Color: cName });
+            }, false, { itemsPerRow: 6 });
+          }
+          var avatarTplContents = getPropValues(variantProps, "Content");
+          if (avatarTplContents.length > 1) {
+            templatedDoc.appendChild(createSectionHeader("Content", "Initials or a swappable icon.", DOC_COLORS.subtitle));
+            var avatarTplContentPanel = createPanel("avatar-template-content", 10);
+            avatarTplContentPanel.resize(1192, avatarTplContentPanel.height);
+            templatedDoc.appendChild(avatarTplContentPanel);
+            addInstancesRow(avatarTplContentPanel, "Content", avatarTplContents, function (ctName) {
+              return makeTemplateInstance({ Content: ctName });
+            }, false);
+          }
+        }
+
         if (lowerSetName === "text") {
           if (hasTextWeights && templateOrderedTextWeights.length > 0) {
             var templateWeightSlot = getTemplateSlot(templatedDoc, slug, "weight");
@@ -3905,6 +3943,31 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       doc.appendChild(colorSlot);
     }
 
+    // Avatar documents Radius, Color, and Content in addition to Size.
+    var avatarRadiusSlot = null;
+    var avatarColorSlot = null;
+    var avatarContentSlot = null;
+    if (lowerSetName === "avatar") {
+      if (getPropValues(variantProps, "Radius").length > 1) {
+        doc.appendChild(createSectionHeader("Radius", "Corner radius scale, from circle to square.", DOC_COLORS.subtitle));
+        avatarRadiusSlot = createPanel("slot:" + slug + ":radius", 10);
+        avatarRadiusSlot.resize(1192, avatarRadiusSlot.height);
+        doc.appendChild(avatarRadiusSlot);
+      }
+      if (getPropValues(variantProps, "Color").length > 1) {
+        doc.appendChild(createSectionHeader("Color", "Brand palette colors available for the avatar.", DOC_COLORS.subtitle));
+        avatarColorSlot = createPanel("slot:" + slug + ":color", 10);
+        avatarColorSlot.resize(1192, avatarColorSlot.height);
+        doc.appendChild(avatarColorSlot);
+      }
+      if (getPropValues(variantProps, "Content").length > 1) {
+        doc.appendChild(createSectionHeader("Content", "Initials or a swappable icon.", DOC_COLORS.subtitle));
+        avatarContentSlot = createPanel("slot:" + slug + ":content", 10);
+        avatarContentSlot.resize(1192, avatarContentSlot.height);
+        doc.appendChild(avatarContentSlot);
+      }
+    }
+
     var leftSlot = null;
     var rightSlot = null;
     var bothSlot = null;
@@ -4455,6 +4518,29 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             ? { itemsPerRow: 3, rowItemSpacing: 56, instancePaddingX: 22, instancePaddingY: 10 }
             : null);
         }
+      }
+
+      // Avatar-only: Radius, Color, and Content showcase rows.
+      if (avatarRadiusSlot) {
+        clearChildren(avatarRadiusSlot);
+        var avatarDocRadii = pickOrdered(getPropValues(variantProps, "Radius"), ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+        addInstancesRow(avatarRadiusSlot, "Radius", avatarDocRadii, function (rName) {
+          return makeInstance({ Radius: rName });
+        }, false);
+      }
+      if (avatarColorSlot) {
+        clearChildren(avatarColorSlot);
+        var avatarDocColors = getPropValues(variantProps, "Color");
+        addInstancesRow(avatarColorSlot, "Color", avatarDocColors, function (cName) {
+          return makeInstance({ Color: cName });
+        }, false, { itemsPerRow: 6 });
+      }
+      if (avatarContentSlot) {
+        clearChildren(avatarContentSlot);
+        var avatarDocContents = getPropValues(variantProps, "Content");
+        addInstancesRow(avatarContentSlot, "Content", avatarDocContents, function (ctName) {
+          return makeInstance({ Content: ctName });
+        }, false);
       }
 
       var iconLabels = orderedSizes.length > 0 ? orderedSizes : [""];
@@ -5968,6 +6054,204 @@ function buildBurgerComponentSet(varMap, page, font) {
 }
 
 // ---------------------------------------------------------------------------
+// SegmentedControl
+// ---------------------------------------------------------------------------
+
+function buildSegmentedControlComponentSet(varMap, page, font) {
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var orientations = ["horizontal", "vertical"];
+  var fullWidths = [false, true];
+  var states = ["default", "disabled"];
+  var segments = ["React", "Angular", "Vue"];
+  var activeIndex = 0;
+  var components = [];
+
+  // Static geometry snapshots per size (variables drive the live values).
+  var fontSizes = { default: 14, xs: 12, sm: 13, md: 14, lg: 16, xl: 18 };
+  var padXs = { default: 12, xs: 8, sm: 10, md: 12, lg: 16, xl: 20 };
+  var padYs = { default: 7, xs: 4, sm: 6, md: 7, lg: 9, xl: 11 };
+  var radii = { default: 8, xs: 4, sm: 6, md: 8, lg: 12, xl: 16 };
+  var indicatorRadii = { default: 6, xs: 2, sm: 4, md: 6, lg: 10, xl: 14 };
+  var rootPad = 4;
+  var rootBorderW = 1;
+  var indicatorBorderW = 1;
+  var fullWidthHPx = 320;
+  var fullWidthVPx = 220;
+
+  var cellW = 380;
+  var cellH = 150;
+
+  for (var oi = 0; oi < orientations.length; oi++) {
+    var orientation = orientations[oi];
+    var isVertical = orientation === "vertical";
+    var capOrientation = orientation.charAt(0).toUpperCase() + orientation.slice(1);
+
+    for (var fwi = 0; fwi < fullWidths.length; fwi++) {
+      var isFullWidth = fullWidths[fwi];
+      var capFullWidth = isFullWidth ? "True" : "False";
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
+        var fontSz = fontSizes[size];
+        var padX = padXs[size];
+        var padY = padYs[size];
+        var rad = radii[size];
+        var indicatorRad = indicatorRadii[size];
+
+        for (var sti = 0; sti < states.length; sti++) {
+          var state = states[sti];
+          var capState = state.charAt(0).toUpperCase() + state.slice(1);
+          var isDisabled = state === "disabled";
+
+          var rootBgPath = isDisabled ? "segmentedcontrol/root-background-disabled" : "segmentedcontrol/root-background";
+          var indicatorBgPath = isDisabled ? "segmentedcontrol/indicator-background-disabled" : "segmentedcontrol/indicator-background";
+          var labelActivePath = isDisabled ? "segmentedcontrol/label-text-disabled" : "segmentedcontrol/label-text-active";
+          var labelInactivePath = isDisabled ? "segmentedcontrol/label-text-disabled" : "segmentedcontrol/label-text";
+
+          var comp = figma.createComponent();
+          comp.name =
+            "Size=" + capSize +
+            ", Orientation=" + capOrientation +
+            ", FullWidth=" + capFullWidth +
+            ", State=" + capState;
+          comp.layoutMode = isVertical ? "VERTICAL" : "HORIZONTAL";
+          comp.primaryAxisSizingMode = (isFullWidth && !isVertical) ? "FIXED" : "AUTO";
+          comp.counterAxisSizingMode = (isFullWidth && isVertical) ? "FIXED" : "AUTO";
+          // NOTE: counterAxisAlignItems only accepts MIN/CENTER/MAX/BASELINE.
+          // Equal-size segments on the counter axis come from each child's
+          // layoutAlign = "STRETCH" below, not from the parent.
+          comp.counterAxisAlignItems = "CENTER";
+          comp.itemSpacing = 0;
+          comp.paddingLeft = rootPad;
+          comp.paddingRight = rootPad;
+          comp.paddingTop = rootPad;
+          comp.paddingBottom = rootPad;
+          comp.cornerRadius = rad;
+          comp.fills = [{ type: "SOLID", color: { r: 0.95, g: 0.95, b: 0.96 } }];
+          comp.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.85, b: 0.87 } }];
+          comp.strokeWeight = rootBorderW;
+          comp.strokeAlign = "INSIDE";
+          if (varMap[rootBgPath]) bindPaintVar(comp, "fills", 0, varMap[rootBgPath]);
+          if (varMap["segmentedcontrol/root-border"]) bindPaintVar(comp, "strokes", 0, varMap["segmentedcontrol/root-border"]);
+          if (varMap["segmentedcontrol/root-border-width"]) bindVar(comp, "strokeWeight", varMap["segmentedcontrol/root-border-width"]);
+          if (varMap["segmentedcontrol/root-padding"]) {
+            bindVar(comp, "paddingLeft", varMap["segmentedcontrol/root-padding"]);
+            bindVar(comp, "paddingRight", varMap["segmentedcontrol/root-padding"]);
+            bindVar(comp, "paddingTop", varMap["segmentedcontrol/root-padding"]);
+            bindVar(comp, "paddingBottom", varMap["segmentedcontrol/root-padding"]);
+          }
+          if (varMap["segmentedcontrol/radius-" + size]) {
+            bindVar(comp, "topLeftRadius", varMap["segmentedcontrol/radius-" + size]);
+            bindVar(comp, "topRightRadius", varMap["segmentedcontrol/radius-" + size]);
+            bindVar(comp, "bottomLeftRadius", varMap["segmentedcontrol/radius-" + size]);
+            bindVar(comp, "bottomRightRadius", varMap["segmentedcontrol/radius-" + size]);
+          }
+
+          // For full-width variants, fix the track's main dimension BEFORE adding
+          // segments so each segment can reliably FILL the available space.
+          if (isFullWidth && !isVertical) {
+            try { comp.resize(fullWidthHPx, comp.height); } catch (_scResizeHErr) {}
+          } else if (isFullWidth && isVertical) {
+            try { comp.resize(fullWidthVPx, comp.height); } catch (_scResizeVErr) {}
+          }
+
+          for (var segIdx = 0; segIdx < segments.length; segIdx++) {
+            var isActive = segIdx === activeIndex;
+            var seg = figma.createFrame();
+            seg.name = isActive ? "Segment (Active)" : "Segment";
+            seg.layoutMode = "HORIZONTAL";
+            seg.primaryAxisSizingMode = "AUTO";
+            seg.counterAxisSizingMode = "AUTO";
+            seg.primaryAxisAlignItems = "CENTER";
+            seg.counterAxisAlignItems = "CENTER";
+            seg.paddingLeft = padX;
+            seg.paddingRight = padX;
+            seg.paddingTop = padY;
+            seg.paddingBottom = padY;
+            seg.cornerRadius = indicatorRad;
+            seg.itemSpacing = 0;
+            seg.clipsContent = false;
+
+            if (isActive) {
+              seg.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              seg.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.85, b: 0.87 } }];
+              seg.strokeWeight = indicatorBorderW;
+              seg.strokeAlign = "INSIDE";
+              if (varMap[indicatorBgPath]) bindPaintVar(seg, "fills", 0, varMap[indicatorBgPath]);
+              if (varMap["segmentedcontrol/indicator-border"]) bindPaintVar(seg, "strokes", 0, varMap["segmentedcontrol/indicator-border"]);
+              if (varMap["segmentedcontrol/indicator-border-width"]) bindVar(seg, "strokeWeight", varMap["segmentedcontrol/indicator-border-width"]);
+            } else {
+              seg.fills = [];
+            }
+            if (varMap["segmentedcontrol/padding-x-" + size]) {
+              bindVar(seg, "paddingLeft", varMap["segmentedcontrol/padding-x-" + size]);
+              bindVar(seg, "paddingRight", varMap["segmentedcontrol/padding-x-" + size]);
+            }
+            if (varMap["segmentedcontrol/padding-y-" + size]) {
+              bindVar(seg, "paddingTop", varMap["segmentedcontrol/padding-y-" + size]);
+              bindVar(seg, "paddingBottom", varMap["segmentedcontrol/padding-y-" + size]);
+            }
+            if (varMap["segmentedcontrol/indicator-radius-" + size]) {
+              bindVar(seg, "topLeftRadius", varMap["segmentedcontrol/indicator-radius-" + size]);
+              bindVar(seg, "topRightRadius", varMap["segmentedcontrol/indicator-radius-" + size]);
+              bindVar(seg, "bottomLeftRadius", varMap["segmentedcontrol/indicator-radius-" + size]);
+              bindVar(seg, "bottomRightRadius", varMap["segmentedcontrol/indicator-radius-" + size]);
+            }
+
+            var labelNode = figma.createText();
+            labelNode.fontName = font;
+            labelNode.characters = segments[segIdx];
+            labelNode.fontSize = fontSz;
+            labelNode.fills = [{ type: "SOLID", color: isActive ? { r: 0.13, g: 0.13, b: 0.13 } : { r: 0.5, g: 0.5, b: 0.5 } }];
+            var labelPath = isActive ? labelActivePath : labelInactivePath;
+            if (varMap[labelPath]) bindPaintVar(labelNode, "fills", 0, varMap[labelPath]);
+            if (varMap["segmentedcontrol/font-size-" + size]) bindVar(labelNode, "fontSize", varMap["segmentedcontrol/font-size-" + size]);
+            if (varMap["segmentedcontrol/font-family"]) bindVar(labelNode, "fontFamily", varMap["segmentedcontrol/font-family"]);
+            if (varMap["segmentedcontrol/font-weight"]) bindVar(labelNode, "fontStyle", varMap["segmentedcontrol/font-weight"]);
+            if (varMap["segmentedcontrol/line-height-" + size]) bindVar(labelNode, "lineHeight", varMap["segmentedcontrol/line-height-" + size]);
+            seg.appendChild(labelNode);
+
+            comp.appendChild(seg);
+            // Sizing rules (using the explicit layoutSizing API, which is far more
+            // reliable than layoutAlign alone for filling a track):
+            //  - Vertical: segments always fill the track width (counter axis).
+            //  - Horizontal full-width: segments share the track width equally.
+            //  - Otherwise segments hug their label.
+            if (isVertical) {
+              if (isFullWidth) {
+                // Parent width is FIXED, so segments can fill it exactly.
+                try { seg.layoutSizingHorizontal = "FILL"; } catch (_scSegHErr) {}
+              } else {
+                // Parent width hugs the widest segment; STRETCH equalizes them.
+                try { seg.layoutAlign = "STRETCH"; } catch (_scSegAlignErr) {}
+              }
+              try { seg.layoutSizingVertical = "HUG"; } catch (_scSegVErr) {}
+            } else {
+              try { seg.layoutSizingHorizontal = isFullWidth ? "FILL" : "HUG"; } catch (_scSegHErr2) {}
+              try { seg.layoutSizingVertical = "HUG"; } catch (_scSegVErr2) {}
+            }
+          }
+
+          if (isDisabled) comp.opacity = 0.6;
+
+          var colIndex = (oi * fullWidths.length + fwi) * states.length + sti;
+          comp.x = colIndex * cellW;
+          comp.y = si * cellH;
+          page.appendChild(comp);
+          components.push(comp);
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " segmented control variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "SegmentedControl";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
 // Slider
 // ---------------------------------------------------------------------------
 
@@ -6659,63 +6943,189 @@ async function buildImageComponentSet(varMap, page, font) {
   return componentSet;
 }
 
-function buildAvatarComponentSet(varMap, page, font) {
+/**
+ * Find a default + candidate list of icon components for the Avatar "Icon" content
+ * INSTANCE_SWAP. Prefers user/person/account/profile glyphs, falls back to any icon.
+ */
+async function findAvatarIconSources() {
+  var iconsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var p = figma.root.children[pi];
+    if (p.type !== "PAGE") continue;
+    await p.loadAsync();
+    if (!iconsPage && p.name && p.name.toLowerCase() === "icons") iconsPage = p;
+  }
+  var searchScope = iconsPage || figma.root;
+  var nodes = [];
+  try {
+    nodes = searchScope.findAll(function (n) {
+      return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+    });
+  } catch (_eFa) {
+    nodes = [];
+  }
+  var candidates = [];
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      candidates.push(nodes[i]);
+    } else {
+      var children = nodes[i].children || [];
+      for (var ci = 0; ci < children.length; ci++) {
+        if (children[ci].type === "COMPONENT") candidates.push(children[ci]);
+      }
+    }
+  }
+  function score(c) {
+    var n = String(c.name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+    if (!n) return 0;
+    if (n.indexOf("usercircle") >= 0) return 110;
+    if (n.indexOf("user") >= 0) return 100;
+    if (n.indexOf("person") >= 0) return 95;
+    if (n.indexOf("account") >= 0) return 90;
+    if (n.indexOf("profile") >= 0) return 85;
+    if (n.indexOf("avatar") >= 0) return 80;
+    if (n.indexOf("contact") >= 0) return 60;
+    return 0;
+  }
+  var best = null;
+  var bestScore = 0;
+  for (var j = 0; j < candidates.length; j++) {
+    var s = score(candidates[j]);
+    if (s > bestScore) {
+      bestScore = s;
+      best = candidates[j];
+    }
+  }
+  // Always fall back to the first available icon (alphabetical) so the swap is
+  // created whenever ANY icon component exists — the user can swap from there.
+  if (!best && candidates.length > 0) {
+    var sorted = candidates.slice().sort(function (a, b) {
+      return String(a.name).localeCompare(String(b.name));
+    });
+    best = sorted[0];
+  }
+  if (best) progress("[Avatar] Icon swap default: " + best.name + " (from " + candidates.length + " candidates)");
+  else progress("[Avatar] No icon component found; using drawn person placeholder.");
+  return { defaultIcon: best, candidates: candidates };
+}
+
+async function buildAvatarComponentSet(varMap, page, font) {
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var paletteColors = ["red", "green", "blue", "purple", "orange", "yellow", "pink", "cyan", "navy"];
   var components = [];
   var colWidth = 100;
   var rowHeight = 100;
   var gap = 16;
   var defaultSizeByKey = { default: 40, xs: 24, sm: 32, md: 40, lg: 48, xl: 56 };
 
-  for (var si = 0; si < sizes.length; si++) {
-    var size = sizes[si];
-    var capSize = size === "default" ? "Default" : size.toUpperCase();
-    var baseS = defaultSizeByKey[size] || 40;
+  var iconSources = await findAvatarIconSources();
+  var iconDefaultComp = iconSources.defaultIcon;
 
-    for (var ri = 0; ri < radii.length; ri++) {
-      var radiusKey = radii[ri];
-      var capRadius = radiusKey === "default" ? "Default" : radiusKey.toUpperCase();
+  function capKey(k) {
+    return k === "default" ? "Default" : (k.charAt(0).toUpperCase() + k.slice(1));
+  }
 
-      var comp = figma.createComponent();
-      comp.name = "Size=" + capSize + ", Radius=" + capRadius;
-      comp.layoutMode = "VERTICAL";
-      comp.primaryAxisSizingMode = "AUTO";
-      comp.counterAxisSizingMode = "AUTO";
-      comp.primaryAxisAlignItems = "CENTER";
-      comp.counterAxisAlignItems = "CENTER";
-      comp.itemSpacing = 0;
-      comp.fills = [];
-      comp.strokes = [];
+  // Drawn fallback person glyph (used only when no icon component exists in the file).
+  function makePersonGlyph(sz, colorVar) {
+    var svg =
+      '<svg width="24" height="24" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">' +
+      '<path d="M12 2a5 5 0 1 0 0 10 5 5 0 0 0 0-10z"/>' +
+      '<path d="M3 21a9 9 0 0 1 18 0v1H3z"/></svg>';
+    var node = figma.createNodeFromSvg(svg);
+    node.name = "Icon";
+    try { node.resize(sz, sz); } catch (_pgSz) {}
+    var vecs = node.findAll ? node.findAll(function (n) { return n.type === "VECTOR"; }) : [];
+    for (var vi = 0; vi < vecs.length; vi++) {
+      vecs[vi].fills = [{ type: "SOLID", color: { r: 0.12, g: 0.12, b: 0.14 } }];
+      if (colorVar) bindPaintVar(vecs[vi], "fills", 0, colorVar);
+    }
+    return node;
+  }
 
-      var shell = figma.createFrame();
-      shell.name = "Face";
-      shell.layoutMode = "HORIZONTAL";
-      shell.primaryAxisSizingMode = "FIXED";
-      shell.counterAxisSizingMode = "FIXED";
-      shell.primaryAxisAlignItems = "CENTER";
-      shell.counterAxisAlignItems = "CENTER";
-      shell.resize(baseS, baseS);
-      shell.fills = [{ type: "SOLID", color: { r: 0.88, g: 0.9, b: 0.94 } }];
+  // colorName === "default" → neutral token surface; otherwise a palette color token.
+  // content: "initials" (AC text) or "icon" (swappable icon instance / drawn glyph).
+  function makeAvatar(sizeKey, radiusKey, colorName, content) {
+    var isDefaultColor = colorName === "default";
+    var isIcon = content === "icon";
+    var baseS = defaultSizeByKey[sizeKey] || 40;
+    var bgKey = isDefaultColor ? "avatar/background" : "avatar/color-" + colorName;
+    var textKey = isDefaultColor ? "avatar/text" : "avatar/on-color-" + colorName;
+
+    var comp = figma.createComponent();
+    comp.name =
+      "Size=" + (sizeKey === "default" ? "Default" : sizeKey.toUpperCase()) +
+      ", Radius=" + (radiusKey === "default" ? "Default" : radiusKey.toUpperCase()) +
+      ", Color=" + capKey(colorName) +
+      ", Content=" + (isIcon ? "Icon" : "Initials");
+    comp.layoutMode = "VERTICAL";
+    comp.primaryAxisSizingMode = "AUTO";
+    comp.counterAxisSizingMode = "AUTO";
+    comp.primaryAxisAlignItems = "CENTER";
+    comp.counterAxisAlignItems = "CENTER";
+    comp.itemSpacing = 0;
+    comp.fills = [];
+    comp.strokes = [];
+
+    var shell = figma.createFrame();
+    shell.name = "Face";
+    shell.layoutMode = "HORIZONTAL";
+    shell.primaryAxisSizingMode = "FIXED";
+    shell.counterAxisSizingMode = "FIXED";
+    shell.primaryAxisAlignItems = "CENTER";
+    shell.counterAxisAlignItems = "CENTER";
+    shell.resize(baseS, baseS);
+    shell.fills = [{ type: "SOLID", color: { r: 0.88, g: 0.9, b: 0.94 } }];
+    shell.strokeAlign = "INSIDE";
+    shell.itemSpacing = 0;
+    shell.paddingTop = 0;
+    shell.paddingBottom = 0;
+    shell.paddingLeft = 0;
+    shell.paddingRight = 0;
+    shell.clipsContent = true;
+
+    bindPaintVar(shell, "fills", 0, varMap[bgKey]);
+    if (isDefaultColor) {
       shell.strokes = [{ type: "SOLID", color: { r: 0.75, g: 0.78, b: 0.84 } }];
       shell.strokeWeight = 1;
       bindVar(shell, "strokeWeight", varMap["avatar/border-width"]);
-      shell.strokeAlign = "INSIDE";
-      shell.itemSpacing = 0;
-      shell.paddingTop = 0;
-      shell.paddingBottom = 0;
-      shell.paddingLeft = 0;
-      shell.paddingRight = 0;
-
-      bindPaintVar(shell, "fills", 0, varMap["avatar/background"]);
       bindPaintVar(shell, "strokes", 0, varMap["avatar/border"]);
-      bindVar(shell, "width", varMap["avatar/size-" + size]);
-      bindVar(shell, "height", varMap["avatar/size-" + size]);
-      bindVar(shell, "topLeftRadius", varMap["avatar/radius-" + radiusKey]);
-      bindVar(shell, "topRightRadius", varMap["avatar/radius-" + radiusKey]);
-      bindVar(shell, "bottomLeftRadius", varMap["avatar/radius-" + radiusKey]);
-      bindVar(shell, "bottomRightRadius", varMap["avatar/radius-" + radiusKey]);
+    } else {
+      // Filled palette avatars have no border so the color reads as a solid swatch.
+      shell.strokes = [];
+    }
+    bindVar(shell, "width", varMap["avatar/size-" + sizeKey]);
+    bindVar(shell, "height", varMap["avatar/size-" + sizeKey]);
+    bindVar(shell, "topLeftRadius", varMap["avatar/radius-" + radiusKey]);
+    bindVar(shell, "topRightRadius", varMap["avatar/radius-" + radiusKey]);
+    bindVar(shell, "bottomLeftRadius", varMap["avatar/radius-" + radiusKey]);
+    bindVar(shell, "bottomRightRadius", varMap["avatar/radius-" + radiusKey]);
 
+    var iconNode = null;
+    if (isIcon) {
+      var glyphSize = Math.max(12, Math.round(baseS * 0.58));
+      if (iconDefaultComp) {
+        try {
+          iconNode = iconDefaultComp.createInstance();
+          iconNode.name = "Icon";
+          try { iconNode.resize(glyphSize, glyphSize); } catch (_riSz) {}
+          var iconColorVar = varMap[textKey];
+          var ivecs = iconNode.findAll(function (n) { return n.type === "VECTOR"; });
+          for (var ivi = 0; ivi < ivecs.length; ivi++) {
+            var iv = ivecs[ivi];
+            if (iv.strokes && iv.strokes.length > 0 && iconColorVar) bindPaintVar(iv, "strokes", 0, iconColorVar);
+            if (iv.fills && iv.fills.length > 0 && iconColorVar) bindPaintVar(iv, "fills", 0, iconColorVar);
+          }
+          shell.appendChild(iconNode);
+        } catch (_eIcon) {
+          iconNode = null;
+        }
+      }
+      if (!iconNode) {
+        var glyph = makePersonGlyph(glyphSize, varMap[textKey]);
+        shell.appendChild(glyph);
+      }
+    } else {
       var initials = figma.createText();
       initials.name = "Initials";
       initials.fontName = font;
@@ -6723,19 +7133,48 @@ function buildAvatarComponentSet(varMap, page, font) {
       initials.textAlignHorizontal = "CENTER";
       initials.fontSize = 14;
       initials.fills = [{ type: "SOLID", color: { r: 0.12, g: 0.12, b: 0.14 } }];
-      bindPaintVar(initials, "fills", 0, varMap["avatar/text"]);
-      bindVar(initials, "fontSize", varMap["avatar/font-size-" + size]);
+      bindPaintVar(initials, "fills", 0, varMap[textKey]);
+      bindVar(initials, "fontSize", varMap["avatar/font-size-" + sizeKey]);
       bindVar(initials, "fontFamily", varMap["avatar/font-family"]);
       bindVar(initials, "fontStyle", varMap["avatar/font-weight"]);
-
       shell.appendChild(initials);
-      comp.appendChild(shell);
-
-      comp.x = ri * (colWidth + gap);
-      comp.y = si * (rowHeight + gap);
-      page.appendChild(comp);
-      components.push(comp);
     }
+
+    comp.appendChild(shell);
+    page.appendChild(comp);
+    return comp;
+  }
+
+  // Emit a full Size × Radius matrix for one (color, content) combination as a
+  // stacked block. Blocks are placed top-to-bottom in emission order.
+  var blockHeight = sizes.length * (rowHeight + gap);
+  var blockGap = gap * 3;
+  var blockIndex = 0;
+  function emitBlock(colorName, content) {
+    var blockY = blockIndex * (blockHeight + blockGap);
+    for (var bs = 0; bs < sizes.length; bs++) {
+      for (var br = 0; br < radii.length; br++) {
+        var c = makeAvatar(sizes[bs], radii[br], colorName, content);
+        c.x = br * (colWidth + gap);
+        c.y = blockY + bs * (rowHeight + gap);
+        components.push(c);
+      }
+    }
+    blockIndex++;
+  }
+
+  // Initials: neutral matrix, then a full matrix per palette color.
+  emitBlock("default", "initials");
+  for (var ci = 0; ci < paletteColors.length; ci++) {
+    if (!varMap["avatar/color-" + paletteColors[ci]]) continue;
+    emitBlock(paletteColors[ci], "initials");
+  }
+
+  // Icon: neutral matrix, then a full matrix per palette color.
+  emitBlock("default", "icon");
+  for (var ici = 0; ici < paletteColors.length; ici++) {
+    if (!varMap["avatar/color-" + paletteColors[ici]]) continue;
+    emitBlock(paletteColors[ici], "icon");
   }
 
   progress("Created " + components.length + " avatar variants");
