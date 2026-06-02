@@ -1,7 +1,7 @@
 import { createServer } from "http";
 import { WebSocketServer } from "ws";
 import { spawn } from "child_process";
-import { writeFileSync } from "fs";
+import { writeFileSync, readFileSync, existsSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -97,6 +97,50 @@ const server = createServer((req, res) => {
         res.end(JSON.stringify({ error: err.message }));
       }
     });
+    return;
+  }
+
+  // POST /api/save-token-lock  — writes the approved token baseline to the repo root
+  if (req.method === "POST" && req.url === "/api/save-token-lock") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      try {
+        const lock = JSON.parse(body);
+        if (!lock || typeof lock !== "object" || !lock.payload || !lock.brands) {
+          throw new Error("Invalid lock payload (expected { version, brands, payload }).");
+        }
+        const lockPath = join(PROJECT_ROOT, "tokens.lock.json");
+        writeFileSync(lockPath, JSON.stringify(lock, null, 2) + "\n", "utf-8");
+        console.log("[token-lock] Wrote tokens.lock.json");
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: true, path: "tokens.lock.json" }));
+      } catch (err) {
+        console.error("[token-lock] Error:", err.message);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // GET /api/token-lock  — returns the saved baseline (anchor for the changelog)
+  if (req.method === "GET" && req.url === "/api/token-lock") {
+    try {
+      const lockPath = join(PROJECT_ROOT, "tokens.lock.json");
+      if (!existsSync(lockPath)) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ missing: true }));
+        return;
+      }
+      const raw = readFileSync(lockPath, "utf-8");
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(raw);
+    } catch (err) {
+      console.error("[token-lock] Read error:", err.message);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+    }
     return;
   }
 

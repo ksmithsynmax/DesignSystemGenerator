@@ -1293,28 +1293,13 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     return buildBadgeComponentSet(varMap, page, font);
   });
   var textInputSet = await buildSet("TextInput", function () {
-    return buildTextInputComponentSet(
-      varMap,
-      page,
-      font,
-      Boolean(buildOptions && buildOptions.textInputDebugDefaultOnly)
-    );
+    return buildTextInputComponentSet(varMap, page, font);
   });
   var selectSet = await buildSet("Select", function () {
-    return buildSelectComponentSet(
-      varMap,
-      page,
-      font,
-      Boolean(buildOptions && buildOptions.selectDebugDefaultOnly)
-    );
+    return buildSelectComponentSet(varMap, page, font);
   });
   var multiSelectSet = await buildSet("MultiSelect", function () {
-    return buildMultiSelectComponentSet(
-      varMap,
-      page,
-      font,
-      Boolean(buildOptions && buildOptions.multiSelectDebugDefaultOnly)
-    );
+    return buildMultiSelectComponentSet(varMap, page, font);
   });
   var cardSet = await buildSet("Card", function () {
     return buildCardComponentSet(varMap, page, font, { compact: true });
@@ -12793,10 +12778,10 @@ function buildBadgeComponentSet(varMap, page, font) {
 // TextInput
 // ---------------------------------------------------------------------------
 
-async function buildTextInputComponentSet(varMap, page, font, debugDefaultOnly) {
+async function buildTextInputComponentSet(varMap, page, font) {
   var variants = ["default", "filled"];
-  var sizes = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
-  var radii = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "error", "disabled"];
   var labelModes = ["none", "label", "required"];
   var leftIconModes = ["off", "on"];
@@ -13206,7 +13191,7 @@ async function findTextInputIconComponents() {
 // Select
 // ---------------------------------------------------------------------------
 
-async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
+async function buildSelectComponentSet(varMap, page, font) {
   function createSelectSwapRefs(iconComp) {
     var refs = [];
     if (!iconComp) return refs;
@@ -13220,8 +13205,8 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
   }
 
   var variants = ["default", "filled"];
-  var sizes = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
-  var radii = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "error", "disabled"];
   var dropdownModes = ["closed", "open"];
   var labelModes = ["none", "label", "required"];
@@ -13273,7 +13258,7 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
                 activeOptionIndices = [0];
                 hoverOptionIndices = [-1];
                 // Memory guard: full Active/Hover controls only on default size + default radius.
-                if (!debugDefaultOnly && size === "default" && rad === "default") {
+                if (size === "default" && rad === "default") {
                   activeOptionIndices = [0, -1, 1, 2];
                   hoverOptionIndices = [-1, 0, 1, 2];
                 }
@@ -13738,7 +13723,7 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
             var colIndex = (ri * columnsPerRadius) + (vi * labelModes.length + li);
             // Use explicit row packing by state + dropdown mode to avoid large
             // empty vertical blocks when Select has many variant permutations.
-            var defaultOpenRows = debugDefaultOnly ? 1 : (4 * 4);
+            var defaultOpenRows = 4 * 4;
             var defaultRows = 1 + defaultOpenRows; // closed + open rows for default state
             var rowsPerSizeRadius = defaultRows + ((states.length - 1) * 2); // non-default: closed + open
             // Keep size progression vertical; radius is now represented in columns.
@@ -13780,7 +13765,7 @@ async function buildSelectComponentSet(varMap, page, font, debugDefaultOnly) {
   return componentSet;
 }
 
-async function buildMultiSelectComponentSet(varMap, page, font, debugDefaultOnly) {
+async function buildMultiSelectComponentSet(varMap, page, font) {
   function createMultiSelectSwapRefs(iconComp) {
     var refs = [];
     if (!iconComp) return refs;
@@ -13799,8 +13784,8 @@ async function buildMultiSelectComponentSet(varMap, page, font, debugDefaultOnly
   }
 
   var variants = ["default", "filled"];
-  var sizes = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
-  var radii = debugDefaultOnly ? ["default"] : ["default", "xs", "sm", "md", "lg", "xl"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "error", "disabled"];
   var dropdownModes = ["closed", "open"];
   var labelModes = ["none", "label", "required"];
