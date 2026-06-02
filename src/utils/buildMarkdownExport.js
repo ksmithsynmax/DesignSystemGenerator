@@ -1,4 +1,34 @@
 import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/componentTokens";
+import { gradientCssFromDef, gradientFirstStopHex } from "./resolveGradient";
+
+// Figma can't store a gradient in a variable, so a gradient-backed token has two
+// faces in Figma: a solid fallback variable + a paint style. Mirror the plugin's
+// paint-style name so devs/designers can cross-reference.
+function gradientPaintStyleName(brandId, gradientId) {
+  const cap = brandId.charAt(0).toUpperCase() + brandId.slice(1);
+  const safeId = String(gradientId).replace(/\//g, "-");
+  return `Gradient / ${cap} / ${safeId}`;
+}
+
+// Finds every token that maps to each gradient id, across the brand's mapping
+// layers, so the export shows which tokens actually render the gradient.
+function gradientUsage(brand) {
+  const usage = {};
+  const scan = (map, themeLabel) => {
+    if (!map || typeof map !== "object") return;
+    Object.entries(map).forEach(([token, mapping]) => {
+      const gid = mapping && mapping.gradient ? String(mapping.gradient).trim() : "";
+      if (!gid) return;
+      if (!usage[gid]) usage[gid] = [];
+      usage[gid].push(themeLabel ? `${token} (${themeLabel})` : token);
+    });
+  };
+  scan(brand.semanticMap, null);
+  scan(brand.darkSemanticOverrides, "dark");
+  scan(brand.componentOverrides, null);
+  scan(brand.componentOverridesDark, "dark");
+  return usage;
+}
 
 function normalizeOpacity(opacity) {
   const parsed = Number(opacity);
@@ -122,6 +152,41 @@ export function buildMarkdownExport(brands, globalPrimitives) {
         lines.push(`| ${key} | \`${alias}\` | \`${hex}\` |`);
       });
       lines.push("");
+    }
+
+    // Gradients
+    if (brand.gradients && Object.keys(brand.gradients).length > 0) {
+      const usage = gradientUsage(brand);
+      lines.push("#### Gradients");
+      lines.push("");
+      lines.push(
+        "Figma variables cannot hold gradients. Each gradient is delivered as: a **CSS value** (copy this in code), a **solid fallback** (the Figma variable value = first stop), and a **Figma paint style** (the real gradient, applied to nodes)."
+      );
+      lines.push("");
+      lines.push("| Gradient | Type | CSS (for code) | Solid fallback | Figma paint style |");
+      lines.push("|----------|------|----------------|----------------|-------------------|");
+      Object.entries(brand.gradients).forEach(([gid, def]) => {
+        const css = gradientCssFromDef(brand, def) || "—";
+        const fallback = gradientFirstStopHex(brand, gid) || "—";
+        const styleName = gradientPaintStyleName(brandId, gid);
+        lines.push(`| \`${gid}\` | ${def?.type || "linear"} | \`${css}\` | \`${fallback}\` | \`${styleName}\` |`);
+      });
+      lines.push("");
+
+      const usedGradients = Object.keys(usage);
+      if (usedGradients.length > 0) {
+        lines.push("**Tokens using a gradient** (copy the CSS above for these tokens; the Figma variable resolves to the solid fallback):");
+        lines.push("");
+        lines.push("| Token | Gradient | CSS (for code) |");
+        lines.push("|-------|----------|----------------|");
+        usedGradients.forEach((gid) => {
+          const css = gradientCssFromDef(brand, brand.gradients[gid]) || "—";
+          usage[gid].forEach((token) => {
+            lines.push(`| ${token} | \`${gid}\` | \`${css}\` |`);
+          });
+        });
+        lines.push("");
+      }
     }
 
     // Component Defaults
