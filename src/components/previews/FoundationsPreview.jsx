@@ -39,7 +39,7 @@ function ColorFamilyRow({ name, ramp }) {
       <div style={{ fontSize: 13, fontWeight: 600, color: TEXT, textTransform: "capitalize" }}>
         {name}
       </div>
-      <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
+      <div style={{ display: "flex", gap: 4, flexWrap: "wrap", justifyContent: "center" }}>
         {ramp.map((hex, i) => (
           <div key={i} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
             <SwatchBox hex={hex} size={28} radius={4} />
@@ -67,19 +67,29 @@ function SemanticGroup({ name, roles, resolveRole }) {
   return (
     <div style={{ marginBottom: 14 }}>
       <div style={{ fontSize: 12, fontWeight: 600, color: TEXT, marginBottom: 8 }}>{name}</div>
-      <div style={{ display: "flex", gap: 12, flexWrap: "wrap" }}>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateColumns: "1fr 1fr",
+          gridTemplateRows: `repeat(${Math.ceil(present.length / 2)}, auto)`,
+          gridAutoFlow: "column",
+          columnGap: 24,
+          rowGap: 10,
+        }}
+      >
         {present.map(([role, hex]) => (
-          <div key={role} style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+          <div key={role} style={{ display: "flex", flexDirection: "row", alignItems: "center", gap: 12 }}>
             <div
               style={{
-                width: 132,
-                height: 40,
+                width: 44,
+                height: 44,
+                flexShrink: 0,
                 borderRadius: 6,
                 background: hex,
                 border: `1px solid ${BORDER}`,
               }}
             />
-            <span style={{ fontSize: 10, fontFamily: MONO, color: TEXT_MUTED }}>{role}</span>
+            <span style={{ fontSize: 11, fontFamily: MONO, color: TEXT_MUTED }}>{role}</span>
           </div>
         ))}
       </div>
@@ -155,7 +165,7 @@ export default function FoundationsPreview({ brand }) {
       </ScaleSection>
 
       <ScaleSection title="Radius">
-        <div style={{ display: "flex", gap: 18, flexWrap: "wrap" }}>
+        <div style={{ display: "flex", gap: 18, flexWrap: "wrap", justifyContent: "center" }}>
           {Object.entries(radiusMap).map(([key, def]) => {
             const value = def && typeof def === "object" ? def.value : def;
             const visual = Math.min(Number(value) || 0, 28);
@@ -180,12 +190,12 @@ export default function FoundationsPreview({ brand }) {
       </ScaleSection>
 
       <ScaleSection title="Spacing">
-        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+        <div style={{ display: "flex", flexDirection: "row", flexWrap: "wrap", gap: 24, alignItems: "center", justifyContent: "center" }}>
           {Object.entries(spacingMap).map(([key, def]) => {
             const value = def && typeof def === "object" ? def.value : def;
             return (
-              <div key={key} style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <span style={{ width: 48, fontSize: 11, fontWeight: 600, color: TEXT }}>{labelOf(key)}</span>
+              <div key={key} style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <span style={{ fontSize: 11, fontWeight: 600, color: TEXT }}>{labelOf(key)}</span>
                 <div
                   style={{
                     height: 14,

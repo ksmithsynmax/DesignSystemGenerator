@@ -5762,6 +5762,7 @@ async function buildFoundationsDocsPage(payload, titleFont) {
   function hexVar(family, index) { return hexVarByName[family + "/" + index] || null; }
 
   // ── PRIMITIVE COLORS (union of brands; families a brand lacks auto-hide via the present/* boolean) ──
+  var maxRampW = 0;
   if (famUnion.length) {
     var brandName = cap(currentBrandId || (brandIds.length ? brandIds[0] : ""));
     sectionHeader(doc, "Primitive Colors", "Base color ramps. Colors and labels switch with the brand/theme appearance, and families a brand doesn't define are hidden automatically.");
@@ -5779,8 +5780,10 @@ async function buildFoundationsDocsPage(payload, titleFont) {
         }
       }
       var famPanel = panel("Family " + family, 14);
-      appendText(famPanel, mediumFont, cap(family), 14, DOC.title, "Family Name");
-      var rampRow = stack("Ramp", "HORIZONTAL", 10, "MIN");
+      famPanel.counterAxisAlignItems = "CENTER";
+      var famInner = stack("Family Inner", "VERTICAL", 14, "MIN");
+      appendText(famInner, mediumFont, cap(family), 14, DOC.title, "Family Name");
+      var rampRow = stack("Ramp", "HORIZONTAL", 8, "MIN");
       for (var rmi = 0; rmi < len; rmi++) {
         var rampCell = stack("Ramp Cell", "VERTICAL", 6, "CENTER");
         var rSw = swatch(44, (ramp && ramp[rmi]) ? ramp[rmi] : "#FFFFFF", 6);
@@ -5791,10 +5794,12 @@ async function buildFoundationsDocsPage(payload, titleFont) {
         bindVar(hexLabel, "characters", hexVar(family, rmi));
         rampRow.appendChild(rampCell);
       }
-      famPanel.appendChild(rampRow);
+      famInner.appendChild(rampRow);
+      famPanel.appendChild(famInner);
       doc.appendChild(famPanel);
       fillWidth(famPanel);
       bindVar(famPanel, "visible", presentVarByFam[family]);
+      try { if (rampRow.width > maxRampW) maxRampW = rampRow.width; } catch (_rwErr) {}
     }
   }
 
@@ -5830,11 +5835,11 @@ async function buildFoundationsDocsPage(payload, titleFont) {
   if (leftoverRoles.length) groupsToRender.push(["Other", leftoverRoles]);
 
   function semSwatchCell(role) {
-    var cell = stack("Sem Cell", "VERTICAL", 6, "MIN");
+    var cell = stack("Sem Cell", "HORIZONTAL", 12, "CENTER");
     var srcHex = (semColorSource[role] && semColorSource[role].value) ? semColorSource[role].value : "#FFFFFF";
     var sw = figma.createFrame();
     sw.name = "Swatch";
-    sw.resize(132, 44);
+    sw.resize(44, 44);
     sw.cornerRadius = 6;
     sw.fills = [{ type: "SOLID", color: hexToFigmaRgb(srcHex) }];
     sw.strokes = [{ type: "SOLID", color: DOC.panelStroke }];
@@ -5865,17 +5870,32 @@ async function buildFoundationsDocsPage(payload, titleFont) {
       }
       if (!present.length) continue;
       var gPanel = panel("Semantic " + groupName, 14);
-      appendText(gPanel, mediumFont, groupName, 14, DOC.title, "Group Name");
-      var gRow = stack("Sem Row", "HORIZONTAL", 12, "MIN");
-      gRow.layoutWrap = "WRAP";
-      gRow.counterAxisSpacing = 14;
+      gPanel.counterAxisAlignItems = "CENTER";
+      var gInner = stack("Sem Inner", "VERTICAL", 14, "MIN");
+      appendText(gInner, mediumFont, groupName, 14, DOC.title, "Group Name");
+      var gRow = stack("Sem Cols", "HORIZONTAL", 24, "MIN");
+      var semCol0 = stack("Sem Col", "VERTICAL", 10, "MIN");
+      var semCol1 = stack("Sem Col", "VERTICAL", 10, "MIN");
+      var semHalf = Math.ceil(present.length / 2);
       for (var pgi = 0; pgi < present.length; pgi++) {
-        gRow.appendChild(semSwatchCell(present[pgi]));
+        (pgi < semHalf ? semCol0 : semCol1).appendChild(semSwatchCell(present[pgi]));
       }
-      gPanel.appendChild(gRow);
+      gRow.appendChild(semCol0);
+      gRow.appendChild(semCol1);
+      gInner.appendChild(gRow);
+      gPanel.appendChild(gInner);
       doc.appendChild(gPanel);
       fillWidth(gPanel);
-      try { gRow.layoutSizingHorizontal = "FILL"; } catch (_grErr) {}
+      // Match the two-column block width to the primitive ramps so edges line up.
+      if (maxRampW > 0) {
+        try {
+          gInner.counterAxisSizingMode = "FIXED";
+          gInner.resize(maxRampW, gInner.height);
+          gRow.layoutSizingHorizontal = "FILL";
+          semCol0.layoutSizingHorizontal = "FILL";
+          semCol1.layoutSizingHorizontal = "FILL";
+        } catch (_semColErr) {}
+      }
     }
   }
 
@@ -5942,6 +5962,7 @@ async function buildFoundationsDocsPage(payload, titleFont) {
   if (radiusEntries.length) {
     sectionHeader(doc, "Radius", "Corner radius scale. Bound to Semantic radius variables.");
     var radiusPanel = panel("Radius Panel", 0);
+    radiusPanel.counterAxisAlignItems = "CENTER";
     var radiusRow = stack("Radius Row", "HORIZONTAL", 18, "MIN");
     for (var rdi = 0; rdi < radiusEntries.length; rdi++) {
       var rKey = radiusEntries[rdi][0];
@@ -5978,12 +5999,13 @@ async function buildFoundationsDocsPage(payload, titleFont) {
   if (spacingEntries.length) {
     sectionHeader(doc, "Spacing", "Spacing scale. Bars bound to Semantic spacing variables.");
     var spacingPanel = panel("Spacing Panel", 0);
-    var spacingCol = stack("Spacing Col", "VERTICAL", 10, "MIN");
+    spacingPanel.counterAxisAlignItems = "CENTER";
+    var spacingCol = stack("Spacing Col", "HORIZONTAL", 24, "CENTER");
     for (var spi = 0; spi < spacingEntries.length; spi++) {
       var spKey = spacingEntries[spi][0];
       var spVal = Number(spacingEntries[spi][1] && spacingEntries[spi][1].value) || 0;
-      var spRow = stack("Spacing Row", "HORIZONTAL", 12, "CENTER");
-      fixedText(spRow, mediumFont, labelOf(spKey), 11, DOC.title, "Spacing Label", 48);
+      var spRow = stack("Spacing Row", "HORIZONTAL", 8, "CENTER");
+      appendText(spRow, mediumFont, labelOf(spKey), 11, DOC.title, "Spacing Label");
       var spBar = figma.createRectangle();
       spBar.name = "Spacing Bar";
       spBar.resize(Math.max(2, spVal), 14);
