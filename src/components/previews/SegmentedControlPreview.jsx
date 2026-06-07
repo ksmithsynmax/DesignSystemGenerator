@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { getDefaultSizeKey, resolveColor, resolveDimension } from "../../utils/resolveToken";
+import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
 const SEGMENTS = ["React", "Angular", "Vue"];
@@ -24,7 +24,6 @@ export default function SegmentedControlPreview({
   const [activeValue, setActiveValue] = useState(SEGMENTS[0]);
   const tokens = COMPONENT_TOKENS.segmentedcontrol;
   const isDisabled = state === "disabled";
-  const isFocus = state === "focus";
   const isHover = state === "hover";
   const isVertical = orientation === "vertical";
   const current = interactive ? activeValue : SEGMENTS[0];
@@ -37,29 +36,30 @@ export default function SegmentedControlPreview({
     resolveColor(brands, brandId, tokens[key]?.semantic, previewTheme, key);
 
   const rootBg = getColor(colorKey("segmentedcontrol-root-background"));
-  const rootBorder = getColor("segmentedcontrol-root-border");
+  const rootBorder = getColor(colorKey("segmentedcontrol-root-border"));
   const indicatorBg = getColor(colorKey("segmentedcontrol-indicator-background"));
-  const indicatorBorder = getColor("segmentedcontrol-indicator-border");
+  const indicatorBorder = getColor(colorKey("segmentedcontrol-indicator-border"));
   const labelText = getColor("segmentedcontrol-label-text");
   const labelTextHover = getColor("segmentedcontrol-label-text-hover");
   const labelTextActive = getColor("segmentedcontrol-label-text-active");
   const labelTextDisabled = getColor("segmentedcontrol-label-text-disabled");
-  const focusRing = getColor("segmentedcontrol-focus-ring");
 
-  const sizeKey = size === "default" ? getDefaultSizeKey(brands, brandId, "segmentedcontrol-font-size") || "md" : size;
-
-  const fontSize = resolveDimension(brands, brandId, "segmentedcontrol-font-size", sizeKey) || 14;
-  const lineHeight = resolveDimension(brands, brandId, "segmentedcontrol-line-height", sizeKey) || 20;
-  const paddingX = resolveDimension(brands, brandId, "segmentedcontrol-padding-x", sizeKey) || 12;
-  const paddingY = resolveDimension(brands, brandId, "segmentedcontrol-padding-y", sizeKey) || 7;
-  const radius = resolveDimension(brands, brandId, "segmentedcontrol-radius", sizeKey) || 8;
-  const indicatorRadius = resolveDimension(brands, brandId, "segmentedcontrol-indicator-radius", sizeKey) ?? Math.max(2, radius - 2);
+  // Pass the raw size through so resolveDimension resolves each token's own
+  // "default" entry (and any brand override at the default size). Pre-mapping
+  // to a single shared size key meant edits to e.g. `segmentedcontrol-radius-default`
+  // never reached the preview because it was reading the `md` entry instead.
+  // Use ?? (not ||) so an explicit 0 isn't treated as falsy and replaced by the fallback.
+  const fontSize = resolveDimension(brands, brandId, "segmentedcontrol-font-size", size) ?? 14;
+  const lineHeight = resolveDimension(brands, brandId, "segmentedcontrol-line-height", size) ?? 20;
+  const paddingX = resolveDimension(brands, brandId, "segmentedcontrol-padding-x", size) ?? 12;
+  const paddingY = resolveDimension(brands, brandId, "segmentedcontrol-padding-y", size) ?? 7;
+  const radius = resolveDimension(brands, brandId, "segmentedcontrol-radius", size) ?? 8;
+  const indicatorRadius = resolveDimension(brands, brandId, "segmentedcontrol-indicator-radius", size) ?? Math.max(0, radius - 4);
   const fontFamily = resolveDimension(brands, brandId, "segmentedcontrol-font-family");
   const fontWeight = resolveDimension(brands, brandId, "segmentedcontrol-font-weight");
   const rootPadding = resolveDimension(brands, brandId, "segmentedcontrol-root-padding") ?? 4;
   const rootBorderWidth = resolveDimension(brands, brandId, "segmentedcontrol-root-border-width") ?? 1;
   const indicatorBorderWidth = resolveDimension(brands, brandId, "segmentedcontrol-indicator-border-width") ?? 1;
-  const focusRingWidth = resolveDimension(brands, brandId, "segmentedcontrol-focus-ring-width") || 2;
 
   const rootStyle = {
     display: fullWidth ? "flex" : "inline-flex",
@@ -87,7 +87,6 @@ export default function SegmentedControlPreview({
       <div role="radiogroup" style={rootStyle}>
         {SEGMENTS.map((segment) => {
           const isActive = segment === current;
-          const showFocus = isFocus && isActive;
           return (
             <button
               key={segment}
@@ -115,8 +114,7 @@ export default function SegmentedControlPreview({
                 fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
                 fontWeight: weightToCss(fontWeight),
                 cursor: isDisabled ? "not-allowed" : interactive ? "pointer" : "default",
-                outline: showFocus ? `${focusRingWidth}px solid ${focusRing}` : "none",
-                outlineOffset: showFocus ? 1 : 0,
+                outline: "none",
                 whiteSpace: "nowrap",
                 boxSizing: "border-box",
               }}

@@ -537,11 +537,13 @@ export const COMPONENT_TOKENS = {
     "segmentedcontrol-root-background":          { type: "COLOR", semantic: "interactive-secondary", figmaPath: "segmentedcontrol/root-background" },
     "segmentedcontrol-root-background-disabled": { type: "COLOR", semantic: "interactive-disabled",  figmaPath: "segmentedcontrol/root-background-disabled" },
     "segmentedcontrol-root-border":              { type: "COLOR", semantic: "border-subtle",         figmaPath: "segmentedcontrol/root-border" },
+    "segmentedcontrol-root-border-disabled":     { type: "COLOR", semantic: "border-disabled",       figmaPath: "segmentedcontrol/root-border-disabled" },
 
     // ── INDICATOR (ACTIVE CONTROL) ──
     "segmentedcontrol-indicator-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "segmentedcontrol/indicator-background" },
     "segmentedcontrol-indicator-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "segmentedcontrol/indicator-background-disabled" },
     "segmentedcontrol-indicator-border":              { type: "COLOR", semantic: "border-default",       figmaPath: "segmentedcontrol/indicator-border" },
+    "segmentedcontrol-indicator-border-disabled":     { type: "COLOR", semantic: "border-disabled",      figmaPath: "segmentedcontrol/indicator-border-disabled" },
 
     // ── LABEL TEXT (per state) ──
     "segmentedcontrol-label-text":          { type: "COLOR", semantic: "text-subtle",   figmaPath: "segmentedcontrol/label-text" },
@@ -549,16 +551,13 @@ export const COMPONENT_TOKENS = {
     "segmentedcontrol-label-text-active":   { type: "COLOR", semantic: "text-default",  figmaPath: "segmentedcontrol/label-text-active" },
     "segmentedcontrol-label-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "segmentedcontrol/label-text-disabled" },
 
-    // ── SHARED COLOR TOKEN ──
-    "segmentedcontrol-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "segmentedcontrol/focus-ring" },
-
     // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
     "segmentedcontrol-font-size":   { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 12, sm: 13, md: 14, lg: 16, xl: 18 }, figmaPath: "segmentedcontrol/font-size" },
     "segmentedcontrol-line-height": { type: "FLOAT", unit: "px", sizes: { default: 20, xs: 18, sm: 18, md: 20, lg: 22, xl: 26 }, figmaPath: "segmentedcontrol/line-height" },
     "segmentedcontrol-padding-x":   { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "segmentedcontrol/padding-x" },
     "segmentedcontrol-padding-y":        { type: "FLOAT", unit: "px", sizes: { default: 7,  xs: 4,  sm: 6,  md: 7,  lg: 9,  xl: 11 }, figmaPath: "segmentedcontrol/padding-y" },
     "segmentedcontrol-radius":           { type: "FLOAT", unit: "px", sizes: { default: 8,  xs: 4,  sm: 6,  md: 8,  lg: 12, xl: 16 }, figmaPath: "segmentedcontrol/radius" },
-    "segmentedcontrol-indicator-radius": { type: "FLOAT", unit: "px", sizes: { default: 6,  xs: 2,  sm: 4,  md: 6,  lg: 10, xl: 14 }, figmaPath: "segmentedcontrol/indicator-radius" },
+    "segmentedcontrol-indicator-radius": { type: "FLOAT", unit: "px", sizes: { default: 4,  xs: 2,  sm: 2,  md: 4,  lg: 8,  xl: 12 }, figmaPath: "segmentedcontrol/indicator-radius" },
 
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "segmentedcontrol-font-family":            { type: "STRING", value: "Inter", figmaPath: "segmentedcontrol/font-family" },
@@ -566,7 +565,6 @@ export const COMPONENT_TOKENS = {
     "segmentedcontrol-root-padding":           { type: "FLOAT", unit: "px", value: 4, figmaPath: "segmentedcontrol/root-padding" },
     "segmentedcontrol-root-border-width":      { type: "FLOAT", unit: "px", value: 1, figmaPath: "segmentedcontrol/root-border-width" },
     "segmentedcontrol-indicator-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "segmentedcontrol/indicator-border-width" },
-    "segmentedcontrol-focus-ring-width":       { type: "FLOAT", unit: "px", value: 2, figmaPath: "segmentedcontrol/focus-ring-width" },
   },
 
   checkbox: {
@@ -1415,6 +1413,114 @@ export const COMPONENT_TOKENS = {
     },
   },
 
+  chart: {
+    // ── SERIES PALETTE (COLOR) ──
+    // Series 1 follows the brand's primary; 2-6 map to distinct palette hues.
+    "chart-series-1": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chart/series-1" },
+    "chart-series-2": { type: "COLOR", defaultMapping: { color: "cyan", index: 5 }, figmaPath: "chart/series-2" },
+    "chart-series-3": { type: "COLOR", defaultMapping: { color: "green", index: 5 }, figmaPath: "chart/series-3" },
+    "chart-series-4": { type: "COLOR", defaultMapping: { color: "orange", index: 5 }, figmaPath: "chart/series-4" },
+    "chart-series-5": { type: "COLOR", defaultMapping: { color: "purple", index: 5 }, figmaPath: "chart/series-5" },
+    "chart-series-6": { type: "COLOR", defaultMapping: { color: "pink", index: 5 }, figmaPath: "chart/series-6" },
+
+    // ── SHADE RAMP (COLOR) ──
+    // Used only by "shades" color mode. A monochromatic ramp (dark -> light) that
+    // defaults to steps of the brand's primary hue but is independently editable —
+    // these are distinct, editable variables, separate from the series palette.
+    "chart-shade-1": { type: "COLOR", isShade: true, figmaPath: "chart/shade-1" },
+    "chart-shade-2": { type: "COLOR", isShade: true, figmaPath: "chart/shade-2" },
+    "chart-shade-3": { type: "COLOR", isShade: true, figmaPath: "chart/shade-3" },
+    "chart-shade-4": { type: "COLOR", isShade: true, figmaPath: "chart/shade-4" },
+    "chart-shade-5": { type: "COLOR", isShade: true, figmaPath: "chart/shade-5" },
+    "chart-shade-6": { type: "COLOR", isShade: true, figmaPath: "chart/shade-6" },
+
+    // ── SERIES LINE STYLE (STRING) — line/combo charts only ──
+    // Each series can render solid, dashed, or dotted independently. The dash
+    // pattern itself is structural (baked in Figma, like the grid dash).
+    "chart-series-1-style": { type: "STRING", value: "solid", allowedValues: ["solid", "dashed", "dotted"], lineOnly: true, figmaPath: "chart/series-1-style" },
+    "chart-series-2-style": { type: "STRING", value: "dashed", allowedValues: ["solid", "dashed", "dotted"], lineOnly: true, figmaPath: "chart/series-2-style" },
+    "chart-series-3-style": { type: "STRING", value: "dotted", allowedValues: ["solid", "dashed", "dotted"], lineOnly: true, figmaPath: "chart/series-3-style" },
+    "chart-series-4-style": { type: "STRING", value: "solid", allowedValues: ["solid", "dashed", "dotted"], lineOnly: true, figmaPath: "chart/series-4-style" },
+    "chart-series-5-style": { type: "STRING", value: "dashed", allowedValues: ["solid", "dashed", "dotted"], lineOnly: true, figmaPath: "chart/series-5-style" },
+    "chart-series-6-style": { type: "STRING", value: "dotted", allowedValues: ["solid", "dashed", "dotted"], lineOnly: true, figmaPath: "chart/series-6-style" },
+
+    // ── STRUCTURE (COLOR) ──
+    "chart-axis": { type: "COLOR", semantic: "border-default", figmaPath: "chart/axis" },
+    "chart-grid": { type: "COLOR", semantic: "border-subtle", figmaPath: "chart/grid" },
+    "chart-label": { type: "COLOR", semantic: "text-subtle", figmaPath: "chart/label" },
+
+    // ── FLOAT TOKENS (size variants: default, sm, md, lg) ──
+    // Charts match Recharts: no size scale. Width fills the container (100% in
+    // code; the frame width in Figma), height is the single tokenized knob. The
+    // remaining values are single defaults rather than a sm/md/lg ramp.
+    "chart-width": { type: "FLOAT", unit: "px", sizes: { default: 320 }, figmaPath: "chart/width" },
+    "chart-height": { type: "FLOAT", unit: "px", sizes: { default: 180 }, figmaPath: "chart/height" },
+    "chart-bar-gap": { type: "FLOAT", unit: "px", sizes: { default: 12 }, figmaPath: "chart/bar-gap" },
+    "chart-label-font-size": { type: "FLOAT", unit: "px", sizes: { default: 11 }, figmaPath: "chart/label-font-size" },
+    "chart-legend-font-size": { type: "FLOAT", unit: "px", sizes: { default: 12 }, figmaPath: "chart/legend-font-size" },
+
+    // ── FLOAT TOKENS (single value) ──
+    "chart-bar-radius": { type: "FLOAT", unit: "px", value: 2, figmaPath: "chart/bar-radius" },
+    "chart-axis-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "chart/axis-width" },
+    "chart-grid-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "chart/grid-width" },
+    "chart-grid-dash": { type: "FLOAT", unit: "px", value: 4, figmaPath: "chart/grid-dash" },
+    "chart-series-dash": { type: "FLOAT", unit: "px", value: 6, lineOnly: true, figmaPath: "chart/series-dash" },
+    "chart-legend-swatch-size": { type: "FLOAT", unit: "px", value: 10, figmaPath: "chart/legend-swatch-size" },
+    "chart-legend-gap": { type: "FLOAT", unit: "px", value: 16, figmaPath: "chart/legend-gap" },
+    "chart-padding": { type: "FLOAT", unit: "px", value: 16, figmaPath: "chart/padding" },
+
+    // ── STRING TOKENS ──
+    "chart-grid-style": { type: "STRING", value: "solid", allowedValues: ["solid", "dashed"], figmaPath: "chart/grid-style" },
+    "chart-line-curve": { type: "STRING", value: "smooth", allowedValues: ["smooth", "straight"], lineOnly: true, figmaPath: "chart/line-curve" },
+    "chart-font-family": { type: "STRING", value: "Inter", figmaPath: "chart/font-family" },
+    "chart-label-font-weight": { type: "STRING", value: "Regular", figmaPath: "chart/label-font-weight" },
+  },
+
+  // Line-specific tokens only. Shared chart styling (series palette, axis, grid,
+  // label, typography, width/height/padding) is inherited from the `chart` group
+  // and merged into this component's editor via getColorTokens/getDimensionTokens.
+  "chart-line": {
+    "chart-line-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "chart-line/width" },
+    "chart-line-point-radius": { type: "FLOAT", unit: "px", value: 3, figmaPath: "chart-line/point-radius" },
+  },
+
+  // Area-specific tokens only. Shared chart styling (series palette, axis, grid,
+  // label, typography, width/height/padding) is inherited from the `chart` group
+  // and merged into this component's editor via getColorTokens/getDimensionTokens.
+  "chart-area": {
+    "chart-area-line-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "chart-area/width" },
+    "chart-area-fill-opacity": { type: "FLOAT", unit: "%", value: 20, figmaPath: "chart-area/fill-opacity" },
+    "chart-area-point-radius": { type: "FLOAT", unit: "px", value: 3, figmaPath: "chart-area/point-radius" },
+  },
+
+  // Stacked bar chart. A bar-based subtype: it inherits the shared chart styling
+  // AND the chart-bar-* tokens (radius/gap). Stack segments are colored by the
+  // active color mode (shades/palette) just like other multi-series charts.
+  "chart-stacked-bar": {},
+
+  // Combo chart (bars + line on shared/secondary axes). A bar-based subtype that
+  // also draws a line, so it keeps chart-bar-* and adds its own line width.
+  // Bars use series-1, the line uses series-2.
+  "chart-combo": {
+    "chart-combo-line-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "chart-combo/line-width" },
+    // Curve defaults to straight: a clean zig-zag reads better against bars than a
+    // smoothed curve. Style/dash let the line be a dashed zig-zag.
+    "chart-combo-line-curve": { type: "STRING", value: "straight", allowedValues: ["smooth", "straight"], figmaPath: "chart-combo/line-curve" },
+    "chart-combo-line-style": { type: "STRING", value: "dashed", allowedValues: ["solid", "dashed", "dotted"], figmaPath: "chart-combo/line-style" },
+    "chart-combo-line-dash": { type: "FLOAT", unit: "px", value: 6, figmaPath: "chart-combo/line-dash" },
+    "chart-combo-point-radius": { type: "FLOAT", unit: "px", value: 3, figmaPath: "chart-combo/point-radius" },
+  },
+
+  // Donut chart (parts-of-a-whole). Slices are colored by the active color mode
+  // (palette/shades) using the shared series/shade ramps. It has no cartesian
+  // axes or grid, so those shared tokens are hidden from its editor. The two
+  // structural knobs below are baked into geometry (like the grid dash pattern):
+  // inner-radius sets the hole size, pad-angle the gap between slices.
+  "chart-donut": {
+    "chart-donut-inner-radius": { type: "FLOAT", unit: "%", value: 60, figmaPath: "chart-donut/inner-radius" },
+    "chart-donut-pad-angle": { type: "FLOAT", unit: "°", value: 2, figmaPath: "chart-donut/pad-angle" },
+  },
+
   pill: {
     // ── COLOR TOKENS ──
     "pill-background": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "pill/background" },
@@ -1806,9 +1912,18 @@ export const COMPONENT_TOKENS = {
     "multiselect-icon-error":     { type: "COLOR", semantic: "feedback-error",   figmaPath: "multiselect/icon-error" },
     "multiselect-focus-ring":     { type: "COLOR", semantic: "border-focus",     figmaPath: "multiselect/focus-ring" },
     /** Selected-value pill (tag) shown inside the trigger. */
-    "multiselect-pill-background":   { type: "COLOR", semantic: "subtle-secondary", figmaPath: "multiselect/pill-background" },
+    "multiselect-default-pill-background": { type: "COLOR", semantic: "subtle-secondary", figmaPath: "multiselect/default-pill-background" },
+    "multiselect-filled-pill-background":  { type: "COLOR", semantic: "subtle-secondary", figmaPath: "multiselect/filled-pill-background" },
     "multiselect-pill-text":         { type: "COLOR", semantic: "text-default",     figmaPath: "multiselect/pill-text" },
     "multiselect-pill-remove-icon":  { type: "COLOR", semantic: "text-placeholder", figmaPath: "multiselect/pill-remove-icon" },
+    /** Error-state pill (tag) colors — used when the field is in error. */
+    "multiselect-pill-background-error":  { type: "COLOR", semantic: "feedback-error",      figmaPath: "multiselect/pill-background-error" },
+    "multiselect-pill-text-error":        { type: "COLOR", semantic: "text-on-interactive", figmaPath: "multiselect/pill-text-error" },
+    "multiselect-pill-remove-icon-error": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "multiselect/pill-remove-icon-error" },
+    /** Disabled-state pill (tag) colors — used when the field is disabled. */
+    "multiselect-pill-background-disabled":  { type: "COLOR", semantic: "interactive-disabled", figmaPath: "multiselect/pill-background-disabled" },
+    "multiselect-pill-text-disabled":        { type: "COLOR", semantic: "text-disabled",        figmaPath: "multiselect/pill-text-disabled" },
+    "multiselect-pill-remove-icon-disabled": { type: "COLOR", semantic: "text-disabled",        figmaPath: "multiselect/pill-remove-icon-disabled" },
     /** Listbox panel (open dropdown behind the trigger). */
     "multiselect-default-dropdown-background": { type: "COLOR", semantic: "surface-default", figmaPath: "multiselect/default-dropdown-background" },
     "multiselect-default-dropdown-border":     { type: "COLOR", semantic: "border-default",  figmaPath: "multiselect/default-dropdown-border" },
@@ -2108,7 +2223,43 @@ const PLACEHOLDER_COMPONENTS = [
   "alert",
 ];
 
-export const COMPONENT_NAMES = [...new Set([...Object.keys(COMPONENT_TOKENS), ...PLACEHOLDER_COMPONENTS])];
+// Chart types shown under the "Charts" nav section. `chart` is the Bar chart,
+// `chart-line` the Line chart, `chart-area` the Area chart. Any future
+// not-yet-built chart types go in CHART_PLACEHOLDER_COMPONENTS.
+const CHART_PLACEHOLDER_COMPONENTS = [];
+export const CHART_COMPONENTS = ["chart", "chart-line", "chart-area", "chart-stacked-bar", "chart-combo", "chart-donut", ...CHART_PLACEHOLDER_COMPONENTS];
+
+export const COMPONENT_NAMES = [
+  ...new Set([
+    ...Object.keys(COMPONENT_TOKENS),
+    ...PLACEHOLDER_COMPONENTS,
+    ...CHART_PLACEHOLDER_COMPONENTS,
+  ]),
+];
+
+// Human-friendly display names. Anything not listed falls back to a capitalized
+// version of its key. Single source of truth for the app, docs export, and sync UI.
+export const COMPONENT_DISPLAY_NAMES = {
+  actionicon: "ActionIcon",
+  textinput: "TextInput",
+  rangeslider: "RangeSlider",
+  multiselect: "MultiSelect",
+  segmentedcontrol: "SegmentedControl",
+  accordionitem: "Accordion Item",
+  chart: "Bar Chart",
+  "chart-line": "Line Chart",
+  "chart-area": "Area Chart",
+  "chart-stacked-bar": "Stacked Bar Chart",
+  "chart-combo": "Combo Chart",
+  "chart-donut": "Donut Chart",
+};
+
+export function getComponentDisplayName(name) {
+  if (COMPONENT_DISPLAY_NAMES[name]) return COMPONENT_DISPLAY_NAMES[name];
+  return typeof name === "string" && name.length
+    ? name.charAt(0).toUpperCase() + name.slice(1)
+    : String(name);
+}
 
 export const COMPONENT_SIZE_KEYS = {
   button: ["xxs", "xs", "sm", "md", "lg", "xl"],
@@ -2128,6 +2279,12 @@ export const COMPONENT_SIZE_KEYS = {
   tooltip: [],
   loader: ["default", "xs", "sm", "md", "lg", "xl"],
   progress: ["default", "xs", "sm", "md", "lg", "xl"],
+  chart: ["default"],
+  "chart-line": ["default"],
+  "chart-area": ["default"],
+  "chart-stacked-bar": ["default"],
+  "chart-combo": ["default"],
+  "chart-donut": ["default"],
   pill: ["default", "xs", "sm", "md", "lg", "xl"],
   badge: ["default", "xs", "sm", "md", "lg", "xl"],
   alert: ["xs", "sm", "md", "lg", "xl"],
@@ -2147,8 +2304,72 @@ export const COMPONENT_SIZE_KEYS = {
   text: ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"],
 };
 
+// Chart subtypes (chart-line, future chart-area) inherit the shared `chart`
+// styling tokens, excluding bar-specific ones (chart-bar-*).
+function isChartSubtype(componentName) {
+  return (
+    typeof componentName === "string" &&
+    componentName.startsWith("chart-") &&
+    Boolean(COMPONENT_TOKENS[componentName])
+  );
+}
+
+// Max number of data series each chart subtype can render. Series colors beyond
+// this limit are hidden from the subtype's editor panel. Line/Area support up to
+// 4 series; the Bar chart (no entry) keeps the full 6-color palette.
+const CHART_SERIES_LIMIT = { "chart-line": 4, "chart-area": 2, "chart-stacked-bar": 4, "chart-combo": 2, "chart-donut": 6 };
+
+// Subtypes that render bars (and therefore keep the chart-bar-* tokens). Line and
+// area subtypes drop those bar-specific tokens.
+const BAR_BASED_CHART_SUBTYPES = ["chart-stacked-bar", "chart-combo"];
+
+// Subtypes with no cartesian axes/grid (e.g. donut). Their editor should not show
+// the shared axis/grid styling tokens, since nothing renders them.
+const AXIS_FREE_CHART_SUBTYPES = ["chart-donut"];
+
+function sharedChartTokens(componentName) {
+  const chart = COMPONENT_TOKENS.chart || {};
+  const seriesLimit = CHART_SERIES_LIMIT[componentName];
+  const isBarBased = BAR_BASED_CHART_SUBTYPES.includes(componentName);
+  const isAxisFree = AXIS_FREE_CHART_SUBTYPES.includes(componentName);
+  return Object.fromEntries(
+    Object.entries(chart).filter(([name]) => {
+      // Bar-specific tokens only apply to the bar + bar-based subtypes.
+      if (name.startsWith("chart-bar") && !isBarBased) return false;
+      // Axis/grid styling only applies to cartesian charts.
+      if (isAxisFree && /^chart-(axis|grid)/.test(name)) return false;
+      // Hide series/shade colors (and per-series styles) beyond the subtype's max.
+      if (seriesLimit != null) {
+        const m = /^chart-(?:series|shade)-(\d+)(?:-style)?$/.exec(name);
+        if (m && parseInt(m[1], 10) > seriesLimit) return false;
+      }
+      return true;
+    })
+  );
+}
+
+// Per-series line styling (dash/curve) only applies to line-based charts. Strip
+// these `lineOnly` tokens from every other chart (e.g. the bar chart).
+function filterLineOnly(tokens, componentName) {
+  if (componentName === "chart-line") return tokens;
+  return Object.fromEntries(
+    Object.entries(tokens).filter(([, def]) => !def.lineOnly)
+  );
+}
+
+function resolveComponentTokenSet(componentName) {
+  if (isChartSubtype(componentName)) {
+    const merged = { ...sharedChartTokens(componentName), ...(COMPONENT_TOKENS[componentName] || {}) };
+    return filterLineOnly(merged, componentName);
+  }
+  if (componentName === "chart") {
+    return filterLineOnly(COMPONENT_TOKENS[componentName], componentName);
+  }
+  return COMPONENT_TOKENS[componentName];
+}
+
 export function getColorTokens(componentName) {
-  const tokens = COMPONENT_TOKENS[componentName];
+  const tokens = resolveComponentTokenSet(componentName);
   if (!tokens) return {};
   return Object.fromEntries(
     Object.entries(tokens).filter(([, def]) => def.type === TOKEN_TYPES.COLOR)
@@ -2156,7 +2377,7 @@ export function getColorTokens(componentName) {
 }
 
 export function getDimensionTokens(componentName) {
-  const tokens = COMPONENT_TOKENS[componentName];
+  const tokens = resolveComponentTokenSet(componentName);
   if (!tokens) return {};
   return Object.fromEntries(
     Object.entries(tokens).filter(([, def]) => def.type === TOKEN_TYPES.FLOAT || def.type === TOKEN_TYPES.STRING)

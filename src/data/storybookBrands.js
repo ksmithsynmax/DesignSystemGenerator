@@ -811,8 +811,7 @@ export const STORYBOOK_BRANDS = {
       },
       "select-font-size": {
         "default": 12,
-        "xs": 12,
-        "xl": 18
+        "xs": 12
       },
       "select-height": {
         "default": 32,
@@ -936,20 +935,6 @@ export const STORYBOOK_BRANDS = {
         "lg": 2,
         "xl": 2.5
       },
-      "select-default-padding-y": {
-        "sm": 0,
-        "xs": 0,
-        "md": 0,
-        "lg": 0,
-        "xl": 0,
-        "default": 0
-      },
-      "select-default-font-weight": {
-        "_value": "Regular"
-      },
-      "select-filled-font-weight": {
-        "_value": "Regular"
-      },
       "select-icon-size": {
         "default": 14,
         "xs": 12,
@@ -957,51 +942,6 @@ export const STORYBOOK_BRANDS = {
         "md": 16,
         "lg": 18,
         "xl": 20
-      },
-      "multiselect-filled-font-weight": {
-        "_value": "Regular"
-      },
-      "multiselect-default-font-weight": {
-        "_value": "Regular"
-      },
-      "burger-radius": {
-        "default": 0
-      },
-      "burger-padding": {
-        "default": 8,
-        "xs": 2
-      },
-      "burger-size": {
-        "xs": 10,
-        "sm": 12,
-        "md": 14,
-        "lg": 16,
-        "xl": 20
-      },
-      "burger-line-gap": {
-        "sm": 3,
-        "md": 3,
-        "lg": 3,
-        "xl": 3
-      },
-      "actionicon-radius": {
-        "md": 4,
-        "lg": 6,
-        "xl": 16
-      },
-      "segmentedcontrol-padding-y": {
-        "md": 6
-      },
-      "segmentedcontrol-radius": {
-        "default": 4,
-        "md": 6
-      },
-      "segmentedcontrol-indicator-radius": {
-        "default": 40,
-        "md": 4
-      },
-      "segmentedcontrol-font-weight": {
-        "_value": "Medium"
       }
     },
     "componentOverridesDark": {
@@ -1898,7 +1838,7 @@ export const STORYBOOK_BRANDS = {
       },
       "textinput-placeholder": {
         "color": "slate-gray",
-        "index": 4,
+        "index": 6,
         "opacity": 100
       },
       "textinput-default-border-focus": {
@@ -2500,8 +2440,8 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "select-placeholder": {
-        "color": "neutral",
-        "index": 0,
+        "color": "steel",
+        "index": 7,
         "opacity": 100
       },
       "card-default-background": {
@@ -3638,14 +3578,13 @@ export const STORYBOOK_BRANDS = {
         "opacity": 100
       },
       "select-filled-option-hover-background": {
-        "color": "steel",
-        "index": 8,
-        "opacity": 100
-      },
-      "select-default-option-selected-background": {
         "color": "blue",
         "index": 6,
         "opacity": 100
+      },
+      "select-default-option-selected-background": {
+        "color": "steel",
+        "index": 8
       },
       "select-filled-dropdown-border": {
         "color": "steel",
@@ -3804,91 +3743,6 @@ export const STORYBOOK_BRANDS = {
       "divider-color-disabled": {
         "color": "slate-gray",
         "index": 7,
-        "opacity": 100
-      },
-      "select-default-placeholder": {
-        "color": "neutral",
-        "index": 0
-      },
-      "multiselect-pill-background": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "multiselect-filled-background": {
-        "color": "steel",
-        "index": 8,
-        "opacity": 100
-      },
-      "multiselect-filled-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "multiselect-pill-remove-icon": {
-        "color": "neutral",
-        "index": 0
-      },
-      "multiselect-filled-dropdown-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "multiselect-filled-option-hover-background": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "multiselect-filled-dropdown-background": {
-        "color": "steel",
-        "index": 8,
-        "opacity": 100
-      },
-      "multiselect-filled-option-selected-background": {
-        "color": "steel",
-        "index": 8
-      },
-      "multiselect-default-option-selected-background": {
-        "color": "transparent",
-        "index": 0,
-        "opacity": 0
-      },
-      "multiselect-default-background": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
-      },
-      "multiselect-default-dropdown-background": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
-      },
-      "multiselect-default-dropdown-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "multiselect-default-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "segmentedcontrol-root-background": {
-        "color": "neutral",
-        "index": 9
-      },
-      "segmentedcontrol-root-border": {
-        "color": "neutral",
-        "index": 9
-      },
-      "segmentedcontrol-indicator-background": {
-        "color": "blue",
-        "index": 5,
-        "opacity": 100
-      },
-      "segmentedcontrol-indicator-border": {
-        "color": "blue",
-        "index": 5,
         "opacity": 100
       }
     },
@@ -6762,181 +6616,6 @@ export const STORYBOOK_BRANDS = {
         "color": "slate-gray",
         "index": 7,
         "opacity": 100
-      },
-      "select-default-placeholder": {
-        "color": "neutral",
-        "index": 0
-      },
-      "multiselect-default-background": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
-      },
-      "multiselect-default-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "multiselect-pill-background": {
-        "color": "steel",
-        "index": 7
-      },
-      "multiselect-default-dropdown-background": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
-      },
-      "multiselect-default-dropdown-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "multiselect-default-option-selected-background": {
-        "color": "transparent",
-        "index": 0,
-        "opacity": 0
-      },
-      "multiselect-filled-background": {
-        "color": "steel",
-        "index": 8,
-        "opacity": 100
-      },
-      "multiselect-filled-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "multiselect-filled-dropdown-background": {
-        "color": "steel",
-        "index": 8,
-        "opacity": 100
-      },
-      "multiselect-filled-dropdown-border": {
-        "color": "steel",
-        "index": 7,
-        "opacity": 100
-      },
-      "multiselect-filled-option-selected-background": {
-        "color": "transparent",
-        "index": 0,
-        "opacity": 0
-      },
-      "burger-color": {
-        "color": "neutral",
-        "index": 0,
-        "opacity": 100
-      },
-      "actionicon-filled-border": {
-        "color": "blue",
-        "index": 5,
-        "opacity": 100
-      },
-      "actionicon-filled-border-hover": {
-        "color": "blue",
-        "index": 6,
-        "opacity": 100
-      },
-      "actionicon-filled-border-focus": {
-        "color": "blue",
-        "index": 5,
-        "opacity": 100
-      },
-      "actionicon-filled-border-pressed": {
-        "color": "blue",
-        "index": 4,
-        "opacity": 100
-      },
-      "actionicon-light-border": {
-        "color": "blue",
-        "index": 1,
-        "opacity": 100
-      },
-      "actionicon-light-border-hover": {
-        "color": "blue",
-        "index": 2,
-        "opacity": 100
-      },
-      "actionicon-light-border-focus": {
-        "color": "blue",
-        "index": 1,
-        "opacity": 100
-      },
-      "actionicon-light-border-pressed": {
-        "color": "blue",
-        "index": 0,
-        "opacity": 100
-      },
-      "actionicon-light-border-disabled": {
-        "color": "slate-gray",
-        "index": 3,
-        "opacity": 100
-      },
-      "actionicon-transparent-background-hover": {
-        "color": "transparent",
-        "index": 0,
-        "opacity": 0
-      },
-      "actionicon-transparent-background-pressed": {
-        "color": "transparent",
-        "index": 0,
-        "opacity": 0
-      },
-      "actionicon-transparent-icon-pressed": {
-        "color": "blue",
-        "index": 4
-      },
-      "actionicon-transparent-icon-hover": {
-        "color": "blue",
-        "index": 6
-      },
-      "segmentedcontrol-root-background": {
-        "color": "neutral",
-        "index": 9,
-        "opacity": 100
-      },
-      "segmentedcontrol-root-border": {
-        "color": "neutral",
-        "index": 9
-      },
-      "segmentedcontrol-indicator-background": {
-        "color": "blue",
-        "index": 5,
-        "opacity": 100
-      },
-      "segmentedcontrol-indicator-border": {
-        "color": "blue",
-        "index": 5,
-        "opacity": 100
-      },
-      "button-filled-error-border": {
-        "color": "red",
-        "index": 5,
-        "opacity": 100
-      },
-      "button-filled-error-border-hover": {
-        "color": "red",
-        "index": 6,
-        "opacity": 100
-      },
-      "button-filled-error-border-focus": {
-        "color": "red",
-        "index": 5,
-        "opacity": 100
-      },
-      "button-filled-error-border-pressed": {
-        "color": "red",
-        "index": 4,
-        "opacity": 100
-      },
-      "button-filled-error-border-disabled": {
-        "color": "slate-gray",
-        "index": 3,
-        "opacity": 100
-      },
-      "avatar-on-color-yellow": {
-        "color": "navy",
-        "index": 9,
-        "opacity": 100
       }
     },
     "semanticRadiusMap": {
@@ -7534,12 +7213,6 @@ export const STORYBOOK_BRANDS = {
       },
       "tabs-default-list-gap": {
         "_value": 0
-      },
-      "divider-thickness": {
-        "default": 1
-      },
-      "divider-inset": {
-        "_value": 8
       }
     },
     "componentOverridesDark": {
@@ -8794,16 +8467,6 @@ export const STORYBOOK_BRANDS = {
         "color": "navy",
         "index": 5,
         "opacity": 100
-      },
-      "divider-color": {
-        "color": "slate-purple",
-        "index": 2,
-        "opacity": 100
-      },
-      "divider-color-disabled": {
-        "color": "navy",
-        "index": 1,
-        "opacity": 100
       }
     },
     "componentOverrides": {
@@ -10024,65 +9687,6 @@ export const STORYBOOK_BRANDS = {
         "color": "navy",
         "index": 5,
         "opacity": 100
-      },
-      "divider-color": {
-        "color": "slate-purple",
-        "index": 2,
-        "opacity": 100
-      },
-      "divider-color-disabled": {
-        "color": "navy",
-        "index": 1,
-        "opacity": 100
-      },
-      "menu-background": {
-        "color": "neutral",
-        "index": 0,
-        "opacity": 100
-      },
-      "menu-background-disabled": {
-        "color": "navy",
-        "index": 1,
-        "opacity": 100
-      },
-      "menu-border": {
-        "color": "slate-purple",
-        "index": 2,
-        "opacity": 100
-      },
-      "actionicon-transparent-border-hover": {
-        "color": "neutral",
-        "index": 2,
-        "opacity": 100
-      },
-      "actionicon-filled-border": {
-        "color": "green",
-        "index": 6,
-        "opacity": 100
-      },
-      "actionicon-filled-border-hover": {
-        "color": "green",
-        "index": 7,
-        "opacity": 100
-      },
-      "actionicon-filled-border-focus": {
-        "color": "green",
-        "index": 6,
-        "opacity": 100
-      },
-      "actionicon-filled-border-pressed": {
-        "color": "green",
-        "index": 8,
-        "opacity": 100
-      },
-      "actionicon-filled-background-disabled": {
-        "color": "navy",
-        "index": 1,
-        "opacity": 100
-      },
-      "actionicon-filled-icon-disabled": {
-        "color": "neutral",
-        "index": 0
       }
     },
     "semanticRadiusMap": {
@@ -11012,21 +10616,6 @@ export const STORYBOOK_BRANDS = {
       "button-filled-background-pressed": {
         "color": "green",
         "index": 4,
-        "opacity": 100
-      },
-      "button-outlined-background": {
-        "color": "transparent",
-        "index": 0,
-        "opacity": 0
-      },
-      "button-outlined-text": {
-        "color": "green",
-        "index": 5,
-        "opacity": 100
-      },
-      "button-outlined-border": {
-        "color": "green",
-        "index": 5,
         "opacity": 100
       }
     },

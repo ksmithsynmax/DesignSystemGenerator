@@ -3,6 +3,7 @@ import { buildExportPayload } from "../utils/buildExportPayload";
 import { buildTokenLock } from "../utils/buildTokenLock";
 import { diffTokenPayloads, formatTokenChangelog, isEmptyDiff } from "../utils/diffTokenPayloads";
 import { useFigmaSync } from "../hooks/useFigmaSync";
+import { CHART_COMPONENTS } from "../data/componentTokens";
 
 const SAVE_LOCK_ENDPOINT = "http://localhost:9001/api/save-token-lock";
 const READ_LOCK_ENDPOINT = "http://localhost:9001/api/token-lock";
@@ -77,6 +78,12 @@ const BUILDABLE_COMPONENTS = [
   "list",
   "loader",
   "progress",
+  "chart",
+  "chart-line",
+  "chart-area",
+  "chart-stacked-bar",
+  "chart-combo",
+  "chart-donut",
   "pill",
   "badge",
   "textinput",
@@ -94,8 +101,26 @@ const BUILDABLE_COMPONENTS = [
   "table",
 ];
 
+// Split the buildable list into Components vs Charts for the selector UI.
+const BUILDABLE_SECTIONS = [
+  {
+    label: "Components",
+    names: BUILDABLE_COMPONENTS.filter((name) => !CHART_COMPONENTS.includes(name)),
+  },
+  {
+    label: "Charts",
+    names: BUILDABLE_COMPONENTS.filter((name) => CHART_COMPONENTS.includes(name)),
+  },
+];
+
 const COMPONENT_LABELS = {
   actionicon: "ActionIcon",
+  chart: "Bar Chart",
+  "chart-line": "Line Chart",
+  "chart-area": "Area Chart",
+  "chart-stacked-bar": "Stacked Bar Chart",
+  "chart-combo": "Combo Chart",
+  "chart-donut": "Donut Chart",
   rangeslider: "RangeSlider",
   textinput: "TextInput",
   multiselect: "MultiSelect",
@@ -343,9 +368,6 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
             </div>
             <div
               style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-                gap: 6,
                 maxHeight: 176,
                 overflowY: "auto",
                 border: "1px solid #2c2f36",
@@ -353,18 +375,42 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
                 padding: 8,
               }}
             >
-              {BUILDABLE_COMPONENTS.map((name) => (
-                <label
-                  key={name}
-                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#CED4DA" }}
-                >
-                  <input
-                    type="checkbox"
-                    checked={selectedComponents.indexOf(name) >= 0}
-                    onChange={() => toggleComponent(name)}
-                  />
-                  {componentLabel(name)}
-                </label>
+              {BUILDABLE_SECTIONS.map((section, sectionIndex) => (
+                <div key={section.label} style={{ marginTop: sectionIndex === 0 ? 0 : 12 }}>
+                  <div
+                    style={{
+                      fontSize: 10,
+                      color: "#868E96",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                      fontWeight: 600,
+                      marginBottom: 6,
+                    }}
+                  >
+                    {section.label}
+                  </div>
+                  <div
+                    style={{
+                      display: "grid",
+                      gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                      gap: 6,
+                    }}
+                  >
+                    {section.names.map((name) => (
+                      <label
+                        key={name}
+                        style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#CED4DA" }}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedComponents.indexOf(name) >= 0}
+                          onChange={() => toggleComponent(name)}
+                        />
+                        {componentLabel(name)}
+                      </label>
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           </div>

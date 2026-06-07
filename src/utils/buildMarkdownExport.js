@@ -1,4 +1,4 @@
-import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES } from "../data/componentTokens";
+import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES, getComponentDisplayName } from "../data/componentTokens";
 import { gradientCssFromDef, gradientFirstStopHex } from "./resolveGradient";
 
 // Figma can't store a gradient in a variable, so a gradient-backed token has two
@@ -210,7 +210,7 @@ export function buildMarkdownExport(brands, globalPrimitives) {
 
   Object.entries(COMPONENT_TOKENS).forEach(([compName, tokens]) => {
     const sizeKeys = COMPONENT_SIZE_KEYS[compName] || [];
-    lines.push(`### ${compName.charAt(0).toUpperCase() + compName.slice(1)}`);
+    lines.push(`### ${getComponentDisplayName(compName)}`);
     lines.push("");
     lines.push(`Size variants: ${sizeKeys.join(", ") || "none"}`);
     lines.push("");

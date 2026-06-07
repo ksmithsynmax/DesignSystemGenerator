@@ -85,9 +85,27 @@ export default function MultiSelectPreview({
   const optionSelectedBackground = resolveMultiSelectColorToken([`${prefix}-option-selected-background`]);
   const optionHoverBackground = resolveMultiSelectColorToken([`${prefix}-option-hover-background`]);
   const optionHoverText = resolveMultiSelectColorToken([`${prefix}-option-hover-text`]);
-  const pillBackground = resolveMultiSelectColorToken(["multiselect-pill-background"]);
-  const pillText = resolveMultiSelectColorToken(["multiselect-pill-text"]);
-  const pillRemoveIcon = resolveMultiSelectColorToken(["multiselect-pill-remove-icon"]);
+  const pillBackground = resolveMultiSelectColorToken(
+    isDisabled
+      ? ["multiselect-pill-background-disabled", `${prefix}-pill-background`]
+      : isError
+        ? ["multiselect-pill-background-error", `${prefix}-pill-background`]
+        : [`${prefix}-pill-background`]
+  );
+  const pillText = resolveMultiSelectColorToken(
+    isDisabled
+      ? ["multiselect-pill-text-disabled", "multiselect-pill-text"]
+      : isError
+        ? ["multiselect-pill-text-error", "multiselect-pill-text"]
+        : ["multiselect-pill-text"]
+  );
+  const pillRemoveIcon = resolveMultiSelectColorToken(
+    isDisabled
+      ? ["multiselect-pill-remove-icon-disabled", "multiselect-pill-remove-icon"]
+      : isError
+        ? ["multiselect-pill-remove-icon-error", "multiselect-pill-remove-icon"]
+        : ["multiselect-pill-remove-icon"]
+  );
 
   const fontSize = resolveDimension(brands, brandId, "multiselect-font-size", size);
   const fontFamily = resolveDimension(brands, brandId, `${prefix}-font-family`);
@@ -125,6 +143,7 @@ export default function MultiSelectPreview({
   const [selectedValues, setSelectedValues] = useState(["Option one"]);
   const [hoveredOption, setHoveredOption] = useState(null);
   const canInteract = interactive && !isDisabled;
+  const canShowDropdown = showDropdown && !isError && !isDisabled;
   const displayValues = interactive ? selectedValues : ["Option one", "Option two"];
 
   const toggleValue = (opt) => {
@@ -284,13 +303,13 @@ export default function MultiSelectPreview({
           aria-hidden
           style={{
             color: chevronColor,
-            transform: showDropdown ? "rotate(270deg)" : "rotate(90deg)",
+            transform: canShowDropdown ? "rotate(270deg)" : "rotate(90deg)",
             display: "block",
             flexShrink: 0,
           }}
         />
       </div>
-      {showDropdown && renderDropdown()}
+      {canShowDropdown && renderDropdown()}
       {isError && (
         <div
           style={{

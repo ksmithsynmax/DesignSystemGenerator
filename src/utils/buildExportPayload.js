@@ -6,6 +6,8 @@ import {
   mergeDarkSemanticsForBrand,
   relativeLuminance,
   availableAvatarColors,
+  chartSeriesMappingForToken,
+  chartShadeMappingForToken,
 } from "./resolveToken";
 import { gradientCssFromDef, gradientFirstStopHex, gradientFigmaExport } from "./resolveGradient";
 import {
@@ -233,9 +235,13 @@ export function buildExportPayload(brands, options) {
 
           // Resolve a color token for one theme. Supports semantic-less tokens that
           // default to a palette primitive (defaultMapping) or to auto-contrast text.
+          const seriesMapping = chartSeriesMappingForToken(brand, tokenName);
+          const shadeMapping = chartShadeMappingForToken(brand, tokenName);
           const resolveColorTokenTheme = (override, semanticMapping, isDark) => {
             if (override) return resolveMappingToColor(brand, override);
             if (def.semantic) return resolveMappingToColor(brand, semanticMapping);
+            if (seriesMapping) return resolveMappingToColor(brand, seriesMapping);
+            if (shadeMapping) return resolveMappingToColor(brand, shadeMapping);
             if (def.defaultMapping) return resolveMappingToColor(brand, def.defaultMapping);
             if (def.autoContrastOf) {
               const bgDef = COMPONENT_TOKENS[compName]?.[def.autoContrastOf];
@@ -282,6 +288,8 @@ export function buildExportPayload(brands, options) {
         } else if (def.type === TOKEN_TYPES.FLOAT) {
           const resolveFloatAlias = (val) => {
             const norm = String(val).replace(".", "_");
+            // Opacity is a dimensionless ratio — never alias it to a spacing primitive.
+            if (def.figmaPath.includes("opacity")) return null;
             if (
               def.figmaPath.includes("border-width") ||
               def.figmaPath.includes("stroke-width") ||

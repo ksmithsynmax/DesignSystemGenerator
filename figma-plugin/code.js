@@ -989,10 +989,27 @@ function resolveManagedComponentKeyFromName(name) {
   var normalized = normalizeComponentKey(name);
   if (!normalized) return null;
   if (normalized === "popup") return "popover";
+  // Renamed chart sets ("Bar Chart", "Line Chart", ...) must still resolve to the
+  // original managed keys so sync matching and cleanup of old "Chart*" sets work.
+  var chartAliases = {
+    barchart: "chart",
+    linechart: "chartline",
+    areachart: "chartarea",
+    stackedbarchart: "chartstackedbar",
+    combochart: "chartcombo",
+    donutchart: "chartdonut",
+  };
+  if (chartAliases[normalized]) return chartAliases[normalized];
   var managedKeys = [
     "button", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "checkbox", "radio",
     "chip", "notification", "alert", "modal", "tooltip", "popover", "menu", "divider", "list", "loader",
     "progress",
+    "chartstackedbar",
+    "chartcombo",
+    "chartdonut",
+    "chartline",
+    "chartarea",
+    "chart",
     "avatar",
     "pill", "badge", "textinput", "multiselect", "select", "card", "actionicon",
     "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image",
@@ -1181,6 +1198,13 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     return hexToFigmaRgb(String(t.value));
   }
 
+  function resolvedComponentString(figmaPathKey, fallback) {
+    if (!componentPayload || !figmaPathKey) return fallback;
+    var t = componentPayload[figmaPathKey];
+    if (!t || t.value == null) return fallback;
+    return String(t.value);
+  }
+
   var compSetGap = 300;
   var buttonFocusRingStyle = (buildOptions && buildOptions.buttonFocusRingStyle === "attached") ? "attached" : "offset";
   var actionIconFocusRingStyle = (buildOptions && buildOptions.actionIconFocusRingStyle === "attached") ? "attached" : "offset";
@@ -1264,6 +1288,24 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   });
   var progressSet = await buildSet("Progress", function () {
     return buildProgressComponentSet(varMap, page, font, resolvedComponentFloat);
+  });
+  var chartSet = await buildSet("Chart", function () {
+    return buildChartComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartLineSet = await buildSet("Chart Line", function () {
+    return buildChartLineComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartAreaSet = await buildSet("Chart Area", function () {
+    return buildChartAreaComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartStackedBarSet = await buildSet("Chart Stacked Bar", function () {
+    return buildChartStackedBarComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartComboSet = await buildSet("Chart Combo", function () {
+    return buildChartComboComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartDonutSet = await buildSet("Chart Donut", function () {
+    return buildChartDonutComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
   });
   var notificationSet = await buildSet("Notification", function () {
     return buildNotificationComponentSet(varMap, page, font, loaderSet, resolvedComponentFloat);
@@ -1373,6 +1415,12 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     chipSet,
     loaderSet,
     progressSet,
+    chartSet,
+    chartLineSet,
+    chartAreaSet,
+    chartStackedBarSet,
+    chartComboSet,
+    chartDonutSet,
     notificationSet,
     alertSet,
     modalSet,
@@ -3338,6 +3386,59 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           }
         }
 
+        // Select / MultiSelect document the open dropdown menu in addition to
+        // the (closed) state row, so the spec shows what the open menu looks like.
+        if (lowerSetName === "select" || lowerSetName === "multiselect") {
+          var selectTplDropdownKey = getPropKey(variantProps, "Dropdown");
+          if (selectTplDropdownKey) {
+            var selectTplDropdownValues = pickOrdered(getPropValues(variantProps, "Dropdown"), ["Closed", "Open"]);
+            var selectTplHasOpen = false;
+            for (var sdvi = 0; sdvi < selectTplDropdownValues.length; sdvi++) {
+              if (String(selectTplDropdownValues[sdvi]).toLowerCase() === "open") { selectTplHasOpen = true; break; }
+            }
+            if (selectTplHasOpen && selectTplDropdownValues.length > 0) {
+              templatedDoc.appendChild(createSectionHeader("Dropdown", "Closed control and the open menu with selectable options.", DOC_COLORS.subtitle));
+              var selectTplDropdownPanel = createPanel(lowerSetName + "-template-dropdown", 10);
+              selectTplDropdownPanel.resize(1192, selectTplDropdownPanel.height);
+              templatedDoc.appendChild(selectTplDropdownPanel);
+              addInstancesRow(
+                selectTplDropdownPanel,
+                "Dropdown",
+                selectTplDropdownValues,
+                function (dropdownName) {
+                  return makeTemplateInstance({ Dropdown: dropdownName });
+                },
+                false,
+                { itemsPerRow: 2, rowItemSpacing: 24 }
+              );
+            }
+          }
+        }
+
+        // Burger documents the open (X / close) state alongside the closed icon.
+        if (lowerSetName === "burger") {
+          var burgerTplOpenedKey = getPropKey(variantProps, "Opened");
+          if (burgerTplOpenedKey) {
+            var burgerTplOpenedValues = pickOrdered(getPropValues(variantProps, "Opened"), ["False", "True"]);
+            if (burgerTplOpenedValues.length > 1) {
+              templatedDoc.appendChild(createSectionHeader("Open & Close", "Closed menu icon and the open (close) state.", DOC_COLORS.subtitle));
+              var burgerTplOpenedPanel = createPanel("burger-template-opened", 10);
+              burgerTplOpenedPanel.resize(1192, burgerTplOpenedPanel.height);
+              templatedDoc.appendChild(burgerTplOpenedPanel);
+              addInstancesRow(
+                burgerTplOpenedPanel,
+                "Opened",
+                burgerTplOpenedValues,
+                function (openedName) {
+                  return makeTemplateInstance({ Opened: openedName });
+                },
+                false,
+                { itemsPerRow: 2, rowItemSpacing: 24 }
+              );
+            }
+          }
+        }
+
         if (lowerSetName === "text") {
           if (hasTextWeights && templateOrderedTextWeights.length > 0) {
             var templateWeightSlot = getTemplateSlot(templatedDoc, slug, "weight");
@@ -3950,6 +4051,34 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         avatarContentSlot = createPanel("slot:" + slug + ":content", 10);
         avatarContentSlot.resize(1192, avatarContentSlot.height);
         doc.appendChild(avatarContentSlot);
+      }
+    }
+
+    // Select / MultiSelect document the open dropdown menu in addition to states.
+    var selectDropdownSlot = null;
+    if ((lowerSetName === "select" || lowerSetName === "multiselect") && getPropKey(variantProps, "Dropdown")) {
+      var selectDocDropdownValues = pickOrdered(getPropValues(variantProps, "Dropdown"), ["Closed", "Open"]);
+      var selectDocHasOpen = false;
+      for (var sddi = 0; sddi < selectDocDropdownValues.length; sddi++) {
+        if (String(selectDocDropdownValues[sddi]).toLowerCase() === "open") { selectDocHasOpen = true; break; }
+      }
+      if (selectDocHasOpen && selectDocDropdownValues.length > 0) {
+        doc.appendChild(createSectionHeader("Dropdown", "Closed control and the open menu with selectable options.", DOC_COLORS.subtitle));
+        selectDropdownSlot = createPanel("slot:" + slug + ":dropdown", 10);
+        selectDropdownSlot.resize(1192, selectDropdownSlot.height);
+        doc.appendChild(selectDropdownSlot);
+      }
+    }
+
+    // Burger documents the open (X / close) state alongside the closed menu icon.
+    var burgerOpenedSlot = null;
+    if (lowerSetName === "burger" && getPropKey(variantProps, "Opened")) {
+      var burgerDocOpenedValues = pickOrdered(getPropValues(variantProps, "Opened"), ["False", "True"]);
+      if (burgerDocOpenedValues.length > 1) {
+        doc.appendChild(createSectionHeader("Open & Close", "Closed menu icon and the open (close) state.", DOC_COLORS.subtitle));
+        burgerOpenedSlot = createPanel("slot:" + slug + ":opened", 10);
+        burgerOpenedSlot.resize(1192, burgerOpenedSlot.height);
+        doc.appendChild(burgerOpenedSlot);
       }
     }
 
@@ -4761,6 +4890,36 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                       ? { itemsPerRow: 1, rowItemSpacing: 12 }
                       : null))));
         }
+      }
+
+      if (selectDropdownSlot) {
+        clearChildren(selectDropdownSlot);
+        var selectDocDropdownFillValues = pickOrdered(getPropValues(variantProps, "Dropdown"), ["Closed", "Open"]);
+        addInstancesRow(
+          selectDropdownSlot,
+          "Dropdown",
+          selectDocDropdownFillValues,
+          function (dropdownName) {
+            return makeInstance({ Dropdown: dropdownName });
+          },
+          false,
+          { itemsPerRow: 2, rowItemSpacing: 24 }
+        );
+      }
+
+      if (burgerOpenedSlot) {
+        clearChildren(burgerOpenedSlot);
+        var burgerDocOpenedFill = pickOrdered(getPropValues(variantProps, "Opened"), ["False", "True"]);
+        addInstancesRow(
+          burgerOpenedSlot,
+          "Opened",
+          burgerDocOpenedFill,
+          function (openedName) {
+            return makeInstance({ Opened: openedName });
+          },
+          false,
+          { itemsPerRow: 2, rowItemSpacing: 24 }
+        );
       }
 
       if (weightSlot && orderedTextWeights.length > 0) {
@@ -5921,19 +6080,20 @@ function buildBurgerComponentSet(varMap, page, font) {
         var lineRadiusVar = varMap["burger/line-radius"];
         var colorVar = varMap[colorPath];
 
-        // Each bar is a real rectangle shape (not a vector stroke).
-        // bindDims=false for rotated (X) bars: binding width/height to a
-        // variable re-applies sizing and resets the node's position, which
-        // clobbers the center-pivot rotation and bends the X back into a "<".
-        function makeBurgerBar(bindDims) {
+        // Hamburger bar: a rectangle that FILLS the size-driven frame width and
+        // binds its thickness (height) to line-size. (The X state is drawn as a
+        // stroked vector instead, so its thickness can bind to line-size without
+        // the rotated-rectangle distortion.) bindWidth is kept for completeness
+        // but the hamburger bars fill via auto-layout rather than binding width.
+        function makeBurgerBar(bindWidth, bindThickness) {
           var bar = figma.createRectangle();
           bar.name = "Bar";
           bar.resize(box, lineSz);
           bar.cornerRadius = lineSz / 2;
           bar.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
           if (colorVar) bindPaintVar(bar, "fills", 0, colorVar);
-          if (bindDims && sizeVar) bindVar(bar, "width", sizeVar);
-          if (bindDims && lineVar) bindVar(bar, "height", lineVar);
+          if (bindWidth && sizeVar) bindVar(bar, "width", sizeVar);
+          if (bindThickness && lineVar) bindVar(bar, "height", lineVar);
           if (lineRadiusVar) {
             bindVar(bar, "topLeftRadius", lineRadiusVar);
             bindVar(bar, "topRightRadius", lineRadiusVar);
@@ -5945,44 +6105,55 @@ function buildBurgerComponentSet(varMap, page, font) {
 
         var lines;
         if (isOpened) {
-          // X: two rectangles crossed at the center.
+          // X: a single stroked vector with two crossing diagonals. Rotated
+          // rectangles fan into a ">" shape when their width is bound to a
+          // variable (the resize anchors the rotated corner), so instead we draw
+          // the X as a vector: the stroke WEIGHT binds to line-size (exact, never
+          // distorts the shape) and the geometry scales with the size-driven
+          // frame. This keeps the bar thickness identical to the hamburger and the
+          // bounding box identical (size x size).
           lines = figma.createFrame();
           lines.name = "Lines";
           lines.layoutMode = "NONE";
           lines.clipsContent = false;
           lines.resize(box, box);
           lines.fills = [];
-          // NOTE: do not bind the open-state frame size to the size variable.
-          // The rotated bars use static dimensions, so if the resolved variable
-          // differs from the static snapshot the frame would be smaller than the
-          // bars and the X would overflow ("break out") of the bounding box.
-          // Figma's `rotation` setter pivots around the node origin (corner),
-          // which fans the two bars into a "<" shape. Set the transform matrix
-          // explicitly so each bar rotates around its own center, pinned to the
-          // middle of the square content box -> a true X. Dimensions are kept
-          // static (bindDims=false) so a bound size variable can't reset the
-          // position and undo the rotation.
-          var rotateBarAroundCenter = function (bar, deg) {
-            var radv = (deg * Math.PI) / 180;
-            var cos = Math.cos(radv);
-            var sin = Math.sin(radv);
-            var halfW = box / 2;
-            var halfH = lineSz / 2;
-            var cx = box / 2;
-            var cy = box / 2;
-            var e = cx - cos * halfW + sin * halfH;
-            var f = cy - sin * halfW - cos * halfH;
-            bar.relativeTransform = [
-              [cos, -sin, e],
-              [sin, cos, f],
-            ];
-          };
-          var barA = makeBurgerBar(false);
-          lines.appendChild(barA);
-          rotateBarAroundCenter(barA, 45);
-          var barB = makeBurgerBar(false);
-          lines.appendChild(barB);
-          rotateBarAroundCenter(barB, -45);
+
+          var xBar = figma.createVector();
+          xBar.name = "Bar";
+          // The X is INSCRIBED in the box: each arm is the same length as a
+          // hamburger bar (= size), rotated 45° about the center. A line of length
+          // L rotated 45° only spans L/√2 on each axis, so the arms stay inside
+          // the box (they do NOT reach the corners) and the stroke is contained.
+          // Do NOT resize the vector (that would stretch the geometry to the
+          // corners) — center it instead and let it scale with the frame.
+          var xc = box / 2;
+          var xd = box / (2 * Math.SQRT2); // half arm-length projected on each axis
+          xBar.vectorPaths = [{
+            windingRule: "NONE",
+            data:
+              "M " + (xc - xd) + " " + (xc - xd) + " L " + (xc + xd) + " " + (xc + xd) +
+              " M " + (xc - xd) + " " + (xc + xd) + " L " + (xc + xd) + " " + (xc - xd),
+          }];
+          xBar.fills = [];
+          xBar.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+          xBar.strokeWeight = lineSz;
+          xBar.strokeCap = "ROUND";
+          xBar.strokeJoin = "ROUND";
+          if (colorVar) bindPaintVar(xBar, "strokes", 0, colorVar);
+          if (lineVar) bindVar(xBar, "strokeWeight", lineVar);
+          lines.appendChild(xBar);
+          // Center the X in the box and let it scale with the size-driven frame;
+          // the stroke weight is bound separately so thickness stays line-size.
+          try { xBar.x = (box - xBar.width) / 2; } catch (_burgerXPosXErr) {}
+          try { xBar.y = (box - xBar.height) / 2; } catch (_burgerXPosYErr) {}
+          try { xBar.constraints = { horizontal: "SCALE", vertical: "SCALE" }; } catch (_burgerXScaleErr) {}
+          // Bind the frame size to the size variable so the bounding box matches
+          // the hamburger state exactly.
+          if (sizeVar) {
+            bindVar(lines, "width", sizeVar);
+            bindVar(lines, "height", sizeVar);
+          }
         } else {
           // Hamburger: three stacked bars centered in a fixed square frame.
           // Use the same static box x box size as the open (X) state so both
@@ -5999,10 +6170,19 @@ function buildBurgerComponentSet(varMap, page, font) {
           lines.fills = [];
           lines.resize(box, box);
           if (gapVar) bindVar(lines, "itemSpacing", gapVar);
+          // Size variable drives the square bounding box, identical to the X state.
+          if (sizeVar) {
+            bindVar(lines, "width", sizeVar);
+            bindVar(lines, "height", sizeVar);
+          }
           for (var bi = 0; bi < 3; bi++) {
-            var bar = makeBurgerBar(true);
+            var bar = makeBurgerBar(false, true);
             lines.appendChild(bar);
             try { bar.layoutGrow = 0; } catch (_burgerBarGrowErr) {}
+            // Fill the frame width (= size) instead of binding the bar width;
+            // keep the thickness fixed (driven by the line-size variable).
+            try { bar.layoutSizingHorizontal = "FILL"; } catch (_burgerBarFillErr) {}
+            try { bar.layoutSizingVertical = "FIXED"; } catch (_burgerBarFixedErr) {}
           }
         }
 
@@ -6046,10 +6226,13 @@ function buildSegmentedControlComponentSet(varMap, page, font) {
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var orientations = ["horizontal", "vertical"];
   var fullWidths = [false, true];
-  var states = ["default", "disabled"];
+  var states = ["default", "hover", "disabled"];
   var segments = ["React", "Angular", "Vue"];
   var activeIndex = 0;
   var components = [];
+  // Column cursor that only advances for orientation/full-width pairs we
+  // actually build, so skipped combinations don't leave gaps in the layout.
+  var pairCol = 0;
 
   // Static geometry snapshots per size (variables drive the live values).
   var fontSizes = { default: 14, xs: 12, sm: 13, md: 14, lg: 16, xl: 18 };
@@ -6075,6 +6258,10 @@ function buildSegmentedControlComponentSet(varMap, page, font) {
       var isFullWidth = fullWidths[fwi];
       var capFullWidth = isFullWidth ? "True" : "False";
 
+      // Vertical segmented controls are only used at full width — skip the
+      // vertical, non-full-width combinations entirely.
+      if (isVertical && !isFullWidth) continue;
+
       for (var si = 0; si < sizes.length; si++) {
         var size = sizes[si];
         var capSize = size === "default" ? "Default" : size.toUpperCase();
@@ -6088,11 +6275,16 @@ function buildSegmentedControlComponentSet(varMap, page, font) {
           var state = states[sti];
           var capState = state.charAt(0).toUpperCase() + state.slice(1);
           var isDisabled = state === "disabled";
+          var isHover = state === "hover";
 
           var rootBgPath = isDisabled ? "segmentedcontrol/root-background-disabled" : "segmentedcontrol/root-background";
+          var rootBorderPath = isDisabled ? "segmentedcontrol/root-border-disabled" : "segmentedcontrol/root-border";
           var indicatorBgPath = isDisabled ? "segmentedcontrol/indicator-background-disabled" : "segmentedcontrol/indicator-background";
+          var indicatorBorderPath = isDisabled ? "segmentedcontrol/indicator-border-disabled" : "segmentedcontrol/indicator-border";
           var labelActivePath = isDisabled ? "segmentedcontrol/label-text-disabled" : "segmentedcontrol/label-text-active";
-          var labelInactivePath = isDisabled ? "segmentedcontrol/label-text-disabled" : "segmentedcontrol/label-text";
+          var labelInactivePath = isDisabled
+            ? "segmentedcontrol/label-text-disabled"
+            : (isHover ? "segmentedcontrol/label-text-hover" : "segmentedcontrol/label-text");
 
           var comp = figma.createComponent();
           comp.name =
@@ -6118,7 +6310,7 @@ function buildSegmentedControlComponentSet(varMap, page, font) {
           comp.strokeWeight = rootBorderW;
           comp.strokeAlign = "INSIDE";
           if (varMap[rootBgPath]) bindPaintVar(comp, "fills", 0, varMap[rootBgPath]);
-          if (varMap["segmentedcontrol/root-border"]) bindPaintVar(comp, "strokes", 0, varMap["segmentedcontrol/root-border"]);
+          if (varMap[rootBorderPath]) bindPaintVar(comp, "strokes", 0, varMap[rootBorderPath]);
           if (varMap["segmentedcontrol/root-border-width"]) bindVar(comp, "strokeWeight", varMap["segmentedcontrol/root-border-width"]);
           if (varMap["segmentedcontrol/root-padding"]) {
             bindVar(comp, "paddingLeft", varMap["segmentedcontrol/root-padding"]);
@@ -6164,7 +6356,7 @@ function buildSegmentedControlComponentSet(varMap, page, font) {
               seg.strokeWeight = indicatorBorderW;
               seg.strokeAlign = "INSIDE";
               if (varMap[indicatorBgPath]) bindPaintVar(seg, "fills", 0, varMap[indicatorBgPath]);
-              if (varMap["segmentedcontrol/indicator-border"]) bindPaintVar(seg, "strokes", 0, varMap["segmentedcontrol/indicator-border"]);
+              if (varMap[indicatorBorderPath]) bindPaintVar(seg, "strokes", 0, varMap[indicatorBorderPath]);
               if (varMap["segmentedcontrol/indicator-border-width"]) bindVar(seg, "strokeWeight", varMap["segmentedcontrol/indicator-border-width"]);
             } else {
               seg.fills = [];
@@ -6220,13 +6412,14 @@ function buildSegmentedControlComponentSet(varMap, page, font) {
 
           if (isDisabled) comp.opacity = 0.6;
 
-          var colIndex = (oi * fullWidths.length + fwi) * states.length + sti;
+          var colIndex = pairCol * states.length + sti;
           comp.x = colIndex * cellW;
           comp.y = si * cellH;
           page.appendChild(comp);
           components.push(comp);
         }
       }
+      pairCol++;
     }
   }
 
@@ -12541,6 +12734,1656 @@ function buildProgressComponentSet(varMap, page, font, resolvedComponentFloat) {
 }
 
 // ---------------------------------------------------------------------------
+// Chart Component Set (Bar)
+// ---------------------------------------------------------------------------
+// Bars/axes/gridlines are built from native shapes. Chart *data* (bar heights,
+// category labels) is baked in as representative sample content — only the
+// styling surfaces (series colors, axis, grid, label typography, bar radius)
+// are bound to design-system variables so they stay live.
+
+function buildChartComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+
+  // Fixed sample data — not a design-system concern.
+  var SAMPLE = [
+    { label: "Jan", value: 42 },
+    { label: "Feb", value: 58 },
+    { label: "Mar", value: 35 },
+    { label: "Apr", value: 71 },
+    { label: "May", value: 49 },
+    { label: "Jun", value: 63 },
+  ];
+  var Y_TICKS = [0, 20, 40, 60, 80];
+  var MAX_SCALE = 80;
+
+  // Structural gutters for tick labels (geometry, not tokens).
+  var Y_GUTTER = 34;
+  var X_GUTTER = 20;
+
+  var seriesPaths = [
+    "chart/series-1", "chart/series-2", "chart/series-3",
+    "chart/series-4", "chart/series-5", "chart/series-6",
+  ];
+  var seriesFallback = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+    { r: 0.61, g: 0.35, b: 0.86 }, { r: 0.92, g: 0.28, b: 0.6 },
+  ];
+  // Dedicated shade ramp (dark -> light) used by the "Shades" color variant.
+  var shadePaths = [
+    "chart/shade-1", "chart/shade-2", "chart/shade-3",
+    "chart/shade-4", "chart/shade-5", "chart/shade-6",
+  ];
+  var shadeFallback = [
+    { r: 0.05, g: 0.28, b: 0.63 }, { r: 0.08, g: 0.40, b: 0.78 },
+    { r: 0.13, g: 0.55, b: 0.90 }, { r: 0.35, g: 0.67, b: 0.94 },
+    { r: 0.55, g: 0.78, b: 0.97 }, { r: 0.72, g: 0.86, b: 0.99 },
+  ];
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var sizes = ["default"];
+  var colorModes = ["single", "palette", "shades"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+
+  for (var ci = 0; ci < colorModes.length; ci++) {
+    var colorMode = colorModes[ci];
+    var capColor = colorMode === "single" ? "Single" : colorMode === "palette" ? "Palette" : "Shades";
+
+    for (var si = 0; si < sizes.length; si++) {
+      var size = sizes[si];
+      var capSize = size === "default" ? "Default" : size.toUpperCase();
+
+      var plotW = resolveCompFloat("chart/width-" + size, 320);
+      var plotH = resolveCompFloat("chart/height-" + size, 180);
+      var barGap = resolveCompFloat("chart/bar-gap-" + size, 12);
+      var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+      var pad = resolveCompFloat("chart/padding", 16);
+      var barRadius = resolveCompFloat("chart/bar-radius", 2);
+      var axisWidth = resolveCompFloat("chart/axis-width", 1);
+      var gridWidth = resolveCompFloat("chart/grid-width", 1);
+
+      var plotX = pad + Y_GUTTER;
+      var plotY = pad;
+      var totalW = pad * 2 + Y_GUTTER + plotW;
+      var totalH = pad * 2 + X_GUTTER + plotH;
+      maxColWidth = Math.max(maxColWidth, totalW);
+      maxRowHeight = Math.max(maxRowHeight, totalH);
+
+      var comp = figma.createComponent();
+      comp.name = "Colors=" + capColor;
+      comp.layoutMode = "NONE";
+      comp.resize(totalW, totalH);
+      comp.fills = [];
+      comp.clipsContent = false;
+
+      // ── Gridlines (horizontal) ──
+      for (var gi = 0; gi < Y_TICKS.length; gi++) {
+        var gy = plotY + plotH - (Y_TICKS[gi] / MAX_SCALE) * plotH;
+        var grid = figma.createLine();
+        grid.name = "Gridline";
+        grid.resize(plotW, 0);
+        grid.x = plotX;
+        grid.y = gy;
+        grid.strokeCap = "NONE";
+        grid.strokes = [{ type: "SOLID", color: gridFallback }];
+        grid.strokeWeight = Math.max(1, gridWidth);
+        if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+        bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+        bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+        comp.appendChild(grid);
+
+        // ── Y tick labels ──
+        var yLabel = figma.createText();
+        yLabel.fontName = font;
+        yLabel.name = "Y Label";
+        yLabel.characters = String(Y_TICKS[gi]);
+        yLabel.fontSize = labelFontSize;
+        yLabel.textAlignHorizontal = "RIGHT";
+        yLabel.resize(Y_GUTTER - 6, labelFontSize + 4);
+        yLabel.x = pad;
+        yLabel.y = gy - (labelFontSize + 4) / 2;
+        yLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(yLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(yLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(yLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(yLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(yLabel);
+      }
+
+      // ── Bars + X tick labels ──
+      var slot = plotW / SAMPLE.length;
+      var barWidth = Math.max(2, slot - barGap);
+      for (var bi = 0; bi < SAMPLE.length; bi++) {
+        var datum = SAMPLE[bi];
+        var barH = Math.max(2, (datum.value / MAX_SCALE) * plotH);
+        var bx = plotX + bi * slot + (slot - barWidth) / 2;
+
+        var bar = figma.createRectangle();
+        bar.name = "Bar";
+        bar.resize(barWidth, barH);
+        bar.x = bx;
+        bar.y = plotY + plotH - barH;
+        var paletteArr = colorMode === "shades" ? shadePaths : seriesPaths;
+        var fallbackArr = colorMode === "shades" ? shadeFallback : seriesFallback;
+        var fillIdx = colorMode === "single" ? 0 : bi % paletteArr.length;
+        bar.fills = [{ type: "SOLID", color: fallbackArr[fillIdx] }];
+        bar.strokes = [];
+        bar.topLeftRadius = barRadius;
+        bar.topRightRadius = barRadius;
+        bindPaintVar(bar, "fills", 0, varMap[paletteArr[fillIdx]]);
+        bindVar(bar, "topLeftRadius", varMap["chart/bar-radius"]);
+        bindVar(bar, "topRightRadius", varMap["chart/bar-radius"]);
+        comp.appendChild(bar);
+
+        var xLabel = figma.createText();
+        xLabel.fontName = font;
+        xLabel.name = "X Label";
+        xLabel.characters = datum.label;
+        xLabel.fontSize = labelFontSize;
+        xLabel.textAlignHorizontal = "CENTER";
+        xLabel.resize(slot, labelFontSize + 4);
+        xLabel.x = plotX + bi * slot;
+        xLabel.y = plotY + plotH + 4;
+        xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(xLabel);
+      }
+
+      // ── Axis lines (drawn last so they sit above gridlines) ──
+      var yAxis = figma.createRectangle();
+      yAxis.name = "Y Axis";
+      yAxis.resize(Math.max(1, axisWidth), plotH);
+      yAxis.x = plotX;
+      yAxis.y = plotY;
+      yAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      yAxis.strokes = [];
+      bindPaintVar(yAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(yAxis, "width", varMap["chart/axis-width"]);
+      comp.appendChild(yAxis);
+
+      var xAxis = figma.createRectangle();
+      xAxis.name = "X Axis";
+      xAxis.resize(plotW, Math.max(1, axisWidth));
+      xAxis.x = plotX;
+      xAxis.y = plotY + plotH;
+      xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      xAxis.strokes = [];
+      bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(xAxis, "height", varMap["chart/axis-width"]);
+      comp.appendChild(xAxis);
+
+      comp.x = si * (maxColWidth + colGap);
+      comp.y = ci * (maxRowHeight + rowGap);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+  }
+
+  progress("Created " + components.length + " chart variants");
+  var chartSet = figma.combineAsVariants(components, page);
+  chartSet.name = "Bar Chart";
+  return chartSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Line)
+// ---------------------------------------------------------------------------
+// Same axis/grid/label scaffold as the bar chart, but the data series is a
+// stroked vector polyline with optional point markers. Shares the `chart/*`
+// styling variables; line-specific stroke weight binds to `chart-line/width`.
+
+function buildChartLineComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+
+  var SAMPLE = [
+    { label: "Jan", v: [42, 24, 60, 12] },
+    { label: "Feb", v: [58, 38, 30, 50] },
+    { label: "Mar", v: [35, 52, 64, 22] },
+    { label: "Apr", v: [71, 30, 20, 58] },
+    { label: "May", v: [49, 62, 44, 28] },
+    { label: "Jun", v: [63, 41, 54, 70] },
+  ];
+  var Y_TICKS = [0, 20, 40, 60, 80];
+  var MAX_SCALE = 80;
+  var Y_GUTTER = 34;
+  var X_GUTTER = 20;
+
+  var seriesPaths = [
+    "chart/series-1", "chart/series-2", "chart/series-3", "chart/series-4",
+  ];
+  var stylePaths = [
+    "chart/series-1-style", "chart/series-2-style",
+    "chart/series-3-style", "chart/series-4-style",
+  ];
+  var styleDefaults = ["solid", "dashed", "dotted", "solid"];
+  var seriesFallbacks = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+  ];
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  // Per-series dash + curve are structural, so they're baked at build time
+  // (Figma can't bind a dash pattern or curve to a variable).
+  var seriesDash = resolveCompFloat("chart/series-dash", 6);
+  var curveSmooth = resolveCompString("chart/line-curve", "smooth") !== "straight";
+
+  function dashForStyle(style) {
+    if (style === "dashed") return [seriesDash, seriesDash];
+    if (style === "dotted") return [2, Math.max(2, seriesDash)];
+    return null;
+  }
+  // Catmull-Rom -> cubic bezier for smooth curves; plain polyline for straight.
+  function buildLinePath(pts, smooth) {
+    if (!pts.length) return "";
+    if (!smooth || pts.length < 3) {
+      var ds = "";
+      for (var k = 0; k < pts.length; k++) {
+        ds += (k === 0 ? "M " : " L ") + pts[k].x + " " + pts[k].y;
+      }
+      return ds;
+    }
+    var d = "M " + pts[0].x + " " + pts[0].y;
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[i - 1] || pts[i];
+      var p1 = pts[i];
+      var p2 = pts[i + 1];
+      var p3 = pts[i + 2] || p2;
+      var cp1x = p1.x + (p2.x - p0.x) / 6;
+      var cp1y = p1.y + (p2.y - p0.y) / 6;
+      var cp2x = p2.x - (p3.x - p1.x) / 6;
+      var cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += " C " + cp1x + " " + cp1y + " " + cp2x + " " + cp2y + " " + p2.x + " " + p2.y;
+    }
+    return d;
+  }
+
+  var sizes = ["default"];
+  var pointModes = ["off", "on"];
+  var seriesCounts = [1, 2, 3, 4];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var legi = 0; legi < legendModes.length; legi++) {
+    var withLegend = legendModes[legi] === "on";
+    var capLegend = withLegend ? "On" : "Off";
+
+  for (var pi = 0; pi < pointModes.length; pi++) {
+    var pointMode = pointModes[pi];
+    var withPoints = pointMode === "on";
+    var capPoints = withPoints ? "On" : "Off";
+
+    for (var sci = 0; sci < seriesCounts.length; sci++) {
+      var nSeries = seriesCounts[sci];
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
+
+      var plotW = resolveCompFloat("chart/width-" + size, 320);
+      var plotH = resolveCompFloat("chart/height-" + size, 180);
+      var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+      var pad = resolveCompFloat("chart/padding", 16);
+      var axisWidth = resolveCompFloat("chart/axis-width", 1);
+      var gridWidth = resolveCompFloat("chart/grid-width", 1);
+      var lineWidth = resolveCompFloat("chart-line/width", 2);
+      var pointRadius = resolveCompFloat("chart-line/point-radius", 3);
+      var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+      var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+      var legendGap = resolveCompFloat("chart/legend-gap", 16);
+      var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+      var plotX = pad + Y_GUTTER;
+      var plotY = pad;
+      var totalW = pad * 2 + Y_GUTTER + plotW;
+      var totalH = pad * 2 + X_GUTTER + plotH + legendRowH;
+      maxColWidth = Math.max(maxColWidth, totalW);
+      maxRowHeight = Math.max(maxRowHeight, totalH);
+
+      var comp = figma.createComponent();
+      comp.name = "Points=" + capPoints + ", Series=" + nSeries + ", Legend=" + capLegend;
+      comp.layoutMode = "NONE";
+      comp.resize(totalW, totalH);
+      comp.fills = [];
+      comp.clipsContent = false;
+
+      // ── Gridlines + Y tick labels ──
+      for (var gi = 0; gi < Y_TICKS.length; gi++) {
+        var gy = plotY + plotH - (Y_TICKS[gi] / MAX_SCALE) * plotH;
+        var grid = figma.createLine();
+        grid.name = "Gridline";
+        grid.resize(plotW, 0);
+        grid.x = plotX;
+        grid.y = gy;
+        grid.strokeCap = "NONE";
+        grid.strokes = [{ type: "SOLID", color: gridFallback }];
+        grid.strokeWeight = Math.max(1, gridWidth);
+        if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+        bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+        bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+        comp.appendChild(grid);
+
+        var yLabel = figma.createText();
+        yLabel.fontName = font;
+        yLabel.name = "Y Label";
+        yLabel.characters = String(Y_TICKS[gi]);
+        yLabel.fontSize = labelFontSize;
+        yLabel.textAlignHorizontal = "RIGHT";
+        yLabel.resize(Y_GUTTER - 6, labelFontSize + 4);
+        yLabel.x = pad;
+        yLabel.y = gy - (labelFontSize + 4) / 2;
+        yLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(yLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(yLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(yLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(yLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(yLabel);
+      }
+
+      // ── Line series (one stroked vector per series) ──
+      var slot = plotW / SAMPLE.length;
+      for (var li = 0; li < nSeries; li++) {
+        var seriesColor = seriesFallbacks[li % seriesFallbacks.length];
+        var seriesVar = varMap[seriesPaths[li % seriesPaths.length]];
+        var lineCoords = [];
+        for (var di = 0; di < SAMPLE.length; di++) {
+          var px = plotX + di * slot + slot / 2;
+          var py = plotY + plotH - (SAMPLE[di].v[li] / MAX_SCALE) * plotH;
+          lineCoords.push({ x: px, y: py });
+        }
+        var lineVec = figma.createVector();
+        lineVec.name = "Line " + (li + 1);
+        comp.appendChild(lineVec);
+        lineVec.x = 0;
+        lineVec.y = 0;
+        lineVec.vectorPaths = [{ windingRule: "NONE", data: buildLinePath(lineCoords, curveSmooth) }];
+        lineVec.strokeWeight = Math.max(1, lineWidth);
+        lineVec.strokeCap = "ROUND";
+        lineVec.strokeJoin = "ROUND";
+        lineVec.fills = [];
+        lineVec.strokes = [{ type: "SOLID", color: seriesColor }];
+        var dashPat = dashForStyle(resolveCompString(stylePaths[li % stylePaths.length], styleDefaults[li % styleDefaults.length]));
+        if (dashPat) lineVec.dashPattern = dashPat;
+        bindPaintVar(lineVec, "strokes", 0, seriesVar);
+        bindVar(lineVec, "strokeWeight", varMap["chart-line/width"]);
+
+        // ── Point markers ──
+        if (withPoints) {
+          for (var ci2 = 0; ci2 < lineCoords.length; ci2++) {
+            var dot = figma.createEllipse();
+            dot.name = "Point";
+            dot.resize(pointRadius * 2, pointRadius * 2);
+            dot.x = lineCoords[ci2].x - pointRadius;
+            dot.y = lineCoords[ci2].y - pointRadius;
+            dot.fills = [{ type: "SOLID", color: seriesColor }];
+            dot.strokes = [];
+            bindPaintVar(dot, "fills", 0, seriesVar);
+            comp.appendChild(dot);
+          }
+        }
+      }
+
+      // ── X tick labels ──
+      for (var xi = 0; xi < SAMPLE.length; xi++) {
+        var xLabel = figma.createText();
+        xLabel.fontName = font;
+        xLabel.name = "X Label";
+        xLabel.characters = SAMPLE[xi].label;
+        xLabel.fontSize = labelFontSize;
+        xLabel.textAlignHorizontal = "CENTER";
+        xLabel.resize(slot, labelFontSize + 4);
+        xLabel.x = plotX + xi * slot;
+        xLabel.y = plotY + plotH + 4;
+        xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(xLabel);
+      }
+
+      // ── Axis lines ──
+      var yAxis = figma.createRectangle();
+      yAxis.name = "Y Axis";
+      yAxis.resize(Math.max(1, axisWidth), plotH);
+      yAxis.x = plotX;
+      yAxis.y = plotY;
+      yAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      yAxis.strokes = [];
+      bindPaintVar(yAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(yAxis, "width", varMap["chart/axis-width"]);
+      comp.appendChild(yAxis);
+
+      var xAxis = figma.createRectangle();
+      xAxis.name = "X Axis";
+      xAxis.resize(plotW, Math.max(1, axisWidth));
+      xAxis.x = plotX;
+      xAxis.y = plotY + plotH;
+      xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      xAxis.strokes = [];
+      bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(xAxis, "height", varMap["chart/axis-width"]);
+      comp.appendChild(xAxis);
+
+      // ── Legend (swatch + label per series, centered below the plot) ──
+      if (withLegend) {
+        var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+        var legendY = plotY + plotH + X_GUTTER + 8;
+        var legendItems = [];
+        var totalLegendW = 0;
+        for (var lgi = 0; lgi < nSeries; lgi++) {
+          var lbl = "Series " + (lgi + 1);
+          var lblW = Math.ceil(lbl.length * legendFontSize * 0.6);
+          var iw = legendSwatch + 6 + lblW;
+          legendItems.push({ w: iw, label: lbl, labelW: lblW });
+          totalLegendW += iw;
+        }
+        totalLegendW += legendGap * Math.max(0, nSeries - 1);
+        var lx = plotX + (plotW - totalLegendW) / 2;
+        if (lx < pad) lx = pad;
+        for (var lgj = 0; lgj < nSeries; lgj++) {
+          var sw = figma.createRectangle();
+          sw.name = "Legend Swatch";
+          sw.resize(legendSwatch, legendSwatch);
+          sw.x = lx;
+          sw.y = legendY + (legendItemH - legendSwatch) / 2;
+          sw.cornerRadius = 2;
+          sw.fills = [{ type: "SOLID", color: seriesFallbacks[lgj % seriesFallbacks.length] }];
+          sw.strokes = [];
+          bindPaintVar(sw, "fills", 0, varMap[seriesPaths[lgj % seriesPaths.length]]);
+          bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+          bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+          comp.appendChild(sw);
+
+          var lt = figma.createText();
+          lt.fontName = font;
+          lt.name = "Legend Label";
+          lt.characters = legendItems[lgj].label;
+          lt.fontSize = legendFontSize;
+          lt.textAlignHorizontal = "LEFT";
+          lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+          lt.x = lx + legendSwatch + 6;
+          lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+          lt.fills = [{ type: "SOLID", color: labelFallback }];
+          bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+          bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+          bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+          bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+          comp.appendChild(lt);
+
+          lx += legendItems[lgj].w + legendGap;
+        }
+      }
+
+        comp.x = si * (maxColWidth + colGap);
+        comp.y = rowIndex * (maxRowHeight + rowGap);
+        page.appendChild(comp);
+        components.push(comp);
+      }
+      rowIndex++;
+    }
+  }
+  }
+
+  progress("Created " + components.length + " line chart variants");
+  var lineSet = figma.combineAsVariants(components, page);
+  lineSet.name = "Line Chart";
+  return lineSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Area)
+// ---------------------------------------------------------------------------
+// Line chart plus a filled region down to the baseline. The fill and the top
+// stroke both bind to chart/series-1; the fill opacity and stroke weight come
+// from the chart-area/* tokens. Shares the chart/* axis/grid/label scaffold.
+
+function buildChartAreaComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+
+  var SAMPLE = [
+    { label: "Jan", value: 42 },
+    { label: "Feb", value: 58 },
+    { label: "Mar", value: 35 },
+    { label: "Apr", value: 71 },
+    { label: "May", value: 49 },
+    { label: "Jun", value: 63 },
+  ];
+  var Y_TICKS = [0, 20, 40, 60, 80];
+  var MAX_SCALE = 80;
+  var Y_GUTTER = 34;
+  var X_GUTTER = 20;
+
+  var seriesFallback = { r: 0.13, g: 0.55, b: 0.9 };
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var sizes = ["default"];
+  var pointModes = ["off", "on"];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var legi = 0; legi < legendModes.length; legi++) {
+    var withLegend = legendModes[legi] === "on";
+    var capLegend = withLegend ? "On" : "Off";
+
+  for (var pi = 0; pi < pointModes.length; pi++) {
+    var pointMode = pointModes[pi];
+    var withPoints = pointMode === "on";
+    var capPoints = withPoints ? "On" : "Off";
+
+    for (var si = 0; si < sizes.length; si++) {
+      var size = sizes[si];
+      var capSize = size === "default" ? "Default" : size.toUpperCase();
+
+      var plotW = resolveCompFloat("chart/width-" + size, 320);
+      var plotH = resolveCompFloat("chart/height-" + size, 180);
+      var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+      var pad = resolveCompFloat("chart/padding", 16);
+      var axisWidth = resolveCompFloat("chart/axis-width", 1);
+      var gridWidth = resolveCompFloat("chart/grid-width", 1);
+      var lineWidth = resolveCompFloat("chart-area/width", 2);
+      var pointRadius = resolveCompFloat("chart-area/point-radius", 3);
+      var fillOpacity = Math.max(0, Math.min(1, resolveCompFloat("chart-area/fill-opacity", 20) / 100));
+      var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+      var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+      var legendGap = resolveCompFloat("chart/legend-gap", 16);
+      var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+      var plotX = pad + Y_GUTTER;
+      var plotY = pad;
+      var totalW = pad * 2 + Y_GUTTER + plotW;
+      var totalH = pad * 2 + X_GUTTER + plotH + legendRowH;
+      maxColWidth = Math.max(maxColWidth, totalW);
+      maxRowHeight = Math.max(maxRowHeight, totalH);
+
+      var comp = figma.createComponent();
+      comp.name = "Points=" + capPoints + ", Legend=" + capLegend;
+      comp.layoutMode = "NONE";
+      comp.resize(totalW, totalH);
+      comp.fills = [];
+      comp.clipsContent = false;
+
+      // ── Gridlines + Y tick labels ──
+      for (var gi = 0; gi < Y_TICKS.length; gi++) {
+        var gy = plotY + plotH - (Y_TICKS[gi] / MAX_SCALE) * plotH;
+        var grid = figma.createLine();
+        grid.name = "Gridline";
+        grid.resize(plotW, 0);
+        grid.x = plotX;
+        grid.y = gy;
+        grid.strokeCap = "NONE";
+        grid.strokes = [{ type: "SOLID", color: gridFallback }];
+        grid.strokeWeight = Math.max(1, gridWidth);
+        if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+        bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+        bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+        comp.appendChild(grid);
+
+        var yLabel = figma.createText();
+        yLabel.fontName = font;
+        yLabel.name = "Y Label";
+        yLabel.characters = String(Y_TICKS[gi]);
+        yLabel.fontSize = labelFontSize;
+        yLabel.textAlignHorizontal = "RIGHT";
+        yLabel.resize(Y_GUTTER - 6, labelFontSize + 4);
+        yLabel.x = pad;
+        yLabel.y = gy - (labelFontSize + 4) / 2;
+        yLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(yLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(yLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(yLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(yLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(yLabel);
+      }
+
+      // ── Compute series points + baseline ──
+      var slot = plotW / SAMPLE.length;
+      var linePath = "";
+      var pointCoords = [];
+      for (var di = 0; di < SAMPLE.length; di++) {
+        var px = plotX + di * slot + slot / 2;
+        var py = plotY + plotH - (SAMPLE[di].value / MAX_SCALE) * plotH;
+        pointCoords.push({ x: px, y: py });
+        linePath += (di === 0 ? "M " : " L ") + px + " " + py;
+      }
+      var baselineY = plotY + plotH;
+
+      // ── Filled area (closed down to the baseline) ──
+      var areaPath = "";
+      for (var ai = 0; ai < pointCoords.length; ai++) {
+        areaPath += (ai === 0 ? "M " : " L ") + pointCoords[ai].x + " " + pointCoords[ai].y;
+      }
+      areaPath +=
+        " L " + pointCoords[pointCoords.length - 1].x + " " + baselineY +
+        " L " + pointCoords[0].x + " " + baselineY + " Z";
+
+      var areaVec = figma.createVector();
+      areaVec.name = "Area";
+      comp.appendChild(areaVec);
+      areaVec.x = 0;
+      areaVec.y = 0;
+      areaVec.vectorPaths = [{ windingRule: "NONZERO", data: areaPath }];
+      areaVec.strokes = [];
+      areaVec.fills = [{ type: "SOLID", color: seriesFallback, opacity: fillOpacity }];
+      bindPaintVar(areaVec, "fills", 0, varMap["chart/series-1"]);
+
+      // ── Top stroke line ──
+      var lineVec = figma.createVector();
+      lineVec.name = "Line";
+      comp.appendChild(lineVec);
+      lineVec.x = 0;
+      lineVec.y = 0;
+      lineVec.vectorPaths = [{ windingRule: "NONE", data: linePath }];
+      lineVec.strokeWeight = Math.max(1, lineWidth);
+      lineVec.strokeCap = "ROUND";
+      lineVec.strokeJoin = "ROUND";
+      lineVec.fills = [];
+      lineVec.strokes = [{ type: "SOLID", color: seriesFallback }];
+      bindPaintVar(lineVec, "strokes", 0, varMap["chart/series-1"]);
+      bindVar(lineVec, "strokeWeight", varMap["chart-area/width"]);
+
+      // ── Point markers ──
+      if (withPoints) {
+        for (var ci2 = 0; ci2 < pointCoords.length; ci2++) {
+          var dot = figma.createEllipse();
+          dot.name = "Point";
+          dot.resize(pointRadius * 2, pointRadius * 2);
+          dot.x = pointCoords[ci2].x - pointRadius;
+          dot.y = pointCoords[ci2].y - pointRadius;
+          dot.fills = [{ type: "SOLID", color: seriesFallback }];
+          dot.strokes = [];
+          bindPaintVar(dot, "fills", 0, varMap["chart/series-1"]);
+          comp.appendChild(dot);
+        }
+      }
+
+      // ── X tick labels ──
+      for (var xi = 0; xi < SAMPLE.length; xi++) {
+        var xLabel = figma.createText();
+        xLabel.fontName = font;
+        xLabel.name = "X Label";
+        xLabel.characters = SAMPLE[xi].label;
+        xLabel.fontSize = labelFontSize;
+        xLabel.textAlignHorizontal = "CENTER";
+        xLabel.resize(slot, labelFontSize + 4);
+        xLabel.x = plotX + xi * slot;
+        xLabel.y = plotY + plotH + 4;
+        xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(xLabel);
+      }
+
+      // ── Axis lines ──
+      var yAxis = figma.createRectangle();
+      yAxis.name = "Y Axis";
+      yAxis.resize(Math.max(1, axisWidth), plotH);
+      yAxis.x = plotX;
+      yAxis.y = plotY;
+      yAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      yAxis.strokes = [];
+      bindPaintVar(yAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(yAxis, "width", varMap["chart/axis-width"]);
+      comp.appendChild(yAxis);
+
+      var xAxis = figma.createRectangle();
+      xAxis.name = "X Axis";
+      xAxis.resize(plotW, Math.max(1, axisWidth));
+      xAxis.x = plotX;
+      xAxis.y = plotY + plotH;
+      xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      xAxis.strokes = [];
+      bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(xAxis, "height", varMap["chart/axis-width"]);
+      comp.appendChild(xAxis);
+
+      // ── Legend (single series, centered below the plot) ──
+      if (withLegend) {
+        var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+        var legendY = plotY + plotH + X_GUTTER + 8;
+        var legendLbl = "Series 1";
+        var legendLblW = Math.ceil(legendLbl.length * legendFontSize * 0.6);
+        var totalLegendW = legendSwatch + 6 + legendLblW;
+        var lx = plotX + (plotW - totalLegendW) / 2;
+        if (lx < pad) lx = pad;
+
+        var sw = figma.createRectangle();
+        sw.name = "Legend Swatch";
+        sw.resize(legendSwatch, legendSwatch);
+        sw.x = lx;
+        sw.y = legendY + (legendItemH - legendSwatch) / 2;
+        sw.cornerRadius = 2;
+        sw.fills = [{ type: "SOLID", color: seriesFallback }];
+        sw.strokes = [];
+        bindPaintVar(sw, "fills", 0, varMap["chart/series-1"]);
+        bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+        bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+        comp.appendChild(sw);
+
+        var lt = figma.createText();
+        lt.fontName = font;
+        lt.name = "Legend Label";
+        lt.characters = legendLbl;
+        lt.fontSize = legendFontSize;
+        lt.textAlignHorizontal = "LEFT";
+        lt.resize(legendLblW + 4, legendFontSize + 4);
+        lt.x = lx + legendSwatch + 6;
+        lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+        lt.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+        bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+        bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+        bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(lt);
+      }
+
+      comp.x = si * (maxColWidth + colGap);
+      comp.y = rowIndex * (maxRowHeight + rowGap);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+    rowIndex++;
+  }
+  }
+
+  progress("Created " + components.length + " area chart variants");
+  var areaSet = figma.combineAsVariants(components, page);
+  areaSet.name = "Area Chart";
+  return areaSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Stacked Bar)
+// ---------------------------------------------------------------------------
+// Bars split into stacked segments. Each segment binds to a series (palette) or
+// shade (shades) variable; only the top segment gets the bar-radius rounded top.
+// Shares the chart/* axis/grid/label/legend scaffold and the chart-bar-* tokens.
+
+function buildChartStackedBarComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+
+  // Segment values are capped so each stack total stays within the 0-80 axis.
+  var SAMPLE = [
+    { label: "Jan", v: [18, 14, 8, 5] },
+    { label: "Feb", v: [22, 16, 12, 6] },
+    { label: "Mar", v: [14, 10, 7, 4] },
+    { label: "Apr", v: [26, 18, 14, 8] },
+    { label: "May", v: [20, 12, 9, 5] },
+    { label: "Jun", v: [24, 16, 10, 6] },
+  ];
+  var Y_TICKS = [0, 20, 40, 60, 80];
+  var MAX_SCALE = 80;
+  var Y_GUTTER = 34;
+  var X_GUTTER = 20;
+
+  var seriesPaths = ["chart/series-1", "chart/series-2", "chart/series-3", "chart/series-4"];
+  var shadePaths = ["chart/shade-1", "chart/shade-2", "chart/shade-3", "chart/shade-4"];
+  var seriesFallbacks = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+  ];
+  var shadeFallbacks = [
+    { r: 0.05, g: 0.28, b: 0.63 }, { r: 0.13, g: 0.55, b: 0.9 },
+    { r: 0.4, g: 0.7, b: 0.95 }, { r: 0.66, g: 0.83, b: 0.98 },
+  ];
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var sizes = ["default"];
+  var colorModes = ["palette", "shades"];
+  var segmentCounts = [2, 3, 4];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var cmi = 0; cmi < colorModes.length; cmi++) {
+    var colorMode = colorModes[cmi];
+    var capColor = colorMode === "shades" ? "Shades" : "Palette";
+    var colorPaths = colorMode === "shades" ? shadePaths : seriesPaths;
+    var colorFallbacks = colorMode === "shades" ? shadeFallbacks : seriesFallbacks;
+
+    for (var sgi = 0; sgi < segmentCounts.length; sgi++) {
+      var nSeg = segmentCounts[sgi];
+
+      for (var lgm = 0; lgm < legendModes.length; lgm++) {
+        var withLegend = legendModes[lgm] === "on";
+        var capLegend = withLegend ? "On" : "Off";
+
+        for (var si = 0; si < sizes.length; si++) {
+          var size = sizes[si];
+          var capSize = size === "default" ? "Default" : size.toUpperCase();
+
+          var plotW = resolveCompFloat("chart/width-" + size, 320);
+          var plotH = resolveCompFloat("chart/height-" + size, 180);
+          var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+          var pad = resolveCompFloat("chart/padding", 16);
+          var axisWidth = resolveCompFloat("chart/axis-width", 1);
+          var gridWidth = resolveCompFloat("chart/grid-width", 1);
+          var barGap = resolveCompFloat("chart/bar-gap-" + size, 12);
+          var barRadius = resolveCompFloat("chart/bar-radius", 2);
+          var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+          var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+          var legendGap = resolveCompFloat("chart/legend-gap", 16);
+          var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+          var plotX = pad + Y_GUTTER;
+          var plotY = pad;
+          var totalW = pad * 2 + Y_GUTTER + plotW;
+          var totalH = pad * 2 + X_GUTTER + plotH + legendRowH;
+          maxColWidth = Math.max(maxColWidth, totalW);
+          maxRowHeight = Math.max(maxRowHeight, totalH);
+
+          var comp = figma.createComponent();
+          comp.name = "Colors=" + capColor + ", Segments=" + nSeg + ", Legend=" + capLegend;
+          comp.layoutMode = "NONE";
+          comp.resize(totalW, totalH);
+          comp.fills = [];
+          comp.clipsContent = false;
+
+          // ── Gridlines + Y tick labels ──
+          for (var gi = 0; gi < Y_TICKS.length; gi++) {
+            var gy = plotY + plotH - (Y_TICKS[gi] / MAX_SCALE) * plotH;
+            var grid = figma.createLine();
+            grid.name = "Gridline";
+            grid.resize(plotW, 0);
+            grid.x = plotX;
+            grid.y = gy;
+            grid.strokeCap = "NONE";
+            grid.strokes = [{ type: "SOLID", color: gridFallback }];
+            grid.strokeWeight = Math.max(1, gridWidth);
+            if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+            bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+            bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+            comp.appendChild(grid);
+
+            var yLabel = figma.createText();
+            yLabel.fontName = font;
+            yLabel.name = "Y Label";
+            yLabel.characters = String(Y_TICKS[gi]);
+            yLabel.fontSize = labelFontSize;
+            yLabel.textAlignHorizontal = "RIGHT";
+            yLabel.resize(Y_GUTTER - 6, labelFontSize + 4);
+            yLabel.x = pad;
+            yLabel.y = gy - (labelFontSize + 4) / 2;
+            yLabel.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(yLabel, "fills", 0, varMap["chart/label"]);
+            bindVar(yLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+            bindVar(yLabel, "fontFamily", varMap["chart/font-family"]);
+            bindVar(yLabel, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(yLabel);
+          }
+
+          // ── Stacked bars + X tick labels ──
+          var slot = plotW / SAMPLE.length;
+          var barWidth = Math.max(2, slot - barGap);
+          for (var bi = 0; bi < SAMPLE.length; bi++) {
+            var bx = plotX + bi * slot + (slot - barWidth) / 2;
+            var cumY = plotY + plotH;
+            for (var seg = 0; seg < nSeg; seg++) {
+              var segH = Math.max(1, (SAMPLE[bi].v[seg] / MAX_SCALE) * plotH);
+              var rectY = cumY - segH;
+              var segRect = figma.createRectangle();
+              segRect.name = "Segment " + (seg + 1);
+              segRect.resize(barWidth, segH);
+              segRect.x = bx;
+              segRect.y = rectY;
+              segRect.fills = [{ type: "SOLID", color: colorFallbacks[seg % colorFallbacks.length] }];
+              segRect.strokes = [];
+              if (seg === nSeg - 1) {
+                segRect.topLeftRadius = barRadius;
+                segRect.topRightRadius = barRadius;
+                bindVar(segRect, "topLeftRadius", varMap["chart/bar-radius"]);
+                bindVar(segRect, "topRightRadius", varMap["chart/bar-radius"]);
+              }
+              bindPaintVar(segRect, "fills", 0, varMap[colorPaths[seg % colorPaths.length]]);
+              comp.appendChild(segRect);
+              cumY = rectY;
+            }
+
+            var xLabel = figma.createText();
+            xLabel.fontName = font;
+            xLabel.name = "X Label";
+            xLabel.characters = SAMPLE[bi].label;
+            xLabel.fontSize = labelFontSize;
+            xLabel.textAlignHorizontal = "CENTER";
+            xLabel.resize(slot, labelFontSize + 4);
+            xLabel.x = plotX + bi * slot;
+            xLabel.y = plotY + plotH + 4;
+            xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+            bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+            bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+            bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(xLabel);
+          }
+
+          // ── Axis lines ──
+          var yAxis = figma.createRectangle();
+          yAxis.name = "Y Axis";
+          yAxis.resize(Math.max(1, axisWidth), plotH);
+          yAxis.x = plotX;
+          yAxis.y = plotY;
+          yAxis.fills = [{ type: "SOLID", color: axisFallback }];
+          yAxis.strokes = [];
+          bindPaintVar(yAxis, "fills", 0, varMap["chart/axis"]);
+          bindVar(yAxis, "width", varMap["chart/axis-width"]);
+          comp.appendChild(yAxis);
+
+          var xAxis = figma.createRectangle();
+          xAxis.name = "X Axis";
+          xAxis.resize(plotW, Math.max(1, axisWidth));
+          xAxis.x = plotX;
+          xAxis.y = plotY + plotH;
+          xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+          xAxis.strokes = [];
+          bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+          bindVar(xAxis, "height", varMap["chart/axis-width"]);
+          comp.appendChild(xAxis);
+
+          // ── Legend ──
+          if (withLegend) {
+            var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+            var legendY = plotY + plotH + X_GUTTER + 8;
+            var legendItems = [];
+            var totalLegendW = 0;
+            for (var lgi = 0; lgi < nSeg; lgi++) {
+              var lbl = "Series " + (lgi + 1);
+              var lblW = Math.ceil(lbl.length * legendFontSize * 0.6);
+              var iw = legendSwatch + 6 + lblW;
+              legendItems.push({ w: iw, label: lbl, labelW: lblW });
+              totalLegendW += iw;
+            }
+            totalLegendW += legendGap * Math.max(0, nSeg - 1);
+            var lx = plotX + (plotW - totalLegendW) / 2;
+            if (lx < pad) lx = pad;
+            for (var lgj = 0; lgj < nSeg; lgj++) {
+              var sw = figma.createRectangle();
+              sw.name = "Legend Swatch";
+              sw.resize(legendSwatch, legendSwatch);
+              sw.x = lx;
+              sw.y = legendY + (legendItemH - legendSwatch) / 2;
+              sw.cornerRadius = 2;
+              sw.fills = [{ type: "SOLID", color: colorFallbacks[lgj % colorFallbacks.length] }];
+              sw.strokes = [];
+              bindPaintVar(sw, "fills", 0, varMap[colorPaths[lgj % colorPaths.length]]);
+              bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+              bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+              comp.appendChild(sw);
+
+              var lt = figma.createText();
+              lt.fontName = font;
+              lt.name = "Legend Label";
+              lt.characters = legendItems[lgj].label;
+              lt.fontSize = legendFontSize;
+              lt.textAlignHorizontal = "LEFT";
+              lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+              lt.x = lx + legendSwatch + 6;
+              lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+              lt.fills = [{ type: "SOLID", color: labelFallback }];
+              bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+              bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+              bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+              bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+              comp.appendChild(lt);
+
+              lx += legendItems[lgj].w + legendGap;
+            }
+          }
+
+          comp.x = si * (maxColWidth + colGap);
+          comp.y = rowIndex * (maxRowHeight + rowGap);
+          page.appendChild(comp);
+          components.push(comp);
+        }
+        rowIndex++;
+      }
+    }
+  }
+
+  progress("Created " + components.length + " stacked bar chart variants");
+  var stackedSet = figma.combineAsVariants(components, page);
+  stackedSet.name = "Stacked Bar Chart";
+  return stackedSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Combo: bars + line)
+// ---------------------------------------------------------------------------
+// Bars (series-1) plus a smooth line (series-2) on shared axes, with an optional
+// secondary right-hand Y axis for the line. Bar-based subtype: keeps chart-bar-*
+// and adds chart-combo/line-width. Variants: Size x Right Axis x Legend.
+
+function buildChartComboComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+  var curveSmooth = resolveCompString("chart-combo/line-curve", "straight") === "smooth";
+  var comboLineStyle = resolveCompString("chart-combo/line-style", "solid");
+  var comboLineDash = resolveCompFloat("chart-combo/line-dash", 6);
+
+  function comboDashPattern(style, dash) {
+    var d = Math.max(2, dash || 6);
+    if (style === "dashed") return [d, d];
+    if (style === "dotted") return [1, d];
+    return [];
+  }
+
+  var SAMPLE = [
+    { label: "Jan", bar: 42, line: 24 },
+    { label: "Feb", bar: 58, line: 38 },
+    { label: "Mar", bar: 35, line: 52 },
+    { label: "Apr", bar: 71, line: 30 },
+    { label: "May", bar: 49, line: 62 },
+    { label: "Jun", bar: 63, line: 41 },
+  ];
+  var Y_TICKS = [0, 20, 40, 60, 80];
+  var MAX_SCALE = 80;
+  var RIGHT_TICKS = [0, 35, 70];
+  var RIGHT_MAX = 70;
+  var Y_GUTTER = 34;
+  var X_GUTTER = 20;
+
+  var barFallback = { r: 0.13, g: 0.55, b: 0.9 };
+  var lineFallback = { r: 0.0, g: 0.74, b: 0.83 };
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  function buildLinePath(pts, smooth) {
+    if (!pts.length) return "";
+    if (!smooth || pts.length < 3) {
+      var ds = "";
+      for (var k = 0; k < pts.length; k++) {
+        ds += (k === 0 ? "M " : " L ") + pts[k].x + " " + pts[k].y;
+      }
+      return ds;
+    }
+    var d = "M " + pts[0].x + " " + pts[0].y;
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[i - 1] || pts[i];
+      var p1 = pts[i];
+      var p2 = pts[i + 1];
+      var p3 = pts[i + 2] || p2;
+      var cp1x = p1.x + (p2.x - p0.x) / 6;
+      var cp1y = p1.y + (p2.y - p0.y) / 6;
+      var cp2x = p2.x - (p3.x - p1.x) / 6;
+      var cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += " C " + cp1x + " " + cp1y + " " + cp2x + " " + cp2y + " " + p2.x + " " + p2.y;
+    }
+    return d;
+  }
+
+  var sizes = ["default"];
+  var pointModes = ["off", "on"];
+  var rightModes = ["off", "on"];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var pmi = 0; pmi < pointModes.length; pmi++) {
+    var withPoints = pointModes[pmi] === "on";
+    var capPoints = withPoints ? "On" : "Off";
+
+  for (var rai = 0; rai < rightModes.length; rai++) {
+    var withRight = rightModes[rai] === "on";
+    var capRight = withRight ? "On" : "Off";
+
+    for (var lgm = 0; lgm < legendModes.length; lgm++) {
+      var withLegend = legendModes[lgm] === "on";
+      var capLegend = withLegend ? "On" : "Off";
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
+
+        var plotW = resolveCompFloat("chart/width-" + size, 320);
+        var plotH = resolveCompFloat("chart/height-" + size, 180);
+        var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+        var pad = resolveCompFloat("chart/padding", 16);
+        var axisWidth = resolveCompFloat("chart/axis-width", 1);
+        var gridWidth = resolveCompFloat("chart/grid-width", 1);
+        var barGap = resolveCompFloat("chart/bar-gap-" + size, 12);
+        var barRadius = resolveCompFloat("chart/bar-radius", 2);
+        var lineWidth = resolveCompFloat("chart-combo/line-width", 2);
+        var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+        var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+        var legendGap = resolveCompFloat("chart/legend-gap", 16);
+        var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+        var rightGutter = withRight ? Y_GUTTER : X_GUTTER / 2;
+        var plotX = pad + Y_GUTTER;
+        var plotY = pad;
+        var totalW = pad * 2 + Y_GUTTER + plotW + rightGutter;
+        var totalH = pad * 2 + X_GUTTER + plotH + legendRowH;
+        maxColWidth = Math.max(maxColWidth, totalW);
+        maxRowHeight = Math.max(maxRowHeight, totalH);
+
+        var comp = figma.createComponent();
+        comp.name = "Points=" + capPoints + ", RightAxis=" + capRight + ", Legend=" + capLegend;
+        comp.layoutMode = "NONE";
+        comp.resize(totalW, totalH);
+        comp.fills = [];
+        comp.clipsContent = false;
+
+        // ── Gridlines + left Y tick labels ──
+        for (var gi = 0; gi < Y_TICKS.length; gi++) {
+          var gy = plotY + plotH - (Y_TICKS[gi] / MAX_SCALE) * plotH;
+          var grid = figma.createLine();
+          grid.name = "Gridline";
+          grid.resize(plotW, 0);
+          grid.x = plotX;
+          grid.y = gy;
+          grid.strokeCap = "NONE";
+          grid.strokes = [{ type: "SOLID", color: gridFallback }];
+          grid.strokeWeight = Math.max(1, gridWidth);
+          if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+          bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+          bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+          comp.appendChild(grid);
+
+          var yLabel = figma.createText();
+          yLabel.fontName = font;
+          yLabel.name = "Y Label";
+          yLabel.characters = String(Y_TICKS[gi]);
+          yLabel.fontSize = labelFontSize;
+          yLabel.textAlignHorizontal = "RIGHT";
+          yLabel.resize(Y_GUTTER - 6, labelFontSize + 4);
+          yLabel.x = pad;
+          yLabel.y = gy - (labelFontSize + 4) / 2;
+          yLabel.fills = [{ type: "SOLID", color: labelFallback }];
+          bindPaintVar(yLabel, "fills", 0, varMap["chart/label"]);
+          bindVar(yLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+          bindVar(yLabel, "fontFamily", varMap["chart/font-family"]);
+          bindVar(yLabel, "fontStyle", varMap["chart/label-font-weight"]);
+          comp.appendChild(yLabel);
+        }
+
+        // ── Right Y tick labels (line scale) ──
+        if (withRight) {
+          for (var ri = 0; ri < RIGHT_TICKS.length; ri++) {
+            var ry = plotY + plotH - (RIGHT_TICKS[ri] / RIGHT_MAX) * plotH;
+            var rLabel = figma.createText();
+            rLabel.fontName = font;
+            rLabel.name = "Right Y Label";
+            rLabel.characters = String(RIGHT_TICKS[ri]);
+            rLabel.fontSize = labelFontSize;
+            rLabel.textAlignHorizontal = "LEFT";
+            rLabel.resize(Y_GUTTER - 6, labelFontSize + 4);
+            rLabel.x = plotX + plotW + 6;
+            rLabel.y = ry - (labelFontSize + 4) / 2;
+            rLabel.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(rLabel, "fills", 0, varMap["chart/label"]);
+            bindVar(rLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+            bindVar(rLabel, "fontFamily", varMap["chart/font-family"]);
+            bindVar(rLabel, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(rLabel);
+          }
+        }
+
+        // ── Bars + X tick labels ──
+        var slot = plotW / SAMPLE.length;
+        var barWidth = Math.max(2, slot - barGap);
+        for (var bi = 0; bi < SAMPLE.length; bi++) {
+          var bx = plotX + bi * slot + (slot - barWidth) / 2;
+          var barH = Math.max(1, (SAMPLE[bi].bar / MAX_SCALE) * plotH);
+          var bar = figma.createRectangle();
+          bar.name = "Bar";
+          bar.resize(barWidth, barH);
+          bar.x = bx;
+          bar.y = plotY + plotH - barH;
+          bar.topLeftRadius = barRadius;
+          bar.topRightRadius = barRadius;
+          bar.fills = [{ type: "SOLID", color: barFallback }];
+          bar.strokes = [];
+          bindPaintVar(bar, "fills", 0, varMap["chart/series-1"]);
+          bindVar(bar, "topLeftRadius", varMap["chart/bar-radius"]);
+          bindVar(bar, "topRightRadius", varMap["chart/bar-radius"]);
+          comp.appendChild(bar);
+
+          var xLabel = figma.createText();
+          xLabel.fontName = font;
+          xLabel.name = "X Label";
+          xLabel.characters = SAMPLE[bi].label;
+          xLabel.fontSize = labelFontSize;
+          xLabel.textAlignHorizontal = "CENTER";
+          xLabel.resize(slot, labelFontSize + 4);
+          xLabel.x = plotX + bi * slot;
+          xLabel.y = plotY + plotH + 4;
+          xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+          bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+          bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+          bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+          bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+          comp.appendChild(xLabel);
+        }
+
+        // ── Line (series-2), centered over each bar slot ──
+        var linePts = [];
+        var lineScale = withRight ? RIGHT_MAX : MAX_SCALE;
+        for (var li = 0; li < SAMPLE.length; li++) {
+          var lx = plotX + li * slot + slot / 2;
+          var ly = plotY + plotH - (SAMPLE[li].line / lineScale) * plotH;
+          linePts.push({ x: lx, y: ly });
+        }
+        var lineVec = figma.createVector();
+        lineVec.name = "Line";
+        comp.appendChild(lineVec);
+        lineVec.x = 0;
+        lineVec.y = 0;
+        lineVec.vectorPaths = [{ windingRule: "NONE", data: buildLinePath(linePts, curveSmooth) }];
+        lineVec.fills = [];
+        lineVec.strokes = [{ type: "SOLID", color: lineFallback }];
+        lineVec.strokeWeight = Math.max(1, lineWidth);
+        lineVec.strokeCap = comboLineStyle === "dotted" ? "ROUND" : "NONE";
+        lineVec.strokeJoin = "ROUND";
+        var comboDash = comboDashPattern(comboLineStyle, comboLineDash);
+        if (comboDash.length) lineVec.dashPattern = comboDash;
+        bindPaintVar(lineVec, "strokes", 0, varMap["chart/series-2"]);
+        bindVar(lineVec, "strokeWeight", varMap["chart-combo/line-width"]);
+
+        // ── Point markers (Points variant) ──
+        if (withPoints) {
+          var pointR = resolveCompFloat("chart-combo/point-radius", 3);
+          for (var pdi = 0; pdi < linePts.length; pdi++) {
+            var dot = figma.createEllipse();
+            dot.name = "Point";
+            dot.resize(pointR * 2, pointR * 2);
+            dot.x = linePts[pdi].x - pointR;
+            dot.y = linePts[pdi].y - pointR;
+            dot.fills = [{ type: "SOLID", color: lineFallback }];
+            dot.strokes = [];
+            bindPaintVar(dot, "fills", 0, varMap["chart/series-2"]);
+            comp.appendChild(dot);
+          }
+        }
+
+        // ── Axis lines ──
+        var yAxis = figma.createRectangle();
+        yAxis.name = "Y Axis";
+        yAxis.resize(Math.max(1, axisWidth), plotH);
+        yAxis.x = plotX;
+        yAxis.y = plotY;
+        yAxis.fills = [{ type: "SOLID", color: axisFallback }];
+        yAxis.strokes = [];
+        bindPaintVar(yAxis, "fills", 0, varMap["chart/axis"]);
+        bindVar(yAxis, "width", varMap["chart/axis-width"]);
+        comp.appendChild(yAxis);
+
+        if (withRight) {
+          var rAxis = figma.createRectangle();
+          rAxis.name = "Right Y Axis";
+          rAxis.resize(Math.max(1, axisWidth), plotH);
+          rAxis.x = plotX + plotW;
+          rAxis.y = plotY;
+          rAxis.fills = [{ type: "SOLID", color: axisFallback }];
+          rAxis.strokes = [];
+          bindPaintVar(rAxis, "fills", 0, varMap["chart/axis"]);
+          bindVar(rAxis, "width", varMap["chart/axis-width"]);
+          comp.appendChild(rAxis);
+        }
+
+        var xAxis = figma.createRectangle();
+        xAxis.name = "X Axis";
+        xAxis.resize(plotW, Math.max(1, axisWidth));
+        xAxis.x = plotX;
+        xAxis.y = plotY + plotH;
+        xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+        xAxis.strokes = [];
+        bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+        bindVar(xAxis, "height", varMap["chart/axis-width"]);
+        comp.appendChild(xAxis);
+
+        // ── Legend (Bars + Line) ──
+        if (withLegend) {
+          var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+          var legendY = plotY + plotH + X_GUTTER + 8;
+          var comboLegend = [
+            { label: "Bars", path: "chart/series-1", fallback: barFallback },
+            { label: "Line", path: "chart/series-2", fallback: lineFallback },
+          ];
+          var legW = [];
+          var totalLegendW = 0;
+          for (var lgi = 0; lgi < comboLegend.length; lgi++) {
+            var lblW = Math.ceil(comboLegend[lgi].label.length * legendFontSize * 0.6);
+            var iw = legendSwatch + 6 + lblW;
+            legW.push({ w: iw, labelW: lblW });
+            totalLegendW += iw;
+          }
+          totalLegendW += legendGap * (comboLegend.length - 1);
+          var lx2 = plotX + (plotW - totalLegendW) / 2;
+          if (lx2 < pad) lx2 = pad;
+          for (var lgj = 0; lgj < comboLegend.length; lgj++) {
+            var sw = figma.createRectangle();
+            sw.name = "Legend Swatch";
+            sw.resize(legendSwatch, legendSwatch);
+            sw.x = lx2;
+            sw.y = legendY + (legendItemH - legendSwatch) / 2;
+            sw.cornerRadius = 2;
+            sw.fills = [{ type: "SOLID", color: comboLegend[lgj].fallback }];
+            sw.strokes = [];
+            bindPaintVar(sw, "fills", 0, varMap[comboLegend[lgj].path]);
+            bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+            bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+            comp.appendChild(sw);
+
+            var lt = figma.createText();
+            lt.fontName = font;
+            lt.name = "Legend Label";
+            lt.characters = comboLegend[lgj].label;
+            lt.fontSize = legendFontSize;
+            lt.textAlignHorizontal = "LEFT";
+            lt.resize(legW[lgj].labelW + 4, legendFontSize + 4);
+            lt.x = lx2 + legendSwatch + 6;
+            lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+            lt.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+            bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+            bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+            bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(lt);
+
+            lx2 += legW[lgj].w + legendGap;
+          }
+        }
+
+        comp.x = si * (maxColWidth + colGap);
+        comp.y = rowIndex * (maxRowHeight + rowGap);
+        page.appendChild(comp);
+        components.push(comp);
+      }
+      rowIndex++;
+    }
+  }
+  }
+
+  progress("Created " + components.length + " combo chart variants");
+  var comboSet = figma.combineAsVariants(components, page);
+  comboSet.name = "Combo Chart";
+  return comboSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Donut)
+// ---------------------------------------------------------------------------
+// Parts-of-a-whole. Each slice is an Ellipse with arcData (an annular sector);
+// the fill binds to a series (palette) or shade (shades) variable. No axes/grid.
+// inner-radius (hole size) and pad-angle (slice gap) are structural and baked in
+// from the chart-donut/* tokens, like the grid dash pattern elsewhere.
+
+function buildChartDonutComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+
+  // Composition sample (proportions are computed; values need not sum to 100).
+  var SAMPLE = [38, 26, 18, 12, 8, 6];
+
+  var seriesPaths = [
+    "chart/series-1", "chart/series-2", "chart/series-3",
+    "chart/series-4", "chart/series-5", "chart/series-6",
+  ];
+  var seriesFallback = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+    { r: 0.61, g: 0.35, b: 0.86 }, { r: 0.92, g: 0.28, b: 0.6 },
+  ];
+  var shadePaths = [
+    "chart/shade-1", "chart/shade-2", "chart/shade-3",
+    "chart/shade-4", "chart/shade-5", "chart/shade-6",
+  ];
+  var shadeFallback = [
+    { r: 0.05, g: 0.28, b: 0.63 }, { r: 0.08, g: 0.40, b: 0.78 },
+    { r: 0.13, g: 0.55, b: 0.90 }, { r: 0.35, g: 0.67, b: 0.94 },
+    { r: 0.55, g: 0.78, b: 0.97 }, { r: 0.72, g: 0.86, b: 0.99 },
+  ];
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var sizes = ["default"];
+  var colorModes = ["palette", "shades"];
+  var sliceCounts = [2, 3, 4, 5, 6];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var ci = 0; ci < colorModes.length; ci++) {
+    var colorMode = colorModes[ci];
+    var capColor = colorMode === "palette" ? "Palette" : "Shades";
+    var palettePaths = colorMode === "shades" ? shadePaths : seriesPaths;
+    var paletteFallback = colorMode === "shades" ? shadeFallback : seriesFallback;
+
+    for (var sci = 0; sci < sliceCounts.length; sci++) {
+      var nSlices = sliceCounts[sci];
+
+      for (var legi = 0; legi < legendModes.length; legi++) {
+        var withLegend = legendModes[legi] === "on";
+        var capLegend = withLegend ? "On" : "Off";
+
+        for (var si = 0; si < sizes.length; si++) {
+          var size = sizes[si];
+
+          var diameter = resolveCompFloat("chart/height-" + size, 180);
+          var pad = resolveCompFloat("chart/padding", 16);
+          var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+          var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+          var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+          var legendGap = resolveCompFloat("chart/legend-gap", 16);
+          var innerPct = resolveCompFloat("chart-donut/inner-radius", 60);
+          var padDeg = resolveCompFloat("chart-donut/pad-angle", 2);
+          var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+          var innerRatio = Math.max(0, Math.min(0.95, innerPct / 100));
+          var padRad = (Math.max(0, padDeg) * Math.PI) / 180;
+
+          var outerR = diameter / 2;
+          var cx = pad + outerR;
+          var cy = pad + outerR;
+          var totalW = pad * 2 + diameter;
+          var totalH = pad * 2 + diameter + legendRowH;
+          maxColWidth = Math.max(maxColWidth, totalW);
+          maxRowHeight = Math.max(maxRowHeight, totalH);
+
+          var comp = figma.createComponent();
+          comp.name = "Colors=" + capColor + ", Slices=" + nSlices + ", Legend=" + capLegend;
+          comp.layoutMode = "NONE";
+          comp.resize(totalW, totalH);
+          comp.fills = [];
+          comp.clipsContent = false;
+
+          // ── Slices (annular sectors via ellipse arcData) ──
+          var total = 0;
+          for (var ti = 0; ti < nSlices; ti++) total += SAMPLE[ti];
+          var startA = -Math.PI / 2;
+          for (var di = 0; di < nSlices; di++) {
+            var frac = SAMPLE[di] / total;
+            var sweep = frac * Math.PI * 2;
+            var a0 = startA + padRad / 2;
+            var a1 = startA + sweep - padRad / 2;
+            if (a1 <= a0) a1 = a0 + 0.0001;
+
+            var slice = figma.createEllipse();
+            slice.name = "Slice " + (di + 1);
+            slice.resize(diameter, diameter);
+            slice.x = cx - outerR;
+            slice.y = cy - outerR;
+            slice.arcData = { startingAngle: a0, endingAngle: a1, innerRadius: innerRatio };
+            slice.fills = [{ type: "SOLID", color: paletteFallback[di % paletteFallback.length] }];
+            slice.strokes = [];
+            bindPaintVar(slice, "fills", 0, varMap[palettePaths[di % palettePaths.length]]);
+            comp.appendChild(slice);
+
+            startA += sweep;
+          }
+
+          // ── Legend (swatch + label per slice, centered below the donut) ──
+          if (withLegend) {
+            var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+            var legendY = pad + diameter + 8;
+            var legendItems = [];
+            var totalLegendW = 0;
+            for (var lgi = 0; lgi < nSlices; lgi++) {
+              var lbl = "Series " + (lgi + 1);
+              var lblW = Math.ceil(lbl.length * legendFontSize * 0.6);
+              var iw = legendSwatch + 6 + lblW;
+              legendItems.push({ w: iw, label: lbl, labelW: lblW });
+              totalLegendW += iw;
+            }
+            totalLegendW += legendGap * Math.max(0, nSlices - 1);
+            var lx = cx - totalLegendW / 2;
+            if (lx < pad) lx = pad;
+            for (var lgj = 0; lgj < nSlices; lgj++) {
+              var sw = figma.createRectangle();
+              sw.name = "Legend Swatch";
+              sw.resize(legendSwatch, legendSwatch);
+              sw.x = lx;
+              sw.y = legendY + (legendItemH - legendSwatch) / 2;
+              sw.cornerRadius = 2;
+              sw.fills = [{ type: "SOLID", color: paletteFallback[lgj % paletteFallback.length] }];
+              sw.strokes = [];
+              bindPaintVar(sw, "fills", 0, varMap[palettePaths[lgj % palettePaths.length]]);
+              bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+              bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+              comp.appendChild(sw);
+
+              var lt = figma.createText();
+              lt.fontName = font;
+              lt.name = "Legend Label";
+              lt.characters = legendItems[lgj].label;
+              lt.fontSize = legendFontSize;
+              lt.textAlignHorizontal = "LEFT";
+              lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+              lt.x = lx + legendSwatch + 6;
+              lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+              lt.fills = [{ type: "SOLID", color: labelFallback }];
+              bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+              bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+              bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+              bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+              comp.appendChild(lt);
+
+              lx += legendItems[lgj].w + legendGap;
+            }
+          }
+
+          comp.x = si * (maxColWidth + colGap);
+          comp.y = rowIndex * (maxRowHeight + rowGap);
+          page.appendChild(comp);
+          components.push(comp);
+        }
+        rowIndex++;
+      }
+    }
+  }
+
+  progress("Created " + components.length + " donut chart variants");
+  var donutSet = figma.combineAsVariants(components, page);
+  donutSet.name = "Donut Chart";
+  return donutSet;
+}
+
+// ---------------------------------------------------------------------------
 // Pill Component Set
 // ---------------------------------------------------------------------------
 
@@ -13225,6 +15068,11 @@ async function buildSelectComponentSet(varMap, page, font) {
   var sizeHeights = { default: 36, xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
   var gap = 20;
   var colWidth = 220;
+  // Dense vertical packing: each column tracks its own running Y so short
+  // (closed) and tall (open) variants sit flush with a uniform gap instead of
+  // leaving large empty reserved rows. This matches the clean TextInput grid.
+  var selectColYCursors = {};
+  var rowGap = 20;
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
@@ -13352,7 +15200,7 @@ async function buildSelectComponentSet(varMap, page, font) {
             input.counterAxisSizingMode = "AUTO";
             input.primaryAxisAlignItems = variant === "default" ? "MIN" : "SPACE_BETWEEN";
             input.counterAxisAlignItems = "CENTER";
-            input.resize(200, sizeHeights[size] || 36);
+            input.resize(colWidth, sizeHeights[size] || 36);
             input.cornerRadius = 4;
             input.paddingLeft = 10;
             input.paddingRight = 10;
@@ -13615,7 +15463,7 @@ async function buildSelectComponentSet(varMap, page, font) {
               dropdown.strokeWeight = 1;
               dropdown.strokeAlign = "INSIDE";
               dropdown.cornerRadius = 4;
-              dropdown.resize(200, 1);
+              dropdown.resize(colWidth, 1);
               try { dropdown.layoutSizingVertical = "HUG"; } catch (_selectDropdownHugErr) {}
               var dropdownBackgroundVar = selectVarWithFallback(varMap, [
                 "select/" + variant + "-dropdown-background",
@@ -13694,6 +15542,7 @@ async function buildSelectComponentSet(varMap, page, font) {
                 }
                 option.appendChild(optionText);
                 dropdown.appendChild(option);
+                try { option.layoutSizingHorizontal = "FILL"; } catch (_optionFillErr) {}
               }
 
               comp.appendChild(dropdown);
@@ -13721,33 +15570,12 @@ async function buildSelectComponentSet(varMap, page, font) {
             // Pack radius variants horizontally to prevent excessively tall stacks.
             var columnsPerRadius = variants.length * labelModes.length;
             var colIndex = (ri * columnsPerRadius) + (vi * labelModes.length + li);
-            // Use explicit row packing by state + dropdown mode to avoid large
-            // empty vertical blocks when Select has many variant permutations.
-            var defaultOpenRows = 4 * 4;
-            var defaultRows = 1 + defaultOpenRows; // closed + open rows for default state
-            var rowsPerSizeRadius = defaultRows + ((states.length - 1) * 2); // non-default: closed + open
-            // Keep size progression vertical; radius is now represented in columns.
-            var rowIndexBase = si * rowsPerSizeRadius;
-
-            var comboIndex = aoi * hoverOptionIndices.length + hoi;
-            var stateBase = 0;
-            var comboOffset = 0;
-            if (state === "default") {
-              if (dropdownMode === "open") {
-                stateBase = 1;
-                comboOffset = comboIndex;
-              } else {
-                stateBase = 0;
-                comboOffset = 0;
-              }
-            } else {
-              var stateOrder = Math.max(0, sti - 1);
-              stateBase = defaultRows + (stateOrder * 2) + (dropdownMode === "open" ? 1 : 0);
-              comboOffset = 0;
-            }
-            var rowIndex = rowIndexBase + stateBase + comboOffset;
+            // Stack each column densely by the component's actual height plus a
+            // uniform gap, so there are no empty reserved rows / large vertical
+            // separations between variant clusters.
             comp.x = colIndex * (colWidth + gap);
-            comp.y = rowIndex * 190;
+            comp.y = selectColYCursors[colIndex] || 0;
+            selectColYCursors[colIndex] = comp.y + comp.height + rowGap;
             page.appendChild(comp);
             components.push(comp);
             }
@@ -13789,9 +15617,9 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
   var states = ["default", "hover", "focus", "error", "disabled"];
   var dropdownModes = ["closed", "open"];
   var labelModes = ["none", "label", "required"];
-  var pillLabels = ["Option one", "Option two"];
+  var pillLabels = ["Option one"];
   var optionLabels = ["Option one", "Option two", "Option three"];
-  var selectedOptionIndices = { 0: true, 1: true };
+  var selectedOptionIndices = { 0: true };
   var hoverOptionIndex = 2;
   var components = [];
 
@@ -13921,9 +15749,9 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
               input.layoutMode = "HORIZONTAL";
               input.primaryAxisSizingMode = "FIXED";
               input.counterAxisSizingMode = "AUTO";
-              input.primaryAxisAlignItems = isDefaultVariant ? "MIN" : "SPACE_BETWEEN";
+              input.primaryAxisAlignItems = "SPACE_BETWEEN";
               input.counterAxisAlignItems = "CENTER";
-              input.resize(200, sizeHeights[size] || 36);
+              input.resize(colWidth, sizeHeights[size] || 36);
               input.cornerRadius = 4;
               input.paddingLeft = 10;
               input.paddingRight = 10;
@@ -13994,9 +15822,22 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
                 varMap["multiselect/pill-radius-" + effectiveRad] ||
                 varMap["multiselect/pill-radius-default"] ||
                 varMap["multiselect/pill-radius"];
-              var pillBackgroundVar = varMap["multiselect/pill-background"];
-              var pillTextVar = varMap["multiselect/pill-text"];
-              var pillRemoveIconVar = varMap["multiselect/pill-remove-icon"];
+              var basePillBackgroundVar = varMap["multiselect/" + variant + "-pill-background"];
+              var pillBackgroundVar = state === "disabled"
+                ? (varMap["multiselect/pill-background-disabled"] || basePillBackgroundVar)
+                : state === "error"
+                  ? (varMap["multiselect/pill-background-error"] || basePillBackgroundVar)
+                  : basePillBackgroundVar;
+              var pillTextVar = state === "disabled"
+                ? (varMap["multiselect/pill-text-disabled"] || varMap["multiselect/pill-text"])
+                : state === "error"
+                  ? (varMap["multiselect/pill-text-error"] || varMap["multiselect/pill-text"])
+                  : varMap["multiselect/pill-text"];
+              var pillRemoveIconVar = state === "disabled"
+                ? (varMap["multiselect/pill-remove-icon-disabled"] || varMap["multiselect/pill-remove-icon"])
+                : state === "error"
+                  ? (varMap["multiselect/pill-remove-icon-error"] || varMap["multiselect/pill-remove-icon"])
+                  : varMap["multiselect/pill-remove-icon"];
 
               // Selected-value pills shown in the trigger.
               var pillsFrame = figma.createFrame();
@@ -14058,23 +15899,7 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
                 pillsFrame.appendChild(pill);
               }
 
-              var triggerContent = null;
-              if (isDefaultVariant) {
-                triggerContent = figma.createFrame();
-                triggerContent.name = "TriggerContent";
-                triggerContent.layoutMode = "HORIZONTAL";
-                triggerContent.primaryAxisSizingMode = "AUTO";
-                triggerContent.counterAxisSizingMode = "AUTO";
-                triggerContent.primaryAxisAlignItems = "MIN";
-                triggerContent.counterAxisAlignItems = "CENTER";
-                triggerContent.itemSpacing = 8;
-                triggerContent.fills = [];
-                triggerContent.strokes = [];
-                input.appendChild(triggerContent);
-                triggerContent.appendChild(pillsFrame);
-              } else {
-                input.appendChild(pillsFrame);
-              }
+              input.appendChild(pillsFrame);
 
               var chevronSlot = figma.createFrame();
               chevronSlot.name = "ChevronSlot";
@@ -14085,8 +15910,7 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
               chevronSlot.counterAxisAlignItems = "CENTER";
               chevronSlot.fills = [];
               chevronSlot.strokes = [];
-              if (isDefaultVariant && triggerContent) triggerContent.appendChild(chevronSlot);
-              else input.appendChild(chevronSlot);
+              input.appendChild(chevronSlot);
 
               var iconPaintVar =
                 state === "disabled" && varMap["multiselect/icon-disabled"]
@@ -14207,7 +16031,7 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
                 dropdown.strokeWeight = 1;
                 dropdown.strokeAlign = "INSIDE";
                 dropdown.cornerRadius = 4;
-                dropdown.resize(200, 1);
+                dropdown.resize(colWidth, 1);
                 try { dropdown.layoutSizingVertical = "HUG"; } catch (_dropdownHugErr) {}
                 var dropdownBackgroundVar = varMap["multiselect/" + variant + "-dropdown-background"];
                 var dropdownBorderVar = varMap["multiselect/" + variant + "-dropdown-border"];
@@ -14274,6 +16098,7 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
                   }
                   option.appendChild(optionText);
                   dropdown.appendChild(option);
+                  try { option.layoutSizingHorizontal = "FILL"; } catch (_optionFillErr) {}
                 }
 
                 comp.appendChild(dropdown);

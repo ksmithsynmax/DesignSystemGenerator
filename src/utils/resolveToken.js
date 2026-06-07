@@ -110,6 +110,132 @@ export function availableAvatarColors(brands, brandId) {
   });
 }
 
+// Chart series palette: resolved per-brand so we only ever use hues the brand
+// actually defines (no #FF00FF "missing color" fallback). Ordered for visual
+// distinctness; neutral is always available via GLOBAL_PRIMITIVES as a backstop.
+const CHART_SERIES_HUE_ORDER = [
+  "blue", "green", "orange", "purple", "cyan", "red",
+  "yellow", "teal", "pink", "steel", "neutral", "indigo", "violet",
+];
+
+function brandHasColorFamily(brand, name) {
+  const family = brand?.primitives?.[name] || GLOBAL_PRIMITIVES[name];
+  return Array.isArray(family) && family.length > 5;
+}
+
+/** The hue used by this brand's interactive-primary (series-1), so we can avoid reusing it. */
+function brandPrimaryHue(brand) {
+  const mapping = brand?.semanticMap?.["interactive-primary"];
+  return mapping && mapping.color ? mapping.color : null;
+}
+
+/**
+ * Ordered hues for chart series 2..6 — only hues the brand defines, with the
+ * primary hue (used by series-1) removed so no two series share a color.
+ */
+export function chartSeriesHues(brand) {
+  const primary = brandPrimaryHue(brand);
+  const hues = CHART_SERIES_HUE_ORDER.filter(
+    (c) => brandHasColorFamily(brand, c) && c !== primary
+  );
+  return hues.length > 0 ? hues : ["neutral"];
+}
+
+/**
+ * Resolve the default {color,index} mapping for a chart series number.
+ * series-1 is driven by the interactive-primary semantic elsewhere; this covers 2..6.
+ */
+export function chartSeriesMapping(brand, seriesNum) {
+  const hues = chartSeriesHues(brand);
+  const slot = Math.max(0, (Number(seriesNum) || 2) - 2);
+  const hue = hues[slot % hues.length];
+  const wrap = Math.floor(slot / hues.length);
+  const index = Math.min(9, 5 + wrap * 2);
+  return { color: hue, index, opacity: 100 };
+}
+
+/** If the token is a chart-series-N color token, return its brand-aware mapping. */
+export function chartSeriesMappingForToken(brand, tokenName) {
+  const m = /^chart-series-(\d+)$/.exec(tokenName || "");
+  if (!m) return null;
+  return chartSeriesMapping(brand, parseInt(m[1], 10));
+}
+
+// "shades" color mode: a monochromatic ramp built from the series-1 hue. We
+// spread the requested number of steps across a mid-range band of the family
+// so adjacent shades stay distinct and readable (dark -> light).
+const SHADE_INDEX_HI = 8;
+const SHADE_INDEX_LO = 3;
+
+function pickShadeIndices(count) {
+  if (count <= 1) return [5];
+  const step = (SHADE_INDEX_HI - SHADE_INDEX_LO) / (count - 1);
+  return Array.from({ length: count }, (_, i) =>
+    Math.round(SHADE_INDEX_HI - i * step)
+  );
+}
+
+/** The primitive color family (e.g. "blue") that series-1 resolves to for a theme. */
+export function chartSeriesBaseHue(brands, brandId, theme = "light") {
+  const brand = brands?.[brandId];
+  if (!brand) return "neutral";
+  const override =
+    theme === "dark"
+      ? brand.componentOverridesDark?.["chart-series-1"]
+      : brand.componentOverrides?.["chart-series-1"];
+  if (override && override.color && override.color !== "transparent") {
+    return override.color;
+  }
+  const map =
+    theme === "dark"
+      ? mergeDarkSemanticsForBrand(brand)
+      : mergeLightSemanticsForBrand(brand);
+  const m = map["interactive-primary"];
+  if (m && m.color && m.color !== "transparent") return m.color;
+  return "neutral";
+}
+
+/** N hex colors forming a shade ramp from the series-1 hue (dark -> light). */
+export function chartShadeColors(brands, brandId, theme, count) {
+  const brand = brands?.[brandId];
+  const family = chartSeriesBaseHue(brands, brandId, theme);
+  const ramp =
+    brand?.primitives?.[family] || GLOBAL_PRIMITIVES[family] || GLOBAL_PRIMITIVES.neutral;
+  const n = Math.max(1, Number(count) || 1);
+  return pickShadeIndices(n).map((i) => {
+    const idx = Math.max(0, Math.min(ramp.length - 1, i));
+    return ramp[idx] || "#FF00FF";
+  });
+}
+
+// Fixed default shade ramp (dark -> light) for chart-shade-1..6. These are only
+// DEFAULTS — each chart-shade-N token is independently editable.
+const CHART_SHADE_RAMP = pickShadeIndices(6); // [8, 7, 6, 5, 4, 3]
+
+/** The base hue family used for shade-token defaults (brand primary, else a sensible fallback). */
+function chartShadeBaseHue(brand) {
+  const primary = brandPrimaryHue(brand);
+  if (primary && brandHasColorFamily(brand, primary)) return primary;
+  const hues = ["blue", "teal", "indigo", "neutral"].filter((c) =>
+    brandHasColorFamily(brand, c)
+  );
+  return hues[0] || "neutral";
+}
+
+/** If the token is a chart-shade-N color token, return its default {color,index} mapping. */
+export function chartShadeMappingForToken(brand, tokenName) {
+  const m = /^chart-shade-(\d+)$/.exec(tokenName || "");
+  if (!m) return null;
+  const slot = Math.max(0, parseInt(m[1], 10) - 1);
+  const family = chartShadeBaseHue(brand);
+  const ramp = brand?.primitives?.[family] || GLOBAL_PRIMITIVES[family] || GLOBAL_PRIMITIVES.neutral;
+  const index = Math.max(
+    0,
+    Math.min(ramp.length - 1, CHART_SHADE_RAMP[slot % CHART_SHADE_RAMP.length])
+  );
+  return { color: family, index, opacity: 100 };
+}
+
 function mappingToHex(brand, mapping) {
   if (!mapping) return "#FF00FF";
   if (mapping.gradient && String(mapping.gradient).trim()) {
@@ -127,6 +253,10 @@ function mappingToHex(brand, mapping) {
 function resolveComponentTokenDefault(brand, brands, brandId, componentToken, activeTheme) {
   const def = findTokenDef(componentToken);
   if (!def) return "transparent";
+  const seriesMapping = chartSeriesMappingForToken(brand, componentToken);
+  if (seriesMapping) return mappingToHex(brand, seriesMapping);
+  const shadeMapping = chartShadeMappingForToken(brand, componentToken);
+  if (shadeMapping) return mappingToHex(brand, shadeMapping);
   if (def.defaultMapping) return mappingToHex(brand, def.defaultMapping);
   if (def.autoContrastOf) {
     const bgHex = resolveColor(brands, brandId, null, activeTheme, def.autoContrastOf);
