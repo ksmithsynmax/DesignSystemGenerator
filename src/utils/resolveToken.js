@@ -64,6 +64,22 @@ function applyOpacity(hex, opacity) {
   return `#${normalized}${alpha}`;
 }
 
+// A presentation-only summary of a 10-step palette ramp as light / main / dark.
+// The full ramp stays the source of truth; this just picks three representative
+// stops (clamped for shorter ramps) so docs/previews can show a clean trio.
+export const PALETTE_SUMMARY_INDICES = { light: 2, main: 5, dark: 8 };
+
+export function summarizePalette(ramp) {
+  if (!Array.isArray(ramp) || ramp.length === 0) return null;
+  const n = ramp.length;
+  const at = (i) => ramp[Math.max(0, Math.min(n - 1, i))];
+  return {
+    light: { hex: at(PALETTE_SUMMARY_INDICES.light), index: Math.min(PALETTE_SUMMARY_INDICES.light, n - 1) },
+    main: { hex: at(PALETTE_SUMMARY_INDICES.main), index: Math.min(PALETTE_SUMMARY_INDICES.main, n - 1) },
+    dark: { hex: at(PALETTE_SUMMARY_INDICES.dark), index: Math.min(PALETTE_SUMMARY_INDICES.dark, n - 1) },
+  };
+}
+
 // Curated avatar palette colors (only included if they exist in the brand/global palette).
 export const AVATAR_PALETTE_COLORS = [
   "red",

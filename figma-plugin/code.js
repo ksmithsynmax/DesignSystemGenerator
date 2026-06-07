@@ -871,6 +871,28 @@ async function syncTokens(payload) {
     progress("Gradient paint styles skipped: " + String(gradStyleErr));
   }
 
+  // ── Foundations-doc-only path ──
+  // Variables are already synced above (idempotent), so the doc has live
+  // variables to bind to. We skip rebuilding component sets entirely.
+  if (buildOptions.foundationsDocOnly) {
+    var foundationsFont = await loadFont();
+    var foundationsSummary;
+    try {
+      foundationsSummary = await buildFoundationsDocsPage(payload, foundationsFont);
+    } catch (foundationsErr) {
+      progress("Foundations doc failed: " + String(foundationsErr));
+      foundationsSummary = { created: 0, skipped: 1 };
+    }
+    var foundationsMsg =
+      "Foundations doc built. " + totalCreated + " vars synced, " + totalAliases + " aliases.";
+    if (foundationsSummary && Number(foundationsSummary.skipped || 0) > 0) {
+      foundationsMsg += " (doc skipped)";
+    }
+    progress(foundationsMsg);
+    figma.ui.postMessage({ type: "sync-complete", success: true, message: foundationsMsg });
+    return;
+  }
+
   // ── Build visual components ──
   progress("Building visual components...");
   var componentBuild = await buildComponents(componentVarMap, buildOptions.componentsToBuild || null, buildOptions, {
@@ -885,6 +907,15 @@ async function syncTokens(payload) {
   var componentFailures = (componentBuild && componentBuild.failures) ? componentBuild.failures : [];
   var docsSummary = (componentBuild && componentBuild.docs) ? componentBuild.docs : null;
 
+  // Always (re)build the Foundations doc alongside the component docs.
+  var foundationsSummary = null;
+  try {
+    var foundationsFontFull = await loadFont();
+    foundationsSummary = await buildFoundationsDocsPage(payload, foundationsFontFull);
+  } catch (foundationsFullErr) {
+    progress("Foundations doc failed: " + String(foundationsFullErr));
+  }
+
   var doneMsg = "Sync complete! " + totalCreated + " vars, " + totalAliases + " aliases, " + syncModes.length + " modes, components built.";
   if (syncModes.length < modeEntries.length) {
     doneMsg += " (" + (modeEntries.length - syncModes.length) + " modes skipped)";
@@ -898,6 +929,9 @@ async function syncTokens(payload) {
       doneMsg += ", " + String(docsSummary.skipped) + " skipped";
     }
     doneMsg += ".";
+  }
+  if (foundationsSummary && Number(foundationsSummary.created || 0) > 0) {
+    doneMsg += " Foundations doc built.";
   }
   progress(doneMsg);
   figma.ui.postMessage({ type: "sync-complete", success: true, message: doneMsg });
@@ -5418,6 +5452,616 @@ function bindPaintVar(node, paintType, paintIndex, variable) {
   } catch (e) {
     progress("Paint bind failed: " + paintType + "[" + paintIndex + "] — " + String(e));
   }
+}
+
+// ---------------------------------------------------------------------------
+// Foundations documentation (colors, radius, spacing, typography)
+// ---------------------------------------------------------------------------
+
+async function buildFoundationsDocsPage(payload, titleFont) {
+  var bodyFont = { family: titleFont.family, style: "Regular" };
+  try { await figma.loadFontAsync(bodyFont); } catch (_bfErr) { bodyFont = titleFont; }
+  var mediumFont = { family: titleFont.family, style: "Medium" };
+  try { await figma.loadFontAsync(mediumFont); } catch (_mfErr) { mediumFont = bodyFont; }
+
+  var DOC = {
+    pageBg: { r: 0.094, g: 0.098, b: 0.149 },
+    panelBg: { r: 0.141, g: 0.149, b: 0.235 },
+    panelStroke: { r: 0.224, g: 0.235, b: 0.337 },
+    title: { r: 1, g: 1, b: 1 },
+    heading: { r: 0, g: 0.424, b: 0.843 },
+    subtitle: { r: 0.651, g: 0.671, b: 0.718 },
+    body: { r: 0.639, g: 0.671, b: 0.729 },
+    label: { r: 0.651, g: 0.69, b: 0.749 },
+    accent: { r: 0.302, g: 0.671, b: 0.969 }
+  };
+
+  // ── Variable lookups for binding ──
+  var collections = [];
+  try { collections = await figma.variables.getLocalVariableCollectionsAsync(); } catch (_colErr) {}
+  var colNameById = {};
+  for (var ci = 0; ci < collections.length; ci++) {
+    colNameById[collections[ci].id] = String(collections[ci].name || "");
+  }
+  var colorVars = [];
+  try { colorVars = await figma.variables.getLocalVariablesAsync("COLOR"); } catch (_cvErr) {}
+  var floatVars = [];
+  try { floatVars = await figma.variables.getLocalVariablesAsync("FLOAT"); } catch (_fvErr) {}
+  var stringVars = [];
+  try { stringVars = await figma.variables.getLocalVariablesAsync("STRING"); } catch (_svErr) {}
+
+  var semScalarByName = {};
+  for (var fvi = 0; fvi < floatVars.length; fvi++) {
+    if ((colNameById[floatVars[fvi].variableCollectionId] || "") === "Semantic") {
+      semScalarByName[String(floatVars[fvi].name)] = floatVars[fvi];
+    }
+  }
+  for (var svi = 0; svi < stringVars.length; svi++) {
+    if ((colNameById[stringVars[svi].variableCollectionId] || "") === "Semantic") {
+      semScalarByName[String(stringVars[svi].name)] = stringVars[svi];
+    }
+  }
+
+  function cap(s) { return String(s).charAt(0).toUpperCase() + String(s).slice(1); }
+
+  // ── Resolve Semantic surface/text vars so doc chrome matches (and switches with) the rest of the docs ──
+  var docColorVarByName = {};
+  for (var dcv = 0; dcv < colorVars.length; dcv++) {
+    var dcvVar = colorVars[dcv];
+    if (!dcvVar || !dcvVar.name) continue;
+    var dcvName = String(dcvVar.name);
+    var dcvCol = (colNameById[dcvVar.variableCollectionId] || "").toLowerCase();
+    if (!docColorVarByName[dcvName] || dcvCol === "semantic") docColorVarByName[dcvName] = dcvVar;
+  }
+  function normName(v) { return String(v || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
+  function resolveDocVar(cands) {
+    for (var i = 0; i < cands.length; i++) { if (docColorVarByName[cands[i]]) return docColorVarByName[cands[i]]; }
+    var allN = Object.keys(docColorVarByName);
+    for (var a = 0; a < allN.length; a++) {
+      var vn = normName(allN[a]);
+      for (var c = 0; c < cands.length; c++) {
+        var cn = normName(cands[c]); if (!cn) continue;
+        if (vn === cn || vn.endsWith(cn)) return docColorVarByName[allN[a]];
+      }
+    }
+    return null;
+  }
+  var docVars = {
+    pageBg: resolveDocVar(["surface-primary", "surface/primary", "surface primary", "subtle-primary", "subtle/primary", "subtle primary"]),
+    panelBg: resolveDocVar(["surface-secondary", "surface/secondary", "surface secondary", "subtle-secondary", "subtle/secondary", "subtle secondary"]),
+    panelStroke: resolveDocVar(["border-primary", "border/primary", "border primary"]),
+    heading: resolveDocVar(["interactive-primary", "interactive/primary", "interactive primary"]),
+    title: resolveDocVar(["text-default", "text/default", "text default"]),
+    textSubtle: resolveDocVar(["text-subtle", "text/subtle", "text subtle"])
+  };
+
+  // ── Node helpers ──
+  function appendText(parent, font, text, size, color, name) {
+    var t = figma.createText();
+    t.name = name || "Text";
+    t.fontName = font;
+    t.fontSize = size;
+    t.characters = String(text);
+    t.fills = [{ type: "SOLID", color: color }];
+    parent.appendChild(t);
+    return t;
+  }
+  function fixedText(parent, font, text, size, color, name, width) {
+    var t = appendText(parent, font, text, size, color, name);
+    try { t.textAutoResize = "HEIGHT"; } catch (_tarErr) {}
+    try { t.layoutSizingHorizontal = "FIXED"; } catch (_lshErr) {}
+    try { t.resize(width, t.height); } catch (_resErr) {}
+    return t;
+  }
+  function stack(name, dir, spacing, align) {
+    var f = figma.createFrame();
+    f.name = name || "Stack";
+    f.layoutMode = dir;
+    f.primaryAxisSizingMode = "AUTO";
+    f.counterAxisSizingMode = "AUTO";
+    f.counterAxisAlignItems = align || "MIN";
+    f.itemSpacing = spacing;
+    f.clipsContent = false;
+    f.fills = [];
+    return f;
+  }
+  function panel(name, spacing) {
+    var p = stack(name, "VERTICAL", spacing, "MIN");
+    p.paddingLeft = 16; p.paddingRight = 16; p.paddingTop = 16; p.paddingBottom = 16;
+    p.cornerRadius = 6;
+    p.fills = [{ type: "SOLID", color: DOC.panelBg }];
+    p.strokes = [{ type: "SOLID", color: DOC.panelStroke }];
+    p.strokeWeight = 1;
+    return p;
+  }
+  // Match the width of the other component docs (content area = 1192 inside 64 padding).
+  var CONTENT_WIDTH = 1192;
+  function fillWidth(node) {
+    try { node.counterAxisSizingMode = "FIXED"; } catch (_caErr) {}
+    try { node.resize(CONTENT_WIDTH, node.height); } catch (_fwErr) {}
+    return node;
+  }
+  function sectionHeader(parent, title, subtitle) {
+    var h = stack("Section Header", "VERTICAL", 6, "MIN");
+    appendText(h, titleFont, title, 20, DOC.heading, "Section Heading");
+    if (subtitle) appendText(h, bodyFont, subtitle, 13, DOC.subtitle, "Section Subtitle");
+    parent.appendChild(h);
+    return h;
+  }
+  function swatch(size, hex, radius) {
+    var r = figma.createFrame();
+    r.name = "Swatch";
+    r.resize(size, size);
+    r.cornerRadius = radius || 4;
+    r.fills = [{ type: "SOLID", color: hexToFigmaRgb(hex) }];
+    r.strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0.08 }];
+    r.strokeWeight = 1;
+    return r;
+  }
+
+  // ── Find / reset docs page ──
+  var docsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var pg = figma.root.children[pi];
+    if (pg && pg.type === "PAGE" && pg.name === "Component Documentation") { docsPage = pg; break; }
+  }
+  if (!docsPage) {
+    docsPage = figma.createPage();
+    docsPage.name = "Component Documentation";
+  }
+  try { await docsPage.loadAsync(); } catch (_lpErr) {}
+
+  var minY = 0; var haveChildren = false;
+  for (var ei = docsPage.children.length - 1; ei >= 0; ei--) {
+    var existing = docsPage.children[ei];
+    if (existing && String(existing.name || "") === "__AUTO_DOCS__ - Foundations") {
+      try { existing.remove(); } catch (_reErr) {}
+      continue;
+    }
+    if (existing && typeof existing.y === "number") {
+      if (!haveChildren || existing.y < minY) { minY = existing.y; haveChildren = true; }
+    }
+  }
+
+  // ── Build frame ──
+  var doc = figma.createFrame();
+  doc.name = "__AUTO_DOCS__ - Foundations";
+  doc.layoutMode = "VERTICAL";
+  doc.primaryAxisSizingMode = "AUTO";
+  doc.counterAxisSizingMode = "AUTO";
+  doc.counterAxisAlignItems = "MIN";
+  doc.itemSpacing = 36;
+  doc.paddingLeft = 64; doc.paddingRight = 64; doc.paddingTop = 64; doc.paddingBottom = 64;
+  doc.cornerRadius = 0;
+  doc.clipsContent = false;
+  doc.fills = [{ type: "SOLID", color: DOC.pageBg }];
+  docsPage.appendChild(doc);
+  doc.resize(CONTENT_WIDTH + 128, doc.height);
+
+  var intro = stack("Intro", "VERTICAL", 8, "MIN");
+  appendText(intro, titleFont, "Foundations", 28, DOC.title, "Component Title");
+  appendText(intro, bodyFont, "Color, radius, spacing, and typography primitives. All sections switch with the brand/theme appearance, like the rest of the docs.", 14, DOC.subtitle, "Component Subtitle");
+  doc.appendChild(intro);
+
+  // ── Determine the current brand (matches the page's preview brand) ──
+  var buildOpts = payload.__buildOptions || {};
+  var requestedBrand = String(buildOpts.activeBrand || "").toLowerCase();
+  var brandIds = [];
+  var pkeys = Object.keys(payload);
+  for (var bki = 0; bki < pkeys.length; bki++) {
+    var key0 = pkeys[bki];
+    if (key0 === "__buildOptions") continue;
+    if (payload[key0] && payload[key0].primitives) brandIds.push(key0);
+  }
+  var currentBrandId = (requestedBrand && payload[requestedBrand] && payload[requestedBrand].primitives)
+    ? requestedBrand
+    : (brandIds.length ? brandIds[0] : null);
+
+  // ── Multi-mode primitives collection ──
+  // Mirrors how the rest of the docs switch brand/theme: a collection with one
+  // mode per brand+theme, so the appearance dropdown drives the color swatches.
+  var THEMES = ["light", "dark"];
+  var primModeEntries = [];
+  for (var pmi = 0; pmi < brandIds.length; pmi++) {
+    var pmBrand = brandIds[pmi];
+    var pmCap = cap(pmBrand);
+    for (var pti = 0; pti < THEMES.length; pti++) {
+      primModeEntries.push({ key: pmBrand + "-" + THEMES[pti], name: pmCap + cap(THEMES[pti]) });
+    }
+  }
+  var primCol = null;
+  var primModes = { modeMap: {} };
+  var primVarByName = {};   // "family/index" -> COLOR var
+  var hexVarByName = {};    // "family/index" -> STRING var (hex label, switches per brand)
+  var presentVarByFam = {}; // "family" -> BOOLEAN var (true when brand has the family)
+  var famUnion = [];        // ordered families across all brands
+  var famMaxLen = {};       // family -> longest ramp across brands
+  if (brandIds.length) {
+    try {
+      primCol = findOrCreateCollection(collections, "Primitive/Brands");
+      primModes = ensureCollectionModes(primCol, primModeEntries);
+      var existingByName = {};
+      for (var pcv = 0; pcv < colorVars.length; pcv++) {
+        if ((colNameById[colorVars[pcv].variableCollectionId] || "") === "Primitive/Brands") {
+          primVarByName[String(colorVars[pcv].name)] = colorVars[pcv];
+        }
+      }
+      var allLocalVars = [];
+      try { allLocalVars = await figma.variables.getLocalVariablesAsync(); } catch (_alvErr) { allLocalVars = []; }
+      for (var alv = 0; alv < allLocalVars.length; alv++) {
+        if ((colNameById[allLocalVars[alv].variableCollectionId] || "") === "Primitive/Brands") {
+          existingByName[String(allLocalVars[alv].name)] = allLocalVars[alv];
+        }
+      }
+      function ensurePrimVar(name, type) {
+        var v = existingByName[name];
+        if (v && v.resolvedType === type) return v;
+        try { v = figma.variables.createVariable(name, primCol, type); existingByName[name] = v; return v; }
+        catch (_epvErr) { return null; }
+      }
+
+      // Union of families + per-family presence map across brands.
+      var presenceByFam = {}; // family -> { brandId: true }
+      for (var pbi = 0; pbi < brandIds.length; pbi++) {
+        var pbId = brandIds[pbi];
+        var pbPalettes = payload[pbId].primitives || {};
+        var pbFams = Object.keys(pbPalettes);
+        for (var pfi = 0; pfi < pbFams.length; pfi++) {
+          var pbFam = pbFams[pfi];
+          var pbRamp = pbPalettes[pbFam];
+          if (!pbRamp || !pbRamp.length) continue;
+          if (famUnion.indexOf(pbFam) < 0) famUnion.push(pbFam);
+          famMaxLen[pbFam] = Math.max(famMaxLen[pbFam] || 0, pbRamp.length);
+          if (!presenceByFam[pbFam]) presenceByFam[pbFam] = {};
+          presenceByFam[pbFam][pbId] = true;
+        }
+      }
+
+      // Color + hex string vars per family/index, set per mode.
+      for (var pbi2 = 0; pbi2 < brandIds.length; pbi2++) {
+        var pbId2 = brandIds[pbi2];
+        var pbPalettes2 = payload[pbId2].primitives || {};
+        for (var fu = 0; fu < famUnion.length; fu++) {
+          var fuFam = famUnion[fu];
+          var fuRamp = pbPalettes2[fuFam];
+          var fuLen = famMaxLen[fuFam] || 0;
+          for (var fri = 0; fri < fuLen; fri++) {
+            var hex = (fuRamp && fuRamp[fri]) ? fuRamp[fri] : null;
+            var colorV = ensurePrimVar(fuFam + "/" + fri, "COLOR");
+            var hexV = ensurePrimVar(fuFam + "/" + fri + "/hex", "STRING");
+            if (colorV) primVarByName[fuFam + "/" + fri] = colorV;
+            if (hexV) hexVarByName[fuFam + "/" + fri] = hexV;
+            for (var pthi = 0; pthi < THEMES.length; pthi++) {
+              var pmId = primModes.modeMap[pbId2 + "-" + THEMES[pthi]];
+              if (!pmId) continue;
+              if (colorV && hex) { try { colorV.setValueForMode(pmId, hexToFigmaRgb(hex)); } catch (_cvmErr) {} }
+              if (hexV) { try { hexV.setValueForMode(pmId, hex ? String(hex).toUpperCase() : ""); } catch (_hvmErr) {} }
+            }
+          }
+        }
+      }
+
+      // Presence boolean per family, set per mode (true only when that brand has the family).
+      for (var fu2 = 0; fu2 < famUnion.length; fu2++) {
+        var fuFam2 = famUnion[fu2];
+        var presV = ensurePrimVar(fuFam2 + "/present", "BOOLEAN");
+        if (!presV) continue;
+        presentVarByFam[fuFam2] = presV;
+        for (var pbi3 = 0; pbi3 < brandIds.length; pbi3++) {
+          var pbId3 = brandIds[pbi3];
+          var has = !!(presenceByFam[fuFam2] && presenceByFam[fuFam2][pbId3]);
+          for (var pthi2 = 0; pthi2 < THEMES.length; pthi2++) {
+            var pmId2 = primModes.modeMap[pbId3 + "-" + THEMES[pthi2]];
+            if (pmId2) { try { presV.setValueForMode(pmId2, has); } catch (_pvbErr) {} }
+          }
+        }
+      }
+    } catch (_primColErr) { progress("Foundations primitives collection failed: " + String(_primColErr)); }
+  }
+  function primVar(family, index) { return primVarByName[family + "/" + index] || null; }
+  function hexVar(family, index) { return hexVarByName[family + "/" + index] || null; }
+
+  // ── PRIMITIVE COLORS (union of brands; families a brand lacks auto-hide via the present/* boolean) ──
+  if (famUnion.length) {
+    var brandName = cap(currentBrandId || (brandIds.length ? brandIds[0] : ""));
+    sectionHeader(doc, "Primitive Colors", "Base color ramps. Colors and labels switch with the brand/theme appearance, and families a brand doesn't define are hidden automatically.");
+    var fallbackPalettes = (currentBrandId && payload[currentBrandId]) ? payload[currentBrandId].primitives : {};
+    for (var fni = 0; fni < famUnion.length; fni++) {
+      var family = famUnion[fni];
+      var len = famMaxLen[family] || 0;
+      if (!len) continue;
+      // Representative ramp for the static structure (prefer current brand, else first brand that has it).
+      var ramp = fallbackPalettes[family] || null;
+      if (!ramp) {
+        for (var rb = 0; rb < brandIds.length; rb++) {
+          var cand = payload[brandIds[rb]].primitives ? payload[brandIds[rb]].primitives[family] : null;
+          if (cand && cand.length) { ramp = cand; break; }
+        }
+      }
+      var famPanel = panel("Family " + family, 14);
+      appendText(famPanel, mediumFont, cap(family), 14, DOC.title, "Family Name");
+      var rampRow = stack("Ramp", "HORIZONTAL", 10, "MIN");
+      for (var rmi = 0; rmi < len; rmi++) {
+        var rampCell = stack("Ramp Cell", "VERTICAL", 6, "CENTER");
+        var rSw = swatch(44, (ramp && ramp[rmi]) ? ramp[rmi] : "#FFFFFF", 6);
+        rampCell.appendChild(rSw);
+        bindPaintVar(rSw, "fills", 0, primVar(family, rmi));
+        appendText(rampCell, mediumFont, String(rmi), 11, DOC.title, "Ramp Index");
+        var hexLabel = appendText(rampCell, bodyFont, (ramp && ramp[rmi]) ? String(ramp[rmi]).toUpperCase() : "", 10, DOC.body, "Ramp Hex");
+        bindVar(hexLabel, "characters", hexVar(family, rmi));
+        rampRow.appendChild(rampCell);
+      }
+      famPanel.appendChild(rampRow);
+      doc.appendChild(famPanel);
+      fillWidth(famPanel);
+      bindVar(famPanel, "visible", presentVarByFam[family]);
+    }
+  }
+
+  // ── SEMANTIC COLORS (roles bound to Semantic vars; switch per brand/theme) ──
+  var semColorByName = {};
+  for (var scc = 0; scc < colorVars.length; scc++) {
+    if ((colNameById[colorVars[scc].variableCollectionId] || "") === "Semantic") {
+      semColorByName[String(colorVars[scc].name)] = colorVars[scc];
+    }
+  }
+  var semColorSource = (currentBrandId && payload[currentBrandId] && payload[currentBrandId].semantic)
+    ? (payload[currentBrandId].semantic.light || {}) : {};
+  var SEMANTIC_GROUPS = [
+    ["Interactive", ["interactive-primary", "interactive-primary-hover", "interactive-primary-pressed", "interactive-secondary", "interactive-secondary-hover", "interactive-disabled"]],
+    ["Text", ["text-default", "text-subtle", "text-on-interactive", "text-placeholder", "text-disabled", "text-inverse"]],
+    ["Surface", ["surface-primary", "surface-secondary", "subtle-primary", "subtle-secondary", "surface-default", "surface-inverse"]],
+    ["Border", ["border-primary", "border-default", "border-subtle", "border-focus", "border-disabled"]],
+    ["Feedback", ["feedback-error", "feedback-success", "feedback-warning"]]
+  ];
+  var groupedSet = {};
+  for (var sg0 = 0; sg0 < SEMANTIC_GROUPS.length; sg0++) {
+    var sg0Keys = SEMANTIC_GROUPS[sg0][1];
+    for (var sg0k = 0; sg0k < sg0Keys.length; sg0k++) groupedSet[sg0Keys[sg0k]] = true;
+  }
+  var leftoverRoles = [];
+  var allSemRoleKeys = Object.keys(semColorSource);
+  for (var ark = 0; ark < allSemRoleKeys.length; ark++) {
+    var rkRole = allSemRoleKeys[ark];
+    if (rkRole === "transparent") continue;
+    if (!groupedSet[rkRole]) leftoverRoles.push(rkRole);
+  }
+  var groupsToRender = SEMANTIC_GROUPS.slice();
+  if (leftoverRoles.length) groupsToRender.push(["Other", leftoverRoles]);
+
+  function semSwatchCell(role) {
+    var cell = stack("Sem Cell", "VERTICAL", 6, "MIN");
+    var srcHex = (semColorSource[role] && semColorSource[role].value) ? semColorSource[role].value : "#FFFFFF";
+    var sw = figma.createFrame();
+    sw.name = "Swatch";
+    sw.resize(132, 44);
+    sw.cornerRadius = 6;
+    sw.fills = [{ type: "SOLID", color: hexToFigmaRgb(srcHex) }];
+    sw.strokes = [{ type: "SOLID", color: DOC.panelStroke }];
+    sw.strokeWeight = 1;
+    bindPaintVar(sw, "fills", 0, semColorByName[role]);
+    if (semColorByName["border-primary"]) bindPaintVar(sw, "strokes", 0, semColorByName["border-primary"]);
+    cell.appendChild(sw);
+    appendText(cell, mediumFont, role, 11, DOC.title, "Sem Role");
+    return cell;
+  }
+
+  var hasAnySemantic = false;
+  for (var has = 0; has < groupsToRender.length && !hasAnySemantic; has++) {
+    var hasKeys = groupsToRender[has][1];
+    for (var hask = 0; hask < hasKeys.length; hask++) {
+      if (semColorByName[hasKeys[hask]]) { hasAnySemantic = true; break; }
+    }
+  }
+
+  if (hasAnySemantic) {
+    sectionHeader(doc, "Semantic Colors", "Role-based colors mapped from the primitives. These switch with the brand/theme appearance.");
+    for (var sgi = 0; sgi < groupsToRender.length; sgi++) {
+      var groupName = groupsToRender[sgi][0];
+      var groupKeys = groupsToRender[sgi][1];
+      var present = [];
+      for (var gpi = 0; gpi < groupKeys.length; gpi++) {
+        if (semColorByName[groupKeys[gpi]]) present.push(groupKeys[gpi]);
+      }
+      if (!present.length) continue;
+      var gPanel = panel("Semantic " + groupName, 14);
+      appendText(gPanel, mediumFont, groupName, 14, DOC.title, "Group Name");
+      var gRow = stack("Sem Row", "HORIZONTAL", 12, "MIN");
+      gRow.layoutWrap = "WRAP";
+      gRow.counterAxisSpacing = 14;
+      for (var pgi = 0; pgi < present.length; pgi++) {
+        gRow.appendChild(semSwatchCell(present[pgi]));
+      }
+      gPanel.appendChild(gRow);
+      doc.appendChild(gPanel);
+      fillWidth(gPanel);
+      try { gRow.layoutSizingHorizontal = "FILL"; } catch (_grErr) {}
+    }
+  }
+
+  var primaryBrand = currentBrandId;
+  function scalarEntries(field, theme) {
+    if (!primaryBrand) return [];
+    var node = payload[primaryBrand][field];
+    var map = node ? (node[theme] || node.light) : null;
+    if (!map) return [];
+    var out = [];
+    var keys = Object.keys(map);
+    for (var i = 0; i < keys.length; i++) out.push([keys[i], map[keys[i]]]);
+    return out;
+  }
+  function labelOf(key) { var parts = String(key).split("/"); return parts[parts.length - 1]; }
+
+  // ── Per-mode px labels ──
+  // The radius/spacing visuals are bound to Semantic FLOAT vars (they switch per
+  // brand/theme), but the "Npx" text is static. Bind the text to a Semantic STRING
+  // var so the label switches with the same mode as the bar/box it describes.
+  var semColForLabels = null;
+  for (var slc = 0; slc < collections.length; slc++) {
+    if (collections[slc].name === "Semantic") { semColForLabels = collections[slc]; break; }
+  }
+  var semLabelModeId = {};
+  if (semColForLabels) {
+    for (var slb = 0; slb < brandIds.length; slb++) {
+      for (var slt = 0; slt < THEMES.length; slt++) {
+        var wantName = cap(brandIds[slb]) + cap(THEMES[slt]);
+        for (var slm = 0; slm < semColForLabels.modes.length; slm++) {
+          if (semColForLabels.modes[slm].name === wantName) {
+            semLabelModeId[brandIds[slb] + "-" + THEMES[slt]] = semColForLabels.modes[slm].modeId;
+            break;
+          }
+        }
+      }
+    }
+  }
+  function pxLabelVar(payloadField, groupName, key) {
+    if (!semColForLabels) return null;
+    var nm = "Doc Labels/" + groupName + "/" + labelOf(key);
+    var v = semScalarByName[nm];
+    if (!v) {
+      try { v = figma.variables.createVariable(nm, semColForLabels, "STRING"); semScalarByName[nm] = v; }
+      catch (_lvErr) { return null; }
+    }
+    for (var lb = 0; lb < brandIds.length; lb++) {
+      var bId = brandIds[lb];
+      var node = payload[bId] ? payload[bId][payloadField] : null;
+      for (var lt = 0; lt < THEMES.length; lt++) {
+        var mId = semLabelModeId[bId + "-" + THEMES[lt]];
+        if (!mId) continue;
+        var map = node ? (node[THEMES[lt]] || node.light) : null;
+        var def = map ? map[key] : null;
+        var val = def ? (typeof def === "object" ? def.value : def) : null;
+        try { v.setValueForMode(mId, (val != null ? Number(val) + "px" : "")); } catch (_lvmErr) {}
+      }
+    }
+    return v;
+  }
+
+  // ── RADIUS ──
+  var radiusEntries = scalarEntries("semanticRadius", "light");
+  if (radiusEntries.length) {
+    sectionHeader(doc, "Radius", "Corner radius scale. Bound to Semantic radius variables.");
+    var radiusPanel = panel("Radius Panel", 0);
+    var radiusRow = stack("Radius Row", "HORIZONTAL", 18, "MIN");
+    for (var rdi = 0; rdi < radiusEntries.length; rdi++) {
+      var rKey = radiusEntries[rdi][0];
+      var rVal = Number(radiusEntries[rdi][1] && radiusEntries[rdi][1].value) || 0;
+      var rCell = stack("Radius Cell", "VERTICAL", 6, "CENTER");
+      var rBox = figma.createFrame();
+      rBox.name = "Radius Box";
+      rBox.resize(56, 56);
+      rBox.fills = [{ type: "SOLID", color: DOC.panelBg }];
+      rBox.strokes = [{ type: "SOLID", color: DOC.accent }];
+      rBox.strokeWeight = 1.5;
+      bindPaintVar(rBox, "strokes", 0, docVars.heading); // brand primary, switches per brand/theme
+      var visualRadius = Math.min(rVal, 28);
+      rBox.topLeftRadius = visualRadius; rBox.topRightRadius = visualRadius;
+      rBox.bottomLeftRadius = visualRadius; rBox.bottomRightRadius = visualRadius;
+      rCell.appendChild(rBox);
+      var rVar = semScalarByName[rKey];
+      if (rVar) {
+        bindVar(rBox, "topLeftRadius", rVar); bindVar(rBox, "topRightRadius", rVar);
+        bindVar(rBox, "bottomLeftRadius", rVar); bindVar(rBox, "bottomRightRadius", rVar);
+      }
+      appendText(rCell, mediumFont, labelOf(rKey), 11, DOC.title, "Radius Label");
+      var rValText = appendText(rCell, bodyFont, rVal + "px", 10, DOC.body, "Radius Value");
+      bindVar(rValText, "characters", pxLabelVar("semanticRadius", "radius", rKey));
+      radiusRow.appendChild(rCell);
+    }
+    radiusPanel.appendChild(radiusRow);
+    doc.appendChild(radiusPanel);
+    fillWidth(radiusPanel);
+  }
+
+  // ── SPACING ──
+  var spacingEntries = scalarEntries("semanticSpacing", "light");
+  if (spacingEntries.length) {
+    sectionHeader(doc, "Spacing", "Spacing scale. Bars bound to Semantic spacing variables.");
+    var spacingPanel = panel("Spacing Panel", 0);
+    var spacingCol = stack("Spacing Col", "VERTICAL", 10, "MIN");
+    for (var spi = 0; spi < spacingEntries.length; spi++) {
+      var spKey = spacingEntries[spi][0];
+      var spVal = Number(spacingEntries[spi][1] && spacingEntries[spi][1].value) || 0;
+      var spRow = stack("Spacing Row", "HORIZONTAL", 12, "CENTER");
+      fixedText(spRow, mediumFont, labelOf(spKey), 11, DOC.title, "Spacing Label", 48);
+      var spBar = figma.createRectangle();
+      spBar.name = "Spacing Bar";
+      spBar.resize(Math.max(2, spVal), 14);
+      spBar.cornerRadius = 3;
+      spBar.fills = [{ type: "SOLID", color: DOC.accent }];
+      bindPaintVar(spBar, "fills", 0, docVars.heading); // brand primary, switches per brand/theme
+      spRow.appendChild(spBar);
+      var spVar = semScalarByName[spKey];
+      if (spVar) bindVar(spBar, "width", spVar);
+      var spValText = appendText(spRow, bodyFont, spVal + "px", 10, DOC.body, "Spacing Value");
+      bindVar(spValText, "characters", pxLabelVar("semanticSpacing", "spacing", spKey));
+      spacingCol.appendChild(spRow);
+    }
+    spacingPanel.appendChild(spacingCol);
+    doc.appendChild(spacingPanel);
+    fillWidth(spacingPanel);
+  }
+
+  // Typography intentionally omitted from Foundations — the Text and Title
+  // components own the type scale.
+
+  // ── Bind doc chrome (background, panels, text) to Semantic vars so it matches and switches with the rest of the docs ──
+  function fdSolid(paint) { return (paint && paint.type === "SOLID") ? paint.color : null; }
+  function fdApprox(a, b) {
+    if (!a || !b) return false;
+    return Math.abs(a.r - b.r) < 0.02 && Math.abs(a.g - b.g) < 0.02 && Math.abs(a.b - b.b) < 0.02;
+  }
+  try {
+    if (docVars.pageBg) bindPaintVar(doc, "fills", 0, docVars.pageBg);
+    var fdNodes = doc.findAll(function () { return true; });
+    for (var fdi = 0; fdi < fdNodes.length; fdi++) {
+      var nd = fdNodes[fdi];
+      if (!nd) continue;
+      if (nd.type === "TEXT") {
+        var tc = (nd.fills && nd.fills.length) ? fdSolid(nd.fills[0]) : null;
+        if (fdApprox(tc, DOC.heading) && docVars.heading) bindPaintVar(nd, "fills", 0, docVars.heading);
+        else if (fdApprox(tc, DOC.title) && docVars.title) bindPaintVar(nd, "fills", 0, docVars.title);
+        else if ((fdApprox(tc, DOC.subtitle) || fdApprox(tc, DOC.body) || fdApprox(tc, DOC.label)) && docVars.textSubtle) bindPaintVar(nd, "fills", 0, docVars.textSubtle);
+        continue;
+      }
+      if (nd.type === "FRAME") {
+        if (String(nd.name || "") === "Swatch") continue; // swatch fills are brand colors
+        var fc = (nd.fills && nd.fills.length) ? fdSolid(nd.fills[0]) : null;
+        var sc = (nd.strokes && nd.strokes.length) ? fdSolid(nd.strokes[0]) : null;
+        if (fdApprox(fc, DOC.panelBg) && docVars.panelBg) bindPaintVar(nd, "fills", 0, docVars.panelBg);
+        else if (fdApprox(fc, DOC.pageBg) && docVars.pageBg) bindPaintVar(nd, "fills", 0, docVars.pageBg);
+        if (fdApprox(sc, DOC.panelStroke) && docVars.panelStroke) bindPaintVar(nd, "strokes", 0, docVars.panelStroke);
+      }
+    }
+  } catch (_chromeErr) { progress("Foundations chrome bind: " + String(_chromeErr)); }
+
+  // ── Initial appearance = current brand/theme (colors via Primitive/Brands, scalars via Semantic) ──
+  var prefTheme = (buildOpts.previewTheme === "dark") ? "dark" : "light";
+  var prefBrand = currentBrandId || (brandIds.length ? brandIds[0] : "");
+  if (prefBrand && typeof doc.setExplicitVariableModeForCollection === "function") {
+    var prefKey = prefBrand + "-" + prefTheme;
+    if (primCol && primModes.modeMap[prefKey]) {
+      try { doc.setExplicitVariableModeForCollection(primCol.id, primModes.modeMap[prefKey]); } catch (_primModeErr) {}
+    }
+    var semColObj = null;
+    for (var sci = 0; sci < collections.length; sci++) {
+      if (collections[sci].name === "Semantic") { semColObj = collections[sci]; break; }
+    }
+    if (semColObj) {
+      var prefName = cap(prefBrand) + cap(prefTheme);
+      var semModeId = null;
+      for (var smo = 0; smo < semColObj.modes.length; smo++) {
+        if (semColObj.modes[smo].name === prefName) { semModeId = semColObj.modes[smo].modeId; break; }
+      }
+      if (semModeId) { try { doc.setExplicitVariableModeForCollection(semColObj.id, semModeId); } catch (_semModeErr) {} }
+    }
+  }
+
+  // ── Position above existing docs ──
+  doc.x = 0;
+  doc.y = haveChildren ? (minY - doc.height - 120) : 0;
+
+  return { created: 1, skipped: 0 };
 }
 
 // ---------------------------------------------------------------------------

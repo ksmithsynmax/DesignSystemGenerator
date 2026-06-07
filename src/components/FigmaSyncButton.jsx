@@ -199,6 +199,17 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
 
   // Preview what changed vs. the saved baseline WITHOUT advancing the baseline,
   // and download the changelog to send to a dev.
+  // Builds (or rebuilds) just the Foundations doc on the Figma "Component
+  // Documentation" page. Variables are re-synced (idempotent) so the doc has
+  // something to bind to, but component sets are NOT rebuilt.
+  const handleBuildFoundationsDoc = useCallback(() => {
+    const buildOptions = Object.assign({}, syncBuildOptions || {});
+    buildOptions.preserveExistingVariables = preserveExistingVariables;
+    buildOptions.foundationsDocOnly = true;
+    const payload = buildExportPayload(brands, buildOptions);
+    sync(payload);
+  }, [brands, preserveExistingVariables, sync, syncBuildOptions]);
+
   const handleExportChanges = useCallback(() => {
     setLockMessage(null);
     const current = buildExportPayload(brands);
@@ -441,6 +452,23 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
           }}
         >
           Sync to Figma
+        </button>
+        <button
+          onClick={handleBuildFoundationsDoc}
+          disabled={buttonDisabled}
+          title="Build (or rebuild) just the Foundations doc on the Figma Component Documentation page — colors, radius, spacing, and typography. Does not rebuild component sets."
+          style={{
+            background: "transparent",
+            color: buttonDisabled ? "#5C5F66" : "#ADB5BD",
+            border: "1px solid #2c2f36",
+            borderRadius: 6,
+            padding: "8px 12px",
+            fontSize: 12,
+            fontWeight: 500,
+            cursor: buttonDisabled ? "not-allowed" : "pointer",
+          }}
+        >
+          Build Foundations doc
         </button>
         <button
           onClick={handleExportChanges}

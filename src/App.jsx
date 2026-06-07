@@ -174,6 +174,7 @@ import {
   AvatarPropertiesPanel,
 } from "./components/panels/AvatarPreviewPanel";
 import { TablePreviewContent, TablePropertiesPanel } from "./components/panels/TablePreviewPanel";
+import { FoundationsPreviewContent } from "./components/panels/FoundationsPreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { buildComponentDocsExport } from "./utils/buildComponentDocsExport";
@@ -357,6 +358,7 @@ function mergeRecoveredBrands(brandsInput) {
 
 export default function App() {
   const COMPONENT_LABELS = {
+    foundations: "Foundations",
     actionicon: "ActionIcon",
     textinput: "TextInput",
     rangeslider: "RangeSlider",
@@ -2653,6 +2655,9 @@ export default function App() {
             }}
           >
             <div style={{ background: "#25262B", borderRadius: 8, padding: 24 }}>
+              {activeComponent === "foundations" && (
+                <FoundationsPreviewContent brands={brands} activeBrand={activeBrand} />
+              )}
               {activeComponent === "button" && (
                 <ButtonPreviewContent
                   brands={brands}
@@ -3953,6 +3958,7 @@ export default function App() {
             }}
           >
             {[
+              { label: "Foundations", names: ["foundations"] },
               {
                 label: "Components",
                 names: COMPONENT_NAMES.filter(

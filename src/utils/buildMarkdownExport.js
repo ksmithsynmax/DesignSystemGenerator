@@ -1,5 +1,61 @@
 import { COMPONENT_TOKENS, COMPONENT_SIZE_KEYS, TOKEN_TYPES, getComponentDisplayName } from "../data/componentTokens";
 import { gradientCssFromDef, gradientFirstStopHex } from "./resolveGradient";
+import { summarizePalette } from "./resolveToken";
+
+// Reads a scalar semantic map entry that may be a bare value or a { value } object.
+function scalarValue(def) {
+  if (def && typeof def === "object") return def.value;
+  return def;
+}
+
+// Appends a brand's Foundations tables: a light/main/dark color summary plus the
+// radius and spacing scales. All read-only over existing brand data.
+function pushBrandFoundations(lines, brand) {
+  const primitives = brand.primitives || {};
+  if (Object.keys(primitives).length > 0) {
+    lines.push("#### Color Summary (Light / Main / Dark)");
+    lines.push("");
+    lines.push("Representative stops from each ramp above. The full ramp remains the source of truth.");
+    lines.push("");
+    lines.push("| Palette | Light | Main | Dark |");
+    lines.push("|---------|-------|------|------|");
+    Object.entries(primitives).forEach(([name, ramp]) => {
+      const s = summarizePalette(ramp);
+      if (!s) return;
+      lines.push(
+        `| ${name} | \`${s.light.hex}\` (${s.light.index}) | \`${s.main.hex}\` (${s.main.index}) | \`${s.dark.hex}\` (${s.dark.index}) |`
+      );
+    });
+    lines.push("");
+  }
+
+  const radiusMap = brand.semanticRadiusMap || {};
+  if (Object.keys(radiusMap).length > 0) {
+    lines.push("#### Radius");
+    lines.push("");
+    lines.push("| Token | Value |");
+    lines.push("|-------|-------|");
+    Object.entries(radiusMap).forEach(([key, def]) => {
+      lines.push(`| ${key} | ${scalarValue(def)} |`);
+    });
+    lines.push("");
+  }
+
+  const spacingMap = brand.semanticSpacingMap || {};
+  if (Object.keys(spacingMap).length > 0) {
+    lines.push("#### Spacing");
+    lines.push("");
+    lines.push("| Token | Value |");
+    lines.push("|-------|-------|");
+    Object.entries(spacingMap).forEach(([key, def]) => {
+      lines.push(`| ${key} | ${scalarValue(def)} |`);
+    });
+    lines.push("");
+  }
+
+  // Typography intentionally omitted from Foundations — the Text and Title
+  // components own the type scale.
+}
 
 // Figma can't store a gradient in a variable, so a gradient-backed token has two
 // faces in Figma: a solid fallback variable + a paint style. Mirror the plugin's
@@ -107,6 +163,9 @@ export function buildMarkdownExport(brands, globalPrimitives) {
       });
     });
     lines.push("");
+
+    // Foundations: color summary + radius / spacing scales
+    pushBrandFoundations(lines, brand);
 
     // Semantic Tokens (Light)
     lines.push("#### Semantic Tokens (Light)");
