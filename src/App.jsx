@@ -400,7 +400,11 @@ export default function App() {
   const [paletteDeleteTargetName, setPaletteDeleteTargetName] = useState("");
   const [paletteDeleteConfirmInput, setPaletteDeleteConfirmInput] = useState("");
   const importBrandsInputRef = useRef(null);
+  const mergeBrandsInputRef = useRef(null);
   const [localDataMessage, setLocalDataMessage] = useState(null);
+  // Holds a parsed-but-not-yet-applied brand merge so the user can review/select
+  // which incoming brands to add or update before anything touches their state.
+  const [pendingBrandMerge, setPendingBrandMerge] = useState(null);
   if (typeof window !== "undefined") {
     window.__DSG_PREVIEW_THEME = previewTheme;
     window.__DSG_PREVIEW_BRAND = activeBrand;
@@ -1704,6 +1708,10 @@ export default function App() {
       return false;
     }
 
+    if (activeComponent === "textinput" && token.startsWith("textinput-error-")) {
+      return (effectiveComponentState || "default") === "error";
+    }
+
     if (activeComponent === "select" || activeComponent === "multiselect") {
       const cp = activeComponent;
       const targetState = effectiveComponentState || "default";
@@ -1871,6 +1879,9 @@ export default function App() {
   });
 
   const visibleDimensionTokenEntries = Object.entries(dimensionTokens).filter(([token]) => {
+    if (activeComponent === "textinput" && token.startsWith("textinput-error-")) {
+      return (effectiveComponentState || "default") === "error";
+    }
     if (activeComponent === "chip") {
       const variantRadiusMatch = token.match(/^chip-(filled|outline|light)-radius$/);
       if (variantRadiusMatch) return activeChipRadius === "default" && variantRadiusMatch[1] === activeVariant;
@@ -2311,6 +2322,96 @@ export default function App() {
       if (event.target) event.target.value = "";
     };
     reader.readAsText(file);
+  };
+
+  const handleMergeBrandsClick = () => {
+    if (mergeBrandsInputRef.current) mergeBrandsInputRef.current.click();
+  };
+
+  // Step 1 of merge: parse the file and stage a review of what would change. Your
+  // brands aren't touched yet — applyBrandMerge does that once you confirm.
+  const handleMergeBrandsFile = (event) => {
+    const file = event.target?.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const raw = JSON.parse(String(reader.result || "{}"));
+        const incoming = raw && typeof raw === "object" && raw.brands && typeof raw.brands === "object"
+          ? raw.brands
+          : raw;
+        if (!incoming || typeof incoming !== "object" || Array.isArray(incoming)) {
+          throw new Error("Invalid file format");
+        }
+        const incomingIds = Object.keys(incoming);
+        if (incomingIds.length === 0) throw new Error("No brands found in file");
+        // Default selection: every incoming brand. The user can deselect any they
+        // don't want (e.g. a brand of theirs the other designer happened to include).
+        setPendingBrandMerge({
+          incoming,
+          ids: incomingIds,
+          selected: incomingIds.slice(),
+        });
+        setLocalDataMessage(null);
+      } catch (err) {
+        setPendingBrandMerge(null);
+        setLocalDataMessage({
+          type: "error",
+          text: "Merge failed: " + (err && err.message ? err.message : "Invalid JSON file"),
+        });
+      } finally {
+        if (event.target) event.target.value = "";
+      }
+    };
+    reader.onerror = () => {
+      setLocalDataMessage({ type: "error", text: "Merge failed: unable to read file." });
+      if (event.target) event.target.value = "";
+    };
+    reader.readAsText(file);
+  };
+
+  const toggleMergeBrand = (id) => {
+    setPendingBrandMerge((curr) => {
+      if (!curr) return curr;
+      const has = curr.selected.indexOf(id) >= 0;
+      return {
+        ...curr,
+        selected: has ? curr.selected.filter((x) => x !== id) : curr.selected.concat(id),
+      };
+    });
+  };
+
+  const cancelBrandMerge = () => setPendingBrandMerge(null);
+
+  // Step 2 of merge: additively fold the selected incoming brands into your state.
+  // Incoming brands win on a name collision (so you get their latest), and every
+  // brand you don't merge is left exactly as-is.
+  const applyBrandMerge = () => {
+    if (!pendingBrandMerge) return;
+    const selectedIds = pendingBrandMerge.selected;
+    if (selectedIds.length === 0) {
+      setLocalDataMessage({ type: "error", text: "Pick at least one brand to merge." });
+      return;
+    }
+    const added = [];
+    const updated = [];
+    const incomingSelected = {};
+    selectedIds.forEach((id) => {
+      incomingSelected[id] = pendingBrandMerge.incoming[id];
+      (brands[id] ? updated : added).push(id);
+    });
+    const mergedBrands = enforceTextDefaultMappings(
+      mergeRecoveredBrands(Object.assign({}, brands, incomingSelected))
+    );
+    setBrands(mergedBrands);
+    const nameOf = (id) => (mergedBrands[id] && mergedBrands[id].name) || id;
+    const parts = [];
+    if (added.length) parts.push("added " + added.map(nameOf).join(", "));
+    if (updated.length) parts.push("updated " + updated.map(nameOf).join(", "));
+    const kept = Object.keys(brands).filter((id) => selectedIds.indexOf(id) < 0);
+    if (kept.length) parts.push("kept " + kept.map((id) => (brands[id] && brands[id].name) || id).join(", "));
+    setPendingBrandMerge(null);
+    setLocalDataMessage({ type: "success", text: "Merge complete — " + parts.join("; ") + "." });
   };
 
   const handleStorybookExport = async () => {
@@ -4047,7 +4148,9 @@ export default function App() {
                   Local Data
                 </div>
                 <p style={{ fontSize: 13, color: "#868E96", marginBottom: 16, lineHeight: 1.5 }}>
-                  Export/import your brand state backup and restore from JSON to prevent accidental loss.
+                  Export your brands to a JSON file to share, or merge another designer's
+                  brands into your generator. Merging adds new brands and updates matching
+                  ones — your other brands are left untouched.
                 </p>
                 <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
                   <button
@@ -4057,12 +4160,20 @@ export default function App() {
                     Export Brands JSON
                   </button>
                   <button
+                    onClick={handleMergeBrandsClick}
+                    style={{ background: "#25262B", border: "1px solid #373A40", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#C1C2C5", cursor: "pointer", fontFamily: "monospace" }}
+                  >
+                    Merge Brands from File
+                  </button>
+                  <button
                     onClick={handleBrandsImportClick}
                     disabled
+                    title="Disabled: replaces ALL your brands. Use Merge instead."
                     style={{ background: "#1F2125", border: "1px solid #2C2E33", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#5C5F66", cursor: "not-allowed", fontFamily: "monospace", opacity: 0.75 }}
                   >
                     Import Brands JSON
                   </button>
+                  {/* Reset Local Data — temporarily hidden (unused). Handler retained.
                   <button
                     onClick={handleResetLocalData}
                     disabled
@@ -4070,6 +4181,7 @@ export default function App() {
                   >
                     Reset Local Data
                   </button>
+                  */}
                 </div>
                 <input
                   ref={importBrandsInputRef}
@@ -4078,6 +4190,64 @@ export default function App() {
                   onChange={handleBrandsImport}
                   style={{ display: "none" }}
                 />
+                <input
+                  ref={mergeBrandsInputRef}
+                  type="file"
+                  accept=".json,application/json"
+                  onChange={handleMergeBrandsFile}
+                  style={{ display: "none" }}
+                />
+                {pendingBrandMerge && (
+                  <div style={{ marginTop: 12, border: "1px solid #373A40", borderRadius: 6, padding: 12 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: "#C1C2C5", marginBottom: 8 }}>
+                      Review merge — pick which brands to bring in
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, marginBottom: 12 }}>
+                      {pendingBrandMerge.ids.map((id) => {
+                        const isUpdate = Boolean(brands[id]);
+                        const incomingName = (pendingBrandMerge.incoming[id] && pendingBrandMerge.incoming[id].name) || id;
+                        return (
+                          <label key={id} style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: "#C1C2C5" }}>
+                            <input
+                              type="checkbox"
+                              checked={pendingBrandMerge.selected.indexOf(id) >= 0}
+                              onChange={() => toggleMergeBrand(id)}
+                            />
+                            <span>{incomingName}</span>
+                            <span
+                              style={{
+                                fontSize: 10,
+                                fontWeight: 700,
+                                textTransform: "uppercase",
+                                letterSpacing: "0.04em",
+                                color: isUpdate ? "#FAB005" : "#40C057",
+                                border: `1px solid ${isUpdate ? "#FAB005" : "#40C057"}`,
+                                borderRadius: 4,
+                                padding: "1px 6px",
+                              }}
+                            >
+                              {isUpdate ? "Overwrites yours" : "New"}
+                            </span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button
+                        onClick={applyBrandMerge}
+                        style={{ background: "#228BE6", border: "none", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#fff", cursor: "pointer", fontFamily: "monospace" }}
+                      >
+                        Apply Merge
+                      </button>
+                      <button
+                        onClick={cancelBrandMerge}
+                        style={{ background: "#25262B", border: "1px solid #373A40", borderRadius: 6, padding: "8px 16px", fontSize: 13, fontWeight: 600, color: "#C1C2C5", cursor: "pointer", fontFamily: "monospace" }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {localDataMessage && (
                   <p style={{ fontSize: 12, color: localDataMessage.type === "error" ? "#FA5252" : "#40C057", marginTop: 8 }}>
                     {localDataMessage.text}
@@ -4085,6 +4255,7 @@ export default function App() {
                 )}
               </div>
 
+              {/* Markdown Export — temporarily hidden (unused). Handler retained.
               <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
                 <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
                   Markdown Export
@@ -4099,7 +4270,9 @@ export default function App() {
                   Download Markdown
                 </button>
               </div>
+              */}
 
+              {/* Component Docs Export — temporarily hidden (unused). Handler retained.
               <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
                 <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>
                   Component Docs Export
@@ -4114,6 +4287,7 @@ export default function App() {
                   Download Usage Guide
                 </button>
               </div>
+              */}
 
               <div style={{ borderTop: "1px solid #2C2E33", marginTop: 20, paddingTop: 20 }}>
                 <div style={{ fontSize: 11, color: "#5C5F66", marginBottom: 12, textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 600 }}>

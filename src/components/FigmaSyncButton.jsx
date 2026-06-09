@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { buildExportPayload } from "../utils/buildExportPayload";
-import { buildTokenLock } from "../utils/buildTokenLock";
+import { TOKEN_LOCK_VERSION } from "../utils/buildTokenLock";
 import { diffTokenPayloads, formatTokenChangelog, isEmptyDiff } from "../utils/diffTokenPayloads";
 import { useFigmaSync } from "../hooks/useFigmaSync";
 import { CHART_COMPONENTS } from "../data/componentTokens";
@@ -50,6 +50,44 @@ function brandNamesOf(brands) {
     names[id] = (brands[id] && brands[id].name) || id;
   });
   return names;
+}
+
+// Returns a brands object containing only the given ids (preserving config).
+function pickBrands(brands, ids) {
+  const out = {};
+  (ids || []).forEach((id) => {
+    if (brands && brands[id]) out[id] = brands[id];
+  });
+  return out;
+}
+
+// Drops non-selected brand entries from a resolved payload so a scoped diff only
+// compares the brands you actually exported (otherwise unexported brands in the
+// baseline would falsely show up as "removed").
+function scopePayloadBrands(payload, ids) {
+  if (!payload) return payload;
+  const idSet = new Set(ids || []);
+  const out = {};
+  Object.keys(payload).forEach((key) => {
+    const entry = payload[key];
+    const isBrand = entry && typeof entry === "object" && entry.components;
+    if (isBrand && !idSet.has(key)) return;
+    out[key] = entry;
+  });
+  return out;
+}
+
+// Advances the saved baseline for ONLY the exported brands, keeping every other
+// brand's previous baseline entry intact. This mirrors what actually changed in
+// Figma (a scoped sync only touches the brands it pushed).
+function mergeScopedLock(prevLock, scopedBrandsConfig, scopedPayload) {
+  const prevPayload = (prevLock && prevLock.payload) || {};
+  const prevBrands = (prevLock && prevLock.brands) || {};
+  return {
+    version: TOKEN_LOCK_VERSION,
+    brands: Object.assign({}, prevBrands, scopedBrandsConfig),
+    payload: Object.assign({}, prevPayload, scopedPayload),
+  };
 }
 
 function diffSummaryText(diff) {
@@ -135,39 +173,70 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
   const { status, pluginConnected, sync, error, lastSyncMessage } = useFigmaSync();
   const [buildMode, setBuildMode] = useState("all");
   const [selectedComponents, setSelectedComponents] = useState(BUILDABLE_COMPONENTS);
+  // "All brands" is temporarily hidden (see commented radio below); force scoped
+  // selection for now. Flip back to "all" when re-enabling the All brands option.
+  const [brandMode, setBrandMode] = useState("selected");
+  const [selectedBrands, setSelectedBrands] = useState([]);
   const [preserveExistingVariables, setPreserveExistingVariables] = useState(true);
   const [lockMessage, setLockMessage] = useState(null);
   const [changelog, setChangelog] = useState(null);
 
+  const allBrandIds = useMemo(() => Object.keys(brands || {}), [brands]);
+
+  // The brand ids this export will actually touch. "all" follows the live brand
+  // list; "selected" is intersected with it so a removed brand can't linger.
+  const exportBrandIds = useMemo(() => {
+    if (brandMode === "all") return allBrandIds;
+    return selectedBrands.filter((id) => allBrandIds.includes(id));
+  }, [brandMode, selectedBrands, allBrandIds]);
+
   const selectedCount = selectedComponents.length;
-  const selectionError = buildMode === "selected" && selectedCount === 0
-    ? "Pick at least one component for selected build mode."
-    : null;
+  const brandSelectionError =
+    brandMode === "selected" && exportBrandIds.length === 0
+      ? "Pick at least one brand to export."
+      : null;
+  const selectionError =
+    (buildMode === "selected" && selectedCount === 0
+      ? "Pick at least one component for selected build mode."
+      : null) || brandSelectionError;
 
   const componentLabel = useCallback((name) => {
     return COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
   }, []);
 
   const selectedSummary = useMemo(() => {
-    if (buildMode === "all") return "All components";
-    return selectedCount + " selected";
-  }, [buildMode, selectedCount]);
+    const comps = buildMode === "all" ? "All components" : selectedCount + " selected";
+    const brandLabel =
+      brandMode === "all"
+        ? "all brands"
+        : exportBrandIds.length === 1
+        ? (brands[exportBrandIds[0]] && brands[exportBrandIds[0]].name) || exportBrandIds[0]
+        : exportBrandIds.length + " brands";
+    return `${comps} · ${brandLabel}`;
+  }, [buildMode, selectedCount, brandMode, exportBrandIds, brands]);
 
   const handleSync = useCallback(() => {
     if (buildMode === "selected" && selectedComponents.length === 0) return;
+    if (exportBrandIds.length === 0) return;
+    const scopedIds = exportBrandIds.slice();
+    const scopedBrandsConfig = pickBrands(brands, scopedIds);
     var buildOptions = Object.assign({}, syncBuildOptions || {});
     buildOptions.preserveExistingVariables = preserveExistingVariables;
     if (buildMode === "selected") {
       buildOptions.componentsToBuild = selectedComponents.slice();
     }
     if (Object.keys(buildOptions).length === 0) buildOptions = null;
-    const payload = buildExportPayload(brands, buildOptions);
+    // Only the selected brands go into the payload. Combined with the plugin's
+    // additive mode reconciliation, this leaves every other brand in the Figma
+    // file untouched.
+    const payload = buildExportPayload(scopedBrandsConfig, buildOptions);
     sync(payload);
 
-    // Capture what this push changed vs. the previous baseline, then advance the
-    // baseline to now. The changelog is the artifact to hand the dev.
+    // Capture what this push changed vs. the previous baseline (scoped to the
+    // exported brands), then advance the baseline for just those brands. The
+    // changelog is the artifact to hand the dev.
     setLockMessage(null);
-    const nextLock = buildTokenLock(brands);
+    const scopedNewPayload = buildExportPayload(scopedBrandsConfig);
     (async () => {
       let prev = null;
       try {
@@ -175,18 +244,16 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
       } catch {
         // Relay unreachable — we just won't have a diff to show this time.
       }
+      let diff = null;
       if (prev && prev.payload) {
-        const diff = diffTokenPayloads(prev.payload, nextLock.payload);
-        setChangelog({ diff, brandNames: brandNamesOf(brands), date: new Date() });
+        diff = diffTokenPayloads(scopePayloadBrands(prev.payload, scopedIds), scopedNewPayload);
+        setChangelog({ diff, brandNames: brandNamesOf(brands), date: new Date(), scopeIds: scopedIds });
       } else {
         setChangelog(null);
       }
       try {
-        await writeTokenLockToRepo(nextLock);
-        const summary =
-          prev && prev.payload
-            ? diffSummaryText(diffTokenPayloads(prev.payload, nextLock.payload))
-            : "baseline initialized";
+        await writeTokenLockToRepo(mergeScopedLock(prev, scopedBrandsConfig, scopedNewPayload));
+        const summary = diff ? diffSummaryText(diff) : "baseline initialized";
         setLockMessage({ type: "success", text: `Synced · baseline updated (${summary})` });
       } catch {
         setLockMessage({
@@ -195,7 +262,7 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
         });
       }
     })();
-  }, [brands, buildMode, selectedComponents, sync, syncBuildOptions, preserveExistingVariables]);
+  }, [brands, buildMode, selectedComponents, exportBrandIds, sync, syncBuildOptions, preserveExistingVariables]);
 
   // Preview what changed vs. the saved baseline WITHOUT advancing the baseline,
   // and download the changelog to send to a dev.
@@ -203,16 +270,19 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
   // Documentation" page. Variables are re-synced (idempotent) so the doc has
   // something to bind to, but component sets are NOT rebuilt.
   const handleBuildFoundationsDoc = useCallback(() => {
+    if (exportBrandIds.length === 0) return;
     const buildOptions = Object.assign({}, syncBuildOptions || {});
     buildOptions.preserveExistingVariables = preserveExistingVariables;
     buildOptions.foundationsDocOnly = true;
-    const payload = buildExportPayload(brands, buildOptions);
+    const payload = buildExportPayload(pickBrands(brands, exportBrandIds), buildOptions);
     sync(payload);
-  }, [brands, preserveExistingVariables, sync, syncBuildOptions]);
+  }, [brands, exportBrandIds, preserveExistingVariables, sync, syncBuildOptions]);
 
   const handleExportChanges = useCallback(() => {
+    if (exportBrandIds.length === 0) return;
     setLockMessage(null);
-    const current = buildExportPayload(brands);
+    const scopedIds = exportBrandIds.slice();
+    const current = buildExportPayload(pickBrands(brands, scopedIds));
     (async () => {
       let prev;
       try {
@@ -228,8 +298,8 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
         });
         return;
       }
-      const diff = diffTokenPayloads(prev.payload, current);
-      setChangelog({ diff, brandNames: brandNamesOf(brands), date: new Date() });
+      const diff = diffTokenPayloads(scopePayloadBrands(prev.payload, scopedIds), current);
+      setChangelog({ diff, brandNames: brandNamesOf(brands), date: new Date(), scopeIds: scopedIds });
       if (isEmptyDiff(diff)) {
         setLockMessage({ type: "success", text: "No token changes since the last baseline." });
         return;
@@ -238,7 +308,7 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
       triggerDownload("tokens-changelog.txt", text);
       setLockMessage({ type: "success", text: `Downloaded changelog (${diffSummaryText(diff)})` });
     })();
-  }, [brands]);
+  }, [brands, exportBrandIds]);
 
   const handleDownloadReport = useCallback(() => {
     if (!changelog) return;
@@ -248,6 +318,21 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
     });
     triggerDownload("tokens-changelog.txt", text);
   }, [changelog]);
+
+  const toggleBrand = useCallback((id) => {
+    setSelectedBrands((curr) => {
+      if (curr.indexOf(id) >= 0) return curr.filter((item) => item !== id);
+      return curr.concat(id);
+    });
+  }, []);
+
+  const selectAllBrands = useCallback(() => {
+    setSelectedBrands(allBrandIds.slice());
+  }, [allBrandIds]);
+
+  const clearBrands = useCallback(() => {
+    setSelectedBrands([]);
+  }, []);
 
   const toggleComponent = useCallback((name) => {
     setSelectedComponents((curr) => {
@@ -325,6 +410,95 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
         }}
       >
         <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, color: "#868E96", fontWeight: 600, minWidth: 48 }}>Brands</span>
+          {/* Temporarily hidden — re-enable to allow pushing every brand at once.
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#CED4DA" }}>
+            <input
+              type="radio"
+              name="brand-mode"
+              checked={brandMode === "all"}
+              onChange={() => setBrandMode("all")}
+            />
+            All brands
+          </label>
+          */}
+          <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#CED4DA" }}>
+            <input
+              type="radio"
+              name="brand-mode"
+              checked={brandMode === "selected"}
+              onChange={() => setBrandMode("selected")}
+            />
+            Selected brands
+          </label>
+        </div>
+
+        {brandMode === "selected" && (
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={selectAllBrands}
+                style={{
+                  background: "#2f9e44",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "4px 8px",
+                  fontSize: 11,
+                  cursor: "pointer",
+                }}
+              >
+                Select all
+              </button>
+              <button
+                onClick={clearBrands}
+                style={{
+                  background: "#495057",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: 4,
+                  padding: "4px 8px",
+                  fontSize: 11,
+                  cursor: "pointer",
+                }}
+              >
+                Clear
+              </button>
+            </div>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+                gap: 6,
+                border: "1px solid #2c2f36",
+                borderRadius: 6,
+                padding: 8,
+              }}
+            >
+              {allBrandIds.map((id) => (
+                <label
+                  key={id}
+                  style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#CED4DA" }}
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedBrands.indexOf(id) >= 0}
+                    onChange={() => toggleBrand(id)}
+                  />
+                  {(brands[id] && brands[id].name) || id}
+                </label>
+              ))}
+            </div>
+            <span style={{ fontSize: 10, color: "#868E96", lineHeight: 1.4 }}>
+              Only the brands you pick are pushed. Other brands in the Figma file are left untouched.
+            </span>
+          </div>
+        )}
+
+        <div style={{ height: 1, background: "#2c2f36", margin: "2px 0" }} />
+
+        <div style={{ display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap" }}>
+          <span style={{ fontSize: 11, color: "#868E96", fontWeight: 600, minWidth: 48 }}>Build</span>
           <label style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "#CED4DA" }}>
             <input
               type="radio"
@@ -522,7 +696,14 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
         >
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
             <span style={{ fontSize: 12, fontWeight: 600, color: "#CED4DA" }}>
-              Token changes since baseline · {diffSummaryText(changelog.diff)}
+              Token changes since baseline
+              {changelog.scopeIds && changelog.scopeIds.length && changelog.scopeIds.length < allBrandIds.length
+                ? ` · ${changelog.scopeIds
+                    .map((id) => (changelog.brandNames && changelog.brandNames[id]) || id)
+                    .join(", ")}`
+                : ""}
+              {" · "}
+              {diffSummaryText(changelog.diff)}
             </span>
             <button
               onClick={handleDownloadReport}

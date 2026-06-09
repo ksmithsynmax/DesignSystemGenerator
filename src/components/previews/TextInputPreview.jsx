@@ -132,6 +132,15 @@ export default function TextInputPreview({
           backgroundColor: bg,
           color: textColor,
           border: bdValue,
+          borderRadius: `${borderRadius}px`,
+          // Height is intrinsic (line-height + padding); textinput-height acts only as a min-height floor.
+          height: "auto",
+          minHeight: `${height}px`,
+          paddingTop: `${paddingY}px`,
+          paddingBottom: `${paddingY}px`,
+          // Horizontal inset uses the section size when an icon occupies that side, otherwise the padding-x token.
+          paddingLeft: showLeftIcon ? `${sectionSize}px` : `${paddingX}px`,
+          paddingRight: showRightIcon ? `${sectionSize}px` : `${paddingX}px`,
           // Mantine 8: `.input::placeholder { color: var(--input-placeholder-color) }` — set the variable so token edits win over global CSS.
           "--input-placeholder-color": isError ? errorColor : placeholderColor,
           fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,

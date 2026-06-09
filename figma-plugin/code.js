@@ -950,12 +950,31 @@ function findOrCreateCollection(collections, name) {
   return figma.variables.createVariableCollection(name);
 }
 
-function ensureCollectionModes(collection, modeEntries) {
+// Reconciles a collection's modes against the modeEntries in the current payload.
+//
+// `additive` (default true) makes the sync SAFE for multi-designer, per-brand
+// exports: it only ever creates/updates modes that are in the payload and NEVER
+// renames or deletes a mode that isn't. That means exporting just your brand(s)
+// can't clobber a teammate's brand modes that live in the same Figma file.
+//
+// Pass additive === false to opt back into destructive reconciliation (rename
+// unused modes, prune anything not in the payload) — only safe when the payload
+// is the complete, authoritative set of every brand in the file.
+// Every real brand mode name is "<Brand><Theme>" and therefore ends in "Light" or
+// "Dark". Anything else (notably Figma's auto-created "Mode 1" placeholder on a
+// brand-new collection) is NOT a brand mode, so additive sync may safely reuse or
+// remove it. A teammate's brand mode always ends in Light/Dark and is preserved.
+function isBrandModeName(name) {
+  return /(?:Light|Dark)$/.test(String(name || ""));
+}
+
+function ensureCollectionModes(collection, modeEntries, additive) {
+  var isAdditive = additive !== false; // safe-by-default
   var modeMap = {};
   var existingModes = collection.modes.slice();
   var usedModeIds = {};
 
-  // First pass: find exact name matches
+  // First pass: find exact name matches (updates an existing brand's mode in place)
   for (var i = 0; i < modeEntries.length; i++) {
     var entry = modeEntries[i];
     for (var mi = 0; mi < existingModes.length; mi++) {
@@ -967,20 +986,22 @@ function ensureCollectionModes(collection, modeEntries) {
     }
   }
 
-  // Collect unused existing modes (for renaming)
-  var unusedModes = [];
+  // Collect unused existing modes. In additive mode only NON-brand placeholders are
+  // reusable (so a fresh collection's "Mode 1" gets named instead of left empty);
+  // a teammate's real brand mode is never reused. Destructive mode reuses anything.
+  var reusableModes = [];
   for (var ui = 0; ui < existingModes.length; ui++) {
-    if (!usedModeIds[existingModes[ui].modeId]) {
-      unusedModes.push(existingModes[ui]);
-    }
+    if (usedModeIds[existingModes[ui].modeId]) continue;
+    if (isAdditive && isBrandModeName(existingModes[ui].name)) continue;
+    reusableModes.push(existingModes[ui]);
   }
 
-  // Second pass: for unmatched entries, reuse unused modes or create new
+  // Second pass: for unmatched entries, reuse a reusable mode (rename) or create new.
   for (var j = 0; j < modeEntries.length; j++) {
     if (modeMap[modeEntries[j].key]) continue; // already matched
 
-    if (unusedModes.length > 0) {
-      var reuse = unusedModes.shift();
+    if (reusableModes.length > 0) {
+      var reuse = reusableModes.shift();
       collection.renameMode(reuse.modeId, modeEntries[j].name);
       modeMap[modeEntries[j].key] = reuse.modeId;
       usedModeIds[reuse.modeId] = true;
@@ -995,16 +1016,18 @@ function ensureCollectionModes(collection, modeEntries) {
     }
   }
 
-  // Clean up leftover unused modes
+  // Clean up leftover unused modes. Additive mode removes ONLY non-brand
+  // placeholders (e.g. the stray "Mode 1") and preserves every real brand mode it
+  // didn't write — so a teammate's brand survives. Destructive mode removes all.
   var finalModes = collection.modes;
   for (var fi = finalModes.length - 1; fi >= 0; fi--) {
-    if (!usedModeIds[finalModes[fi].modeId]) {
-      try {
-        collection.removeMode(finalModes[fi].modeId);
-        progress("Removed old mode '" + finalModes[fi].name + "' from " + collection.name);
-      } catch (e) {
-        // Can't remove last mode — safe to ignore
-      }
+    if (usedModeIds[finalModes[fi].modeId]) continue;
+    if (isAdditive && isBrandModeName(finalModes[fi].name)) continue;
+    try {
+      collection.removeMode(finalModes[fi].modeId);
+      progress("Removed old mode '" + finalModes[fi].name + "' from " + collection.name);
+    } catch (e) {
+      // Can't remove last mode — safe to ignore
     }
   }
 
@@ -1553,6 +1576,11 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
 
   positionComponentSets(validSets, compSetGap);
 
+  // Docs are built for the component sets in this run. A scoped/partial sync
+  // only rebuilds the docs for what it touched; the targeted-clear below leaves
+  // every other component's doc in place, so nothing disappears. (We avoid a
+  // full cross-page rescan here on purpose — it can throw on unloaded/broken
+  // pages and take the entire docs build down with it.)
   var docsSourceSets = validSets;
   if (!docsSourceSets || docsSourceSets.length === 0) {
     docsSourceSets = collectManagedComponentSetsFromPage(page, null);
@@ -1677,10 +1705,20 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
 }
 
 function collectManagedComponentSetsFromPage(page, requestedSet) {
-  if (!page || !page.children) return [];
+  if (!page) return [];
+  // Under documentAccess: "dynamic-page", reading `.children` on a page that
+  // has not been loaded throws. Guard every access so a single unloaded page
+  // can never abort the whole docs build.
+  var children;
+  try {
+    children = page.children;
+  } catch (childrenErr) {
+    return [];
+  }
+  if (!children) return [];
   var sets = [];
-  for (var i = 0; i < page.children.length; i++) {
-    var node = page.children[i];
+  for (var i = 0; i < children.length; i++) {
+    var node = children[i];
     if (!node) continue;
     if (node.type === "COMPONENT") {
       var cn2 = normalizeComponentKey(node.name);
@@ -1704,7 +1742,7 @@ function collectManagedComponentSetsFromRoot(requestedSet) {
   if (!figma || !figma.root || !figma.root.children) return sets;
   for (var pi = 0; pi < figma.root.children.length; pi++) {
     var page = figma.root.children[pi];
-    if (!page || page.type !== "PAGE" || !page.children) continue;
+    if (!page || page.type !== "PAGE") continue;
     var pageSets = collectManagedComponentSetsFromPage(page, requestedSet);
     for (var si = 0; si < pageSets.length; si++) {
       var set = pageSets[si];
@@ -2581,10 +2619,30 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
   try { await docsPage.loadAsync(); } catch (e) {}
 
+  // Only clear the docs for the component sets we're about to (re)build this run.
+  // A scoped/partial sync (e.g. one brand, or a subset of components) must NOT
+  // wipe docs for components it didn't build — otherwise every other component's
+  // doc disappears. The Foundations doc is managed separately and left untouched.
+  var docNamesToReplace = {};
+  for (var rci = 0; rci < componentSets.length; rci++) {
+    var rcSet = componentSets[rci];
+    if (!rcSet) continue;
+    var rcName = rcSet.name || ("Component " + (rci + 1));
+    docNamesToReplace["__AUTO_DOCS__ - " + rcName] = true;
+  }
   try {
     for (var ci = docsPage.children.length - 1; ci >= 0; ci--) {
       var childName = String(docsPage.children[ci].name || "");
-      if (childName.indexOf("__AUTO_DOCS__") === 0) docsPage.children[ci].remove();
+      if (childName.indexOf("__AUTO_DOCS__") !== 0) continue;
+      var shouldReplace = false;
+      for (var rk in docNamesToReplace) {
+        // Match the exact doc name or its " (fallback)" variant.
+        if (childName === rk || childName.indexOf(rk + " ") === 0) {
+          shouldReplace = true;
+          break;
+        }
+      }
+      if (shouldReplace) docsPage.children[ci].remove();
     }
   } catch (clearErr) {
     progress("Docs cleanup warning: " + String(clearErr));
