@@ -1,5 +1,6 @@
 import { useState } from "react";
 import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
+import CheckIcon from "@untitledui-icons/react/line/CheckIcon";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
@@ -85,6 +86,7 @@ export default function MultiSelectPreview({
   const optionSelectedBackground = resolveMultiSelectColorToken([`${prefix}-option-selected-background`]);
   const optionHoverBackground = resolveMultiSelectColorToken([`${prefix}-option-hover-background`]);
   const optionHoverText = resolveMultiSelectColorToken([`${prefix}-option-hover-text`]);
+  const optionCheckColor = resolveMultiSelectColorToken(["multiselect-option-check-icon"]);
   const pillBackground = resolveMultiSelectColorToken(
     isDisabled
       ? ["multiselect-pill-background-disabled", `${prefix}-pill-background`]
@@ -136,6 +138,7 @@ export default function MultiSelectPreview({
   const bdValue = `${borderWidth}px solid ${borderColor}`;
   const dropdownBdValue = `${borderWidth}px solid ${dropdownBorderColor}`;
   const chevronIconSize = Math.max(8, Math.round((Number(sectionSize) || 20) * 0.7));
+  const optionCheckSize = Math.max(12, Math.round(Number(fontSize) || 16));
   const fontWeightValue = fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400;
   const labelFontWeightValue = labelFontWeight === "Semi Bold" ? 600 : labelFontWeight === "Bold" ? 700 : 400;
   const errorFontWeightValue = errorFontWeight === "Semi Bold" ? 600 : errorFontWeight === "Bold" ? 700 : 400;
@@ -239,7 +242,27 @@ export default function MultiSelectPreview({
               cursor: canInteract ? "pointer" : "default",
             }}
           >
-            {opt}
+            <span
+              aria-hidden
+              style={{
+                width: optionCheckSize,
+                marginRight: 8,
+                flexShrink: 0,
+                display: "inline-flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {isSelected ? (
+                <CheckIcon
+                  width={optionCheckSize}
+                  height={optionCheckSize}
+                  strokeWidth={Number.isFinite(Number(iconStrokeWidth)) ? Number(iconStrokeWidth) : 2}
+                  style={{ color: optionCheckColor, display: "block" }}
+                />
+              ) : null}
+            </span>
+            <span style={{ flex: 1, minWidth: 0 }}>{opt}</span>
           </div>
         );
       })}

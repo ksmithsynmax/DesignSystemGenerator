@@ -2366,10 +2366,6 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         cell.itemSpacing = 6;
         cell.clipsContent = false;
         cell.fills = [];
-        if (fillCellWidth) {
-          try { cell.layoutAlign = "STRETCH"; } catch (_cellStretchErr) {}
-          try { cell.layoutSizingHorizontal = "FILL"; } catch (_cellFillErr) {}
-        }
         if (label != null && String(label).trim().length > 0) {
           var labelNode = appendText(cell, bodyFont, String(label), 10, DOC_COLORS.cellLabel, "Cell Label");
           try { labelNode.textAlignHorizontal = "CENTER"; } catch (_labelAlignErr) {}
@@ -2398,11 +2394,22 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             instWrap.clipsContent = false;
             instWrap.appendChild(inst);
             cell.appendChild(instWrap);
+            if (fillCellWidth) {
+              try { instWrap.layoutSizingHorizontal = "FILL"; } catch (_instWrapFillErr) {}
+              try { inst.layoutSizingHorizontal = "FILL"; } catch (_instFillErr) {}
+            }
           } else {
             cell.appendChild(inst);
+            if (fillCellWidth) {
+              try { inst.layoutSizingHorizontal = "FILL"; } catch (_instFillErr2) {}
+            }
           }
         }
         rowFrame.appendChild(cell);
+        // Must be set after the cell is parented into the auto-layout row.
+        if (fillCellWidth) {
+          try { cell.layoutSizingHorizontal = "FILL"; } catch (_cellFillErr) {}
+        }
       }
     }
 
@@ -2425,7 +2432,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         var slice = labels.slice(start, start + itemsPerRow);
         var rowChunk = figma.createFrame();
         rowChunk.layoutMode = "HORIZONTAL";
-        rowChunk.primaryAxisSizingMode = "AUTO";
+        // When cells fill, the row must own a fixed width so FILL children can
+        // distribute it; a hug (AUTO) row would collapse FILL children to zero.
+        rowChunk.primaryAxisSizingMode = fillCellWidth ? "FIXED" : "AUTO";
         rowChunk.counterAxisSizingMode = "AUTO";
         rowChunk.counterAxisAlignItems = "MIN";
         rowChunk.primaryAxisAlignItems = "CENTER";
@@ -2435,11 +2444,14 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         rowChunk.fills = [];
         appendLabelCells(rowChunk, slice);
         rowWrap.appendChild(rowChunk);
+        if (fillCellWidth) {
+          try { rowChunk.layoutSizingHorizontal = "FILL"; } catch (_rowChunkFillErr) {}
+        }
       }
     } else {
       var row = figma.createFrame();
       row.layoutMode = "HORIZONTAL";
-      row.primaryAxisSizingMode = "AUTO";
+      row.primaryAxisSizingMode = fillCellWidth ? "FIXED" : "AUTO";
       row.counterAxisSizingMode = "AUTO";
       row.counterAxisAlignItems = "MIN";
       row.primaryAxisAlignItems = "CENTER";
@@ -2449,6 +2461,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       row.fills = [];
       appendLabelCells(row, labels);
       rowWrap.appendChild(row);
+      if (fillCellWidth) {
+        try { row.layoutSizingHorizontal = "FILL"; } catch (_rowFillErr) {}
+      }
     }
 
     target.appendChild(rowWrap);
@@ -3674,13 +3689,29 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           templateRightOn != null
         ) {
           clearChildren(templateBothSlot);
+          // TextInput keeps its fixed 220px columns; just split sizes across two
+          // rows (XS/SM/MD, then LG/XL) so the wider XL has room without wrapping.
+          var templateBothIconsConfig =
+            lowerSetName === "textinput"
+              ? { itemsPerRow: 3 }
+              : undefined;
           addInstancesRow(templateBothSlot, "Both Icons", templateIconLabels, function (sizeName) {
             var patch = {};
             if (templateSizeKey) patch.Size = sizeName;
             patch[templateLeftIconKey] = templateLeftOn;
             patch[templateRightIconKey] = templateRightOn;
-            return makeTemplateInstance(patch);
-          }, false);
+            var bothTplInst = makeTemplateInstance(patch);
+            // XL with both icons needs more than the default 220px column or its
+            // placeholder wraps; widen just this instance.
+            if (
+              bothTplInst &&
+              lowerSetName === "textinput" &&
+              String(sizeName).toLowerCase() === "xl"
+            ) {
+              try { bothTplInst.resize(320, bothTplInst.height); } catch (_xlTplWidthErr) {}
+            }
+            return bothTplInst;
+          }, false, templateBothIconsConfig);
         } else if (!hasIcons) {
           removeSectionOrSlot(templatedDoc, slug, "icons-both");
         }
@@ -4840,13 +4871,29 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         rightOn != null
       ) {
         clearChildren(bothSlot);
+        // TextInput keeps its fixed 220px columns; we just split the sizes across
+        // two rows (XS/SM/MD, then LG/XL) so the wider XL has room without wrapping.
+        var bothIconsConfig =
+          lowerSetName === "textinput"
+            ? { itemsPerRow: 3 }
+            : undefined;
         addInstancesRow(bothSlot, "Both Icons", iconLabels, function (sizeName) {
           var patch = {};
           if (sizeKey) patch.Size = sizeName;
           patch[leftIconKey] = leftOn;
           patch[rightIconKey] = rightOn;
-          return makeInstance(patch);
-        }, false);
+          var bothInst = makeInstance(patch);
+          // XL with both icons needs more than the default 220px column or its
+          // placeholder wraps; widen just this instance.
+          if (
+            bothInst &&
+            lowerSetName === "textinput" &&
+            String(sizeName).toLowerCase() === "xl"
+          ) {
+            try { bothInst.resize(320, bothInst.height); } catch (_xlWidthErr) {}
+          }
+          return bothInst;
+        }, false, bothIconsConfig);
       }
 
       if (statesSlot && states.length > 0) {
@@ -15492,13 +15539,15 @@ async function buildTextInputComponentSet(varMap, page, font) {
             input.paddingRight = 10;
             input.paddingTop = 0;
             input.paddingBottom = 0;
-            input.minHeight = sizeHeights[size];
+            // Height is fully padding-driven: the Input frame hugs vertically
+            // (counterAxisSizingMode = "AUTO"), so its height = line-height +
+            // top/bottom padding. We intentionally do NOT bind textinput/height
+            // to minHeight here — there is no fixed-height floor. (Figma requires
+            // null, not 0, to clear a min-height.)
+            input.minHeight = null;
             input.itemSpacing = 8;
 
-            // Bind input dimensions (size-based)
-            if (varMap["textinput/height-" + size]) {
-              bindVar(input, "minHeight", varMap["textinput/height-" + size]);
-            }
+            // Bind input padding (size-based). padding-y drives the vertical size.
             if (varMap["textinput/padding-x-" + size]) {
               bindVar(input, "paddingLeft", varMap["textinput/padding-x-" + size]);
               bindVar(input, "paddingRight", varMap["textinput/padding-x-" + size]);
@@ -15630,6 +15679,11 @@ async function buildTextInputComponentSet(varMap, page, font) {
             }
 
             comp.appendChild(input);
+            // Now that Input is inside the auto-layout component, force its
+            // resizing explicitly: fill width, HUG height. Hug makes the height
+            // come purely from line-height + padding-y (no fixed height).
+            try { input.layoutSizingHorizontal = "FILL"; } catch (_inputFillErr) {}
+            try { input.layoutSizingVertical = "HUG"; } catch (_inputHugErr) {}
 
             // --- Error text (only for error state) ---
             if (state === "error") {
@@ -16354,6 +16408,13 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
     progress("[MultiSelect] Warning: no icon component found, using vector fallback");
   }
 
+  var checkIconComp = await findCheckIconComponent();
+  if (checkIconComp) {
+    progress("[MultiSelect] Selected-option check icon source: " + checkIconComp.name);
+  } else {
+    progress("[MultiSelect] No check icon component found; selected options use a vector checkmark fallback.");
+  }
+
   var sizeHeights = { default: 36, xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
   var gap = 20;
   var colWidth = 220;
@@ -16711,18 +16772,10 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
                 chevronSlot.appendChild(chevronVector);
               }
 
-              if (isDefaultVariant) {
-                var trailingSpacer = figma.createFrame();
-                trailingSpacer.name = "Spacer";
-                trailingSpacer.layoutMode = "NONE";
-                trailingSpacer.primaryAxisSizingMode = "FIXED";
-                trailingSpacer.counterAxisSizingMode = "AUTO";
-                trailingSpacer.fills = [];
-                trailingSpacer.strokes = [];
-                trailingSpacer.resize(1, 1);
-                try { trailingSpacer.layoutGrow = 1; } catch (_spacerGrowErr) {}
-                input.appendChild(trailingSpacer);
-              }
+              // No trailing spacer: the input uses SPACE_BETWEEN, so with exactly
+              // two children (pills + chevron slot) the chevron is pinned to the
+              // right edge. A third spacer child would push the chevron to the
+              // middle, which was the default-variant bug.
 
               if (state === "focus") {
                 input.effects = [{
@@ -16821,6 +16874,92 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
                     if (lineHeightVar) bindVar(optionText, "lineHeight", lineHeightVar);
                   }
                   option.appendChild(optionText);
+
+                  var checkColorVar =
+                    varMap["multiselect/option-check-icon"] ||
+                    varMap["multiselect/text"] ||
+                    null;
+                  var checkSizeVar =
+                    varMap["multiselect/icon-size-" + size] ||
+                    varMap["multiselect/icon-size-default"] ||
+                    varMap["multiselect/icon-size"];
+                  var checkStrokeVar =
+                    varMap["multiselect/icon-stroke-width-" + size] ||
+                    varMap["multiselect/icon-stroke-width-default"] ||
+                    varMap["multiselect/icon-stroke-width"];
+
+                  // Always reserve a fixed leading icon column so selected and
+                  // unselected labels line up. The checkmark only fills it when selected.
+                  var checkSlot = figma.createFrame();
+                  checkSlot.name = "CheckSlot";
+                  checkSlot.layoutMode = "HORIZONTAL";
+                  checkSlot.primaryAxisSizingMode = "FIXED";
+                  checkSlot.counterAxisSizingMode = "FIXED";
+                  checkSlot.primaryAxisAlignItems = "CENTER";
+                  checkSlot.counterAxisAlignItems = "CENTER";
+                  checkSlot.clipsContent = false;
+                  checkSlot.fills = [];
+                  checkSlot.strokes = [];
+                  checkSlot.resize(16, 16);
+                  if (checkSizeVar) {
+                    bindVar(checkSlot, "width", checkSizeVar);
+                    bindVar(checkSlot, "height", checkSizeVar);
+                  }
+                  option.insertChild(0, checkSlot);
+                  try { checkSlot.layoutGrow = 0; } catch (_chkSlotGrowErr) {}
+                  try { checkSlot.layoutAlign = "CENTER"; } catch (_chkSlotAlignErr) {}
+
+                  if (isSelectedOption) {
+                    if (checkIconComp) {
+                      var checkInstance = checkIconComp.createInstance();
+                      checkInstance.name = "Check";
+                      try { checkInstance.resizeWithoutConstraints(16, 16); } catch (_chkResizeErr) {}
+                      checkSlot.appendChild(checkInstance);
+                      try { checkInstance.layoutSizingHorizontal = "FILL"; } catch (_chkFillHErr) {}
+                      try { checkInstance.layoutSizingVertical = "FILL"; } catch (_chkFillVErr) {}
+                      if (typeof comp.addComponentProperty === "function") {
+                        var checkSwapRefs = createMultiSelectSwapRefs(checkIconComp);
+                        var checkSwapProp = null;
+                        for (var csri = 0; csri < checkSwapRefs.length; csri++) {
+                          try {
+                            checkSwapProp = comp.addComponentProperty("Check", "INSTANCE_SWAP", checkSwapRefs[csri]);
+                            break;
+                          } catch (_chkSwapErr) {}
+                        }
+                        if (checkSwapProp) {
+                          try { checkInstance.componentPropertyReferences = { mainComponent: checkSwapProp }; } catch (_chkSwapRefErr) {}
+                        }
+                      }
+                      if (checkColorVar && typeof checkInstance.findAll === "function") {
+                        var checkVectors = checkInstance.findAll(function (n) { return n.type === "VECTOR"; });
+                        for (var chvi = 0; chvi < checkVectors.length; chvi++) {
+                          try {
+                            if (checkStrokeVar) bindVar(checkVectors[chvi], "strokeWeight", checkStrokeVar);
+                            if (checkVectors[chvi].strokes && checkVectors[chvi].strokes.length > 0) {
+                              bindPaintVar(checkVectors[chvi], "strokes", 0, checkColorVar);
+                            }
+                            if (checkVectors[chvi].fills && checkVectors[chvi].fills.length > 0) {
+                              bindPaintVar(checkVectors[chvi], "fills", 0, checkColorVar);
+                            }
+                          } catch (_chkVecErr) {}
+                        }
+                      }
+                    } else {
+                      var checkVector = figma.createVector();
+                      checkVector.name = "Check";
+                      checkVector.vectorPaths = [{ windingRule: "NONZERO", data: "M 1 5 L 5 9 L 13 1" }];
+                      checkVector.resize(14, 10);
+                      checkVector.fills = [];
+                      checkVector.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
+                      checkVector.strokeWeight = 1.5;
+                      if (checkStrokeVar) bindVar(checkVector, "strokeWeight", checkStrokeVar);
+                      checkVector.strokeJoin = "ROUND";
+                      checkVector.strokeCap = "ROUND";
+                      if (checkColorVar) bindPaintVar(checkVector, "strokes", 0, checkColorVar);
+                      checkSlot.appendChild(checkVector);
+                    }
+                  }
+
                   dropdown.appendChild(option);
                   try { option.layoutSizingHorizontal = "FILL"; } catch (_optionFillErr) {}
                 }
@@ -16962,6 +17101,51 @@ async function findSelectChevronIconComponent() {
     return sorted[0];
   }
 
+  return null;
+}
+
+// Finds a standalone checkmark icon component (for the MultiSelect selected-option
+// indicator). Prefers a plain "check" icon and avoids grabbing a "checkbox" set.
+async function findCheckIconComponent() {
+  var iconCandidates = [];
+  var iconsPage = null;
+
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var page = figma.root.children[pi];
+    if (page.type !== "PAGE") continue;
+    await page.loadAsync();
+    if (!iconsPage && page.name && page.name.toLowerCase() === "icons") {
+      iconsPage = page;
+    }
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function (n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") iconCandidates.push(setChildren[ci]);
+      }
+    }
+  }
+
+  // Prefer a check / checkmark / tick icon, but skip anything that looks like a checkbox.
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var normalized = String(iconCandidates[j].name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+    if (normalized.indexOf("checkbox") >= 0) continue;
+    if (
+      normalized.indexOf("check") >= 0 ||
+      normalized.indexOf("tick") >= 0
+    ) {
+      return iconCandidates[j];
+    }
+  }
   return null;
 }
 

@@ -48,7 +48,15 @@ export default function TextInputPreview({
   const textColor = isDisabled
     ? resolveColor(brands, brandId, tokens["textinput-text-disabled"]?.semantic, "light", "textinput-text-disabled")
     : resolveColor(brands, brandId, tokens["textinput-text"]?.semantic, "light", "textinput-text");
-  const placeholderColor = resolveColor(brands, brandId, tokens["textinput-placeholder"]?.semantic, "light", "textinput-placeholder");
+  const placeholderColor = isDisabled
+    ? resolveColor(
+        brands,
+        brandId,
+        tokens["textinput-placeholder-disabled"]?.semantic,
+        "light",
+        "textinput-placeholder-disabled"
+      )
+    : resolveColor(brands, brandId, tokens["textinput-placeholder"]?.semantic, "light", "textinput-placeholder");
   const labelColor = isDisabled
     ? resolveColor(
         brands,
@@ -133,9 +141,9 @@ export default function TextInputPreview({
           color: textColor,
           border: bdValue,
           borderRadius: `${borderRadius}px`,
-          // Height is intrinsic (line-height + padding); textinput-height acts only as a min-height floor.
+          // Height is fully padding-driven (line-height + top/bottom padding); no fixed-height floor.
           height: "auto",
-          minHeight: `${height}px`,
+          minHeight: 0,
           paddingTop: `${paddingY}px`,
           paddingBottom: `${paddingY}px`,
           // Horizontal inset uses the section size when an icon occupies that side, otherwise the padding-x token.

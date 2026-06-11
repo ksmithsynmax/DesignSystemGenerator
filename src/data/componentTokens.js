@@ -1713,6 +1713,7 @@ export const COMPONENT_TOKENS = {
     "textinput-text":           { type: "COLOR", semantic: "text-default",     figmaPath: "textinput/text" },
     "textinput-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "textinput/text-disabled" },
     "textinput-placeholder":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "textinput/placeholder" },
+    "textinput-placeholder-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "textinput/placeholder-disabled" },
     "textinput-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "textinput/label-color" },
     "textinput-label-color-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "textinput/label-color-disabled" },
     "textinput-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "textinput/asterisk-color" },
@@ -1964,6 +1965,12 @@ export const COMPONENT_TOKENS = {
       type: "COLOR",
       semantic: "text-default",
       figmaPath: "multiselect/filled-option-hover-text",
+    },
+    /** Checkmark icon shown on selected rows in the open list. */
+    "multiselect-option-check-icon": {
+      type: "COLOR",
+      semantic: "text-default",
+      figmaPath: "multiselect/option-check-icon",
     },
 
     // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
