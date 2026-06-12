@@ -1837,12 +1837,14 @@ async function buildUsageDocsPage(componentSets, titleFont) {
   };
 
   var DOC_COLOR_VAR_NAMES = {
-    pageBg: ["surface-primary", "surface/primary", "surface primary", "subtle-primary", "subtle/primary", "subtle primary"],
-    panelBg: ["surface-secondary", "surface/secondary", "surface secondary", "subtle-secondary", "subtle/secondary", "subtle secondary"],
-    panelStroke: ["border-primary", "border/primary", "border primary"],
-    sectionHeading: ["interactive-primary", "interactive/primary", "interactive primary"],
-    title: ["text-default", "text/default", "text default"],
-    textSubtle: ["text-subtle", "text/subtle", "text subtle"],
+    // Dedicated, per-brand docs-chrome variables take priority; fall back to the
+    // brand's surface/border semantics so older files keep their look.
+    pageBg: ["docs/page-background", "docs-page-background", "surface-primary", "surface/primary", "surface primary", "subtle-primary", "subtle/primary", "subtle primary"],
+    panelBg: ["docs/card-background", "docs-card-background", "surface-secondary", "surface/secondary", "surface secondary", "subtle-secondary", "subtle/secondary", "subtle secondary"],
+    panelStroke: ["docs/card-border", "docs-card-border", "border-primary", "border/primary", "border primary"],
+    sectionHeading: ["docs/section-heading", "docs-section-heading", "interactive-primary", "interactive/primary", "interactive primary"],
+    title: ["docs/title", "docs-title", "text-default", "text/default", "text default"],
+    textSubtle: ["docs/body-text", "docs-body-text", "text-subtle", "text/subtle", "text subtle"],
   };
 
   var docsColorVars = {};
@@ -3701,14 +3703,14 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             patch[templateLeftIconKey] = templateLeftOn;
             patch[templateRightIconKey] = templateRightOn;
             var bothTplInst = makeTemplateInstance(patch);
-            // XL with both icons needs more than the default 220px column or its
-            // placeholder wraps; widen just this instance.
+            // LG/XL with both icons need more than the default 220px column or the
+            // placeholder wraps; widen these instances.
             if (
               bothTplInst &&
               lowerSetName === "textinput" &&
-              String(sizeName).toLowerCase() === "xl"
+              (String(sizeName).toLowerCase() === "lg" || String(sizeName).toLowerCase() === "xl")
             ) {
-              try { bothTplInst.resize(320, bothTplInst.height); } catch (_xlTplWidthErr) {}
+              try { bothTplInst.resize(240, bothTplInst.height); } catch (_lgXlTplWidthErr) {}
             }
             return bothTplInst;
           }, false, templateBothIconsConfig);
@@ -4883,14 +4885,14 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           patch[leftIconKey] = leftOn;
           patch[rightIconKey] = rightOn;
           var bothInst = makeInstance(patch);
-          // XL with both icons needs more than the default 220px column or its
-          // placeholder wraps; widen just this instance.
+          // LG/XL with both icons need more than the default 220px column or the
+          // placeholder wraps; widen these instances.
           if (
             bothInst &&
             lowerSetName === "textinput" &&
-            String(sizeName).toLowerCase() === "xl"
+            (String(sizeName).toLowerCase() === "lg" || String(sizeName).toLowerCase() === "xl")
           ) {
-            try { bothInst.resize(320, bothInst.height); } catch (_xlWidthErr) {}
+            try { bothInst.resize(240, bothInst.height); } catch (_lgXlWidthErr) {}
           }
           return bothInst;
         }, false, bothIconsConfig);
@@ -5632,12 +5634,12 @@ async function buildFoundationsDocsPage(payload, titleFont) {
     return null;
   }
   var docVars = {
-    pageBg: resolveDocVar(["surface-primary", "surface/primary", "surface primary", "subtle-primary", "subtle/primary", "subtle primary"]),
-    panelBg: resolveDocVar(["surface-secondary", "surface/secondary", "surface secondary", "subtle-secondary", "subtle/secondary", "subtle secondary"]),
-    panelStroke: resolveDocVar(["border-primary", "border/primary", "border primary"]),
-    heading: resolveDocVar(["interactive-primary", "interactive/primary", "interactive primary"]),
-    title: resolveDocVar(["text-default", "text/default", "text default"]),
-    textSubtle: resolveDocVar(["text-subtle", "text/subtle", "text subtle"])
+    pageBg: resolveDocVar(["docs/page-background", "docs-page-background", "surface-primary", "surface/primary", "surface primary", "subtle-primary", "subtle/primary", "subtle primary"]),
+    panelBg: resolveDocVar(["docs/card-background", "docs-card-background", "surface-secondary", "surface/secondary", "surface secondary", "subtle-secondary", "subtle/secondary", "subtle secondary"]),
+    panelStroke: resolveDocVar(["docs/card-border", "docs-card-border", "border-primary", "border/primary", "border primary"]),
+    heading: resolveDocVar(["docs/section-heading", "docs-section-heading", "interactive-primary", "interactive/primary", "interactive primary"]),
+    title: resolveDocVar(["docs/title", "docs-title", "text-default", "text/default", "text default"]),
+    textSubtle: resolveDocVar(["docs/body-text", "docs-body-text", "text-subtle", "text/subtle", "text subtle"])
   };
 
   // ── Node helpers ──
@@ -6170,17 +6172,30 @@ async function buildFoundationsDocsPage(payload, titleFont) {
     if (primCol && primModes.modeMap[prefKey]) {
       try { doc.setExplicitVariableModeForCollection(primCol.id, primModes.modeMap[prefKey]); } catch (_primModeErr) {}
     }
+    var prefModeName = cap(prefBrand) + cap(prefTheme);
     var semColObj = null;
     for (var sci = 0; sci < collections.length; sci++) {
       if (collections[sci].name === "Semantic") { semColObj = collections[sci]; break; }
     }
     if (semColObj) {
-      var prefName = cap(prefBrand) + cap(prefTheme);
       var semModeId = null;
       for (var smo = 0; smo < semColObj.modes.length; smo++) {
-        if (semColObj.modes[smo].name === prefName) { semModeId = semColObj.modes[smo].modeId; break; }
+        if (semColObj.modes[smo].name === prefModeName) { semModeId = semColObj.modes[smo].modeId; break; }
       }
       if (semModeId) { try { doc.setExplicitVariableModeForCollection(semColObj.id, semModeId); } catch (_semModeErr) {} }
+    }
+    // Docs chrome can bind to dedicated docs/* vars in the Components collection;
+    // pin that collection's mode too so the Foundations doc shows the right brand/theme.
+    var compColObj = null;
+    for (var cci = 0; cci < collections.length; cci++) {
+      if (collections[cci].name === "Components") { compColObj = collections[cci]; break; }
+    }
+    if (compColObj) {
+      var compModeId = null;
+      for (var cmo = 0; cmo < compColObj.modes.length; cmo++) {
+        if (compColObj.modes[cmo].name === prefModeName) { compModeId = compColObj.modes[cmo].modeId; break; }
+      }
+      if (compModeId) { try { doc.setExplicitVariableModeForCollection(compColObj.id, compModeId); } catch (_compModeErr) {} }
     }
   }
 
@@ -15598,9 +15613,21 @@ async function buildTextInputComponentSet(varMap, page, font) {
               bindVar(input, "strokeWeight", varMap["textinput/border-width"]);
             }
 
-            var textInputIconColorPath = state === "disabled"
-              ? "textinput/text-disabled"
-              : (state === "focus" ? "textinput/text" : "textinput/placeholder");
+            // Icon color is per variant and per state, e.g. textinput/default-icon-hover.
+            var textInputIconStateSuffix =
+              state === "disabled" ? "-disabled"
+              : state === "error" ? "-error"
+              : state === "focus" ? "-focus"
+              : state === "hover" ? "-hover"
+              : "";
+            var textInputIconColorPath =
+              varMap["textinput/" + variant + "-icon" + textInputIconStateSuffix]
+                ? "textinput/" + variant + "-icon" + textInputIconStateSuffix
+                : (varMap["textinput/" + variant + "-icon"]
+                    ? "textinput/" + variant + "-icon"
+                    : (state === "disabled"
+                        ? "textinput/text-disabled"
+                        : (state === "focus" ? "textinput/text" : "textinput/placeholder")));
 
             function appendTextInputIcon(iconComp, iconName) {
               if (!iconComp) return null;
@@ -15635,8 +15662,13 @@ async function buildTextInputComponentSet(varMap, page, font) {
 
             if (state === "disabled") {
               textNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
-              if (varMap["textinput/text-disabled"]) {
-                bindPaintVar(textNode, "fills", 0, varMap["textinput/text-disabled"]);
+              // Disabled shows the placeholder, so use the per-variant
+              // placeholder-disabled token (fall back to text-disabled).
+              var disabledPlaceholderVar =
+                varMap["textinput/" + variant + "-placeholder-disabled"] ||
+                varMap["textinput/text-disabled"];
+              if (disabledPlaceholderVar) {
+                bindPaintVar(textNode, "fills", 0, disabledPlaceholderVar);
               }
             } else if (state === "focus") {
               textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
@@ -16027,15 +16059,26 @@ async function buildSelectComponentSet(varMap, page, font) {
             if (varMap[borderPath]) bindPaintVar(input, "strokes", 0, varMap[borderPath]);
 
             var valueNode = figma.createText();
-            valueNode.name = (state === "focus") ? "Value" : "Placeholder";
+            // Focus, hover and error all display a selected value so the trigger
+            // text color (and its hover/error variants) is demonstrable; other
+            // states show the placeholder.
+            var showsValue = (state === "focus" || state === "hover" || state === "error");
+            valueNode.name = showsValue ? "Value" : "Placeholder";
             valueNode.fontName = font;
-            valueNode.characters = (state === "focus") ? "Option one" : "Pick one";
+            valueNode.characters = showsValue ? "Option one" : "Pick one";
             valueNode.fontSize = 14;
             valueNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
             if (state === "focus") {
               if (varMap["select/text"]) bindPaintVar(valueNode, "fills", 0, varMap["select/text"]);
+            } else if (state === "hover") {
+              var hoverTextVar = varMap["select/" + variant + "-text-hover"] || varMap["select/text"];
+              if (hoverTextVar) bindPaintVar(valueNode, "fills", 0, hoverTextVar);
+            } else if (state === "error") {
+              var errorTextVar = varMap["select/text-error"] || varMap["select/text"];
+              if (errorTextVar) bindPaintVar(valueNode, "fills", 0, errorTextVar);
             } else if (state === "disabled") {
-              if (varMap["select/text-disabled"]) bindPaintVar(valueNode, "fills", 0, varMap["select/text-disabled"]);
+              var disabledTextVar = varMap["select/" + variant + "-text-disabled"] || varMap["select/text"];
+              if (disabledTextVar) bindPaintVar(valueNode, "fills", 0, disabledTextVar);
             } else {
               var placeholderPath = "select/" + variant + "-placeholder" + (state === "error" ? "-error" : "");
               var placeholderVar = selectVarWithFallback(varMap, [
@@ -16116,11 +16159,13 @@ async function buildSelectComponentSet(varMap, page, font) {
             else input.appendChild(chevronSlot);
 
             var selectIconPaintVar =
-              state === "disabled" && varMap["select/icon-disabled"]
-                ? varMap["select/icon-disabled"]
+              state === "disabled" && (varMap["select/" + variant + "-icon-disabled"] || varMap["select/icon-disabled"])
+                ? (varMap["select/" + variant + "-icon-disabled"] || varMap["select/icon-disabled"])
                 : state === "error" && varMap["select/icon-error"]
                   ? varMap["select/icon-error"]
-                  : varMap["select/icon"];
+                  : state === "hover" && varMap["select/" + variant + "-icon-hover"]
+                    ? varMap["select/" + variant + "-icon-hover"]
+                    : varMap["select/icon"];
             var selectIconStrokeVar =
               varMap["select/icon-stroke-width-" + size] ||
               varMap["select/icon-stroke-width-default"] ||
@@ -16309,6 +16354,12 @@ async function buildSelectComponentSet(varMap, page, font) {
                     "select/" + variant + "-option-hover-text",
                   ]);
                   if (optionHoverTextVar) bindPaintVar(optionText, "fills", 0, optionHoverTextVar);
+                } else if (isSelectedOption) {
+                  var optionSelectedTextVar = selectVarWithFallback(varMap, [
+                    "select/" + variant + "-option-selected-text",
+                    "select/text",
+                  ]);
+                  if (optionSelectedTextVar) bindPaintVar(optionText, "fills", 0, optionSelectedTextVar);
                 } else if (varMap["select/text"]) {
                   bindPaintVar(optionText, "fills", 0, varMap["select/text"]);
                 }

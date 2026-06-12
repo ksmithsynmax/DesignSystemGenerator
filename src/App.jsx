@@ -175,6 +175,7 @@ import {
 } from "./components/panels/AvatarPreviewPanel";
 import { TablePreviewContent, TablePropertiesPanel } from "./components/panels/TablePreviewPanel";
 import { FoundationsPreviewContent } from "./components/panels/FoundationsPreviewPanel";
+import { DocsThemePreviewContent } from "./components/panels/DocsThemePreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { buildComponentDocsExport } from "./utils/buildComponentDocsExport";
@@ -359,6 +360,7 @@ function mergeRecoveredBrands(brandsInput) {
 export default function App() {
   const COMPONENT_LABELS = {
     foundations: "Foundations",
+    docs: "Docs Theme",
     actionicon: "ActionIcon",
     textinput: "TextInput",
     rangeslider: "RangeSlider",
@@ -1482,6 +1484,8 @@ export default function App() {
             ? forcedState || activeSelectState
           : activeComponent === "multiselect"
             ? forcedState || activeMultiSelectState
+          : activeComponent === "menu"
+            ? forcedState || activeMenuState
           : forcedState;
 
   const visibleColorTokenEntries = Object.entries(colorTokens).filter(([token, def]) => {
@@ -1710,6 +1714,13 @@ export default function App() {
 
     if (activeComponent === "textinput" && token.startsWith("textinput-error-")) {
       return (effectiveComponentState || "default") === "error";
+    }
+
+    if (activeComponent === "menu" && token.endsWith("-disabled")) {
+      return (effectiveComponentState || "default") === "disabled";
+    }
+    if (activeComponent === "menu" && token.endsWith("-hover")) {
+      return (effectiveComponentState || "default") === "hover";
     }
 
     if (activeComponent === "select" || activeComponent === "multiselect") {
@@ -2758,6 +2769,13 @@ export default function App() {
             <div style={{ background: "#25262B", borderRadius: 8, padding: 24 }}>
               {activeComponent === "foundations" && (
                 <FoundationsPreviewContent brands={brands} activeBrand={activeBrand} />
+              )}
+              {activeComponent === "docs" && (
+                <DocsThemePreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  previewTheme={previewTheme}
+                />
               )}
               {activeComponent === "button" && (
                 <ButtonPreviewContent
@@ -4059,12 +4077,13 @@ export default function App() {
             }}
           >
             {[
-              { label: "Foundations", names: ["foundations"] },
+              { label: "Foundations", names: ["foundations", "docs"] },
               {
                 label: "Components",
                 names: COMPONENT_NAMES.filter(
                   (name) =>
                     !CHART_COMPONENTS.includes(name) &&
+                    name !== "docs" &&
                     name !== "accordion-item" &&
                     name !== "accordion-content"
                 ),

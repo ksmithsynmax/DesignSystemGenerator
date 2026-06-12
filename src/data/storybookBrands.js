@@ -2394,7 +2394,12 @@ export const STORYBOOK_BRANDS = {
         "index": 0,
         "opacity": 0
       },
-      "select-text-disabled": {
+      "select-default-text-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "select-filled-text-disabled": {
         "color": "slate-gray",
         "index": 7,
         "opacity": 100
@@ -2409,7 +2414,12 @@ export const STORYBOOK_BRANDS = {
         "index": 0,
         "opacity": 100
       },
-      "select-icon-disabled": {
+      "select-default-icon-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "select-filled-icon-disabled": {
         "color": "slate-gray",
         "index": 7,
         "opacity": 100
@@ -5371,7 +5381,12 @@ export const STORYBOOK_BRANDS = {
         "index": 0,
         "opacity": 0
       },
-      "select-text-disabled": {
+      "select-default-text-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "select-filled-text-disabled": {
         "color": "slate-gray",
         "index": 7,
         "opacity": 100
@@ -5386,7 +5401,12 @@ export const STORYBOOK_BRANDS = {
         "index": 0,
         "opacity": 100
       },
-      "select-icon-disabled": {
+      "select-default-icon-disabled": {
+        "color": "slate-gray",
+        "index": 7,
+        "opacity": 100
+      },
+      "select-filled-icon-disabled": {
         "color": "slate-gray",
         "index": 7,
         "opacity": 100

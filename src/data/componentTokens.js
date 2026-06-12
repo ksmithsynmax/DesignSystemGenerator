@@ -1713,12 +1713,25 @@ export const COMPONENT_TOKENS = {
     "textinput-text":           { type: "COLOR", semantic: "text-default",     figmaPath: "textinput/text" },
     "textinput-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "textinput/text-disabled" },
     "textinput-placeholder":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "textinput/placeholder" },
-    "textinput-placeholder-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "textinput/placeholder-disabled" },
+    "textinput-default-placeholder-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "textinput/default-placeholder-disabled" },
+    "textinput-filled-placeholder-disabled":  { type: "COLOR", semantic: "text-disabled", figmaPath: "textinput/filled-placeholder-disabled" },
     "textinput-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "textinput/label-color" },
     "textinput-label-color-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "textinput/label-color-disabled" },
     "textinput-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "textinput/asterisk-color" },
     "textinput-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "textinput/error-color" },
     "textinput-focus-ring":     { type: "COLOR", semantic: "border-focus",     figmaPath: "textinput/focus-ring" },
+
+    // ── ICON COLORS (per variant, per state) ──
+    "textinput-default-icon":          { type: "COLOR", semantic: "text-placeholder", figmaPath: "textinput/default-icon" },
+    "textinput-default-icon-hover":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "textinput/default-icon-hover" },
+    "textinput-default-icon-focus":    { type: "COLOR", semantic: "text-default",     figmaPath: "textinput/default-icon-focus" },
+    "textinput-default-icon-error":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "textinput/default-icon-error" },
+    "textinput-default-icon-disabled": { type: "COLOR", semantic: "text-disabled",    figmaPath: "textinput/default-icon-disabled" },
+    "textinput-filled-icon":           { type: "COLOR", semantic: "text-placeholder", figmaPath: "textinput/filled-icon" },
+    "textinput-filled-icon-hover":     { type: "COLOR", semantic: "text-placeholder", figmaPath: "textinput/filled-icon-hover" },
+    "textinput-filled-icon-focus":     { type: "COLOR", semantic: "text-default",     figmaPath: "textinput/filled-icon-focus" },
+    "textinput-filled-icon-error":     { type: "COLOR", semantic: "feedback-error",   figmaPath: "textinput/filled-icon-error" },
+    "textinput-filled-icon-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "textinput/filled-icon-disabled" },
 
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "textinput-height":    { type: "FLOAT", unit: "px", sizes: { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 },  figmaPath: "textinput/height" },
@@ -1780,7 +1793,11 @@ export const COMPONENT_TOKENS = {
 
     // ── SHARED COLOR TOKENS ──
     "select-text":           { type: "COLOR", semantic: "text-default",     figmaPath: "select/text" },
-    "select-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "select/text-disabled" },
+    "select-default-text-hover": { type: "COLOR", semantic: "text-default", figmaPath: "select/default-text-hover" },
+    "select-filled-text-hover":  { type: "COLOR", semantic: "text-default", figmaPath: "select/filled-text-hover" },
+    "select-text-error":     { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/text-error" },
+    "select-default-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "select/default-text-disabled" },
+    "select-filled-text-disabled":  { type: "COLOR", semantic: "text-disabled", figmaPath: "select/filled-text-disabled" },
     "select-default-placeholder": { type: "COLOR", semantic: "text-placeholder", figmaPath: "select/default-placeholder" },
     "select-filled-placeholder": { type: "COLOR", semantic: "text-placeholder", figmaPath: "select/filled-placeholder" },
     "select-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "select/placeholder-error" },
@@ -1791,7 +1808,10 @@ export const COMPONENT_TOKENS = {
     "select-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/error-color" },
     /** Right-slot / chevron icon tint (Mantine `section`). */
     "select-icon":           { type: "COLOR", semantic: "text-default",     figmaPath: "select/icon" },
-    "select-icon-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "select/icon-disabled" },
+    "select-default-icon-hover": { type: "COLOR", semantic: "text-default", figmaPath: "select/default-icon-hover" },
+    "select-filled-icon-hover":  { type: "COLOR", semantic: "text-default", figmaPath: "select/filled-icon-hover" },
+    "select-default-icon-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "select/default-icon-disabled" },
+    "select-filled-icon-disabled":  { type: "COLOR", semantic: "text-disabled", figmaPath: "select/filled-icon-disabled" },
     "select-icon-error":     { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/icon-error" },
     "select-focus-ring":     { type: "COLOR", semantic: "border-focus",     figmaPath: "select/focus-ring" },
     /** Listbox panel (open dropdown behind the trigger). */
@@ -1809,6 +1829,17 @@ export const COMPONENT_TOKENS = {
       type: "COLOR",
       semantic: "subtle-primary",
       figmaPath: "select/filled-option-selected-background",
+    },
+    /** Label text for the currently-selected row (readability vs selected BG). */
+    "select-default-option-selected-text": {
+      type: "COLOR",
+      semantic: "text-default",
+      figmaPath: "select/default-option-selected-text",
+    },
+    "select-filled-option-selected-text": {
+      type: "COLOR",
+      semantic: "text-default",
+      figmaPath: "select/filled-option-selected-text",
     },
     /**
      * Hovered row (pointer) and keyboard-highlighted row (`data-combobox-selected`).
@@ -2180,6 +2211,19 @@ export const COMPONENT_TOKENS = {
     "table-header-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "table/header-font-weight" },
     "table-header-font-family": { type: "STRING", value: "Inter", figmaPath: "table/header-font-family" },
     "table-header-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "table/header-line-height" },
+  },
+
+  // ── DOCS THEME ──
+  // Chrome colors for the generated documentation page (Figma + in-app docs).
+  // These default to the brand's surface/border semantics so existing docs keep
+  // their look, but can be overridden per brand and per theme (light/dark).
+  docs: {
+    "docs-page-background": { type: "COLOR", semantic: "surface-primary",   figmaPath: "docs/page-background" },
+    "docs-card-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "docs/card-background" },
+    "docs-card-border":     { type: "COLOR", semantic: "border-primary",    figmaPath: "docs/card-border" },
+    "docs-title":           { type: "COLOR", semantic: "text-default",       figmaPath: "docs/title" },
+    "docs-body-text":       { type: "COLOR", semantic: "text-subtle",        figmaPath: "docs/body-text" },
+    "docs-section-heading": { type: "COLOR", semantic: "interactive-primary", figmaPath: "docs/section-heading" },
   },
 };
 

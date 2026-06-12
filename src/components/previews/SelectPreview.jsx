@@ -58,8 +58,35 @@ export default function SelectPreview({
   };
 
   const textColor = isDisabled
-    ? resolveColor(brands, brandId, tokens["select-text-disabled"]?.semantic, "light", "select-text-disabled")
+    ? resolveColor(
+        brands,
+        brandId,
+        tokens[`${prefix}-text-disabled`]?.semantic ?? tokens["select-text"]?.semantic,
+        "light",
+        tokens[`${prefix}-text-disabled`] ? `${prefix}-text-disabled` : "select-text"
+      )
     : resolveColor(brands, brandId, tokens["select-text"]?.semantic, "light", "select-text");
+  // The hover/error colors apply only to the trigger value text (under the
+  // label), never to the dropdown option rows.
+  const triggerValueColor = isDisabled
+    ? textColor
+    : isError
+      ? resolveColor(
+          brands,
+          brandId,
+          tokens["select-text-error"]?.semantic ?? tokens["select-text"]?.semantic,
+          "light",
+          tokens["select-text-error"] ? "select-text-error" : "select-text"
+        )
+      : isHover
+        ? resolveColor(
+            brands,
+            brandId,
+            tokens[`${prefix}-text-hover`]?.semantic ?? tokens["select-text"]?.semantic,
+            "light",
+            tokens[`${prefix}-text-hover`] ? `${prefix}-text-hover` : "select-text"
+          )
+        : textColor;
   const placeholderColor = resolveSelectColorToken(
     isError
       ? [
@@ -73,17 +100,27 @@ export default function SelectPreview({
   const asteriskColor = resolveColor(brands, brandId, tokens["select-asterisk-color"]?.semantic, "light", "select-asterisk-color");
   const errorColor = resolveColor(brands, brandId, tokens["select-error-color"]?.semantic, "light", "select-error-color");
   const iconSemantic = isDisabled
-    ? tokens["select-icon-disabled"]?.semantic
+    ? tokens[`${prefix}-icon-disabled`]?.semantic ?? tokens["select-icon"]?.semantic
     : isError
       ? tokens["select-icon-error"]?.semantic ??
         tokens["select-icon"]?.semantic
-      : tokens["select-icon"]?.semantic;
-  const iconColorKey = isDisabled ? "select-icon-disabled" : isError ? "select-icon-error" : "select-icon";
+      : isHover
+        ? tokens[`${prefix}-icon-hover`]?.semantic ??
+          tokens["select-icon"]?.semantic
+        : tokens["select-icon"]?.semantic;
+  const iconColorKey = isDisabled
+    ? (tokens[`${prefix}-icon-disabled`] ? `${prefix}-icon-disabled` : "select-icon")
+    : isError
+      ? "select-icon-error"
+      : isHover
+        ? (tokens[`${prefix}-icon-hover`] ? `${prefix}-icon-hover` : "select-icon")
+        : "select-icon";
   const chevronColor = resolveColor(brands, brandId, iconSemantic, "light", iconColorKey);
   const focusRingColor = resolveColor(brands, brandId, tokens["select-focus-ring"]?.semantic, "light", "select-focus-ring");
   const dropdownBackground = resolveSelectColorToken([`${prefix}-dropdown-background`]);
   const dropdownBorderColor = resolveSelectColorToken([`${prefix}-dropdown-border`]);
   const optionSelectedBackground = resolveSelectColorToken([`${prefix}-option-selected-background`]);
+  const optionSelectedText = resolveSelectColorToken([`${prefix}-option-selected-text`, "select-text"]);
   const optionHoverBackground = resolveSelectColorToken([`${prefix}-option-hover-background`]);
   const optionHoverText = resolveSelectColorToken([`${prefix}-option-hover-text`]);
 
@@ -121,7 +158,10 @@ export default function SelectPreview({
   const [hoveredOption, setHoveredOption] = useState(null);
   const canInteract = interactive && !isDisabled;
   const displayValue = interactive ? selectedValue : "Option one";
-  const triggerTextColor = isError && !displayValue ? placeholderColor : textColor;
+  const triggerTextColor = isError && !displayValue ? placeholderColor : triggerValueColor;
+  // The dropdown never shows in the error or disabled states; both are
+  // closed-field states.
+  const dropdownOpen = showDropdown && !isError && !isDisabled;
 
   const selectOption = (opt) => {
     if (!canInteract) return;
@@ -149,7 +189,11 @@ export default function SelectPreview({
           : isOptionHover
             ? optionHoverBackground
             : "transparent";
-        const rowColor = isOptionHover ? optionHoverText : textColor;
+        const rowColor = isOptionHover
+          ? optionHoverText
+          : isSelected
+            ? optionSelectedText
+            : textColor;
         return (
           <div
             key={opt}
@@ -239,13 +283,13 @@ export default function SelectPreview({
           aria-hidden
           style={{
             color: chevronColor,
-            transform: showDropdown ? "rotate(270deg)" : "rotate(90deg)",
+            transform: dropdownOpen ? "rotate(270deg)" : "rotate(90deg)",
             display: "block",
             flexShrink: 0,
           }}
         />
       </div>
-      {showDropdown && renderDropdown()}
+      {dropdownOpen && renderDropdown()}
       {isError && (
         <div
           style={{

@@ -52,9 +52,9 @@ export default function TextInputPreview({
     ? resolveColor(
         brands,
         brandId,
-        tokens["textinput-placeholder-disabled"]?.semantic,
+        tokens[`${prefix}-placeholder-disabled`]?.semantic ?? tokens["textinput-placeholder"]?.semantic,
         "light",
-        "textinput-placeholder-disabled"
+        tokens[`${prefix}-placeholder-disabled`] ? `${prefix}-placeholder-disabled` : "textinput-placeholder"
       )
     : resolveColor(brands, brandId, tokens["textinput-placeholder"]?.semantic, "light", "textinput-placeholder");
   const labelColor = isDisabled
@@ -98,7 +98,14 @@ export default function TextInputPreview({
   const bdValue = `${borderWidth}px solid ${borderColor}`;
   const mantineSize = size === "default" ? getDefaultSizeKey(brands, brandId, "textinput-height") || "sm" : size;
   const mantineRadius = radius === "default" ? getDefaultSizeKey(brands, brandId, "textinput-radius") || "sm" : radius;
-  const iconColor = isDisabled ? placeholderColor : textColor;
+  const iconColorKey = `${prefix}-icon${stateSuffix}`;
+  const iconColor = resolveColor(
+    brands,
+    brandId,
+    tokens[iconColorKey]?.semantic ?? tokens[`${prefix}-icon`]?.semantic,
+    "light",
+    tokens[iconColorKey] ? iconColorKey : `${prefix}-icon`
+  );
   const iconProps = { width: iconSize, height: iconSize, style: { color: iconColor } };
 
   return (
