@@ -4207,6 +4207,19 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       }
     }
 
+    // Modal documents its header/footer Layout options as a dedicated section.
+    // The Variants section already covers Default/Filled, so only add this when
+    // the variant axis isn't already Layout (older sets without a Variant prop).
+    var modalLayoutSlot = null;
+    if (lowerSetName === "modal" && variantPropName !== "Layout" && getPropKey(variantProps, "Layout")) {
+      var modalDocLayoutValues = getPropValues(variantProps, "Layout");
+      if (modalDocLayoutValues.length > 0) {
+        doc.appendChild(createSectionHeader("Layout", "Header and footer arrangements available for the modal.", DOC_COLORS.subtitle));
+        modalLayoutSlot = createStack("slot:" + slug + ":layout", 16);
+        doc.appendChild(modalLayoutSlot);
+      }
+    }
+
     var leftSlot = null;
     var rightSlot = null;
     var bothSlot = null;
@@ -5041,7 +5054,16 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           "Dropdown",
           selectDocDropdownFillValues,
           function (dropdownName) {
-            return makeInstance({ Dropdown: dropdownName });
+            var dropdownProps = { Dropdown: dropdownName };
+            // The open menu should showcase the active/selected option highlight.
+            // makeInstance doesn't default Active/Hover, so the open example would
+            // otherwise inherit Active=Off (nothing selected). Pin the first option
+            // active and hover off so the selected-state tokens render.
+            if (String(dropdownName).toLowerCase() === "open") {
+              if (getPropKey(variantProps, "Active")) dropdownProps.Active = "One";
+              if (getPropKey(variantProps, "Hover")) dropdownProps.Hover = "Off";
+            }
+            return makeInstance(dropdownProps);
           },
           false,
           { itemsPerRow: 2, rowItemSpacing: 24 }
@@ -5061,6 +5083,65 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           false,
           { itemsPerRow: 2, rowItemSpacing: 24 }
         );
+      }
+
+      if (modalLayoutSlot) {
+        clearChildren(modalLayoutSlot);
+        var modalDocLayoutFill = pickOrdered(
+          getPropValues(variantProps, "Layout"),
+          ["Action-right", "Basic", "Centered-arch", "Centered-action"]
+        );
+        var modalDocVariantFill = pickOrdered(
+          getPropValues(variantProps, "Variant"),
+          ["Default", "Filled"]
+        );
+        var modalLayoutVariantValues = modalDocVariantFill.length > 0 ? modalDocVariantFill : [null];
+        for (var mli = 0; mli < modalDocLayoutFill.length; mli++) {
+          (function (layoutValue) {
+            // One block per layout: heading + description, then each variant in
+            // its own bordered card stacked vertically for easy scanning.
+            var layoutBlock = createStack("modal-layout-block-" + normalizeName(layoutValue), 8);
+            var layoutHeader = createStack("modal-layout-header-" + normalizeName(layoutValue), 6);
+            appendText(layoutHeader, titleFont, String(layoutValue), 18, DOC_COLORS.panelHeading, "Layout Heading", "title");
+            appendText(layoutHeader, bodyFont, getVariantDescription(setName, layoutValue), 12, DOC_COLORS.panelBody, "Layout Description");
+            layoutBlock.appendChild(layoutHeader);
+
+            for (var mvi = 0; mvi < modalLayoutVariantValues.length; mvi++) {
+              (function (variantValue) {
+                var layoutCard = createPanel(
+                  "modal-layout-card-" + normalizeName(layoutValue) + "-" + normalizeName(String(variantValue)),
+                  10
+                );
+                layoutCard.counterAxisSizingMode = "FIXED";
+                layoutCard.resize(1192, layoutCard.height);
+
+                var layoutCardInner = createStack(
+                  "modal-layout-inner-" + normalizeName(layoutValue) + "-" + normalizeName(String(variantValue)),
+                  10
+                );
+                layoutCardInner.paddingLeft = 12;
+                layoutCardInner.paddingRight = 12;
+                layoutCardInner.paddingTop = 12;
+                layoutCardInner.paddingBottom = 12;
+                addInstancesRow(
+                  layoutCardInner,
+                  String(variantValue),
+                  [variantValue],
+                  function (vv) {
+                    var modalLayoutProps = { Layout: layoutValue };
+                    if (vv != null) modalLayoutProps.Variant = vv;
+                    return makeInstance(modalLayoutProps);
+                  },
+                  false
+                );
+                layoutCard.appendChild(layoutCardInner);
+                layoutBlock.appendChild(layoutCard);
+              })(modalLayoutVariantValues[mvi]);
+            }
+
+            modalLayoutSlot.appendChild(layoutBlock);
+          })(modalDocLayoutFill[mli]);
+        }
       }
 
       if (weightSlot && orderedTextWeights.length > 0) {
@@ -6962,19 +7043,31 @@ function buildBurgerComponentSet(varMap, page, font) {
             bindVar(lines, "height", sizeVar);
           }
           for (var bi = 0; bi < 3; bi++) {
-            var bar = makeBurgerBar(false, true);
+            var bar = makeBurgerBar(false, false);
             lines.appendChild(bar);
             try { bar.layoutGrow = 0; } catch (_burgerBarGrowErr) {}
-            // Fill the frame width (= size) instead of binding the bar width;
-            // keep the thickness fixed (driven by the line-size variable).
-            try { bar.layoutSizingHorizontal = "FILL"; } catch (_burgerBarFillErr) {}
-            try { bar.layoutSizingVertical = "FIXED"; } catch (_burgerBarFixedErr) {}
+            // IMPORTANT: bind width/height only AFTER the bar is parented and its
+            // layout sizing is FIXED. Figma drops width/height variable bindings
+            // when layoutSizing* is changed, so binding earlier (or using FILL)
+            // silently fails and the icon falls back to its static snapshot size.
+            try { bar.layoutSizingHorizontal = "FIXED"; } catch (_burgerBarFixedHErr) {}
+            try { bar.layoutSizingVertical = "FIXED"; } catch (_burgerBarFixedVErr) {}
+            if (sizeVar) bindVar(bar, "width", sizeVar);
+            if (lineVar) bindVar(bar, "height", lineVar);
           }
         }
 
         comp.appendChild(lines);
         try { lines.layoutGrow = 0; } catch (_burgerGrowErr) {}
         try { lines.layoutAlign = "INHERIT"; } catch (_burgerAlignErr) {}
+        // Re-bind the frame's size AFTER it's parented and its layout sizing is
+        // finalized (layoutGrow 0 + layoutAlign INHERIT keep both axes FIXED).
+        // Binding before parenting can be dropped by the auto-layout, which is why
+        // the size/line variables previously didn't drive the icon.
+        if (sizeVar) {
+          bindVar(lines, "width", sizeVar);
+          bindVar(lines, "height", sizeVar);
+        }
 
         if (state === "focus") {
           comp.effects = [{
@@ -11726,7 +11819,8 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var overlayStates = ["off", "on"];
   var closeStates = ["off", "on"];
-  var layouts = ["action-right", "basic", "centered-arch"];
+  var layouts = ["action-right", "basic", "centered-arch", "centered-action"];
+  var variants = ["default", "filled"];
   var components = [];
   var headerOnly = false;
   var buttonSet = sourceSets && sourceSets.buttonSet ? sourceSets.buttonSet : null;
@@ -11735,14 +11829,17 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
   var useLinkedTextComponents = false;
   var modalTitleCopy = "Modal Title";
   var modalBodyCopy = "This action cannot be undone. Please confirm you want to proceed.";
-  var headerPaddingXVar = varMap["modal/header-padding-x"] || varMap["modal/padding-x"];
-  var headerPaddingYVar = varMap["modal/header-padding-y"] || varMap["modal/padding-y"];
-  var bodyPaddingTopVar = varMap["modal/body-padding-top"] || null;
-  var bodyPaddingRightVar = varMap["modal/body-padding-right"] || varMap["modal/padding-x"];
-  var bodyPaddingBottomVar = varMap["modal/body-padding-bottom"] || varMap["modal/padding-y"];
-  var bodyPaddingLeftVar = varMap["modal/body-padding-left"] || varMap["modal/padding-x"];
-  var footerPaddingXVar = varMap["modal/footer-padding-x"] || varMap["modal/padding-x"];
-  var footerPaddingYVar = varMap["modal/footer-padding-y"] || varMap["modal/padding-y"];
+
+  // Per-variant variable resolver: prefers modal/{variant}-{suffix}, then falls back
+  // to the supplied legacy names so older files keep working.
+  function mvarFor(variant, suffix, fallbacks) {
+    var k = "modal/" + variant + "-" + suffix;
+    if (varMap[k]) return varMap[k];
+    for (var fi = 0; fi < (fallbacks || []).length; fi++) {
+      if (varMap[fallbacks[fi]]) return varMap[fallbacks[fi]];
+    }
+    return null;
+  }
 
   var widthBySize = { default: 420, xs: 280, sm: 340, md: 420, lg: 520, xl: 640 };
   var colGap = 28;
@@ -11782,6 +11879,42 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
   var alertIcons = await findAlertIconComponents();
   var modalCloseIconSource = alertIcons.close || alertIcons.fallback;
 
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = cap(variant);
+
+    // Resolve every per-variant variable once for this variant. Colors/typography
+    // come from modal/{variant}-*; the "default" variant additionally uses a
+    // distinct header bar + section dividers.
+    var modalBgVar = mvarFor(variant, "background", ["modal/filled-background"]);
+    var modalHeaderBgVar = mvarFor(variant, "header-background", ["modal/filled-header-background", "modal/filled-background"]);
+    var modalFooterBgVar = mvarFor(variant, "footer-background", ["modal/filled-footer-background", "modal/filled-background"]);
+    var modalBorderVar = mvarFor(variant, "border", ["modal/filled-border"]);
+    var modalHeaderBorderVar = mvarFor(variant, "header-border", ["modal/filled-header-border", "modal/filled-border"]);
+    var modalFooterBorderVar = mvarFor(variant, "footer-border", ["modal/filled-footer-border", "modal/filled-border"]);
+    var modalTitleVar = mvarFor(variant, "title", ["modal/filled-title"]);
+    var modalBodyVar = mvarFor(variant, "body", ["modal/filled-body"]);
+    var modalCloseVar = mvarFor(variant, "close", ["modal/filled-close"]);
+    var modalBorderWidthVar = mvarFor(variant, "border-width", ["modal/border-width"]);
+    var titleFontSizeVar = mvarFor(variant, "title-font-size", ["modal/title-font-size"]);
+    var titleFontFamilyVar = mvarFor(variant, "title-font-family", ["modal/title-font-family"]);
+    var titleFontWeightVar = mvarFor(variant, "title-font-weight", ["modal/title-font-weight"]);
+    var titleLineHeightVar = mvarFor(variant, "title-line-height", ["modal/title-line-height"]);
+    var bodyFontSizeVar = mvarFor(variant, "body-font-size", ["modal/body-font-size"]);
+    var bodyFontFamilyVar = mvarFor(variant, "body-font-family", ["modal/body-font-family"]);
+    var bodyFontWeightVar = mvarFor(variant, "body-font-weight", ["modal/body-font-weight"]);
+    var bodyLineHeightVar = mvarFor(variant, "body-line-height", ["modal/body-line-height"]);
+    var headerPaddingXVar = mvarFor(variant, "header-padding-x", ["modal/header-padding-x", "modal/" + variant + "-padding-x", "modal/padding-x"]);
+    var headerPaddingYVar = mvarFor(variant, "header-padding-y", ["modal/header-padding-y", "modal/" + variant + "-padding-y", "modal/padding-y"]);
+    var bodyPaddingTopVar = mvarFor(variant, "body-padding-top", ["modal/body-padding-top"]);
+    var bodyPaddingRightVar = mvarFor(variant, "body-padding-right", ["modal/body-padding-right", "modal/" + variant + "-padding-x", "modal/padding-x"]);
+    var bodyPaddingBottomVar = mvarFor(variant, "body-padding-bottom", ["modal/body-padding-bottom", "modal/" + variant + "-padding-y", "modal/padding-y"]);
+    var bodyPaddingLeftVar = mvarFor(variant, "body-padding-left", ["modal/body-padding-left", "modal/" + variant + "-padding-x", "modal/padding-x"]);
+    var footerPaddingTopVar = mvarFor(variant, "footer-padding-top", ["modal/footer-padding-y", "modal/" + variant + "-padding-y", "modal/padding-y"]);
+    var footerPaddingRightVar = mvarFor(variant, "footer-padding-right", ["modal/footer-padding-x", "modal/" + variant + "-padding-x", "modal/padding-x"]);
+    var footerPaddingBottomVar = mvarFor(variant, "footer-padding-bottom", ["modal/footer-padding-y", "modal/" + variant + "-padding-y", "modal/padding-y"]);
+    var footerPaddingLeftVar = mvarFor(variant, "footer-padding-left", ["modal/footer-padding-x", "modal/" + variant + "-padding-x", "modal/padding-x"]);
+
   for (var si = 0; si < sizes.length; si++) {
     var size = sizes[si];
     var capSize = size === "default" ? "Default" : size.toUpperCase();
@@ -11803,10 +11936,14 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
             var layout = layouts[li];
             var capLayout = cap(layout);
             var isCenteredArch = layout === "centered-arch";
+            var isCenteredAction = layout === "centered-action";
+            var isCenteredTitle = isCenteredArch || isCenteredAction;
+            var showDividers = variant === "default";
 
             var comp = figma.createComponent();
             comp.name =
-              "Size=" + capSize +
+              "Variant=" + capVariant +
+              ", Size=" + capSize +
               ", Radius=" + capRadius +
               ", Overlay=" + capOverlay +
               ", Close=" + capClose +
@@ -11826,9 +11963,9 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
             comp.clipsContent = true;
             bindVar(comp, "minWidth", varMap["modal/width-" + size]);
             bindVar(comp, "maxWidth", varMap["modal/width-" + size]);
-            bindPaintVar(comp, "fills", 0, varMap["modal/background"]);
-            bindPaintVar(comp, "strokes", 0, varMap["modal/border"]);
-            bindVar(comp, "strokeWeight", varMap["modal/border-width"]);
+            bindPaintVar(comp, "fills", 0, modalBgVar);
+            bindPaintVar(comp, "strokes", 0, modalBorderVar);
+            bindVar(comp, "strokeWeight", modalBorderWidthVar);
             bindVar(comp, "topLeftRadius", varMap["modal/radius-" + radius]);
             bindVar(comp, "topRightRadius", varMap["modal/radius-" + radius]);
             bindVar(comp, "bottomLeftRadius", varMap["modal/radius-" + radius]);
@@ -11839,9 +11976,9 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
             header.layoutMode = "HORIZONTAL";
             header.primaryAxisSizingMode = "FIXED";
             header.counterAxisSizingMode = "AUTO";
-            header.primaryAxisAlignItems = isCenteredArch ? "MIN" : "SPACE_BETWEEN";
+            header.primaryAxisAlignItems = isCenteredTitle ? "MIN" : "SPACE_BETWEEN";
             header.counterAxisAlignItems = "CENTER";
-            header.resize(panelW, isCenteredArch ? 48 : 44);
+            header.resize(panelW, isCenteredTitle ? 48 : 44);
             header.paddingLeft = 16;
             header.paddingRight = 16;
             header.paddingTop = 12;
@@ -11852,8 +11989,8 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
             bindVar(header, "paddingRight", headerPaddingXVar);
             bindVar(header, "paddingTop", headerPaddingYVar);
             bindVar(header, "paddingBottom", headerPaddingYVar);
-            bindPaintVar(header, "fills", 0, varMap["modal/background"]);
-            if (isCenteredArch) {
+            bindPaintVar(header, "fills", 0, modalHeaderBgVar);
+            if (isCenteredTitle) {
               var leftCloseSpacer = figma.createFrame();
               leftCloseSpacer.name = "close-spacer";
               leftCloseSpacer.layoutMode = "NONE";
@@ -11884,13 +12021,13 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               titleNode.fontSize = 18;
               titleNode.textAutoResize = "HEIGHT";
               titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-              bindPaintVar(titleNode, "fills", 0, varMap["modal/title"]);
-              bindVar(titleNode, "fontSize", varMap["modal/title-font-size"]);
-              bindVar(titleNode, "fontFamily", varMap["modal/title-font-family"]);
-              bindVar(titleNode, "fontStyle", varMap["modal/title-font-weight"]);
-              bindVar(titleNode, "lineHeight", varMap["modal/title-line-height"]);
+              bindPaintVar(titleNode, "fills", 0, modalTitleVar);
+              bindVar(titleNode, "fontSize", titleFontSizeVar);
+              bindVar(titleNode, "fontFamily", titleFontFamilyVar);
+              bindVar(titleNode, "fontStyle", titleFontWeightVar);
+              bindVar(titleNode, "lineHeight", titleLineHeightVar);
             }
-            if (isCenteredArch) {
+            if (isCenteredTitle) {
               try {
                 if (titleNode.type === "TEXT") {
                   titleNode.textAutoResize = "WIDTH_AND_HEIGHT";
@@ -11915,10 +12052,12 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               centeredTitleSlot.appendChild(titleNode);
               header.appendChild(centeredTitleSlot);
             } else {
+              if (titleNode.type === "TEXT") titleNode.textAutoResize = "HEIGHT";
               titleNode.layoutGrow = 1;
-              titleNode.layoutAlign = "STRETCH";
-              try { titleNode.layoutSizingHorizontal = "FILL"; } catch (_modalTitleFillErr) {}
+              titleNode.layoutAlign = "INHERIT";
               header.appendChild(titleNode);
+              try { titleNode.layoutSizingHorizontal = "FILL"; } catch (_modalTitleFillErr) {}
+              try { titleNode.layoutSizingVertical = "HUG"; } catch (_modalTitleHugErr) {}
             }
 
             if (withClose) {
@@ -11939,11 +12078,11 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 for (var mcvi = 0; mcvi < modalCloseNodes.length; mcvi++) {
                   var modalCloseNode = modalCloseNodes[mcvi];
                   if (modalCloseNode.strokes && modalCloseNode.strokes.length > 0) {
-                    bindPaintVar(modalCloseNode, "strokes", 0, varMap["modal/close"]);
+                    bindPaintVar(modalCloseNode, "strokes", 0, modalCloseVar);
                     bindVar(modalCloseNode, "strokeWeight", varMap["modal/close-icon-stroke-width"]);
                   }
                   if (modalCloseNode.fills && modalCloseNode.fills.length > 0) {
-                    bindPaintVar(modalCloseNode, "fills", 0, varMap["modal/close"]);
+                    bindPaintVar(modalCloseNode, "fills", 0, modalCloseVar);
                   }
                 }
                 header.appendChild(closeIconInst);
@@ -11954,10 +12093,10 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 closeNode.characters = "×";
                 closeNode.fontSize = 18;
                 closeNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
-                bindPaintVar(closeNode, "fills", 0, varMap["modal/close"]);
+                bindPaintVar(closeNode, "fills", 0, modalCloseVar);
                 header.appendChild(closeNode);
               }
-            } else if (isCenteredArch) {
+            } else if (isCenteredTitle) {
               var rightCloseSpacer = figma.createFrame();
               rightCloseSpacer.name = "close-spacer";
               rightCloseSpacer.layoutMode = "NONE";
@@ -11966,6 +12105,40 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               header.appendChild(rightCloseSpacer);
             }
             comp.appendChild(header);
+
+            if (showDividers) {
+              var headerDividerWrap = figma.createFrame();
+              headerDividerWrap.name = "header-divider";
+              headerDividerWrap.layoutMode = "HORIZONTAL";
+              headerDividerWrap.primaryAxisSizingMode = "FIXED";
+              headerDividerWrap.counterAxisSizingMode = "AUTO";
+              headerDividerWrap.itemSpacing = 0;
+              headerDividerWrap.paddingTop = 0;
+              headerDividerWrap.paddingBottom = 0;
+              headerDividerWrap.paddingLeft = 16;
+              headerDividerWrap.paddingRight = 16;
+              headerDividerWrap.fills = [];
+              headerDividerWrap.strokes = [];
+              headerDividerWrap.resize(panelW, 1);
+              bindVar(headerDividerWrap, "paddingLeft", headerPaddingXVar);
+              bindVar(headerDividerWrap, "paddingRight", headerPaddingXVar);
+              comp.appendChild(headerDividerWrap);
+              try { headerDividerWrap.layoutSizingHorizontal = "FILL"; } catch (_hdivWrapFillErr) {}
+              try { headerDividerWrap.layoutSizingVertical = "HUG"; } catch (_hdivWrapHugErr) {}
+
+              var headerDividerLine = figma.createFrame();
+              headerDividerLine.name = "line";
+              headerDividerLine.layoutMode = "NONE";
+              headerDividerLine.resize(Math.max(1, panelW - 32), 1);
+              headerDividerLine.fills = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+              headerDividerLine.strokes = [];
+              bindPaintVar(headerDividerLine, "fills", 0, modalHeaderBorderVar);
+              headerDividerWrap.appendChild(headerDividerLine);
+              try { headerDividerLine.layoutSizingHorizontal = "FILL"; } catch (_hdivLineFillErr) {}
+              try { headerDividerLine.layoutSizingVertical = "FIXED"; } catch (_hdivLineFixedErr) {}
+              headerDividerLine.resize(headerDividerLine.width, 1);
+              bindVar(headerDividerLine, "height", modalBorderWidthVar);
+            }
 
             if (!headerOnly) {
               var bodyWrap = figma.createFrame();
@@ -11987,7 +12160,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               bindVar(bodyWrap, "paddingRight", bodyPaddingRightVar);
               bindVar(bodyWrap, "paddingBottom", bodyPaddingBottomVar);
               bindVar(bodyWrap, "paddingLeft", bodyPaddingLeftVar);
-              bindPaintVar(bodyWrap, "fills", 0, varMap["modal/background"]);
+              bindPaintVar(bodyWrap, "fills", 0, modalBgVar);
               comp.appendChild(bodyWrap);
 
               var bodyNode = null;
@@ -12025,21 +12198,57 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 bodyNode.textAutoResize = "HEIGHT";
                 bodyNode.resize(panelW - 32, bodyNode.height);
                 bodyNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-                bindPaintVar(bodyNode, "fills", 0, varMap["modal/body"]);
-                bindVar(bodyNode, "fontSize", varMap["modal/body-font-size"]);
-                bindVar(bodyNode, "fontFamily", varMap["modal/body-font-family"]);
-                bindVar(bodyNode, "fontStyle", varMap["modal/body-font-weight"]);
-                bindVar(bodyNode, "lineHeight", varMap["modal/body-line-height"]);
+                bindPaintVar(bodyNode, "fills", 0, modalBodyVar);
+                bindVar(bodyNode, "fontSize", bodyFontSizeVar);
+                bindVar(bodyNode, "fontFamily", bodyFontFamilyVar);
+                bindVar(bodyNode, "fontStyle", bodyFontWeightVar);
+                bindVar(bodyNode, "lineHeight", bodyLineHeightVar);
               }
               bodyWrap.appendChild(bodyNode);
+              if (bodyNode.type === "TEXT") bodyNode.textAutoResize = "HEIGHT";
+              try { bodyNode.layoutSizingHorizontal = "FILL"; } catch (_modalBodyFillErr) {}
+              try { bodyNode.layoutSizingVertical = "HUG"; } catch (_modalBodyHugErr2) {}
 
-              if (layout === "action-right" || layout === "centered-arch") {
+              if (layout === "action-right" || layout === "centered-arch" || layout === "centered-action") {
+              if (showDividers) {
+                var footerDividerWrap = figma.createFrame();
+                footerDividerWrap.name = "footer-divider";
+                footerDividerWrap.layoutMode = "HORIZONTAL";
+                footerDividerWrap.primaryAxisSizingMode = "FIXED";
+                footerDividerWrap.counterAxisSizingMode = "AUTO";
+                footerDividerWrap.itemSpacing = 0;
+                footerDividerWrap.paddingTop = 0;
+                footerDividerWrap.paddingBottom = 0;
+                footerDividerWrap.paddingLeft = 16;
+                footerDividerWrap.paddingRight = 16;
+                footerDividerWrap.fills = [];
+                footerDividerWrap.strokes = [];
+                footerDividerWrap.resize(panelW, 1);
+                bindVar(footerDividerWrap, "paddingLeft", footerPaddingLeftVar);
+                bindVar(footerDividerWrap, "paddingRight", footerPaddingRightVar);
+                comp.appendChild(footerDividerWrap);
+                try { footerDividerWrap.layoutSizingHorizontal = "FILL"; } catch (_fdivWrapFillErr) {}
+                try { footerDividerWrap.layoutSizingVertical = "HUG"; } catch (_fdivWrapHugErr) {}
+
+                var footerDividerLine = figma.createFrame();
+                footerDividerLine.name = "line";
+                footerDividerLine.layoutMode = "NONE";
+                footerDividerLine.resize(Math.max(1, panelW - 32), 1);
+                footerDividerLine.fills = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+                footerDividerLine.strokes = [];
+                bindPaintVar(footerDividerLine, "fills", 0, modalFooterBorderVar);
+                footerDividerWrap.appendChild(footerDividerLine);
+                try { footerDividerLine.layoutSizingHorizontal = "FILL"; } catch (_fdivLineFillErr) {}
+                try { footerDividerLine.layoutSizingVertical = "FIXED"; } catch (_fdivLineFixedErr) {}
+                footerDividerLine.resize(footerDividerLine.width, 1);
+                bindVar(footerDividerLine, "height", modalBorderWidthVar);
+              }
               var actionRow = figma.createFrame();
               actionRow.name = "actions";
               actionRow.layoutMode = "HORIZONTAL";
               actionRow.primaryAxisSizingMode = "FIXED";
               actionRow.counterAxisSizingMode = "AUTO";
-              actionRow.primaryAxisAlignItems = layout === "centered-arch" ? "SPACE_BETWEEN" : "MAX";
+              actionRow.primaryAxisAlignItems = layout === "centered-action" ? "CENTER" : (layout === "centered-arch" ? "SPACE_BETWEEN" : "MAX");
               actionRow.counterAxisAlignItems = "CENTER";
               actionRow.itemSpacing = 12;
               actionRow.resize(panelW, 58);
@@ -12049,14 +12258,42 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               actionRow.paddingBottom = 12;
               actionRow.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.15, b: 0.24 } }];
               actionRow.strokes = [];
-              bindVar(actionRow, "paddingLeft", footerPaddingXVar);
-              bindVar(actionRow, "paddingRight", footerPaddingXVar);
-              bindVar(actionRow, "paddingTop", footerPaddingYVar);
-              bindVar(actionRow, "paddingBottom", footerPaddingYVar);
-              bindPaintVar(actionRow, "fills", 0, varMap["modal/background"]);
+              bindVar(actionRow, "paddingLeft", footerPaddingLeftVar);
+              bindVar(actionRow, "paddingRight", footerPaddingRightVar);
+              bindVar(actionRow, "paddingTop", footerPaddingTopVar);
+              bindVar(actionRow, "paddingBottom", footerPaddingBottomVar);
+              bindPaintVar(actionRow, "fills", 0, modalFooterBgVar);
               comp.appendChild(actionRow);
 
-              if (cancelButtonVariant && confirmButtonVariant) {
+              if (layout === "centered-action") {
+                if (confirmButtonVariant) {
+                  var singleBtnInstance = confirmButtonVariant.createInstance();
+                  singleBtnInstance.name = "Action";
+                  actionRow.appendChild(singleBtnInstance);
+                } else {
+                  var singleBtn = figma.createFrame();
+                  singleBtn.name = "Action";
+                  singleBtn.layoutMode = "HORIZONTAL";
+                  singleBtn.primaryAxisSizingMode = "AUTO";
+                  singleBtn.counterAxisSizingMode = "AUTO";
+                  singleBtn.primaryAxisAlignItems = "CENTER";
+                  singleBtn.counterAxisAlignItems = "CENTER";
+                  singleBtn.paddingLeft = 20;
+                  singleBtn.paddingRight = 20;
+                  singleBtn.paddingTop = 8;
+                  singleBtn.paddingBottom = 8;
+                  singleBtn.cornerRadius = 6;
+                  singleBtn.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+                  actionRow.appendChild(singleBtn);
+
+                  var singleTxt = figma.createText();
+                  singleTxt.fontName = font;
+                  singleTxt.characters = "Button";
+                  singleTxt.fontSize = 14;
+                  singleTxt.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                  singleBtn.appendChild(singleTxt);
+                }
+              } else if (cancelButtonVariant && confirmButtonVariant) {
                 var cancelBtnInstance = cancelButtonVariant.createInstance();
                 cancelBtnInstance.name = "Cancel";
                 actionRow.appendChild(cancelBtnInstance);
@@ -12134,8 +12371,12 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               footer.paddingRight = 16;
               footer.paddingTop = 10;
               footer.paddingBottom = 10;
+              bindVar(footer, "paddingLeft", footerPaddingLeftVar);
+              bindVar(footer, "paddingRight", footerPaddingRightVar);
+              bindVar(footer, "paddingTop", footerPaddingTopVar);
+              bindVar(footer, "paddingBottom", footerPaddingBottomVar);
               footer.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-              bindPaintVar(footer, "fills", 0, varMap["modal/footer-background"]);
+              bindPaintVar(footer, "fills", 0, modalFooterBgVar);
               comp.appendChild(footer);
 
               if (cancelButtonVariant && confirmButtonVariant) {
@@ -12165,7 +12406,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
             }
 
             var colIndex = (ri * overlayStates.length + oi) * closeStates.length + ci;
-            var rowIndex = si * layouts.length + li;
+            var rowIndex = ((vi * sizes.length) + si) * layouts.length + li;
             comp.x = colIndex * colWidth;
             comp.y = rowIndex * rowHeight;
             page.appendChild(comp);
@@ -12174,6 +12415,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
         }
       }
     }
+  }
   }
 
   progress("Created " + components.length + " modal variants");
@@ -16861,6 +17103,11 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
                 dropdown.cornerRadius = 4;
                 dropdown.resize(colWidth, 1);
                 try { dropdown.layoutSizingVertical = "HUG"; } catch (_dropdownHugErr) {}
+                var dropdownMaxHeightVar = varMap["multiselect/dropdown-max-height"];
+                if (dropdownMaxHeightVar) {
+                  bindVar(dropdown, "maxHeight", dropdownMaxHeightVar);
+                  dropdown.clipsContent = true;
+                }
                 var dropdownBackgroundVar = varMap["multiselect/" + variant + "-dropdown-background"];
                 var dropdownBorderVar = varMap["multiselect/" + variant + "-dropdown-border"];
                 if (dropdownBackgroundVar) bindPaintVar(dropdown, "fills", 0, dropdownBackgroundVar);

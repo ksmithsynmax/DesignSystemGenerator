@@ -171,8 +171,11 @@ const COMPONENT_LABELS = {
 
 export default function FigmaSyncButton({ brands, syncBuildOptions }) {
   const { status, pluginConnected, sync, error, lastSyncMessage } = useFigmaSync();
-  const [buildMode, setBuildMode] = useState("all");
-  const [selectedComponents, setSelectedComponents] = useState(BUILDABLE_COMPONENTS);
+  // Default to scoped builds with an empty selection so a sync can never
+  // accidentally regenerate every component — the user must opt in to "All
+  // components" or explicitly pick which components to build.
+  const [buildMode, setBuildMode] = useState("selected");
+  const [selectedComponents, setSelectedComponents] = useState([]);
   // "All brands" is temporarily hidden (see commented radio below); force scoped
   // selection for now. Flip back to "all" when re-enabling the All brands option.
   const [brandMode, setBrandMode] = useState("selected");

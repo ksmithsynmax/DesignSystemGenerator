@@ -5,7 +5,8 @@ import ModalPreview from "../previews/ModalPreview";
 
 export const MODAL_SIZE_OPTIONS = ["xs", "sm", "md", "lg", "xl"];
 export const MODAL_RADIUS_OPTIONS = ["xs", "sm", "md", "lg", "xl"];
-export const MODAL_LAYOUT_OPTIONS = ["basic", "actions-right", "centered-ack"];
+export const MODAL_VARIANT_OPTIONS = ["default", "filled"];
+export const MODAL_LAYOUT_OPTIONS = ["basic", "actions-right", "centered-ack", "centered-action"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -60,6 +61,7 @@ export function ModalPreviewContent({
   brands,
   activeBrand,
   activeColorToken,
+  variant,
   size,
   radius,
   layout,
@@ -67,6 +69,7 @@ export function ModalPreviewContent({
   withCloseButton,
   centered,
   showSectionDividers,
+  dividerInset,
   title,
   body,
 }) {
@@ -81,6 +84,7 @@ export function ModalPreviewContent({
         <ModalPreview
           brands={brands}
           brandId={activeBrand}
+          variant={variant}
           size={size}
           radius={radius}
           layout={layout}
@@ -88,6 +92,7 @@ export function ModalPreviewContent({
           withCloseButton={withCloseButton}
           centered={centered}
           showSectionDividers={showSectionDividers}
+          dividerInset={dividerInset}
           title={title}
           body={body}
         />
@@ -102,6 +107,7 @@ export function ModalPreviewContent({
           <ModalPreview
             brands={brands}
             brandId={activeBrand}
+            variant={variant}
             size={s}
             radius={radius}
             layout={layout}
@@ -109,6 +115,7 @@ export function ModalPreviewContent({
             withCloseButton={withCloseButton}
             centered={centered}
             showSectionDividers={showSectionDividers}
+            dividerInset={dividerInset}
             title={title}
             body={body}
           />
@@ -119,6 +126,8 @@ export function ModalPreviewContent({
 }
 
 export function ModalPropertiesPanel({
+  variant,
+  setVariant,
   size,
   setSize,
   radius,
@@ -133,6 +142,8 @@ export function ModalPropertiesPanel({
   setCentered,
   showSectionDividers,
   setShowSectionDividers,
+  dividerInset,
+  setDividerInset,
   title,
   setTitle,
   body,
@@ -140,6 +151,7 @@ export function ModalPropertiesPanel({
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      <PropertyRow label="Variant" value={variant} onChange={setVariant} options={MODAL_VARIANT_OPTIONS} />
       <PropertyRow label="Size" value={size} onChange={setSize} options={MODAL_SIZE_OPTIONS} />
       <PropertyRow label="Radius" value={radius} onChange={setRadius} options={MODAL_RADIUS_OPTIONS} />
       <PropertyRow label="Layout" value={layout} onChange={setLayout} options={MODAL_LAYOUT_OPTIONS} />
@@ -166,7 +178,17 @@ export function ModalPropertiesPanel({
         value={showSectionDividers ? "on" : "off"}
         onChange={(v) => setShowSectionDividers(v === "on")}
         options={["off", "on"]}
-        disabled={layout !== "centered-ack"}
+        disabled={layout !== "centered-ack" && layout !== "centered-action"}
+      />
+      <PropertyRow
+        label="Divider Width"
+        value={dividerInset ? "inset" : "full"}
+        onChange={(v) => setDividerInset(v === "inset")}
+        options={["full", "inset"]}
+        disabled={
+          !showSectionDividers ||
+          (layout !== "centered-ack" && layout !== "centered-action")
+        }
       />
       <div>
         <SectionLabel mb={6}>Title</SectionLabel>

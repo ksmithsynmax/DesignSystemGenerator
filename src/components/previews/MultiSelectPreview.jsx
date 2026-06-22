@@ -134,6 +134,7 @@ export default function MultiSelectPreview({
   const pillRadius = resolveDimension(brands, brandId, "multiselect-pill-radius", effectiveRadius);
   const sectionSize = resolveDimension(brands, brandId, "multiselect-icon-size", size);
   const iconStrokeWidth = resolveDimension(brands, brandId, "multiselect-icon-stroke-width", size);
+  const dropdownMaxHeight = resolveDimension(brands, brandId, "multiselect-dropdown-max-height");
 
   const bdValue = `${borderWidth}px solid ${borderColor}`;
   const dropdownBdValue = `${borderWidth}px solid ${dropdownBorderColor}`;
@@ -210,6 +211,8 @@ export default function MultiSelectPreview({
         padding: 8,
         width: "100%",
         boxSizing: "border-box",
+        maxHeight: dropdownMaxHeight ? `${dropdownMaxHeight}px` : undefined,
+        overflowY: "auto",
       }}
     >
       {ALL_OPTIONS.map((opt) => {

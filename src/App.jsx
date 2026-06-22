@@ -37,6 +37,7 @@ import TokenChainCard from "./components/editors/TokenChainCard";
 import DimensionTokenRow from "./components/editors/DimensionTokenRow";
 import AddPrimitiveForm from "./components/editors/AddPrimitiveForm";
 import BrandGradientsSection from "./components/editors/BrandGradientsSection";
+import SemanticColorEditor from "./components/editors/SemanticColorEditor";
 import {
   ButtonPreviewContent,
   ButtonPropertiesPanel,
@@ -196,6 +197,7 @@ const VARIANTS_BY_COMPONENT = {
   textinput: ["default", "filled"],
   select: ["default", "filled"],
   multiselect: ["default", "filled"],
+  modal: ["default", "filled"],
   table: ["default"],
   progress: ["default"],
   avatar: ["filled"],
@@ -222,14 +224,23 @@ function enforceTextDefaultMappings(brandsInput) {
   const next = JSON.parse(JSON.stringify(brandsInput));
   const semanticScaleKeys = ["semanticRadiusMap", "semanticTypographyMap", "semanticSpacingMap"];
 
+  const isValidMapping = (m) =>
+    m != null && typeof m === "object" && m.color != null && Number.isFinite(Number(m.index));
+
   const applyMappings = (brandId, mappings) => {
     if (!next[brandId]) return;
     if (!next[brandId].semanticMap) next[brandId].semanticMap = {};
     if (!next[brandId].darkSemanticOverrides) next[brandId].darkSemanticOverrides = {};
     Object.entries(mappings).forEach(([semantic, mapping]) => {
-      next[brandId].semanticMap[semantic] = { ...mapping };
+      // Backfill-only: seed the default mapping when missing/invalid, but never
+      // stomp a value the user has explicitly set. This is what makes the
+      // Semantic Colors editor safe — edits to these keys now persist across
+      // reloads instead of being force-reset on every load.
+      if (!isValidMapping(next[brandId].semanticMap[semantic])) {
+        next[brandId].semanticMap[semantic] = { ...mapping };
+      }
       // Preserve any explicit dark override; only backfill if missing.
-      if (!next[brandId].darkSemanticOverrides[semantic]) {
+      if (!isValidMapping(next[brandId].darkSemanticOverrides[semantic])) {
         next[brandId].darkSemanticOverrides[semantic] = { ...mapping };
       }
     });
@@ -344,6 +355,92 @@ function enforceTextDefaultMappings(brandsInput) {
     if (hasAnyLegacyValue || hasOversizedValue) {
       b.dimensionOverrides["select-icon-size"] = { ...nextSelectSectionSizes };
     }
+  });
+
+  // Migrate legacy flat modal color overrides to the "filled" variant. The
+  // original modal became the `filled` variant, so any persisted overrides like
+  // `modal-background` must move to `modal-filled-background` to keep the modal
+  // already in use looking identical. New `modal-default-*` tokens are untouched.
+  var modalColorSuffixes = [
+    "background",
+    "header-background",
+    "footer-background",
+    "border",
+    "title",
+    "body",
+    "overlay",
+    "close",
+  ];
+  Object.keys(next).forEach((brandId) => {
+    const b = next[brandId];
+    if (!b) return;
+    ["componentOverrides", "componentOverridesDark"].forEach((mapKey) => {
+      const map = b[mapKey];
+      if (!map || typeof map !== "object") return;
+      modalColorSuffixes.forEach((suffix) => {
+        const oldKey = `modal-${suffix}`;
+        const newKey = `modal-filled-${suffix}`;
+        if (map[oldKey] && !map[newKey]) {
+          map[newKey] = map[oldKey];
+        }
+        if (map[oldKey]) delete map[oldKey];
+      });
+    });
+  });
+
+  // Migrate legacy shared modal dimension overrides (spacing/typography/border-width)
+  // to the "filled" variant so modals already in use keep their exact sizing. Width,
+  // radius, overlay-opacity, and close-icon-stroke-width stay shared and are untouched.
+  var modalDimSuffixes = [
+    "padding-x",
+    "padding-y",
+    "header-padding-x",
+    "header-padding-y",
+    "body-padding-top",
+    "body-padding-right",
+    "body-padding-bottom",
+    "body-padding-left",
+    "footer-padding-x",
+    "footer-padding-y",
+    "title-font-size",
+    "title-font-family",
+    "title-font-weight",
+    "title-line-height",
+    "body-font-size",
+    "body-font-family",
+    "body-font-weight",
+    "body-line-height",
+    "border-width",
+  ];
+  Object.keys(next).forEach((brandId) => {
+    const b = next[brandId];
+    if (!b) return;
+    const dims = b.dimensionOverrides;
+    if (!dims || typeof dims !== "object") return;
+    modalDimSuffixes.forEach((suffix) => {
+      const oldKey = `modal-${suffix}`;
+      const newKey = `modal-filled-${suffix}`;
+      if (dims[oldKey] && !dims[newKey]) {
+        dims[newKey] = dims[oldKey];
+      }
+      if (dims[oldKey]) delete dims[oldKey];
+    });
+    // Footer padding moved from x/y to per-side (top/right/bottom/left) to match
+    // body padding. Map x -> right + left and y -> top + bottom for each variant.
+    ["default", "filled"].forEach((mv) => {
+      const xKey = `modal-${mv}-footer-padding-x`;
+      const yKey = `modal-${mv}-footer-padding-y`;
+      if (dims[xKey]) {
+        if (!dims[`modal-${mv}-footer-padding-right`]) dims[`modal-${mv}-footer-padding-right`] = dims[xKey];
+        if (!dims[`modal-${mv}-footer-padding-left`]) dims[`modal-${mv}-footer-padding-left`] = dims[xKey];
+        delete dims[xKey];
+      }
+      if (dims[yKey]) {
+        if (!dims[`modal-${mv}-footer-padding-top`]) dims[`modal-${mv}-footer-padding-top`] = dims[yKey];
+        if (!dims[`modal-${mv}-footer-padding-bottom`]) dims[`modal-${mv}-footer-padding-bottom`] = dims[yKey];
+        delete dims[yKey];
+      }
+    });
   });
 
   return next;
@@ -716,6 +813,7 @@ export default function App() {
   const [activeModalWithCloseButton, setActiveModalWithCloseButton] = useState(true);
   const [activeModalCentered, setActiveModalCentered] = useState(true);
   const [activeModalShowSectionDividers, setActiveModalShowSectionDividers] = useState(true);
+  const [activeModalDividerInset, setActiveModalDividerInset] = useState(false);
   const [activeModalTitle, setActiveModalTitle] = useState("Modal title");
   const [activeModalBody, setActiveModalBody] = useState(
     "This action cannot be undone. Please confirm you want to proceed."
@@ -889,6 +987,7 @@ export default function App() {
       setActiveAnchorState("default");
       setActiveAnchorText("View documentation");
     } else if (newComp === "modal") {
+      setActiveVariant("default");
       setActiveModalSize(modalDefault);
       setActiveModalRadius(modalDefault);
       setActiveModalLayout("basic");
@@ -896,6 +995,7 @@ export default function App() {
       setActiveModalWithCloseButton(true);
       setActiveModalCentered(true);
       setActiveModalShowSectionDividers(true);
+      setActiveModalDividerInset(false);
       setActiveModalTitle("Modal title");
       setActiveModalBody("This action cannot be undone. Please confirm you want to proceed.");
     } else if (newComp === "checkbox") {
@@ -1165,6 +1265,29 @@ export default function App() {
     [activeBrand, previewTheme]
   );
 
+  const updateSemanticMapping = useCallback(
+    (semanticKey, partial) => {
+      setBrands((prev) => {
+        const next = JSON.parse(JSON.stringify(prev));
+        const b = next[activeBrand];
+        if (!b) return prev;
+        if (!b.semanticMap) b.semanticMap = {};
+        if (!b.darkSemanticOverrides) b.darkSemanticOverrides = {};
+        const mapKey = previewTheme === "dark" ? "darkSemanticOverrides" : "semanticMap";
+        const merged =
+          previewTheme === "dark"
+            ? mergeDarkSemanticsForBrand(b)
+            : mergeLightSemanticsForBrand(b);
+        // Start from the effective mapping (explicit override or starter default)
+        // so changing only color or only index keeps the other field intact.
+        const current = b[mapKey][semanticKey] || merged[semanticKey] || { color: "neutral", index: 0 };
+        b[mapKey][semanticKey] = { ...current, ...partial };
+        return next;
+      });
+    },
+    [activeBrand, previewTheme]
+  );
+
   const updateDimensionOverride = useCallback(
     (tokenName, size, value) => {
       setBrands((prev) => {
@@ -1423,7 +1546,7 @@ export default function App() {
       forcedIndeterminate = true;
     }
 
-    if (["button", "actionicon", "tabs", "accordion", "checkbox", "chip", "badge", "alert", "radio", "textinput", "select", "multiselect", "card"].includes(activeComponent)) {
+    if (["button", "actionicon", "tabs", "accordion", "checkbox", "chip", "badge", "alert", "radio", "textinput", "select", "multiselect", "card", "modal"].includes(activeComponent)) {
       const variantSegment = parts[1];
       const knownVariants = {
         button: ["filled", "outlined", "ghost"],
@@ -1439,6 +1562,7 @@ export default function App() {
         textinput: ["default", "filled"],
         select: ["default", "filled"],
         multiselect: ["default", "filled"],
+        modal: ["default", "filled"],
       };
       if (knownVariants[activeComponent]?.includes(variantSegment)) {
         forcedVariant = activeComponent === "tabs" ? fromTabsTokenVariant(variantSegment) : variantSegment;
@@ -1794,6 +1918,7 @@ export default function App() {
       textinput: ["default", "filled"],
       select: ["default", "filled"],
       multiselect: ["default", "filled"],
+      modal: ["default", "filled"],
     };
     const variants = variantsByComponent[activeComponent];
 
@@ -1892,6 +2017,13 @@ export default function App() {
   const visibleDimensionTokenEntries = Object.entries(dimensionTokens).filter(([token]) => {
     if (activeComponent === "textinput" && token.startsWith("textinput-error-")) {
       return (effectiveComponentState || "default") === "error";
+    }
+    if (activeComponent === "modal") {
+      // Spacing/typography/border-width are per-variant; width, radius,
+      // overlay-opacity, and close-icon-stroke-width are shared across variants.
+      const variantMatch = token.match(/^modal-(default|filled)-/);
+      if (variantMatch) return variantMatch[1] === activeVariant;
+      return true;
     }
     if (activeComponent === "chip") {
       const variantRadiusMatch = token.match(/^chip-(filled|outline|light)-radius$/);
@@ -2673,6 +2805,23 @@ export default function App() {
                 <PrimitiveScale key={c} name={c} scale={GLOBAL_PRIMITIVES[c]} readOnly />
               ))}
             </Section>
+            {activeComponent === "foundations" && (
+              <Section title={`Semantic Colors — ${brand.name}`}>
+                <SemanticColorEditor
+                  theme={previewTheme === "dark" ? "dark" : "light"}
+                  mergedMap={previewTheme === "dark" ? darkSemanticMerged : lightSemanticMerged}
+                  brandColors={colorNames}
+                  globalColors={globalColorNames}
+                  resolveHex={(role) => resolveColor(brands, activeBrand, role, previewTheme)}
+                  rampLengthOf={(c) =>
+                    (brand.primitives && brand.primitives[c] && brand.primitives[c].length) ||
+                    (GLOBAL_PRIMITIVES[c] && GLOBAL_PRIMITIVES[c].length) ||
+                    10
+                  }
+                  onUpdate={updateSemanticMapping}
+                />
+              </Section>
+            )}
             {visibleColorTokenEntries.length > 0 && (
             <Section title={`Color Tokens — ${getComponentLabel(activeComponent)}`}>
               {visibleColorTokenEntries.map(([token, def]) => {
@@ -2957,6 +3106,7 @@ export default function App() {
                   brands={brands}
                   activeBrand={activeBrand}
                   activeColorToken={activeColorToken}
+                  variant={forcedVariant || activeVariant}
                   size={activeModalSize}
                   radius={activeModalRadius}
                   layout={activeModalLayout}
@@ -2964,6 +3114,7 @@ export default function App() {
                   withCloseButton={activeModalWithCloseButton}
                   centered={activeModalCentered}
                   showSectionDividers={activeModalShowSectionDividers}
+                  dividerInset={activeModalDividerInset}
                   title={activeModalTitle}
                   body={activeModalBody}
                 />
@@ -3579,6 +3730,8 @@ export default function App() {
               )}
               {activeComponent === "modal" && (
                 <ModalPropertiesPanel
+                  variant={forcedVariant || activeVariant}
+                  setVariant={setActiveVariant}
                   size={activeModalSize}
                   setSize={setActiveModalSize}
                   radius={activeModalRadius}
@@ -3593,6 +3746,8 @@ export default function App() {
                   setCentered={setActiveModalCentered}
                   showSectionDividers={activeModalShowSectionDividers}
                   setShowSectionDividers={setActiveModalShowSectionDividers}
+                  dividerInset={activeModalDividerInset}
+                  setDividerInset={setActiveModalDividerInset}
                   title={activeModalTitle}
                   setTitle={setActiveModalTitle}
                   body={activeModalBody}

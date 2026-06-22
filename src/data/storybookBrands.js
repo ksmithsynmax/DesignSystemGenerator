@@ -1262,17 +1262,17 @@ export const STORYBOOK_BRANDS = {
         "index": 5,
         "opacity": 10
       },
-      "modal-background": {
+      "modal-filled-background": {
         "color": "steel",
         "index": 8,
         "opacity": 100
       },
-      "modal-header-background": {
+      "modal-filled-header-background": {
         "color": "steel",
         "index": 8,
         "opacity": 100
       },
-      "modal-footer-background": {
+      "modal-filled-footer-background": {
         "color": "steel",
         "index": 8,
         "opacity": 100
@@ -1346,7 +1346,7 @@ export const STORYBOOK_BRANDS = {
         "index": 5,
         "opacity": 10
       },
-      "modal-border": {
+      "modal-filled-border": {
         "color": "steel",
         "index": 7,
         "opacity": 100
@@ -2507,7 +2507,7 @@ export const STORYBOOK_BRANDS = {
         "index": 0,
         "opacity": 100
       },
-      "modal-close": {
+      "modal-filled-close": {
         "color": "neutral",
         "index": 0
       },
@@ -4098,17 +4098,17 @@ export const STORYBOOK_BRANDS = {
         "index": 4,
         "opacity": 100
       },
-      "modal-background": {
+      "modal-filled-background": {
         "color": "steel",
         "index": 8,
         "opacity": 100
       },
-      "modal-header-background": {
+      "modal-filled-header-background": {
         "color": "steel",
         "index": 8,
         "opacity": 100
       },
-      "modal-border": {
+      "modal-filled-border": {
         "color": "steel",
         "index": 7,
         "opacity": 100
@@ -5201,7 +5201,7 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 9
       },
-      "modal-footer-background": {
+      "modal-filled-footer-background": {
         "color": "steel",
         "index": 8,
         "opacity": 100
@@ -5449,7 +5449,7 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0
       },
-      "modal-close": {
+      "modal-filled-close": {
         "color": "neutral",
         "index": 0
       },
@@ -7501,7 +7501,7 @@ export const STORYBOOK_BRANDS = {
         "color": "green",
         "index": 5
       },
-      "modal-background": {
+      "modal-filled-background": {
         "color": "neutral",
         "index": 0
       },
