@@ -179,6 +179,7 @@ import {
   SkeletonPropertiesPanel,
 } from "./components/panels/SkeletonPreviewPanel";
 import { TablePreviewContent, TablePropertiesPanel } from "./components/panels/TablePreviewPanel";
+import { CalendarPreviewContent, CalendarPropertiesPanel } from "./components/panels/CalendarPreviewPanel";
 import { FoundationsPreviewContent } from "./components/panels/FoundationsPreviewPanel";
 import { DocsThemePreviewContent } from "./components/panels/DocsThemePreviewPanel";
 import FigmaSyncButton from "./components/FigmaSyncButton";
@@ -801,6 +802,8 @@ export default function App() {
     "You are now obligated to give a star to Mantine project on GitHub"
   );
   const [activeTableShowRowHover, setActiveTableShowRowHover] = useState(true);
+  const [activeCalendarShowOutside, setActiveCalendarShowOutside] = useState(true);
+  const [activeCalendarShowHeader, setActiveCalendarShowHeader] = useState(true);
   const [activeAlertRadius, setActiveAlertRadius] = useState("default");
   const [activeAlertColor, setActiveAlertColor] = useState("info");
   const [activeAlertWithCloseButton, setActiveAlertWithCloseButton] = useState(false);
@@ -1190,6 +1193,9 @@ export default function App() {
     } else if (newComp === "table") {
       setActiveVariant("default");
       setActiveTableShowRowHover(true);
+    } else if (newComp === "calendar") {
+      setActiveVariant("default");
+      setActiveCalendarShowOutside(true);
     }
   }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, burgerDefault, segmentedControlDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, multiSelectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, skeletonDefault, skeletonRadiusDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, chartSizeDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
 
@@ -3589,6 +3595,16 @@ export default function App() {
                   showRowHover={activeTableShowRowHover}
                 />
               )}
+              {activeComponent === "calendar" && (
+                <CalendarPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  showOutsideDays={activeCalendarShowOutside}
+                  showHeader={activeCalendarShowHeader}
+                />
+              )}
             </div>
           </div>
 
@@ -4333,7 +4349,15 @@ export default function App() {
                   setShowRowHover={setActiveTableShowRowHover}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "pill", "badge", "image", "avatar", "skeleton", "table"].includes(activeComponent) && (
+              {activeComponent === "calendar" && (
+                <CalendarPropertiesPanel
+                  showOutsideDays={activeCalendarShowOutside}
+                  setShowOutsideDays={setActiveCalendarShowOutside}
+                  showHeader={activeCalendarShowHeader}
+                  setShowHeader={setActiveCalendarShowHeader}
+                />
+              )}
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "pill", "badge", "image", "avatar", "skeleton", "table", "calendar"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

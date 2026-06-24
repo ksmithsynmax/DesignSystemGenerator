@@ -1073,6 +1073,7 @@ function resolveManagedComponentKeyFromName(name) {
     "pill", "badge", "textinput", "multiselect", "select", "card", "actionicon",
     "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image",
     "skeleton",
+    "calendar",
     "table"
   ];
   // Longest keys first so e.g. "textinput" matches before the "text" prefix rule.
@@ -1442,6 +1443,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var skeletonSet = await buildSet("Skeleton", function () {
     return buildSkeletonComponentSet(varMap, page, font);
   });
+  var calendarSet = await buildSet("Calendar", async function () {
+    return await buildCalendarComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
   var tableBuildResult = await buildSet("Table", async function () {
     return await buildTableComponentSet(varMap, page, font, {
       badgeSet: badgeSet,
@@ -1513,6 +1517,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     imageSet,
     avatarSet,
     skeletonSet,
+    calendarSet,
   ].concat(tableFlatten);
   var validSets = generatedSets.filter(function (set) { return Boolean(set); });
   try {
@@ -2737,6 +2742,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         variantPropName = "Layout";
       }
     }
+    if (lowerSetName === "calendar" && variants.length === 0) {
+      var calendarViews = getPropValues(variantProps, "View");
+      if (calendarViews.length > 0) {
+        variants = calendarViews.slice();
+        variantPropName = "View";
+      }
+    }
     if (variants.length === 0) {
       var typeVariants = getPropValues(variantProps, "Type");
       if (typeVariants.length > 0) {
@@ -3008,6 +3020,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           }
           if (lowerSetName === "list" && templateIconModeKey && templateIconModeOff != null) {
             props[templateIconModeKey] = templateIconModeOff;
+          }
+          // Calendar: the View variants (Day/Month/Year) document header-off; the
+          // date-field header gets its own dedicated example instead.
+          if (lowerSetName === "calendar") {
+            var templateCalHeaderKey = getPropKey(variantProps, "Header");
+            if (templateCalHeaderKey) props[templateCalHeaderKey] = "Off";
           }
           var patchKeys = Object.keys(propPatch || {});
           for (var p = 0; p < patchKeys.length; p++) {
@@ -4273,6 +4291,19 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       }
     }
 
+    // Calendar documents the optional date-field header as a dedicated example,
+    // separate from the View variants (which render header-off).
+    var calendarHeaderSlot = null;
+    if (lowerSetName === "calendar" && getPropKey(variantProps, "Header")) {
+      var calDocHeaderValues = getPropValues(variantProps, "Header");
+      if (calDocHeaderValues.indexOf("On") >= 0) {
+        doc.appendChild(createSectionHeader("Date Field Header", "Optional summary header showing the selected date above the calendar.", DOC_COLORS.subtitle));
+        calendarHeaderSlot = createPanel("slot:" + slug + ":calendar-header", 10);
+        calendarHeaderSlot.resize(1192, calendarHeaderSlot.height);
+        doc.appendChild(calendarHeaderSlot);
+      }
+    }
+
     var leftSlot = null;
     var rightSlot = null;
     var bothSlot = null;
@@ -4519,6 +4550,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         }
         if (lowerSetName === "list" && iconModeKey && iconModeOff != null) {
           props[iconModeKey] = iconModeOff;
+        }
+        // Calendar: the View variants (Day/Month/Year) document header-off; the
+        // date-field header gets its own dedicated example instead.
+        if (lowerSetName === "calendar") {
+          var calHeaderKey = getPropKey(variantProps, "Header");
+          if (calHeaderKey) props[calHeaderKey] = "Off";
         }
         if (lowerSetName === "divider") {
           if (orientationKey && orientationHorizontal != null) props[orientationKey] = orientationHorizontal;
@@ -5237,6 +5274,27 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             modalLayoutSlot.appendChild(layoutBlock);
           })(modalDocLayoutFill[mli]);
         }
+      }
+
+      if (calendarHeaderSlot) {
+        clearChildren(calendarHeaderSlot);
+        calendarHeaderSlot.paddingLeft = 12;
+        calendarHeaderSlot.paddingRight = 12;
+        calendarHeaderSlot.paddingTop = 12;
+        calendarHeaderSlot.paddingBottom = 12;
+        var calHeaderViewFill = pickOrdered(getPropValues(variantProps, "View"), ["Day", "Month", "Year"]);
+        var calHeaderView = calHeaderViewFill.length > 0 ? calHeaderViewFill[0] : null;
+        addInstancesRow(
+          calendarHeaderSlot,
+          "On",
+          ["On"],
+          function () {
+            var calHeaderProps = { Header: "On" };
+            if (calHeaderView != null) calHeaderProps.View = calHeaderView;
+            return makeInstance(calHeaderProps);
+          },
+          false
+        );
       }
 
       if (weightSlot && orderedTextWeights.length > 0) {
@@ -8182,6 +8240,741 @@ function buildSkeletonComponentSet(varMap, page, font) {
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Skeleton";
   return componentSet;
+}
+
+// ---------------------------------------------------------------------------
+// Calendar Component (month grid)
+// ---------------------------------------------------------------------------
+// A single component (no variants): header (nav + month label), weekday row, and
+// a Monday-first 6×7 grid of day cells. Day states (selected, in-range, today,
+// weekend, outside-month) each bind to their own calendar/* color tokens. Sizing,
+// radius, spacing, and typography bind to the calendar dimension tokens.
+
+async function buildCalendarComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_p, f) { return f; };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_p, f) { return f; };
+
+  // Pre-load the weight styles the calendar can request so the BAKED
+  // fontName.style matches the bound font-weight variable's value. Otherwise
+  // every text node bakes the base (Regular) style while the variable resolves
+  // to e.g. "Semi Bold", and Figma shows the baked style until the layer is
+  // detached (the bug this fixes).
+  var calFamily = (font && font.family) ? font.family : "Inter";
+  var calWeightFonts = { regular: font };
+  async function loadCalWeight(key, candidates) {
+    for (var i = 0; i < candidates.length; i++) {
+      try { await figma.loadFontAsync(candidates[i]); calWeightFonts[key] = candidates[i]; return; }
+      catch (e) {}
+    }
+  }
+  await loadCalWeight("regular", [{ family: calFamily, style: "Regular" }]);
+  await loadCalWeight("medium", [{ family: calFamily, style: "Medium" }, { family: calFamily, style: "Regular" }]);
+  await loadCalWeight("semibold", [{ family: calFamily, style: "Semi Bold" }, { family: calFamily, style: "SemiBold" }, { family: calFamily, style: "Medium" }]);
+  await loadCalWeight("bold", [{ family: calFamily, style: "Bold" }, { family: calFamily, style: "Semi Bold" }, { family: calFamily, style: "SemiBold" }]);
+  if (!calWeightFonts.regular) calWeightFonts.regular = font;
+
+  function normCalWeight(label) {
+    var s = String(label == null ? "" : label).toLowerCase().replace(/[\s_-]+/g, "");
+    if (s === "semibold") return "semibold";
+    if (s === "bold" || s === "extrabold" || s === "black" || s === "heavy") return "bold";
+    if (s === "medium") return "medium";
+    return "regular";
+  }
+  // Default weight per token, used when a variable isn't present in this brand.
+  var CAL_WEIGHT_FALLBACKS = {
+    "calendar/header-font-weight": "Semi Bold",
+    "calendar/weekday-font-weight": "Medium",
+    "calendar/day-font-weight": "Regular",
+    "calendar/field-label-font-weight": "Medium",
+    "calendar/field-value-font-weight": "Semi Bold",
+  };
+  function fontForWeight(weightKey) {
+    var label = resolveCompString(weightKey, CAL_WEIGHT_FALLBACKS[weightKey] || "Regular");
+    return calWeightFonts[normCalWeight(label)] || calWeightFonts.regular || font;
+  }
+
+  // Untitled UI chevron icon components for the header nav (instance-swapped in).
+  var navIcons = await findCalendarChevronIcons();
+
+  // Use the SAME finder + scope as the chevrons for the date-field edit icon, so
+  // if the chevrons resolve, edit-01 resolves too. The full candidate list (from
+  // the shared util) only feeds the INSTANCE_SWAP preferred-values dropdown.
+  var editIconComp = navIcons.edit;
+  var calIconCandidates = await collectFigmaIconCandidates();
+
+  function calSwapRefs(iconComp) {
+    var refs = [];
+    if (!iconComp) return refs;
+    if (iconComp.key) refs.push(iconComp.key);
+    if (iconComp.id) refs.push(iconComp.id);
+    return refs;
+  }
+  function calSwapPreferred() {
+    var preferred = [];
+    var seen = {};
+    for (var i = 0; i < calIconCandidates.length && preferred.length < 32; i++) {
+      var c = calIconCandidates[i];
+      if (!c || !c.key || seen[c.key]) continue;
+      seen[c.key] = true;
+      preferred.push({ type: "COMPONENT", key: c.key, name: c.name });
+    }
+    return preferred;
+  }
+  function attachEditSwap(component, iconInst) {
+    if (!component || !iconInst || !editIconComp) return;
+    if (typeof component.addComponentProperty !== "function") return;
+    var refs = calSwapRefs(editIconComp);
+    var preferred = calSwapPreferred();
+    var opts = preferred.length > 0 ? { preferredValues: preferred } : undefined;
+    var propName = null;
+    var lastErr = null;
+    for (var i = 0; i < refs.length; i++) {
+      try { propName = component.addComponentProperty("Edit Icon", "INSTANCE_SWAP", refs[i], opts); break; }
+      catch (e) { lastErr = e; }
+    }
+    if (!propName) {
+      for (var j = 0; j < refs.length; j++) {
+        try { propName = component.addComponentProperty("Edit Icon", "INSTANCE_SWAP", refs[j]); break; }
+        catch (e2) { lastErr = e2; }
+      }
+    }
+    if (propName) {
+      try { iconInst.componentPropertyReferences = { mainComponent: propName }; } catch (_setRef) {}
+    } else if (lastErr) {
+      progress("[Calendar] Edit Icon INSTANCE_SWAP failed: " + String(lastErr));
+    }
+  }
+
+  var WEEKDAYS = ["Mo", "Tu", "We", "Th", "Fr", "Sa", "Su"];
+  var MONTHS_SHORT = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  var MONTHS_FULL = [
+    "January", "February", "March", "April", "May", "June",
+    "July", "August", "September", "October", "November", "December",
+  ];
+  var REF_YEAR = 2026;
+  var REF_MONTH = 5; // June (0-indexed)
+  var SELECTED_DAY = 16;
+  var TODAY = 24;
+  var DECADE_START = Math.floor(REF_YEAR / 10) * 10;
+  // Header label per view level.
+  var VIEW_LABELS = {
+    Day: MONTHS_FULL[REF_MONTH] + " " + REF_YEAR,
+    Month: String(REF_YEAR),
+    Year: DECADE_START + " – " + (DECADE_START + 9),
+  };
+
+  // Token-driven dimensions (fallbacks mirror componentTokens defaults).
+  var daySize = resolveCompFloat("calendar/day-size", 36);
+  var dayRadius = resolveCompFloat("calendar/day-radius", 8);
+  var cellGap = resolveCompFloat("calendar/cell-gap", 2);
+  var padding = resolveCompFloat("calendar/padding", 16);
+  var radius = resolveCompFloat("calendar/radius", 8);
+  var borderWidth = resolveCompFloat("calendar/border-width", 1);
+  var headerFontSize = resolveCompFloat("calendar/header-font-size", 14);
+  var weekdayFontSize = resolveCompFloat("calendar/weekday-font-size", 12);
+  var dayFontSize = resolveCompFloat("calendar/day-font-size", 13);
+  var fieldPadding = resolveCompFloat("calendar/field-padding", 16);
+  var fieldLabelFontSize = resolveCompFloat("calendar/field-label-font-size", 12);
+  var fieldValueFontSize = resolveCompFloat("calendar/field-value-font-size", 20);
+
+  // Field value mirrors the selected day (June 16, 2026) → "Tue, Jun 16, 2026".
+  var WEEKDAYS_ABBR = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var FIELD_VALUE = (function () {
+    var d = new Date(REF_YEAR, REF_MONTH, SELECTED_DAY);
+    return WEEKDAYS_ABBR[d.getDay()] + ", " + MONTHS_SHORT[REF_MONTH] + " " + SELECTED_DAY + ", " + REF_YEAR;
+  })();
+
+  // Fallback colors (dark theme approximations); real values come from var binding.
+  var FB = {
+    background: { r: 0.04, g: 0.06, b: 0.10 },
+    border: { r: 0.12, g: 0.16, b: 0.23 },
+    headerText: { r: 1, g: 1, b: 1 },
+    navIcon: { r: 0.53, g: 0.56, b: 0.62 },
+    weekdayText: { r: 0.53, g: 0.56, b: 0.62 },
+    dayText: { r: 1, g: 1, b: 1 },
+    weekendText: { r: 0.53, g: 0.56, b: 0.62 },
+    outsideText: { r: 0.35, g: 0.38, b: 0.45 },
+    selectedBg: { r: 0.13, g: 0.55, b: 0.9 },
+    selectedText: { r: 1, g: 1, b: 1 },
+    inRangeBg: { r: 0.15, g: 0.2, b: 0.3 },
+    todayBg: { r: 0.1, g: 0.13, b: 0.2 },
+    fieldLabel: { r: 0.53, g: 0.56, b: 0.62 },
+    fieldValue: { r: 1, g: 1, b: 1 },
+    fieldEditIcon: { r: 0.53, g: 0.56, b: 0.62 },
+    fieldDivider: { r: 0.12, g: 0.16, b: 0.23 },
+  };
+
+  function buildMatrix(year, month) {
+    var first = new Date(year, month, 1);
+    var leading = (first.getDay() + 6) % 7;
+    var start = new Date(year, month, 1 - leading);
+    var rows = [];
+    for (var r = 0; r < 6; r++) {
+      var week = [];
+      for (var c = 0; c < 7; c++) {
+        var d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + (r * 7 + c));
+        var dow = (d.getDay() + 6) % 7;
+        week.push({ day: d.getDate(), outside: d.getMonth() !== month, weekend: dow >= 5 });
+      }
+      rows.push(week);
+    }
+    while (rows.length > 5 && rows[rows.length - 1].every(function (x) { return x.outside; })) rows.pop();
+    return rows;
+  }
+
+  function bindCorners(node, variable) {
+    bindVar(node, "topLeftRadius", variable);
+    bindVar(node, "topRightRadius", variable);
+    bindVar(node, "bottomLeftRadius", variable);
+    bindVar(node, "bottomRightRadius", variable);
+  }
+  function bindPadding(node, variable) {
+    bindVar(node, "paddingLeft", variable);
+    bindVar(node, "paddingRight", variable);
+    bindVar(node, "paddingTop", variable);
+    bindVar(node, "paddingBottom", variable);
+  }
+
+  function makeCellText(chars, fontSizeFallback, fontSizeKey, weightKey, colorFallback, colorKey) {
+    var t = figma.createText();
+    t.fontName = fontForWeight(weightKey);
+    t.characters = String(chars);
+    t.fontSize = fontSizeFallback;
+    t.textAlignHorizontal = "CENTER";
+    t.textAlignVertical = "CENTER";
+    t.fills = [{ type: "SOLID", color: colorFallback }];
+    if (varMap[colorKey]) bindPaintVar(t, "fills", 0, varMap[colorKey]);
+    if (varMap[fontSizeKey]) bindVar(t, "fontSize", varMap[fontSizeKey]);
+    if (varMap["calendar/font-family"]) bindVar(t, "fontFamily", varMap["calendar/font-family"]);
+    if (varMap[weightKey]) bindVar(t, "fontStyle", varMap[weightKey]);
+    return t;
+  }
+
+  // Fixed-size square cell (auto-layout, centered content).
+  function makeSquareCell(name) {
+    var cell = figma.createFrame();
+    cell.name = name;
+    cell.layoutMode = "HORIZONTAL";
+    cell.primaryAxisSizingMode = "FIXED";
+    cell.counterAxisSizingMode = "FIXED";
+    cell.primaryAxisAlignItems = "CENTER";
+    cell.counterAxisAlignItems = "CENTER";
+    cell.resize(daySize, daySize);
+    cell.fills = [];
+    cell.strokes = [];
+    cell.clipsContent = false;
+    bindVar(cell, "width", varMap["calendar/day-size"]);
+    bindVar(cell, "height", varMap["calendar/day-size"]);
+    return cell;
+  }
+
+  function makeRow(name) {
+    var row = figma.createFrame();
+    row.name = name;
+    row.layoutMode = "HORIZONTAL";
+    row.primaryAxisSizingMode = "AUTO";
+    row.counterAxisSizingMode = "AUTO";
+    row.counterAxisAlignItems = "CENTER";
+    row.itemSpacing = cellGap;
+    row.fills = [];
+    row.strokes = [];
+    row.clipsContent = false;
+    bindVar(row, "itemSpacing", varMap["calendar/cell-gap"]);
+    return row;
+  }
+
+  var gridWidth = 7 * daySize + 6 * cellGap;
+  var pickerCellW = (gridWidth - 2 * cellGap) / 3; // 3-column month/year grids
+
+  // A wider control cell (months/years) — height tracks day-size, width is fixed.
+  function makePickerCell() {
+    var cell = figma.createFrame();
+    cell.name = "Cell";
+    cell.layoutMode = "HORIZONTAL";
+    cell.primaryAxisSizingMode = "FIXED";
+    cell.counterAxisSizingMode = "FIXED";
+    cell.primaryAxisAlignItems = "CENTER";
+    cell.counterAxisAlignItems = "CENTER";
+    cell.resize(pickerCellW, daySize);
+    cell.fills = [];
+    cell.strokes = [];
+    cell.clipsContent = false;
+    cell.cornerRadius = dayRadius;
+    bindVar(cell, "height", varMap["calendar/day-size"]);
+    bindCorners(cell, varMap["calendar/day-radius"]);
+    return cell;
+  }
+
+  // Apply selected / today background + text treatment to a control cell.
+  function applyState(cell, isSelected, isToday, isOutside) {
+    var textFallback = isOutside ? FB.outsideText : FB.dayText;
+    var textKey = isOutside ? "calendar/day-outside-text" : "calendar/day-text";
+    var bgFallback = null;
+    var bgKey = null;
+    if (isSelected) {
+      bgFallback = FB.selectedBg; bgKey = "calendar/day-selected-background";
+      textFallback = FB.selectedText; textKey = "calendar/day-selected-text";
+    } else if (isToday) {
+      bgFallback = FB.todayBg; bgKey = "calendar/day-today-background";
+    }
+    if (bgFallback) {
+      cell.fills = [{ type: "SOLID", color: bgFallback }];
+      if (varMap[bgKey]) bindPaintVar(cell, "fills", 0, varMap[bgKey]);
+    }
+    return { textFallback: textFallback, textKey: textKey };
+  }
+
+  function buildHeader(label) {
+    var header = figma.createFrame();
+    header.name = "Header";
+    header.layoutMode = "HORIZONTAL";
+    header.primaryAxisSizingMode = "FIXED";
+    header.counterAxisSizingMode = "AUTO";
+    header.primaryAxisAlignItems = "SPACE_BETWEEN";
+    header.counterAxisAlignItems = "CENTER";
+    header.layoutAlign = "STRETCH";
+    header.itemSpacing = 8;
+    header.fills = [];
+    header.strokes = [];
+    header.clipsContent = false;
+    header.resize(gridWidth, daySize);
+
+    function makeNav(name, dir, glyph) {
+      var navCell = makeSquareCell(name);
+      var iconComp = dir === "left" ? navIcons.left : navIcons.right;
+      if (iconComp) {
+        var inst = iconComp.createInstance();
+        inst.name = "Chevron";
+        try { inst.resizeWithoutConstraints(18, 18); } catch (_rz) {}
+        try { inst.layoutGrow = 0; } catch (_lg) {}
+        try { inst.layoutAlign = "CENTER"; } catch (_la) {}
+        if (typeof inst.findAll === "function") {
+          var vecs = inst.findAll(function (n) { return n.type === "VECTOR"; });
+          for (var vi = 0; vi < vecs.length; vi++) {
+            try {
+              if (vecs[vi].strokes && vecs[vi].strokes.length > 0 && varMap["calendar/nav-icon"]) {
+                bindPaintVar(vecs[vi], "strokes", 0, varMap["calendar/nav-icon"]);
+              }
+              if (vecs[vi].fills && vecs[vi].fills.length > 0 && varMap["calendar/nav-icon"]) {
+                bindPaintVar(vecs[vi], "fills", 0, varMap["calendar/nav-icon"]);
+              }
+            } catch (_bv) {}
+          }
+        }
+        navCell.appendChild(inst);
+      } else {
+        navCell.appendChild(
+          makeCellText(glyph, headerFontSize, "calendar/header-font-size", "calendar/header-font-weight", FB.navIcon, "calendar/nav-icon")
+        );
+      }
+      return navCell;
+    }
+    header.appendChild(makeNav("Nav Prev", "left", "‹"));
+    var labelTxt = makeCellText(label, headerFontSize, "calendar/header-font-size", "calendar/header-font-weight", FB.headerText, "calendar/header-text");
+    header.appendChild(labelTxt);
+    header.appendChild(makeNav("Nav Next", "right", "›"));
+    return header;
+  }
+
+  // Day grid: weekday row + week rows.
+  function buildDayBody() {
+    var grid = figma.createFrame();
+    grid.name = "Month";
+    grid.layoutMode = "VERTICAL";
+    grid.primaryAxisSizingMode = "AUTO";
+    grid.counterAxisSizingMode = "AUTO";
+    grid.counterAxisAlignItems = "MIN";
+    grid.itemSpacing = cellGap;
+    grid.fills = [];
+    grid.strokes = [];
+    grid.clipsContent = false;
+    bindVar(grid, "itemSpacing", varMap["calendar/cell-gap"]);
+
+    var weekdayRow = makeRow("Weekdays");
+    for (var wi = 0; wi < WEEKDAYS.length; wi++) {
+      var wdCell = makeSquareCell("Weekday");
+      wdCell.appendChild(
+        makeCellText(WEEKDAYS[wi], weekdayFontSize, "calendar/weekday-font-size", "calendar/weekday-font-weight", FB.weekdayText, "calendar/weekday-text")
+      );
+      weekdayRow.appendChild(wdCell);
+    }
+    grid.appendChild(weekdayRow);
+
+    var matrix = buildMatrix(REF_YEAR, REF_MONTH);
+    for (var ri = 0; ri < matrix.length; ri++) {
+      var week = matrix[ri];
+      var weekRow = makeRow("Week");
+      for (var di = 0; di < week.length; di++) {
+        var cellData = week[di];
+        var dayCell = makeSquareCell("Day");
+        dayCell.cornerRadius = dayRadius;
+        bindCorners(dayCell, varMap["calendar/day-radius"]);
+
+        var inMonth = !cellData.outside;
+        var isSelected = inMonth && cellData.day === SELECTED_DAY;
+        var isToday = inMonth && cellData.day === TODAY;
+        var textFallback = cellData.outside ? FB.outsideText : (cellData.weekend ? FB.weekendText : FB.dayText);
+        var textKey = cellData.outside ? "calendar/day-outside-text" : (cellData.weekend ? "calendar/day-weekend-text" : "calendar/day-text");
+        if (isSelected) {
+          dayCell.fills = [{ type: "SOLID", color: FB.selectedBg }];
+          if (varMap["calendar/day-selected-background"]) bindPaintVar(dayCell, "fills", 0, varMap["calendar/day-selected-background"]);
+          textFallback = FB.selectedText; textKey = "calendar/day-selected-text";
+        } else if (isToday) {
+          dayCell.fills = [{ type: "SOLID", color: FB.todayBg }];
+          if (varMap["calendar/day-today-background"]) bindPaintVar(dayCell, "fills", 0, varMap["calendar/day-today-background"]);
+        }
+        dayCell.appendChild(
+          makeCellText(cellData.day, dayFontSize, "calendar/day-font-size", "calendar/day-font-weight", textFallback, textKey)
+        );
+        weekRow.appendChild(dayCell);
+      }
+      grid.appendChild(weekRow);
+    }
+    return grid;
+  }
+
+  // 3-column grid of control cells (months or years).
+  function buildPickerBody(name, items) {
+    var grid = figma.createFrame();
+    grid.name = name;
+    grid.layoutMode = "VERTICAL";
+    grid.primaryAxisSizingMode = "AUTO";
+    grid.counterAxisSizingMode = "AUTO";
+    grid.counterAxisAlignItems = "MIN";
+    grid.itemSpacing = cellGap;
+    grid.fills = [];
+    grid.strokes = [];
+    grid.clipsContent = false;
+    bindVar(grid, "itemSpacing", varMap["calendar/cell-gap"]);
+
+    for (var r = 0; r < items.length; r += 3) {
+      var row = makeRow("Row");
+      for (var c = 0; c < 3 && r + c < items.length; c++) {
+        var it = items[r + c];
+        var cell = makePickerCell();
+        var st = applyState(cell, it.selected, it.today, it.outside);
+        cell.appendChild(
+          makeCellText(it.label, dayFontSize, "calendar/day-font-size", "calendar/day-font-weight", st.textFallback, st.textKey)
+        );
+        row.appendChild(cell);
+      }
+      grid.appendChild(row);
+    }
+    return grid;
+  }
+
+  function monthItems() {
+    var items = [];
+    for (var i = 0; i < 12; i++) {
+      items.push({
+        label: MONTHS_SHORT[i],
+        selected: i === REF_MONTH,
+        today: false,
+        outside: false,
+      });
+    }
+    return items;
+  }
+  function yearItems() {
+    var items = [];
+    for (var y = DECADE_START - 1; y <= DECADE_START + 10; y++) {
+      items.push({
+        label: String(y),
+        selected: y === REF_YEAR,
+        today: false,
+        outside: y < DECADE_START || y > DECADE_START + 9,
+      });
+    }
+    return items;
+  }
+
+  // Left-aligned, auto-width text used in the date-field header.
+  function makeFieldText(chars, fsFallback, fsKey, weightKey, colorFallback, colorKey) {
+    var t = figma.createText();
+    t.fontName = fontForWeight(weightKey);
+    t.textAutoResize = "WIDTH_AND_HEIGHT";
+    t.characters = String(chars);
+    t.fontSize = fsFallback;
+    t.textAlignHorizontal = "LEFT";
+    t.fills = [{ type: "SOLID", color: colorFallback }];
+    if (varMap[colorKey]) bindPaintVar(t, "fills", 0, varMap[colorKey]);
+    if (varMap[fsKey]) bindVar(t, "fontSize", varMap[fsKey]);
+    if (varMap["calendar/font-family"]) bindVar(t, "fontFamily", varMap["calendar/font-family"]);
+    if (varMap[weightKey]) bindVar(t, "fontStyle", varMap[weightKey]);
+    return t;
+  }
+
+  // Returns { node, inst } — inst is the swappable instance (null for vector
+  // fallback when no edit/pencil icon component exists).
+  function makeEditIcon() {
+    if (editIconComp) {
+      var inst = editIconComp.createInstance();
+      inst.name = "Edit";
+      try { inst.resizeWithoutConstraints(18, 18); } catch (_rz) {}
+      try { inst.layoutGrow = 0; } catch (_lg) {}
+      if (typeof inst.findAll === "function") {
+        var vecs = inst.findAll(function (n) { return n.type === "VECTOR"; });
+        for (var vi = 0; vi < vecs.length; vi++) {
+          try {
+            if (vecs[vi].strokes && vecs[vi].strokes.length > 0 && varMap["calendar/field-edit-icon"]) {
+              bindPaintVar(vecs[vi], "strokes", 0, varMap["calendar/field-edit-icon"]);
+            }
+            if (vecs[vi].fills && vecs[vi].fills.length > 0 && varMap["calendar/field-edit-icon"]) {
+              bindPaintVar(vecs[vi], "fills", 0, varMap["calendar/field-edit-icon"]);
+            }
+          } catch (_bv) {}
+        }
+      }
+      return { node: inst, inst: inst };
+    }
+    var v = figma.createVector();
+    v.name = "Edit";
+    v.vectorPaths = [
+      { windingRule: "NONE", data: "M11.7 3.5 L14.5 6.3 L6.0 14.8 L2.6 15.7 L3.5 12.3 Z" },
+      { windingRule: "NONE", data: "M10.8 4.4 L13.6 7.2" },
+    ];
+    v.resize(18, 18);
+    v.fills = [];
+    v.strokes = [{ type: "SOLID", color: FB.fieldEditIcon }];
+    v.strokeWeight = 1.5;
+    try { v.strokeCap = "ROUND"; } catch (_sc) {}
+    try { v.strokeJoin = "ROUND"; } catch (_sj) {}
+    if (varMap["calendar/field-edit-icon"]) bindPaintVar(v, "strokes", 0, varMap["calendar/field-edit-icon"]);
+    return { node: v, inst: null };
+  }
+
+  // Date-field summary: "Select date" label stacked above a row holding the
+  // formatted value and an edit icon (icon centered on the value line). A bottom
+  // divider separates it from the calendar body.
+  function buildFieldHeader() {
+    var fh = figma.createFrame();
+    fh.name = "Date Field";
+    fh.layoutMode = "VERTICAL";
+    fh.primaryAxisSizingMode = "AUTO";
+    fh.counterAxisSizingMode = "FIXED";
+    fh.counterAxisAlignItems = "MIN";
+    fh.layoutAlign = "STRETCH";
+    fh.itemSpacing = 2;
+    fh.paddingLeft = fieldPadding;
+    fh.paddingRight = fieldPadding;
+    fh.paddingTop = fieldPadding;
+    fh.paddingBottom = fieldPadding;
+    fh.fills = [];
+    fh.clipsContent = false;
+    fh.strokes = [{ type: "SOLID", color: FB.fieldDivider }];
+    fh.strokeAlign = "INSIDE";
+    try {
+      fh.strokeTopWeight = 0;
+      fh.strokeLeftWeight = 0;
+      fh.strokeRightWeight = 0;
+      fh.strokeBottomWeight = Math.max(1, borderWidth);
+    } catch (_sw) { fh.strokeWeight = Math.max(1, borderWidth); }
+    if (varMap["calendar/field-divider"]) bindPaintVar(fh, "strokes", 0, varMap["calendar/field-divider"]);
+    if (varMap["calendar/border-width"]) {
+      try { bindVar(fh, "strokeBottomWeight", varMap["calendar/border-width"]); } catch (_sbw) {}
+    }
+    if (varMap["calendar/field-padding"]) bindPadding(fh, varMap["calendar/field-padding"]);
+
+    fh.appendChild(
+      makeFieldText("Select date", fieldLabelFontSize, "calendar/field-label-font-size", "calendar/field-label-font-weight", FB.fieldLabel, "calendar/field-label-text")
+    );
+
+    // Value + edit icon share a row, vertically centered so the icon sits on the
+    // same line as the date value.
+    var valueRow = figma.createFrame();
+    valueRow.name = "Value Row";
+    valueRow.layoutMode = "HORIZONTAL";
+    valueRow.primaryAxisSizingMode = "FIXED";
+    valueRow.counterAxisSizingMode = "AUTO";
+    valueRow.primaryAxisAlignItems = "SPACE_BETWEEN";
+    valueRow.counterAxisAlignItems = "CENTER";
+    valueRow.layoutAlign = "STRETCH";
+    valueRow.itemSpacing = 12;
+    valueRow.fills = [];
+    valueRow.clipsContent = false;
+    valueRow.appendChild(
+      makeFieldText(FIELD_VALUE, fieldValueFontSize, "calendar/field-value-font-size", "calendar/field-value-font-weight", FB.fieldValue, "calendar/field-value-text")
+    );
+    var edit = makeEditIcon();
+    valueRow.appendChild(edit.node);
+    fh.appendChild(valueRow);
+    return { frame: fh, editInst: edit.inst };
+  }
+
+  function buildVariant(viewName, withHeader) {
+    var comp = figma.createComponent();
+    comp.name = "View=" + viewName + ", Header=" + (withHeader ? "On" : "Off");
+    comp.layoutMode = "VERTICAL";
+    comp.primaryAxisSizingMode = "AUTO";
+    comp.counterAxisSizingMode = "AUTO";
+    comp.counterAxisAlignItems = "MIN";
+    comp.itemSpacing = 0;
+    comp.clipsContent = true;
+    comp.fills = [{ type: "SOLID", color: FB.background }];
+    comp.strokes = [{ type: "SOLID", color: FB.border }];
+    comp.strokeWeight = Math.max(1, borderWidth);
+    comp.strokeAlign = "INSIDE";
+    comp.cornerRadius = radius;
+    if (varMap["calendar/background"]) bindPaintVar(comp, "fills", 0, varMap["calendar/background"]);
+    if (varMap["calendar/border"]) bindPaintVar(comp, "strokes", 0, varMap["calendar/border"]);
+    if (varMap["calendar/border-width"]) bindVar(comp, "strokeWeight", varMap["calendar/border-width"]);
+    bindCorners(comp, varMap["calendar/radius"]);
+
+    var fieldEditInst = null;
+    if (withHeader) {
+      var fieldHeader = buildFieldHeader();
+      comp.appendChild(fieldHeader.frame);
+      fieldEditInst = fieldHeader.editInst;
+    }
+
+    // Calendar body carries the padding so the field divider can run edge to edge.
+    var body = figma.createFrame();
+    body.name = "Body";
+    body.layoutMode = "VERTICAL";
+    body.primaryAxisSizingMode = "AUTO";
+    body.counterAxisSizingMode = "AUTO";
+    body.counterAxisAlignItems = "MIN";
+    body.itemSpacing = 10;
+    body.paddingLeft = padding;
+    body.paddingRight = padding;
+    body.paddingTop = padding;
+    body.paddingBottom = padding;
+    body.fills = [];
+    body.clipsContent = false;
+    bindPadding(body, varMap["calendar/padding"]);
+
+    body.appendChild(buildHeader(VIEW_LABELS[viewName]));
+    if (viewName === "Day") body.appendChild(buildDayBody());
+    else if (viewName === "Month") body.appendChild(buildPickerBody("Months", monthItems()));
+    else body.appendChild(buildPickerBody("Years", yearItems()));
+    comp.appendChild(body);
+
+    // Expose the edit icon as an auto-swap (INSTANCE_SWAP) property, defaulted to
+    // edit-01, after it's part of the component tree.
+    if (fieldEditInst) attachEditSwap(comp, fieldEditInst);
+
+    page.appendChild(comp);
+    return comp;
+  }
+
+  // Two rows: Header=On (default, top) then Header=Off, three views per row.
+  var views = ["Day", "Month", "Year"];
+  var components = [];
+  for (var hi = 0; hi < 2; hi++) {
+    for (var vi2 = 0; vi2 < views.length; vi2++) {
+      components.push(buildVariant(views[vi2], hi === 0));
+    }
+  }
+
+  // Lay the variants out in a 3-column grid before combining so they don't
+  // overlap (the tallest "Day" grid otherwise stacks behind the shorter views).
+  var colGap = 48;
+  var rowGap = 64;
+  var estW = 7 * daySize + 6 * cellGap + 2 * padding;
+  var step = estW + colGap;
+  // Tallest component in the first (Header=On) row sets the second row's offset.
+  var row0MaxH = 0;
+  for (var k = 0; k < 3 && k < components.length; k++) {
+    var hh = components[k].height;
+    if (Number.isFinite(hh) && hh > row0MaxH) row0MaxH = hh;
+  }
+  for (var ci = 0; ci < components.length; ci++) {
+    var col = ci % 3;
+    var row = Math.floor(ci / 3);
+    components[ci].x = col * step;
+    components[ci].y = row === 0 ? 0 : row0MaxH + rowGap;
+  }
+
+  progress("Created " + components.length + " calendar view variants");
+  var calendarSet = figma.combineAsVariants(components, page);
+  calendarSet.name = "Calendar";
+  return calendarSet;
+}
+
+/**
+ * Find Untitled UI chevron-left / chevron-right icon components for the Calendar
+ * header nav. Returns { left, right } (either may be null → text-glyph fallback).
+ */
+async function findCalendarChevronIcons() {
+  var result = { left: null, right: null, edit: null };
+  var iconCandidates = [];
+  var iconsPage = null;
+
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var p = figma.root.children[pi];
+    if (p.type !== "PAGE") continue;
+    await p.loadAsync();
+    if (!iconsPage && p.name && p.name.toLowerCase() === "icons") iconsPage = p;
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function (n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") iconCandidates.push(setChildren[ci]);
+      }
+    }
+  }
+
+  // Combine the component's own name with its parent set name (Untitled UI often
+  // names the SET "edit-01" with children like "Style=Line").
+  function combinedName(c) {
+    var own = String(c && c.name || "");
+    var parent = c && c.parent;
+    var setName = parent && parent.type === "COMPONENT_SET" ? String(parent.name || "") : "";
+    return (setName + " " + own).toLowerCase().replace(/[\s_\-\/]+/g, "");
+  }
+  // Edit icon scored separately so edit-01 beats edit-02 etc. (contains match,
+  // same style as the chevron matching above).
+  var editBest = null;
+  var editBestScore = 0;
+  var editish = [];
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var normalized = combinedName(iconCandidates[j]);
+    if (normalized.indexOf("chevrondouble") < 0) {
+      if (!result.left && normalized.indexOf("chevronleft") >= 0) result.left = iconCandidates[j];
+      if (!result.right && normalized.indexOf("chevronright") >= 0) result.right = iconCandidates[j];
+    }
+    var escore = 0;
+    if (normalized.indexOf("edit01") >= 0) escore += 100;
+    else if (normalized.indexOf("edit") >= 0) escore += 40;
+    else if (normalized.indexOf("pencil") >= 0) escore += 30;
+    if (escore > 0) {
+      editish.push(iconCandidates[j].name);
+      if (normalized.indexOf("creditcard") >= 0 || normalized.indexOf("useredit") >= 0 ||
+          normalized.indexOf("usersedit") >= 0 || normalized.indexOf("message") >= 0 ||
+          normalized.indexOf("image") >= 0 || normalized.indexOf("file") >= 0 ||
+          normalized.indexOf("folder") >= 0) {
+        escore -= 80;
+      }
+      escore -= normalized.length * 0.1; // prefer the tightest match
+      if (escore > editBestScore) { editBestScore = escore; editBest = iconCandidates[j]; }
+    }
+  }
+  result.edit = editBest;
+
+  progress("[Calendar] icon candidates: " + iconCandidates.length +
+    "; edit/pencil matches: " + (editish.length ? editish.join(", ") : "none"));
+  if (result.left) progress("[Calendar] Left nav icon: " + result.left.name);
+  if (result.right) progress("[Calendar] Right nav icon: " + result.right.name);
+  if (result.edit) progress("[Calendar] Edit icon: " + result.edit.name);
+  else progress("[Calendar] Edit icon NOT found — using vector fallback.");
+  if (!result.left || !result.right) {
+    progress("[Calendar] Chevron icons not found; using text-glyph fallback.");
+  }
+  return result;
 }
 
 /**

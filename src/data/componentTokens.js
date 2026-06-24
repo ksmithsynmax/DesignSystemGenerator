@@ -2362,6 +2362,51 @@ export const COMPONENT_TOKENS = {
     "table-header-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "table/header-line-height" },
   },
 
+  // Calendar (month grid). Mirrors Mantine's Calendar: a header (month label +
+  // prev/next nav), a weekday row, and a 6×7 grid of day cells. Day states
+  // (selected, in-range, today, weekend, outside-month) each get their own
+  // editable color tokens. Dimensions are single-value (no size scale).
+  calendar: {
+    // ── COLOR TOKENS ──
+    "calendar-background": { type: "COLOR", semantic: "surface-default", figmaPath: "calendar/background" },
+    "calendar-border": { type: "COLOR", semantic: "border-default", figmaPath: "calendar/border" },
+    "calendar-header-text": { type: "COLOR", semantic: "text-default", figmaPath: "calendar/header-text" },
+    "calendar-nav-icon": { type: "COLOR", semantic: "text-subtle", figmaPath: "calendar/nav-icon" },
+    "calendar-weekday-text": { type: "COLOR", semantic: "text-subtle", figmaPath: "calendar/weekday-text" },
+    "calendar-day-text": { type: "COLOR", semantic: "text-default", figmaPath: "calendar/day-text" },
+    "calendar-day-weekend-text": { type: "COLOR", semantic: "text-subtle", figmaPath: "calendar/day-weekend-text" },
+    "calendar-day-outside-text": { type: "COLOR", semantic: "text-disabled", figmaPath: "calendar/day-outside-text" },
+    "calendar-day-hover-background": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "calendar/day-hover-background" },
+    "calendar-day-selected-background": { type: "COLOR", semantic: "interactive-primary", figmaPath: "calendar/day-selected-background" },
+    "calendar-day-selected-text": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "calendar/day-selected-text" },
+    "calendar-day-in-range-background": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "calendar/day-in-range-background" },
+    "calendar-day-today-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "calendar/day-today-background" },
+    // ── DATE-FIELD HEADER (optional summary row above the grid) ──
+    "calendar-field-label-text": { type: "COLOR", semantic: "text-subtle", figmaPath: "calendar/field-label-text" },
+    "calendar-field-value-text": { type: "COLOR", semantic: "text-default", figmaPath: "calendar/field-value-text" },
+    "calendar-field-edit-icon": { type: "COLOR", semantic: "text-subtle", figmaPath: "calendar/field-edit-icon" },
+    "calendar-field-divider": { type: "COLOR", semantic: "border-default", figmaPath: "calendar/field-divider" },
+    // ── DIMENSION TOKENS ──
+    "calendar-radius": { type: "FLOAT", unit: "px", value: 8, figmaPath: "calendar/radius" },
+    "calendar-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "calendar/border-width" },
+    "calendar-padding": { type: "FLOAT", unit: "px", value: 16, figmaPath: "calendar/padding" },
+    "calendar-day-size": { type: "FLOAT", unit: "px", value: 36, figmaPath: "calendar/day-size" },
+    "calendar-day-radius": { type: "FLOAT", unit: "px", value: 8, figmaPath: "calendar/day-radius" },
+    "calendar-cell-gap": { type: "FLOAT", unit: "px", value: 2, figmaPath: "calendar/cell-gap" },
+    "calendar-header-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "calendar/header-font-size" },
+    "calendar-header-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "calendar/header-font-weight" },
+    "calendar-weekday-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "calendar/weekday-font-size" },
+    "calendar-weekday-font-weight": { type: "STRING", value: "Medium", figmaPath: "calendar/weekday-font-weight" },
+    "calendar-day-font-size": { type: "FLOAT", unit: "px", value: 13, figmaPath: "calendar/day-font-size" },
+    "calendar-day-font-weight": { type: "STRING", value: "Regular", figmaPath: "calendar/day-font-weight" },
+    "calendar-field-padding": { type: "FLOAT", unit: "px", value: 16, figmaPath: "calendar/field-padding" },
+    "calendar-field-label-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "calendar/field-label-font-size" },
+    "calendar-field-label-font-weight": { type: "STRING", value: "Medium", figmaPath: "calendar/field-label-font-weight" },
+    "calendar-field-value-font-size": { type: "FLOAT", unit: "px", value: 20, figmaPath: "calendar/field-value-font-size" },
+    "calendar-field-value-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "calendar/field-value-font-weight" },
+    "calendar-font-family": { type: "STRING", value: "Inter", figmaPath: "calendar/font-family" },
+  },
+
   // ── DOCS THEME ──
   // Chrome colors for the generated documentation page (Figma + in-app docs).
   // These default to the brand's surface/border semantics so existing docs keep
@@ -2491,6 +2536,7 @@ export const COMPONENT_SIZE_KEYS = {
   badge: ["default", "xs", "sm", "md", "lg", "xl"],
   alert: ["xs", "sm", "md", "lg", "xl"],
   table: [],
+  calendar: [],
   modal: ["default", "xs", "sm", "md", "lg", "xl"],
   image: ["default", "xs", "sm", "md", "lg", "xl"],
   avatar: ["default", "xs", "sm", "md", "lg", "xl"],

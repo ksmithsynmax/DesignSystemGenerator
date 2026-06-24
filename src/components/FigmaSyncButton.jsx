@@ -139,6 +139,7 @@ const BUILDABLE_COMPONENTS = [
   "avatar",
   "skeleton",
   "table",
+  "calendar",
 ];
 
 // Split the buildable list into Components vs Charts for the selector UI.
