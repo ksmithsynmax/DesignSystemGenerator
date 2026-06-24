@@ -1,14 +1,52 @@
 import { Alert } from "@mantine/core";
 import AlertTriangleIcon from "@untitledui-icons/react/line/AlertTriangleIcon";
+import AlertCircleIcon from "@untitledui-icons/react/line/AlertCircleIcon";
+import CheckCircleIcon from "@untitledui-icons/react/line/CheckCircleIcon";
+import InfoCircleIcon from "@untitledui-icons/react/line/InfoCircleIcon";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
-import { GLOBAL_PRIMITIVES } from "../../data/brands";
+
+// Alert color is a semantic status; each has a default status icon.
+const STATUS_ICON = {
+  info: InfoCircleIcon,
+  success: CheckCircleIcon,
+  warning: AlertTriangleIcon,
+  error: AlertCircleIcon,
+};
+
+const STATUSES = ["info", "success", "warning", "error"];
+const STATUS_VARIANTS = ["default", "filled", "outline"];
+
+/**
+ * Per-status, per-variant color token keys. Each status × variant has its own
+ * editable tokens (defaulting to the matching feedback-* semantic). Variants
+ * without a status axis fall back to the generic variant triplet.
+ */
+export function alertColorTokenKeys(variant, status) {
+  if (STATUS_VARIANTS.includes(variant) && STATUSES.includes(status)) {
+    const base = `alert-${variant}-${status}`;
+    return {
+      bg: `${base}-background`,
+      text: `${base}-text`,
+      border: `${base}-border`,
+      icon: `${base}-icon`,
+      close: `${base}-close`,
+    };
+  }
+  return {
+    bg: `alert-${variant}-background`,
+    text: `alert-${variant}-text`,
+    border: `alert-${variant}-border`,
+    icon: "alert-icon",
+    close: "alert-close",
+  };
+}
 
 export default function AlertPreview({
   brands,
   brandId,
-  variant = "light",
-  color = "blue",
+  variant = "default",
+  color = "info",
   radius = "md",
   withCloseButton = false,
   withIcon = true,
@@ -16,15 +54,19 @@ export default function AlertPreview({
   message = "Lorem ipsum dolor sit, amet consectetur adipisicing elit. At officiis, quae tempore necessitatibus placeat saepe.",
 }) {
   const tokens = COMPONENT_TOKENS.alert;
-  const bgKey = `alert-${variant}-background`;
-  const textKey = `alert-${variant}-text`;
-  const borderKey = `alert-${variant}-border`;
+  const {
+    bg: bgKey,
+    text: textKey,
+    border: borderKey,
+    icon: iconKey,
+    close: closeKey,
+  } = alertColorTokenKeys(variant, color);
 
-  const background = resolveColor(brands, brandId, tokens[bgKey]?.semantic, "light", bgKey);
-  const textColor = resolveColor(brands, brandId, tokens[textKey]?.semantic, "light", textKey);
-  const borderColor = resolveColor(brands, brandId, tokens[borderKey]?.semantic, "light", borderKey);
-  const iconColor = resolveColor(brands, brandId, tokens["alert-icon"]?.semantic, "light", "alert-icon");
-  const closeColor = resolveColor(brands, brandId, tokens["alert-close"]?.semantic, "light", "alert-close");
+  const variantBackground = resolveColor(brands, brandId, tokens[bgKey]?.semantic, "light", bgKey);
+  const variantTextColor = resolveColor(brands, brandId, tokens[textKey]?.semantic, "light", textKey);
+  const variantBorderColor = resolveColor(brands, brandId, tokens[borderKey]?.semantic, "light", borderKey);
+  const variantIconColor = resolveColor(brands, brandId, tokens[iconKey]?.semantic, "light", iconKey);
+  const variantCloseColor = resolveColor(brands, brandId, tokens[closeKey]?.semantic, "light", closeKey);
 
   const borderWidth = resolveDimension(brands, brandId, "alert-border-width");
   const cornerRadius = resolveDimension(brands, brandId, "alert-radius", radius);
@@ -41,70 +83,14 @@ export default function AlertPreview({
   const iconTitleGap = resolveDimension(brands, brandId, "alert-icon-title-gap") ?? 8;
   const titleMessageGap = resolveDimension(brands, brandId, "alert-title-message-gap") ?? 6;
 
-  const brand = brands[brandId];
-  const palette = brand?.primitives?.[color] || GLOBAL_PRIMITIVES[color] || null;
-  const toneSoft = palette?.[1] || null;
-  const toneStrong = palette?.[6] || null;
-  const toneBorder = palette?.[4] || null;
-  const hasTokenOverride = (tokenName) => Boolean(brand?.componentOverrides?.[tokenName]);
-  const iconOverride = hasTokenOverride("alert-icon");
-  const closeOverride = hasTokenOverride("alert-close");
-
-  const variantBackground =
-    hasTokenOverride(bgKey)
-      ? background
-      : variant === "filled"
-        ? (toneStrong || background)
-        : variant === "light"
-          ? (toneSoft || background)
-          : variant === "outline"
-            ? "transparent"
-            : variant === "transparent"
-              ? "transparent"
-              : background;
-
-  const variantTextColor =
-    hasTokenOverride(textKey)
-      ? textColor
-      : variant === "filled"
-        ? "#FFFFFF"
-        : (toneStrong || textColor);
-
-  const variantBorderColor =
-    hasTokenOverride(borderKey)
-      ? borderColor
-      : variant === "filled"
-        ? (toneStrong || borderColor)
-        : variant === "light"
-          ? (toneSoft || borderColor)
-          : variant === "outline"
-            ? (toneBorder || toneStrong || borderColor)
-            : variant === "transparent"
-              ? "transparent"
-              : borderColor;
-
-  const variantIconColor =
-    iconOverride
-      ? iconColor
-      : variant === "filled"
-        ? "#FFFFFF"
-        : (toneStrong || iconColor);
-
-  const variantCloseColor =
-    closeOverride
-      ? closeColor
-      : variant === "filled"
-        ? "#FFFFFF"
-        : closeColor;
-
+  const StatusIcon = STATUS_ICON[color] || AlertTriangleIcon;
   const iconNode = withIcon ? (
-    <AlertTriangleIcon width={16} height={16} style={{ color: variantIconColor }} />
+    <StatusIcon width={16} height={16} style={{ color: variantIconColor }} />
   ) : null;
 
   return (
     <Alert
       variant={variant}
-      color={color}
       radius={radius}
       title={title}
       icon={iconNode}

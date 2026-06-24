@@ -109,6 +109,7 @@ export function ChartPropertiesPanel({
   const isStacked = type === "stacked-bar";
   const isCombo = type === "combo";
   const isDonut = type === "donut";
+  const isRadar = type === "radar";
   const hasSeries = isMultiSeries || isStacked;
   // Combo is a fixed 2-series scheme (bar = series-1, line = series-2), so it has
   // no color-mode / series-count controls.
@@ -130,14 +131,14 @@ export function ChartPropertiesPanel({
     <div style={{ display: "grid", gap: 10 }}>
       {!isCombo && (
         <PropertyRow
-          label={isDonut ? "Slice colors" : hasSeries ? "Color" : "Bar colors"}
+          label={isDonut ? "Slice colors" : hasSeries || isRadar ? "Color" : "Bar colors"}
           value={colorMode}
           onChange={setColorMode}
           options={colorModeOptions}
           formatOption={formatColorMode}
         />
       )}
-      {((hasSeries && colorMode !== "single") || isDonut) && (
+      {((hasSeries && colorMode !== "single") || (isRadar && colorMode !== "single") || isDonut) && (
         <PropertyRow
           label={isStacked ? "Segments" : isDonut ? "Slices" : "Series"}
           value={String(seriesCount)}
@@ -145,7 +146,7 @@ export function ChartPropertiesPanel({
           options={seriesCountOptions}
         />
       )}
-      {(isMultiSeries || isCombo) && (
+      {(isMultiSeries || isCombo || isRadar) && (
         <PropertyRow
           label="Points"
           value={showPoints ? "on" : "off"}
@@ -161,7 +162,7 @@ export function ChartPropertiesPanel({
           options={["off", "on"]}
         />
       )}
-      {(hasSeries || isCombo || isDonut) && (
+      {(hasSeries || isCombo || isDonut || isRadar) && (
         <PropertyRow
           label="Legend"
           value={showLegend ? "on" : "off"}

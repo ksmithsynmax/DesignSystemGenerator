@@ -1055,6 +1055,7 @@ function resolveManagedComponentKeyFromName(name) {
     stackedbarchart: "chartstackedbar",
     combochart: "chartcombo",
     donutchart: "chartdonut",
+    radarchart: "chartradar",
   };
   if (chartAliases[normalized]) return chartAliases[normalized];
   var managedKeys = [
@@ -1064,12 +1065,14 @@ function resolveManagedComponentKeyFromName(name) {
     "chartstackedbar",
     "chartcombo",
     "chartdonut",
+    "chartradar",
     "chartline",
     "chartarea",
     "chart",
     "avatar",
     "pill", "badge", "textinput", "multiselect", "select", "card", "actionicon",
     "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image",
+    "skeleton",
     "table"
   ];
   // Longest keys first so e.g. "textinput" matches before the "text" prefix rule.
@@ -1364,6 +1367,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var chartDonutSet = await buildSet("Chart Donut", function () {
     return buildChartDonutComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
   });
+  var chartRadarSet = await buildSet("Chart Radar", function () {
+    return buildChartRadarComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
   var notificationSet = await buildSet("Notification", function () {
     return buildNotificationComponentSet(varMap, page, font, loaderSet, resolvedComponentFloat);
   });
@@ -1433,6 +1439,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var avatarSet = await buildSet("Avatar", async function () {
     return await buildAvatarComponentSet(varMap, page, font);
   });
+  var skeletonSet = await buildSet("Skeleton", function () {
+    return buildSkeletonComponentSet(varMap, page, font);
+  });
   var tableBuildResult = await buildSet("Table", async function () {
     return await buildTableComponentSet(varMap, page, font, {
       badgeSet: badgeSet,
@@ -1478,6 +1487,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     chartStackedBarSet,
     chartComboSet,
     chartDonutSet,
+    chartRadarSet,
     notificationSet,
     alertSet,
     modalSet,
@@ -1502,6 +1512,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     textSet,
     imageSet,
     avatarSet,
+    skeletonSet,
   ].concat(tableFlatten);
   var validSets = generatedSets.filter(function (set) { return Boolean(set); });
   try {
@@ -2715,7 +2726,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var slug = normalizeName(setName);
     var lowerSetName = String(setName || "").toLowerCase();
     var normalizedSetName = normalizeComponentKey(setName);
-    var stackSizeRows = lowerSetName === "title" || lowerSetName === "text" || lowerSetName === "modal";
+    var stackSizeRows = lowerSetName === "title" || lowerSetName === "text" || lowerSetName === "modal" || lowerSetName === "skeleton";
     var variantProps = set.variantGroupProperties || {};
     var variants = getPropValues(variantProps, "Variant");
     var variantPropName = "Variant";
@@ -2823,6 +2834,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateLeftArrowKey = getPropKey(variantProps, "LeftArrow");
       var templateRightArrowKey = getPropKey(variantProps, "RightArrow");
       var templateMenuKey = getPropKey(variantProps, "Menu");
+      // Alert/Modal: surface the close control in docs by default (it's an opt-in
+      // variant in the set, so the default variant would otherwise hide it).
+      var templateCloseKey = getPropKey(variantProps, "Close") || getPropKey(variantProps, "WithCloseButton");
+      var templateCloseValues = templateCloseKey ? getPropValues(variantProps, templateCloseKey) : [];
+      var templateCloseOn = templateCloseValues.indexOf("On") >= 0
+        ? "On"
+        : (templateCloseValues.indexOf("True") >= 0 ? "True" : null);
       var templateIconModeKey = getPropKey(variantProps, "Icon");
       if (lowerSetName === "list" && templateIconModeKey && !templateListIconsSlot) {
         templatedDoc.appendChild(createSectionHeader("With Icons", "Preview list content with and without icon markers.", DOC_COLORS.subtitle));
@@ -2911,6 +2929,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         ? pickOrdered(templateColorValues, ["Default", "Success", "Warning", "Error"])
         : [];
 
+      // Alert uses a "Status" axis as its semantic color dimension.
+      var templateAlertStatusKey = (lowerSetName === "alert") ? getPropKey(variantProps, "Status") : null;
+      var templateAlertStatusColors = templateAlertStatusKey
+        ? pickOrdered(getPropValues(variantProps, "Status"), ["Info", "Success", "Warning", "Error"])
+        : [];
+
       var templateLeftValues = templateLeftIconKey ? getPropValues(variantProps, templateLeftIconKey) : [];
       var templateRightValues = templateRightIconKey ? getPropValues(variantProps, templateRightIconKey) : [];
       var templateLeftArrowValues = templateLeftArrowKey ? getPropValues(variantProps, templateLeftArrowKey) : [];
@@ -2975,6 +2999,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (templateLeftArrowKey && templateLeftArrowOff != null) props[templateLeftArrowKey] = templateLeftArrowOff;
           if (templateRightArrowKey && templateRightArrowOff != null) props[templateRightArrowKey] = templateRightArrowOff;
           if (templateMenuKey && templateMenuOff != null) props[templateMenuKey] = templateMenuOff;
+          if ((lowerSetName === "alert" || lowerSetName === "modal") && templateCloseKey && templateCloseOn != null) {
+            props[templateCloseKey] = templateCloseOn;
+          }
+          // Alert: show the status icon (info/success/warning/error) next to the title by default.
+          if (lowerSetName === "alert" && templateIconModeKey && templateIconModeOn != null) {
+            props[templateIconModeKey] = templateIconModeOn;
+          }
           if (lowerSetName === "list" && templateIconModeKey && templateIconModeOff != null) {
             props[templateIconModeKey] = templateIconModeOff;
           }
@@ -3112,6 +3143,28 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 false
               );
               templateVariantSection.appendChild(templateVariantColorsPanel);
+            } else if (lowerSetName === "alert" && templateAlertStatusKey && templateAlertStatusColors.length > 0) {
+              var templateAlertColorsPanel = createStack("variant-colors-" + normalizeName(templateVariantName), 10);
+              templateAlertColorsPanel.paddingLeft = 12;
+              templateAlertColorsPanel.paddingRight = 12;
+              templateAlertColorsPanel.paddingTop = 12;
+              templateAlertColorsPanel.paddingBottom = 12;
+              addInstancesRow(
+                templateAlertColorsPanel,
+                "Status",
+                templateAlertStatusColors,
+                (function (vName) {
+                  return function (statusName) {
+                    var statusPatch = {};
+                    statusPatch[variantPropName] = vName;
+                    statusPatch.Status = statusName;
+                    return makeTemplateInstance(statusPatch);
+                  };
+                })(templateVariantName),
+                false,
+                { itemsPerRow: 1 }
+              );
+              templateVariantSection.appendChild(templateAlertColorsPanel);
             } else {
               var templateVariantStatesPanel = createStack("variant-states-" + normalizeName(templateVariantName), 10);
               templateVariantStatesPanel.paddingLeft = 12;
@@ -4287,6 +4340,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var leftArrowKey = getPropKey(variantProps, "LeftArrow");
       var rightArrowKey = getPropKey(variantProps, "RightArrow");
       var menuKey = getPropKey(variantProps, "Menu");
+      // Alert/Modal: surface the close control in docs by default (it's an opt-in
+      // variant in the set, so the default variant would otherwise hide it).
+      var closeKey = getPropKey(variantProps, "Close") || getPropKey(variantProps, "WithCloseButton");
+      var closeValues = closeKey ? getPropValues(variantProps, closeKey) : [];
+      var closeOn = closeValues.indexOf("On") >= 0
+        ? "On"
+        : (closeValues.indexOf("True") >= 0 ? "True" : null);
       var iconModeKey = getPropKey(variantProps, "Icon");
       var orientationKey = getPropKey(variantProps, "Orientation");
       var insetKey = getPropKey(variantProps, "Inset");
@@ -4368,6 +4428,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         ? pickOrdered(colorValuesAll, ["Default", "Success", "Warning", "Error"])
         : [];
 
+      // Alert uses a "Status" axis as its semantic color dimension.
+      var alertDocStatusKey = (lowerSetName === "alert") ? getPropKey(variantProps, "Status") : null;
+      var alertDocStatusColors = alertDocStatusKey
+        ? pickOrdered(getPropValues(variantProps, "Status"), ["Info", "Success", "Warning", "Error"])
+        : [];
+
       var leftValues = leftIconKey ? getPropValues(variantProps, leftIconKey) : [];
       var rightValues = rightIconKey ? getPropValues(variantProps, rightIconKey) : [];
       var leftArrowValues = leftArrowKey ? getPropValues(variantProps, leftArrowKey) : [];
@@ -4444,6 +4510,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         if (leftArrowKey && leftArrowOff != null) props[leftArrowKey] = leftArrowOff;
         if (rightArrowKey && rightArrowOff != null) props[rightArrowKey] = rightArrowOff;
         if (menuKey && menuOff != null) props[menuKey] = menuOff;
+        if ((lowerSetName === "alert" || lowerSetName === "modal") && closeKey && closeOn != null) {
+          props[closeKey] = closeOn;
+        }
+        // Alert: show the status icon (info/success/warning/error) next to the title by default.
+        if (lowerSetName === "alert" && iconModeKey && iconModeOn != null) {
+          props[iconModeKey] = iconModeOn;
+        }
         if (lowerSetName === "list" && iconModeKey && iconModeOff != null) {
           props[iconModeKey] = iconModeOff;
         }
@@ -4584,6 +4657,28 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               false
             );
             variantSection.appendChild(variantColorsPanel);
+          } else if (lowerSetName === "alert" && alertDocStatusKey && alertDocStatusColors.length > 0) {
+            var alertColorsPanel = createStack("variant-colors-" + normalizeName(variantName), 10);
+            alertColorsPanel.paddingLeft = 12;
+            alertColorsPanel.paddingRight = 12;
+            alertColorsPanel.paddingTop = 12;
+            alertColorsPanel.paddingBottom = 12;
+            addInstancesRow(
+              alertColorsPanel,
+              "Status",
+              alertDocStatusColors,
+              (function (vName) {
+                return function (statusName) {
+                  var statusPatch = {};
+                  statusPatch[variantPropName] = vName;
+                  statusPatch.Status = statusName;
+                  return makeInstance(statusPatch);
+                };
+              })(variantName),
+              false,
+              { itemsPerRow: 1 }
+            );
+            variantSection.appendChild(alertColorsPanel);
           } else {
             var variantStatesPanel = createStack("variant-states-" + normalizeName(variantName), 10);
             variantStatesPanel.paddingLeft = 12;
@@ -7997,6 +8092,95 @@ async function buildImageComponentSet(varMap, page, font) {
   progress("Created " + components.length + " image variants");
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Image";
+  return componentSet;
+}
+
+function buildSkeletonComponentSet(varMap, page, font) {
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var circles = [false, true];
+  var components = [];
+
+  var defaultWidthBySize = { default: 240, xs: 120, sm: 180, md: 240, lg: 320, xl: 420 };
+  var defaultHeightBySize = { default: 16, xs: 8, sm: 12, md: 16, lg: 24, xl: 32 };
+  var defaultRadiusBySize = { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 };
+
+  var fillVar = varMap["skeleton/fill"];
+
+  for (var si = 0; si < sizes.length; si++) {
+    var size = sizes[si];
+    var capSize = size === "default" ? "Default" : size.toUpperCase();
+    var widthVar = varMap["skeleton/width-" + size] || varMap["skeleton/width"];
+    var heightVar = varMap["skeleton/height-" + size] || varMap["skeleton/height"];
+    var baseW = defaultWidthBySize[size] || 240;
+    var baseH = defaultHeightBySize[size] || 16;
+
+    for (var ri = 0; ri < radii.length; ri++) {
+      var radius = radii[ri];
+      var capRadius = radius === "default" ? "Default" : radius.toUpperCase();
+      var radiusVar = varMap["skeleton/radius-" + radius] || varMap["skeleton/radius"];
+      var baseR = defaultRadiusBySize[radius] || 0;
+
+      for (var ci = 0; ci < circles.length; ci++) {
+        var isCircle = circles[ci];
+        // Mantine: when circle, width/height/radius all equal the height value.
+        var compW = isCircle ? baseH : baseW;
+        var compH = baseH;
+
+        var comp = figma.createComponent();
+        comp.name = "Size=" + capSize + ", Radius=" + capRadius + ", Circle=" + (isCircle ? "True" : "False");
+        comp.layoutMode = "NONE";
+        comp.clipsContent = true;
+        comp.resize(compW, compH);
+        comp.fills = [];
+        comp.strokes = [];
+        comp.x = si * 560;
+        comp.y = ((ri * circles.length) + ci) * 120;
+
+        var surface = figma.createRectangle();
+        surface.name = "Skeleton Surface";
+        surface.resize(compW, compH);
+        surface.x = 0;
+        surface.y = 0;
+        surface.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+        surface.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.14, b: 0.16 } }];
+        surface.strokes = [];
+        if (fillVar) bindPaintVar(surface, "fills", 0, fillVar);
+
+        // Width: circle pins both axes to the height token; block uses the width token.
+        bindVar(comp, "width", isCircle ? heightVar : widthVar);
+        bindVar(comp, "height", heightVar);
+        bindVar(surface, "width", isCircle ? heightVar : widthVar);
+        bindVar(surface, "height", heightVar);
+
+        // Radius: circle pins all corners to the height token (full pill); block uses radius token.
+        var cornerVar = isCircle ? heightVar : radiusVar;
+        if (isCircle) {
+          comp.cornerRadius = baseH;
+          surface.cornerRadius = baseH;
+        } else {
+          comp.cornerRadius = baseR;
+          surface.cornerRadius = baseR;
+        }
+        bindVar(comp, "topLeftRadius", cornerVar);
+        bindVar(comp, "topRightRadius", cornerVar);
+        bindVar(comp, "bottomLeftRadius", cornerVar);
+        bindVar(comp, "bottomRightRadius", cornerVar);
+        bindVar(surface, "topLeftRadius", cornerVar);
+        bindVar(surface, "topRightRadius", cornerVar);
+        bindVar(surface, "bottomLeftRadius", cornerVar);
+        bindVar(surface, "bottomRightRadius", cornerVar);
+
+        comp.appendChild(surface);
+        page.appendChild(comp);
+        components.push(comp);
+      }
+    }
+  }
+
+  progress("Created " + components.length + " skeleton variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Skeleton";
   return componentSet;
 }
 
@@ -11640,8 +11824,10 @@ async function buildNotificationComponentSet(varMap, page, font, loaderSet, reso
 // ---------------------------------------------------------------------------
 
 async function buildAlertComponentSet(varMap, page, font) {
-  var variants = ["default", "filled", "light", "outline", "transparent", "white"];
-  var radii = ["xs", "sm", "md", "lg", "xl"];
+  // Alert color is a semantic status; each status × variant has its own tokens.
+  var variants = ["default", "filled", "outline"];
+  var statuses = ["info", "success", "warning", "error"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var closeStates = ["off", "on"];
   var iconStates = ["off", "on"];
   var components = [];
@@ -11656,153 +11842,192 @@ async function buildAlertComponentSet(varMap, page, font) {
       .join("-");
   }
 
+  // Resolve a per-status color variable, falling back to the generic variant
+  // token (so legacy files without the status variables still bind something).
+  function avar(variant, status, suffix) {
+    return (
+      varMap["alert/" + variant + "-" + status + "-" + suffix] ||
+      varMap["alert/" + variant + "-" + suffix] ||
+      null
+    );
+  }
+
+  // Bind an icon instance's vector colors (stroke + fill where present).
+  function bindIconColor(inst, variable) {
+    if (!variable) return;
+    var vectors = inst.findAll(function(n) {
+      return n.type === "VECTOR" || n.type === "BOOLEAN_OPERATION" || n.type === "ELLIPSE" || n.type === "RECTANGLE";
+    });
+    var targets = vectors.length ? vectors : [inst];
+    for (var k = 0; k < targets.length; k++) {
+      bindPaintVar(targets[k], "strokes", 0, variable);
+      bindPaintVar(targets[k], "fills", 0, variable);
+    }
+  }
+
   var alertIcons = await findAlertIconComponents();
-  if (alertIcons.warning) progress("[Alert] Icon source: " + alertIcons.warning.name);
-  else progress("[Alert] Warning icon not found");
-  if (alertIcons.close) progress("[Alert] Close source: " + alertIcons.close.name);
-  else progress("[Alert] Close icon not found");
+  var statusIconSource = {
+    info: alertIcons.info || alertIcons.warning || alertIcons.fallback,
+    success: alertIcons.success || alertIcons.warning || alertIcons.fallback,
+    warning: alertIcons.warning || alertIcons.fallback,
+    error: alertIcons.error || alertIcons.warning || alertIcons.fallback,
+  };
+  progress("[Alert] Icons — info:" + (alertIcons.info ? alertIcons.info.name : "?") +
+    " success:" + (alertIcons.success ? alertIcons.success.name : "?") +
+    " warning:" + (alertIcons.warning ? alertIcons.warning.name : "?") +
+    " error:" + (alertIcons.error ? alertIcons.error.name : "?"));
+  if (!alertIcons.close) progress("[Alert] Close icon not found");
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
     var capVariant = cap(variant);
 
-    for (var ri = 0; ri < radii.length; ri++) {
-      var radius = radii[ri];
-      var capRadius = radius.toUpperCase();
+    for (var si = 0; si < statuses.length; si++) {
+      var status = statuses[si];
+      var capStatus = cap(status);
 
-      for (var ci = 0; ci < closeStates.length; ci++) {
-        var withClose = closeStates[ci] === "on";
-        var capClose = withClose ? "On" : "Off";
+      for (var ri = 0; ri < radii.length; ri++) {
+        var radius = radii[ri];
+        var capRadius = radius.toUpperCase();
 
-        for (var ii = 0; ii < iconStates.length; ii++) {
-          var withIcon = iconStates[ii] === "on";
-          var capIcon = withIcon ? "On" : "Off";
+        for (var ci = 0; ci < closeStates.length; ci++) {
+          var withClose = closeStates[ci] === "on";
+          var capClose = withClose ? "On" : "Off";
 
-          var comp = figma.createComponent();
-          comp.name =
-            "Variant=" + capVariant +
-            ", Radius=" + capRadius +
-            ", Close=" + capClose +
-            ", Icon=" + capIcon;
-          comp.resize(380, 110);
-          comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-          comp.strokes = [{ type: "SOLID", color: { r: 0.84, g: 0.84, b: 0.84 } }];
-          comp.strokeWeight = 1;
-          comp.strokeAlign = "INSIDE";
-          comp.cornerRadius = 8;
+          for (var ii = 0; ii < iconStates.length; ii++) {
+            var withIcon = iconStates[ii] === "on";
+            var capIcon = withIcon ? "On" : "Off";
 
-          bindPaintVar(comp, "fills", 0, varMap["alert/" + variant + "-background"]);
-          bindPaintVar(comp, "strokes", 0, varMap["alert/" + variant + "-border"]);
-          bindVar(comp, "strokeWeight", varMap["alert/border-width"]);
-          bindVar(comp, "topLeftRadius", varMap["alert/radius-" + radius]);
-          bindVar(comp, "topRightRadius", varMap["alert/radius-" + radius]);
-          bindVar(comp, "bottomLeftRadius", varMap["alert/radius-" + radius]);
-          bindVar(comp, "bottomRightRadius", varMap["alert/radius-" + radius]);
+            var comp = figma.createComponent();
+            comp.name =
+              "Variant=" + capVariant +
+              ", Status=" + capStatus +
+              ", Radius=" + capRadius +
+              ", Close=" + capClose +
+              ", Icon=" + capIcon;
+            comp.resize(380, 110);
+            comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            comp.strokes = [{ type: "SOLID", color: { r: 0.84, g: 0.84, b: 0.84 } }];
+            comp.strokeWeight = 1;
+            comp.strokeAlign = "INSIDE";
+            comp.cornerRadius = 8;
 
-          var textWidth = withClose ? 316 : 340;
-          var body = figma.createFrame();
-          body.name = "body";
-          body.layoutMode = "VERTICAL";
-          body.primaryAxisSizingMode = "AUTO";
-          body.counterAxisSizingMode = "AUTO";
-          body.primaryAxisAlignItems = "MIN";
-          body.counterAxisAlignItems = "MIN";
-          body.itemSpacing = 0;
-          body.fills = [];
-          body.x = 14;
-          body.y = 10;
-          comp.appendChild(body);
+            bindPaintVar(comp, "fills", 0, avar(variant, status, "background"));
+            bindPaintVar(comp, "strokes", 0, avar(variant, status, "border"));
+            bindVar(comp, "strokeWeight", varMap["alert/border-width"]);
+            bindVar(comp, "topLeftRadius", varMap["alert/radius-" + radius]);
+            bindVar(comp, "topRightRadius", varMap["alert/radius-" + radius]);
+            bindVar(comp, "bottomLeftRadius", varMap["alert/radius-" + radius]);
+            bindVar(comp, "bottomRightRadius", varMap["alert/radius-" + radius]);
 
-          var titleRow = figma.createFrame();
-          titleRow.name = "title-row";
-          titleRow.layoutMode = "HORIZONTAL";
-          titleRow.primaryAxisSizingMode = "AUTO";
-          titleRow.counterAxisSizingMode = "AUTO";
-          titleRow.primaryAxisAlignItems = "MIN";
-          titleRow.counterAxisAlignItems = "CENTER";
-          titleRow.itemSpacing = 8;
-          titleRow.fills = [];
-          bindVar(titleRow, "itemSpacing", varMap["alert/icon-title-gap"]);
-          body.appendChild(titleRow);
+            var textVar = avar(variant, status, "text");
+            var textWidth = withClose ? 316 : 340;
+            var body = figma.createFrame();
+            body.name = "body";
+            body.layoutMode = "VERTICAL";
+            body.primaryAxisSizingMode = "AUTO";
+            body.counterAxisSizingMode = "AUTO";
+            body.primaryAxisAlignItems = "MIN";
+            body.counterAxisAlignItems = "MIN";
+            body.itemSpacing = 0;
+            body.fills = [];
+            body.x = 14;
+            body.y = 10;
+            comp.appendChild(body);
 
-          if (withIcon) {
-            var warningSource = alertIcons.warning || alertIcons.fallback;
-            if (warningSource) {
-              var warningInst = warningSource.createInstance();
-              warningInst.name = "icon";
-              try { warningInst.resize(16, 16); } catch (e) {}
-              var warningVectors = warningInst.findAll(function(n) { return n.type === "VECTOR"; });
-              for (var wvi = 0; wvi < warningVectors.length; wvi++) {
-                bindVar(warningVectors[wvi], "strokeWeight", varMap["alert/icon-stroke-width"]);
+            var titleRow = figma.createFrame();
+            titleRow.name = "title-row";
+            titleRow.layoutMode = "HORIZONTAL";
+            titleRow.primaryAxisSizingMode = "AUTO";
+            titleRow.counterAxisSizingMode = "AUTO";
+            titleRow.primaryAxisAlignItems = "MIN";
+            titleRow.counterAxisAlignItems = "CENTER";
+            titleRow.itemSpacing = 8;
+            titleRow.fills = [];
+            bindVar(titleRow, "itemSpacing", varMap["alert/icon-title-gap"]);
+            body.appendChild(titleRow);
+
+            if (withIcon) {
+              var iconSource = statusIconSource[status] || alertIcons.fallback;
+              if (iconSource) {
+                var iconInst = iconSource.createInstance();
+                iconInst.name = "icon";
+                try { iconInst.resize(16, 16); } catch (e) {}
+                var iconVectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
+                for (var wvi = 0; wvi < iconVectors.length; wvi++) {
+                  bindVar(iconVectors[wvi], "strokeWeight", varMap["alert/icon-stroke-width"]);
+                }
+                bindIconColor(iconInst, avar(variant, status, "icon"));
+                titleRow.appendChild(iconInst);
               }
-              titleRow.appendChild(warningInst);
             }
-          }
 
-          var titleNode = figma.createText();
-          titleNode.name = "title";
-          titleNode.fontName = font;
-          titleNode.characters = "Alert title";
-          titleNode.fontSize = 14;
-          titleNode.textAutoResize = "HEIGHT";
-          titleNode.resize(textWidth, titleNode.height);
-          titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-          bindPaintVar(titleNode, "fills", 0, varMap["alert/" + variant + "-text"]);
-          bindVar(titleNode, "fontSize", varMap["alert/title-font-size"]);
-          bindVar(titleNode, "fontFamily", varMap["alert/title-font-family"]);
-          bindVar(titleNode, "fontStyle", varMap["alert/title-font-weight"]);
-          bindVar(titleNode, "lineHeight", varMap["alert/title-line-height"]);
-          titleRow.appendChild(titleNode);
+            var titleNode = figma.createText();
+            titleNode.name = "title";
+            titleNode.fontName = font;
+            titleNode.characters = "Alert title";
+            titleNode.fontSize = 14;
+            titleNode.textAutoResize = "HEIGHT";
+            titleNode.resize(textWidth, titleNode.height);
+            titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+            bindPaintVar(titleNode, "fills", 0, textVar);
+            bindVar(titleNode, "fontSize", varMap["alert/title-font-size"]);
+            bindVar(titleNode, "fontFamily", varMap["alert/title-font-family"]);
+            bindVar(titleNode, "fontStyle", varMap["alert/title-font-weight"]);
+            bindVar(titleNode, "lineHeight", varMap["alert/title-line-height"]);
+            titleRow.appendChild(titleNode);
 
-          var messageWrap = figma.createFrame();
-          messageWrap.name = "message-wrap";
-          messageWrap.layoutMode = "VERTICAL";
-          messageWrap.primaryAxisSizingMode = "AUTO";
-          messageWrap.counterAxisSizingMode = "AUTO";
-          messageWrap.primaryAxisAlignItems = "MIN";
-          messageWrap.counterAxisAlignItems = "MIN";
-          messageWrap.paddingTop = 6;
-          messageWrap.fills = [];
-          bindVar(messageWrap, "paddingTop", varMap["alert/title-message-gap"]);
-          body.appendChild(messageWrap);
+            var messageWrap = figma.createFrame();
+            messageWrap.name = "message-wrap";
+            messageWrap.layoutMode = "VERTICAL";
+            messageWrap.primaryAxisSizingMode = "AUTO";
+            messageWrap.counterAxisSizingMode = "AUTO";
+            messageWrap.primaryAxisAlignItems = "MIN";
+            messageWrap.counterAxisAlignItems = "MIN";
+            messageWrap.paddingTop = 6;
+            messageWrap.fills = [];
+            bindVar(messageWrap, "paddingTop", varMap["alert/title-message-gap"]);
+            body.appendChild(messageWrap);
 
-          var messageNode = figma.createText();
-          messageNode.name = "message";
-          messageNode.fontName = font;
-          messageNode.characters = "Lorem ipsum dolor sit amet consectetur adipiscing elit.";
-          messageNode.fontSize = 13;
-          messageNode.textAutoResize = "HEIGHT";
-          messageNode.resize(textWidth, messageNode.height);
-          messageNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
-          bindPaintVar(messageNode, "fills", 0, varMap["alert/" + variant + "-text"]);
-          bindVar(messageNode, "fontSize", varMap["alert/message-font-size"]);
-          bindVar(messageNode, "fontFamily", varMap["alert/message-font-family"]);
-          bindVar(messageNode, "fontStyle", varMap["alert/message-font-weight"]);
-          bindVar(messageNode, "lineHeight", varMap["alert/message-line-height"]);
-          messageWrap.appendChild(messageNode);
+            var messageNode = figma.createText();
+            messageNode.name = "message";
+            messageNode.fontName = font;
+            messageNode.characters = "Lorem ipsum dolor sit amet consectetur adipiscing elit.";
+            messageNode.fontSize = 13;
+            messageNode.textAutoResize = "HEIGHT";
+            messageNode.resize(textWidth, messageNode.height);
+            messageNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+            bindPaintVar(messageNode, "fills", 0, textVar);
+            bindVar(messageNode, "fontSize", varMap["alert/message-font-size"]);
+            bindVar(messageNode, "fontFamily", varMap["alert/message-font-family"]);
+            bindVar(messageNode, "fontStyle", varMap["alert/message-font-weight"]);
+            bindVar(messageNode, "lineHeight", varMap["alert/message-line-height"]);
+            messageWrap.appendChild(messageNode);
 
-          if (withClose) {
-            var closeSource = alertIcons.close || alertIcons.fallback;
-            if (closeSource) {
-              var closeInst = closeSource.createInstance();
-              closeInst.name = "close";
-              try { closeInst.resize(16, 16); } catch (e) {}
-              var closeVectors = closeInst.findAll(function(n) { return n.type === "VECTOR"; });
-              for (var cvi = 0; cvi < closeVectors.length; cvi++) {
-                bindVar(closeVectors[cvi], "strokeWeight", varMap["alert/icon-stroke-width"]);
+            if (withClose) {
+              var closeSource = alertIcons.close || alertIcons.fallback;
+              if (closeSource) {
+                var closeInst = closeSource.createInstance();
+                closeInst.name = "close";
+                try { closeInst.resize(16, 16); } catch (e) {}
+                var closeVectors = closeInst.findAll(function(n) { return n.type === "VECTOR"; });
+                for (var cvi = 0; cvi < closeVectors.length; cvi++) {
+                  bindVar(closeVectors[cvi], "strokeWeight", varMap["alert/icon-stroke-width"]);
+                }
+                bindIconColor(closeInst, avar(variant, status, "close"));
+                closeInst.x = 356;
+                closeInst.y = 10;
+                comp.appendChild(closeInst);
               }
-              closeInst.x = 356;
-              closeInst.y = 10;
-              comp.appendChild(closeInst);
             }
-          }
 
-          var colIndex = vi * radii.length + ri;
-          var rowIndex = ci * iconStates.length + ii;
-          comp.x = colIndex * (colWidth + gap);
-          comp.y = rowIndex * (rowHeight + gap);
-          page.appendChild(comp);
-          components.push(comp);
+            var colIndex = vi * radii.length + ri;
+            var rowIndex = ((si * closeStates.length + ci) * iconStates.length) + ii;
+            comp.x = colIndex * (colWidth + gap);
+            comp.y = rowIndex * (rowHeight + gap);
+            page.appendChild(comp);
+            components.push(comp);
+          }
         }
       }
     }
@@ -12475,6 +12700,20 @@ async function findAlertIconComponents() {
         if (n.indexOf("warning") >= 0) score += 70;
         if (n.indexOf("alert") >= 0) score += 30;
         if (n.indexOf("triangle") >= 0) score += 20;
+      } else if (target === "info") {
+        if (n.indexOf("infocircle") >= 0) score += 100;
+        if (n.indexOf("info") >= 0) score += 60;
+        if (n.indexOf("circle") >= 0) score += 10;
+      } else if (target === "success") {
+        if (n.indexOf("checkcircle") >= 0) score += 100;
+        if (n.indexOf("check") >= 0) score += 70;
+        if (n.indexOf("tick") >= 0) score += 40;
+        if (n.indexOf("circle") >= 0) score += 10;
+      } else if (target === "error") {
+        if (n.indexOf("alertcircle") >= 0) score += 100;
+        if (n.indexOf("xcircle") >= 0) score += 50;
+        if (n.indexOf("error") >= 0) score += 50;
+        if (n.indexOf("circle") >= 0) score += 10;
       } else if (target === "close") {
         if (n.indexOf("xclose") >= 0) score += 100;
         if (n.indexOf("close") >= 0) score += 70;
@@ -12489,12 +12728,22 @@ async function findAlertIconComponents() {
   }
 
   var warningIcon = pickBest("warning");
+  var infoIcon = pickBest("info");
+  var successIcon = pickBest("success");
+  var errorIcon = pickBest("error");
   var closeIcon = pickBest("close");
   var fallbackIcon = iconCandidates.length
     ? iconCandidates.slice().sort(function(a, b) { return a.name.localeCompare(b.name); })[0]
     : null;
 
-  return { warning: warningIcon, close: closeIcon, fallback: fallbackIcon };
+  return {
+    warning: warningIcon,
+    info: infoIcon,
+    success: successIcon,
+    error: errorIcon,
+    close: closeIcon,
+    fallback: fallbackIcon,
+  };
 }
 
 async function findNotificationIconComponents() {
@@ -15233,6 +15482,89 @@ function buildChartComboComponentSet(varMap, page, font, resolvedComponentFloat,
 // the fill binds to a series (palette) or shade (shades) variable. No axes/grid.
 // inner-radius (hole size) and pad-angle (slice gap) are structural and baked in
 // from the chart-donut/* tokens, like the grid dash pattern elsewhere.
+//
+// When corner-radius > 0 the slice is drawn as a custom VectorNode instead, since
+// Figma's ellipse arcData cannot round the segment ends. The path is a rounded
+// annular sector built from cubic-bezier-approximated arcs + corner fillets.
+
+function donutPolar(cx, cy, ang, rad) {
+  return { x: cx + rad * Math.cos(ang), y: cy + rad * Math.sin(ang) };
+}
+
+// Append cubic-bezier segments approximating a circular arc (center cx,cy radius R
+// from angle a0 to a1) to `cmds`. Assumes the current path point is already at
+// polar(a0). Subdivides into <= 90deg spans for accuracy. Works for a0<a1 or a0>a1.
+function donutArcCmds(cmds, cx, cy, R, a0, a1) {
+  var total = a1 - a0;
+  if (Math.abs(total) < 1e-7) return;
+  var steps = Math.max(1, Math.ceil(Math.abs(total) / (Math.PI / 2)));
+  var seg = total / steps;
+  var a = a0;
+  for (var i = 0; i < steps; i++) {
+    var b = a + seg;
+    var t = (4 / 3) * Math.tan(seg / 4);
+    var p3 = donutPolar(cx, cy, b, R);
+    var p0 = donutPolar(cx, cy, a, R);
+    var c1 = { x: p0.x - t * R * Math.sin(a), y: p0.y + t * R * Math.cos(a) };
+    var c2 = { x: p3.x + t * R * Math.sin(b), y: p3.y - t * R * Math.cos(b) };
+    cmds.push("C " + c1.x.toFixed(3) + " " + c1.y.toFixed(3) + " " +
+      c2.x.toFixed(3) + " " + c2.y.toFixed(3) + " " +
+      p3.x.toFixed(3) + " " + p3.y.toFixed(3));
+    a = b;
+  }
+}
+
+// Append a corner fillet (minor arc of radius rr around center cc) from `fromPt`
+// to `toPt`. Both points must lie at distance rr from the center.
+function donutFilletCmds(cmds, ccx, ccy, rr, fromPt, toPt) {
+  var f0 = Math.atan2(fromPt.y - ccy, fromPt.x - ccx);
+  var f1 = Math.atan2(toPt.y - ccy, toPt.x - ccx);
+  var d = f1 - f0;
+  while (d > Math.PI) d -= 2 * Math.PI;
+  while (d < -Math.PI) d += 2 * Math.PI;
+  donutArcCmds(cmds, ccx, ccy, rr, f0, f0 + d);
+}
+
+// Build an SVG-like path string for a rounded annular sector (ring segment) with
+// all four corners filleted by radius rr. Angles use screen convention (y-down).
+function buildRoundedSectorPath(cx, cy, ri, ro, a0, a1, rr) {
+  rr = Math.max(0, Math.min(rr, (ro - ri) / 2 - 0.5));
+  var dO = Math.asin(Math.max(0, Math.min(1, rr / (ro - rr))));
+  var dI = Math.asin(Math.max(0, Math.min(1, rr / (ri + rr))));
+  // Keep fillets inside the slice's angular span.
+  var maxHalf = (a1 - a0) / 2 * 0.98;
+  if (dO > maxHalf) dO = maxHalf;
+  if (dI > maxHalf) dI = maxHalf;
+
+  var oRim = ro - rr;
+  var iRim = ri + rr;
+
+  var P_os = donutPolar(cx, cy, a0 + dO, ro);
+  var P_oe = donutPolar(cx, cy, a1 - dO, ro);
+  var C_oe = donutPolar(cx, cy, a1 - dO, oRim);
+  var Q_oe = donutPolar(cx, cy, a1, oRim * Math.cos(dO));
+  var C_ie = donutPolar(cx, cy, a1 - dI, iRim);
+  var Q_ie = donutPolar(cx, cy, a1, iRim * Math.cos(dI));
+  var P_ie = donutPolar(cx, cy, a1 - dI, ri);
+  var P_is = donutPolar(cx, cy, a0 + dI, ri);
+  var C_is = donutPolar(cx, cy, a0 + dI, iRim);
+  var Q_is = donutPolar(cx, cy, a0, iRim * Math.cos(dI));
+  var C_os = donutPolar(cx, cy, a0 + dO, oRim);
+  var Q_os = donutPolar(cx, cy, a0, oRim * Math.cos(dO));
+
+  var cmds = [];
+  cmds.push("M " + P_os.x.toFixed(3) + " " + P_os.y.toFixed(3));
+  donutArcCmds(cmds, cx, cy, ro, a0 + dO, a1 - dO);
+  donutFilletCmds(cmds, C_oe.x, C_oe.y, rr, P_oe, Q_oe);
+  cmds.push("L " + Q_ie.x.toFixed(3) + " " + Q_ie.y.toFixed(3));
+  donutFilletCmds(cmds, C_ie.x, C_ie.y, rr, Q_ie, P_ie);
+  donutArcCmds(cmds, cx, cy, ri, a1 - dI, a0 + dI);
+  donutFilletCmds(cmds, C_is.x, C_is.y, rr, P_is, Q_is);
+  cmds.push("L " + Q_os.x.toFixed(3) + " " + Q_os.y.toFixed(3));
+  donutFilletCmds(cmds, C_os.x, C_os.y, rr, Q_os, P_os);
+  cmds.push("Z");
+  return cmds.join(" ");
+}
 
 function buildChartDonutComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
   var resolveCompFloat =
@@ -15300,10 +15632,13 @@ function buildChartDonutComponentSet(varMap, page, font, resolvedComponentFloat,
           var legendGap = resolveCompFloat("chart/legend-gap", 16);
           var innerPct = resolveCompFloat("chart-donut/inner-radius", 60);
           var padDeg = resolveCompFloat("chart-donut/pad-angle", 2);
+          var cornerRad = resolveCompFloat("chart-donut/corner-radius", 8);
           var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
 
           var innerRatio = Math.max(0, Math.min(0.95, innerPct / 100));
           var padRad = (Math.max(0, padDeg) * Math.PI) / 180;
+          var innerR = innerRatio * (diameter / 2);
+          var roundSlices = cornerRad >= 0.5 && innerR > 1;
 
           var outerR = diameter / 2;
           var cx = pad + outerR;
@@ -15331,12 +15666,27 @@ function buildChartDonutComponentSet(varMap, page, font, resolvedComponentFloat,
             var a1 = startA + sweep - padRad / 2;
             if (a1 <= a0) a1 = a0 + 0.0001;
 
-            var slice = figma.createEllipse();
+            var slice = null;
+            if (roundSlices) {
+              try {
+                var pathData = buildRoundedSectorPath(cx, cy, innerR, outerR, a0, a1, cornerRad);
+                slice = figma.createVector();
+                slice.name = "Slice " + (di + 1);
+                slice.vectorPaths = [{ windingRule: "NONZERO", data: pathData }];
+              } catch (donutVecErr) {
+                if (slice) { try { slice.remove(); } catch (_rmErr) {} }
+                slice = null;
+                progress("[Donut] rounded slice failed, using arc: " + String(donutVecErr));
+              }
+            }
+            if (!slice) {
+              slice = figma.createEllipse();
+              slice.resize(diameter, diameter);
+              slice.x = cx - outerR;
+              slice.y = cy - outerR;
+              slice.arcData = { startingAngle: a0, endingAngle: a1, innerRadius: innerRatio };
+            }
             slice.name = "Slice " + (di + 1);
-            slice.resize(diameter, diameter);
-            slice.x = cx - outerR;
-            slice.y = cy - outerR;
-            slice.arcData = { startingAngle: a0, endingAngle: a1, innerRadius: innerRatio };
             slice.fills = [{ type: "SOLID", color: paletteFallback[di % paletteFallback.length] }];
             slice.strokes = [];
             bindPaintVar(slice, "fills", 0, varMap[palettePaths[di % palettePaths.length]]);
@@ -15409,6 +15759,282 @@ function buildChartDonutComponentSet(varMap, page, font, resolvedComponentFloat,
   var donutSet = figma.combineAsVariants(components, page);
   donutSet.name = "Donut Chart";
   return donutSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Radar / Spider)
+// ---------------------------------------------------------------------------
+// A polar chart: one axis per category arranged around a circle, with one filled
+// polygon per data series. Grid rings bind to chart/grid; spokes to chart/axis;
+// the per-series polygons to chart/series-N. Polygon stroke width binds to
+// chart-radar/line-width; fill opacity + dot radius are baked at build time
+// (Figma can't bind those). Variant axes mirror the line chart: Points × Series ×
+// Legend.
+
+function buildChartRadarComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+
+  var SAMPLE = [
+    { label: "Speed", v: [78, 52, 64, 40] },
+    { label: "Power", v: [62, 70, 38, 55] },
+    { label: "Range", v: [84, 44, 60, 30] },
+    { label: "Agility", v: [48, 66, 52, 72] },
+    { label: "Defense", v: [70, 36, 46, 58] },
+    { label: "Stealth", v: [55, 60, 70, 42] },
+  ];
+  var N = SAMPLE.length;
+  var MAX_SCALE = 100;
+  var RING_FRACS = [0.25, 0.5, 0.75, 1.0];
+
+  var seriesPaths = [
+    "chart/series-1", "chart/series-2", "chart/series-3", "chart/series-4",
+  ];
+  var seriesFallbacks = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+  ];
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  // Axis k points outward from center; first axis at top (-90deg), going clockwise.
+  function axisAngle(k) {
+    return -Math.PI / 2 + k * ((2 * Math.PI) / N);
+  }
+  function ringPath(cx, cy, R, frac) {
+    var d = "";
+    for (var k = 0; k < N; k++) {
+      var p = donutPolar(cx, cy, axisAngle(k), R * frac);
+      d += (k === 0 ? "M " : " L ") + p.x.toFixed(3) + " " + p.y.toFixed(3);
+    }
+    return d + " Z";
+  }
+
+  var sizes = ["default"];
+  var pointModes = ["off", "on"];
+  var seriesCounts = [1, 2, 3, 4];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var legi = 0; legi < legendModes.length; legi++) {
+    var withLegend = legendModes[legi] === "on";
+    var capLegend = withLegend ? "On" : "Off";
+
+    for (var pi = 0; pi < pointModes.length; pi++) {
+      var pointMode = pointModes[pi];
+      var withPoints = pointMode === "on";
+      var capPoints = withPoints ? "On" : "Off";
+
+      for (var sci = 0; sci < seriesCounts.length; sci++) {
+        var nSeries = seriesCounts[sci];
+
+        for (var si = 0; si < sizes.length; si++) {
+          var size = sizes[si];
+
+          var diameter = resolveCompFloat("chart/height-" + size, 180);
+          var pad = resolveCompFloat("chart/padding", 16);
+          var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+          var axisWidth = resolveCompFloat("chart/axis-width", 1);
+          var gridWidth = resolveCompFloat("chart/grid-width", 1);
+          var lineWidth = resolveCompFloat("chart-radar/line-width", 2);
+          var fillOpacity = Math.max(0, Math.min(100, resolveCompFloat("chart-radar/fill-opacity", 25))) / 100;
+          var dotRadius = Math.max(0, resolveCompFloat("chart-radar/dot-radius", 3));
+          var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+          var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+          var legendGap = resolveCompFloat("chart/legend-gap", 16);
+          var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+          var labelPad = 30;
+          var R = diameter / 2;
+          var cx = pad + labelPad + R;
+          var cy = pad + labelPad + R;
+          var totalW = pad * 2 + labelPad * 2 + diameter;
+          var totalH = pad * 2 + labelPad * 2 + diameter + legendRowH;
+          maxColWidth = Math.max(maxColWidth, totalW);
+          maxRowHeight = Math.max(maxRowHeight, totalH);
+
+          var comp = figma.createComponent();
+          comp.name = "Points=" + capPoints + ", Series=" + nSeries + ", Legend=" + capLegend;
+          comp.layoutMode = "NONE";
+          comp.resize(totalW, totalH);
+          comp.fills = [];
+          comp.clipsContent = false;
+
+          // ── Grid rings (concentric polygons) ──
+          for (var ri = 0; ri < RING_FRACS.length; ri++) {
+            var ring = figma.createVector();
+            ring.name = "Grid Ring";
+            ring.x = 0;
+            ring.y = 0;
+            ring.vectorPaths = [{ windingRule: "NONE", data: ringPath(cx, cy, R, RING_FRACS[ri]) }];
+            ring.fills = [];
+            ring.strokes = [{ type: "SOLID", color: gridFallback }];
+            ring.strokeWeight = Math.max(1, gridWidth);
+            ring.strokeJoin = "ROUND";
+            bindPaintVar(ring, "strokes", 0, varMap["chart/grid"]);
+            bindVar(ring, "strokeWeight", varMap["chart/grid-width"]);
+            comp.appendChild(ring);
+          }
+
+          // ── Spokes (center to each axis tip) ──
+          var spokeD = "";
+          for (var spi = 0; spi < N; spi++) {
+            var tip = donutPolar(cx, cy, axisAngle(spi), R);
+            spokeD += "M " + cx.toFixed(3) + " " + cy.toFixed(3) + " L " +
+              tip.x.toFixed(3) + " " + tip.y.toFixed(3) + " ";
+          }
+          var spokes = figma.createVector();
+          spokes.name = "Axis Spokes";
+          spokes.x = 0;
+          spokes.y = 0;
+          spokes.vectorPaths = [{ windingRule: "NONE", data: spokeD }];
+          spokes.fills = [];
+          spokes.strokes = [{ type: "SOLID", color: axisFallback }];
+          spokes.strokeWeight = Math.max(1, axisWidth);
+          bindPaintVar(spokes, "strokes", 0, varMap["chart/axis"]);
+          bindVar(spokes, "strokeWeight", varMap["chart/axis-width"]);
+          comp.appendChild(spokes);
+
+          // ── Series polygons (one filled + stroked vector per series) ──
+          for (var li = 0; li < nSeries; li++) {
+            var seriesColor = seriesFallbacks[li % seriesFallbacks.length];
+            var seriesVar = varMap[seriesPaths[li % seriesPaths.length]];
+            var coords = [];
+            var polyD = "";
+            for (var ki = 0; ki < N; ki++) {
+              var val = SAMPLE[ki].v[li];
+              var rr = R * (val / MAX_SCALE);
+              var pt = donutPolar(cx, cy, axisAngle(ki), rr);
+              coords.push(pt);
+              polyD += (ki === 0 ? "M " : " L ") + pt.x.toFixed(3) + " " + pt.y.toFixed(3);
+            }
+            polyD += " Z";
+
+            var poly = figma.createVector();
+            poly.name = "Series " + (li + 1);
+            poly.x = 0;
+            poly.y = 0;
+            poly.vectorPaths = [{ windingRule: "NONZERO", data: polyD }];
+            poly.fills = [{ type: "SOLID", color: seriesColor, opacity: fillOpacity }];
+            poly.strokes = [{ type: "SOLID", color: seriesColor }];
+            poly.strokeWeight = Math.max(1, lineWidth);
+            poly.strokeJoin = "ROUND";
+            bindPaintVar(poly, "fills", 0, seriesVar);
+            bindPaintVar(poly, "strokes", 0, seriesVar);
+            bindVar(poly, "strokeWeight", varMap["chart-radar/line-width"]);
+            comp.appendChild(poly);
+
+            // ── Vertex points ──
+            if (withPoints && dotRadius > 0) {
+              for (var ci2 = 0; ci2 < coords.length; ci2++) {
+                var dot = figma.createEllipse();
+                dot.name = "Point";
+                dot.resize(dotRadius * 2, dotRadius * 2);
+                dot.x = coords[ci2].x - dotRadius;
+                dot.y = coords[ci2].y - dotRadius;
+                dot.fills = [{ type: "SOLID", color: seriesColor }];
+                dot.strokes = [];
+                bindPaintVar(dot, "fills", 0, seriesVar);
+                comp.appendChild(dot);
+              }
+            }
+          }
+
+          // ── Category (axis) labels ──
+          for (var ai = 0; ai < N; ai++) {
+            var labelPt = donutPolar(cx, cy, axisAngle(ai), R + 16);
+            var lblTxt = figma.createText();
+            lblTxt.fontName = font;
+            lblTxt.name = "Axis Label";
+            lblTxt.characters = SAMPLE[ai].label;
+            lblTxt.fontSize = labelFontSize;
+            lblTxt.textAlignHorizontal = "CENTER";
+            var lblW = Math.max(24, Math.ceil(SAMPLE[ai].label.length * labelFontSize * 0.62));
+            lblTxt.resize(lblW, labelFontSize + 4);
+            lblTxt.x = labelPt.x - lblW / 2;
+            lblTxt.y = labelPt.y - (labelFontSize + 4) / 2;
+            lblTxt.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(lblTxt, "fills", 0, varMap["chart/label"]);
+            bindVar(lblTxt, "fontSize", varMap["chart/label-font-size-" + size]);
+            bindVar(lblTxt, "fontFamily", varMap["chart/font-family"]);
+            bindVar(lblTxt, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(lblTxt);
+          }
+
+          // ── Legend (swatch + label per series, centered below the plot) ──
+          if (withLegend) {
+            var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+            var legendY = pad + labelPad * 2 + diameter + 8;
+            var legendItems = [];
+            var totalLegendW = 0;
+            for (var lgi = 0; lgi < nSeries; lgi++) {
+              var lbl = "Series " + (lgi + 1);
+              var lblW2 = Math.ceil(lbl.length * legendFontSize * 0.6);
+              var iw = legendSwatch + 6 + lblW2;
+              legendItems.push({ w: iw, label: lbl, labelW: lblW2 });
+              totalLegendW += iw;
+            }
+            totalLegendW += legendGap * Math.max(0, nSeries - 1);
+            var lx = cx - totalLegendW / 2;
+            if (lx < pad) lx = pad;
+            for (var lgj = 0; lgj < nSeries; lgj++) {
+              var sw = figma.createRectangle();
+              sw.name = "Legend Swatch";
+              sw.resize(legendSwatch, legendSwatch);
+              sw.x = lx;
+              sw.y = legendY + (legendItemH - legendSwatch) / 2;
+              sw.cornerRadius = 2;
+              sw.fills = [{ type: "SOLID", color: seriesFallbacks[lgj % seriesFallbacks.length] }];
+              sw.strokes = [];
+              bindPaintVar(sw, "fills", 0, varMap[seriesPaths[lgj % seriesPaths.length]]);
+              bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+              bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+              comp.appendChild(sw);
+
+              var lt = figma.createText();
+              lt.fontName = font;
+              lt.name = "Legend Label";
+              lt.characters = legendItems[lgj].label;
+              lt.fontSize = legendFontSize;
+              lt.textAlignHorizontal = "LEFT";
+              lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+              lt.x = lx + legendSwatch + 6;
+              lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+              lt.fills = [{ type: "SOLID", color: labelFallback }];
+              bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+              bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+              bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+              bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+              comp.appendChild(lt);
+
+              lx += legendItems[lgj].w + legendGap;
+            }
+          }
+
+          comp.x = si * (maxColWidth + colGap);
+          comp.y = rowIndex * (maxRowHeight + rowGap);
+          page.appendChild(comp);
+          components.push(comp);
+        }
+        rowIndex++;
+      }
+    }
+  }
+
+  progress("Created " + components.length + " radar chart variants");
+  var radarSet = figma.combineAsVariants(components, page);
+  radarSet.name = "Radar Chart";
+  return radarSet;
 }
 
 // ---------------------------------------------------------------------------

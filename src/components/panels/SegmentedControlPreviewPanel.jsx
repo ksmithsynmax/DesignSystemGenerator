@@ -3,7 +3,7 @@ import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-export const SEGMENTED_CONTROL_STATES = ["default", "hover", "disabled"];
+export const SEGMENTED_CONTROL_STATES = ["default", "hover", "focus", "disabled"];
 export const SEGMENTED_CONTROL_ORIENTATIONS = ["horizontal", "vertical"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {

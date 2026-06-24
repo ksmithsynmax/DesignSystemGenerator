@@ -59,6 +59,18 @@ ${grid}${axes}    <Bar dataKey="value" stackId="s" fill="var(--chart-shade-1)" /
   </BarChart>`
     );
   }
+  if (args.type === "radar") {
+    const ramp = args.colorMode === "shades" ? "shade" : "series";
+    return wrap(
+      "RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis",
+      `  <RadarChart data={data}>
+${args.showGrid ? "    <PolarGrid stroke=\"var(--chart-grid)\" />\n" : ""}    <PolarAngleAxis dataKey="name" />
+${args.showAxis ? "    <PolarRadiusAxis stroke=\"var(--chart-axis)\" />\n" : ""}    <Radar dataKey="value" stroke={\`var(--chart-${ramp}-1)\`}
+      strokeWidth={2} fill={\`var(--chart-${ramp}-1)\`} fillOpacity={0.25}
+      dot={${args.showPoints ? "{ r: 3 }" : "false"}} />
+  </RadarChart>`
+    );
+  }
   if (args.type === "donut") {
     const ramp = args.colorMode === "shades" ? "shade" : "series";
     return wrap(
@@ -87,7 +99,7 @@ export default {
   title: "Components/Chart",
   component: ChartPreview,
   argTypes: {
-    type: { control: "select", options: ["bar", "line", "area", "stacked-bar", "combo", "donut"] },
+    type: { control: "select", options: ["bar", "line", "area", "stacked-bar", "combo", "donut", "radar"] },
     colorMode: { control: "select", options: ["single", "palette", "shades"] },
     seriesCount: { control: { type: "range", min: 1, max: 6, step: 1 } },
     showPoints: { control: "boolean" },
@@ -160,4 +172,12 @@ export const Donut = {
 export const DonutShades = {
   name: "Donut — Shades",
   args: { type: "donut", colorMode: "shades", seriesCount: 5, showLegend: true },
+};
+export const Radar = {
+  name: "Radar",
+  args: { type: "radar", colorMode: "single", seriesCount: 1, showPoints: true },
+};
+export const RadarMultiSeries = {
+  name: "Radar — Multi-series",
+  args: { type: "radar", colorMode: "palette", seriesCount: 3, showPoints: false, showLegend: true },
 };

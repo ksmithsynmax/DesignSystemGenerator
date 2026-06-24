@@ -48,6 +48,7 @@ export const BRAND_STARTER_SEMANTIC_MAP = {
   "feedback-error": { color: "navy", index: 7 },
   "feedback-success": { color: "slate-gray", index: 4 },
   "feedback-warning": { color: "navy", index: 4 },
+  "feedback-info": { color: "navy", index: 5 },
   "interactive-disabled": { color: "neutral", index: 3 },
   "text-disabled": { color: "neutral", index: 5 },
   "border-disabled": { color: "neutral", index: 4 },
@@ -109,6 +110,7 @@ export const INITIAL_BRANDS = {
       "feedback-error":      { color: "red", index: 5 },
       "feedback-success":    { color: "green", index: 5 },
       "feedback-warning":    { color: "yellow", index: 5 },
+      "feedback-info":       { color: "blue", index: 5 },
       "interactive-disabled": { color: "neutral", index: 3 },
       "text-disabled":        { color: "neutral", index: 5 },
       "border-disabled":      { color: "neutral", index: 4 },
@@ -137,6 +139,7 @@ export const INITIAL_BRANDS = {
       "text-inverse":        { color: "neutral", index: 9 },
       "text-placeholder":    { color: "neutral", index: 5 },
       "feedback-warning":    { color: "yellow", index: 6 },
+      "feedback-info":       { color: "blue", index: 6 },
     },
     // Reserved semantic radius tokens (synced to Semantic collection).
     semanticRadiusMap: {
@@ -303,6 +306,7 @@ export const INITIAL_BRANDS = {
       "feedback-error":      { color: "red", index: 5 },
       "feedback-success":    { color: "green", index: 5 },
       "feedback-warning":    { color: "orange", index: 5 },
+      "feedback-info":       { color: "blue", index: 5 },
       "interactive-disabled": { color: "neutral", index: 3 },
       "text-disabled":        { color: "neutral", index: 5 },
       "border-disabled":      { color: "neutral", index: 4 },
@@ -332,6 +336,7 @@ export const INITIAL_BRANDS = {
       "text-inverse":        { color: "neutral", index: 9 },
       "text-placeholder":    { color: "neutral", index: 5 },
       "feedback-warning":    { color: "orange", index: 6 },
+      "feedback-info":       { color: "blue", index: 6 },
     },
     // Reserved semantic radius tokens (synced to Semantic collection).
     semanticRadiusMap: {

@@ -56,7 +56,7 @@ export const SEMANTIC_GROUPS = [
   ["Text", ["text-default", "text-subtle", "text-on-interactive", "text-placeholder", "text-disabled", "text-inverse"]],
   ["Surface", ["surface-primary", "surface-secondary", "subtle-primary", "subtle-secondary", "surface-default", "surface-inverse"]],
   ["Border", ["border-primary", "border-default", "border-subtle", "border-focus", "border-disabled"]],
-  ["Feedback", ["feedback-error", "feedback-success", "feedback-warning"]],
+  ["Feedback", ["feedback-info", "feedback-success", "feedback-warning", "feedback-error"]],
 ];
 
 function SemanticGroup({ name, roles, resolveRole }) {

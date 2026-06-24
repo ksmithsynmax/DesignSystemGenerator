@@ -1519,6 +1519,15 @@ export const COMPONENT_TOKENS = {
   "chart-donut": {
     "chart-donut-inner-radius": { type: "FLOAT", unit: "%", value: 60, figmaPath: "chart-donut/inner-radius" },
     "chart-donut-pad-angle": { type: "FLOAT", unit: "°", value: 2, figmaPath: "chart-donut/pad-angle" },
+    "chart-donut-corner-radius": { type: "FLOAT", unit: "px", value: 8, figmaPath: "chart-donut/corner-radius" },
+  },
+
+  // Radar (spider) chart. Shares the series/shade palette + grid/axis/label tokens
+  // with the other chart subtypes; these tokens style the per-series polygons.
+  "chart-radar": {
+    "chart-radar-line-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "chart-radar/line-width" },
+    "chart-radar-fill-opacity": { type: "FLOAT", unit: "%", value: 25, figmaPath: "chart-radar/fill-opacity" },
+    "chart-radar-dot-radius": { type: "FLOAT", unit: "px", value: 3, figmaPath: "chart-radar/dot-radius" },
   },
 
   pill: {
@@ -1620,11 +1629,81 @@ export const COMPONENT_TOKENS = {
     "alert-white-text": { type: "COLOR", semantic: "text-default", figmaPath: "alert/white-text" },
     "alert-white-border": { type: "COLOR", semantic: "border-default", figmaPath: "alert/white-border" },
 
+    // ── PER-STATUS COLOR TOKENS ──
+    // Alert color is a semantic status. Each status × variant has its own
+    // editable tokens, defaulting to the matching feedback-* semantic.
+    "alert-default-info-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/default-info-background" },
+    "alert-default-info-text": { type: "COLOR", semantic: "feedback-info", figmaPath: "alert/default-info-text" },
+    "alert-default-info-border": { type: "COLOR", semantic: "border-default", figmaPath: "alert/default-info-border" },
+    "alert-default-success-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/default-success-background" },
+    "alert-default-success-text": { type: "COLOR", semantic: "feedback-success", figmaPath: "alert/default-success-text" },
+    "alert-default-success-border": { type: "COLOR", semantic: "border-default", figmaPath: "alert/default-success-border" },
+    "alert-default-warning-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/default-warning-background" },
+    "alert-default-warning-text": { type: "COLOR", semantic: "feedback-warning", figmaPath: "alert/default-warning-text" },
+    "alert-default-warning-border": { type: "COLOR", semantic: "border-default", figmaPath: "alert/default-warning-border" },
+    "alert-default-error-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/default-error-background" },
+    "alert-default-error-text": { type: "COLOR", semantic: "feedback-error", figmaPath: "alert/default-error-text" },
+    "alert-default-error-border": { type: "COLOR", semantic: "border-default", figmaPath: "alert/default-error-border" },
+
+    "alert-filled-info-background": { type: "COLOR", semantic: "feedback-info", figmaPath: "alert/filled-info-background" },
+    "alert-filled-info-text": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "alert/filled-info-text" },
+    "alert-filled-info-border": { type: "COLOR", semantic: "feedback-info", figmaPath: "alert/filled-info-border" },
+    "alert-filled-success-background": { type: "COLOR", semantic: "feedback-success", figmaPath: "alert/filled-success-background" },
+    "alert-filled-success-text": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "alert/filled-success-text" },
+    "alert-filled-success-border": { type: "COLOR", semantic: "feedback-success", figmaPath: "alert/filled-success-border" },
+    "alert-filled-warning-background": { type: "COLOR", semantic: "feedback-warning", figmaPath: "alert/filled-warning-background" },
+    "alert-filled-warning-text": { type: "COLOR", semantic: "text-default", figmaPath: "alert/filled-warning-text" },
+    "alert-filled-warning-border": { type: "COLOR", semantic: "feedback-warning", figmaPath: "alert/filled-warning-border" },
+    "alert-filled-error-background": { type: "COLOR", semantic: "feedback-error", figmaPath: "alert/filled-error-background" },
+    "alert-filled-error-text": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "alert/filled-error-text" },
+    "alert-filled-error-border": { type: "COLOR", semantic: "feedback-error", figmaPath: "alert/filled-error-border" },
+
+    "alert-outline-info-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/outline-info-background" },
+    "alert-outline-info-text": { type: "COLOR", semantic: "feedback-info", figmaPath: "alert/outline-info-text" },
+    "alert-outline-info-border": { type: "COLOR", semantic: "feedback-info", figmaPath: "alert/outline-info-border" },
+    "alert-outline-success-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/outline-success-background" },
+    "alert-outline-success-text": { type: "COLOR", semantic: "feedback-success", figmaPath: "alert/outline-success-text" },
+    "alert-outline-success-border": { type: "COLOR", semantic: "feedback-success", figmaPath: "alert/outline-success-border" },
+    "alert-outline-warning-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/outline-warning-background" },
+    "alert-outline-warning-text": { type: "COLOR", semantic: "feedback-warning", figmaPath: "alert/outline-warning-text" },
+    "alert-outline-warning-border": { type: "COLOR", semantic: "feedback-warning", figmaPath: "alert/outline-warning-border" },
+    "alert-outline-error-background": { type: "COLOR", semantic: "surface-default", figmaPath: "alert/outline-error-background" },
+    "alert-outline-error-text": { type: "COLOR", semantic: "feedback-error", figmaPath: "alert/outline-error-text" },
+    "alert-outline-error-border": { type: "COLOR", semantic: "feedback-error", figmaPath: "alert/outline-error-border" },
+
+    // Per-status icon / close colors (these differ per variant and status).
+    "alert-default-info-icon": { type: "COLOR", semantic: "feedback-info", figmaPath: "alert/default-info-icon" },
+    "alert-default-info-close": { type: "COLOR", semantic: "feedback-info", figmaPath: "alert/default-info-close" },
+    "alert-default-success-icon": { type: "COLOR", semantic: "feedback-success", figmaPath: "alert/default-success-icon" },
+    "alert-default-success-close": { type: "COLOR", semantic: "feedback-success", figmaPath: "alert/default-success-close" },
+    "alert-default-warning-icon": { type: "COLOR", semantic: "feedback-warning", figmaPath: "alert/default-warning-icon" },
+    "alert-default-warning-close": { type: "COLOR", semantic: "feedback-warning", figmaPath: "alert/default-warning-close" },
+    "alert-default-error-icon": { type: "COLOR", semantic: "feedback-error", figmaPath: "alert/default-error-icon" },
+    "alert-default-error-close": { type: "COLOR", semantic: "feedback-error", figmaPath: "alert/default-error-close" },
+
+    "alert-filled-info-icon": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "alert/filled-info-icon" },
+    "alert-filled-info-close": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "alert/filled-info-close" },
+    "alert-filled-success-icon": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "alert/filled-success-icon" },
+    "alert-filled-success-close": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "alert/filled-success-close" },
+    "alert-filled-warning-icon": { type: "COLOR", semantic: "text-default", figmaPath: "alert/filled-warning-icon" },
+    "alert-filled-warning-close": { type: "COLOR", semantic: "text-default", figmaPath: "alert/filled-warning-close" },
+    "alert-filled-error-icon": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "alert/filled-error-icon" },
+    "alert-filled-error-close": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "alert/filled-error-close" },
+
+    "alert-outline-info-icon": { type: "COLOR", semantic: "feedback-info", figmaPath: "alert/outline-info-icon" },
+    "alert-outline-info-close": { type: "COLOR", semantic: "feedback-info", figmaPath: "alert/outline-info-close" },
+    "alert-outline-success-icon": { type: "COLOR", semantic: "feedback-success", figmaPath: "alert/outline-success-icon" },
+    "alert-outline-success-close": { type: "COLOR", semantic: "feedback-success", figmaPath: "alert/outline-success-close" },
+    "alert-outline-warning-icon": { type: "COLOR", semantic: "feedback-warning", figmaPath: "alert/outline-warning-icon" },
+    "alert-outline-warning-close": { type: "COLOR", semantic: "feedback-warning", figmaPath: "alert/outline-warning-close" },
+    "alert-outline-error-icon": { type: "COLOR", semantic: "feedback-error", figmaPath: "alert/outline-error-icon" },
+    "alert-outline-error-close": { type: "COLOR", semantic: "feedback-error", figmaPath: "alert/outline-error-close" },
+
     "alert-icon": { type: "COLOR", semantic: "interactive-primary", figmaPath: "alert/icon" },
     "alert-close": { type: "COLOR", semantic: "text-default", figmaPath: "alert/close" },
 
     // ── FLOAT TOKENS ──
-    "alert-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "alert/radius" },
+    "alert-radius": { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "alert/radius" },
     "alert-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "alert/padding-x" },
     "alert-padding-y": { type: "FLOAT", unit: "px", value: 10, figmaPath: "alert/padding-y" },
     "alert-title-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "alert/title-font-size" },
@@ -2105,6 +2184,31 @@ export const COMPONENT_TOKENS = {
     },
   },
 
+  /** Loading placeholder. `circle` and `animate` are preview/Figma variant props, not tokens. */
+  skeleton: {
+    // ── COLOR TOKENS ──
+    "skeleton-fill": { type: "COLOR", semantic: "surface-secondary", figmaPath: "skeleton/fill" },
+    // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
+    "skeleton-width": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 240, xs: 120, sm: 180, md: 240, lg: 320, xl: 420 },
+      figmaPath: "skeleton/width",
+    },
+    "skeleton-height": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 16, xs: 8, sm: 12, md: 16, lg: 24, xl: 32 },
+      figmaPath: "skeleton/height",
+    },
+    "skeleton-radius": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },
+      figmaPath: "skeleton/radius",
+    },
+  },
+
   /** User avatar (image and/or initials); Mantine `Avatar` maps to size, radius, and filled surface. */
   avatar: {
     "avatar-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "avatar/background" },
@@ -2323,7 +2427,7 @@ const PLACEHOLDER_COMPONENTS = [
 // `chart-line` the Line chart, `chart-area` the Area chart. Any future
 // not-yet-built chart types go in CHART_PLACEHOLDER_COMPONENTS.
 const CHART_PLACEHOLDER_COMPONENTS = [];
-export const CHART_COMPONENTS = ["chart", "chart-line", "chart-area", "chart-stacked-bar", "chart-combo", "chart-donut", ...CHART_PLACEHOLDER_COMPONENTS];
+export const CHART_COMPONENTS = ["chart", "chart-line", "chart-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", ...CHART_PLACEHOLDER_COMPONENTS];
 
 export const COMPONENT_NAMES = [
   ...new Set([
@@ -2348,6 +2452,7 @@ export const COMPONENT_DISPLAY_NAMES = {
   "chart-stacked-bar": "Stacked Bar Chart",
   "chart-combo": "Combo Chart",
   "chart-donut": "Donut Chart",
+  "chart-radar": "Radar Chart",
 };
 
 export function getComponentDisplayName(name) {
@@ -2381,6 +2486,7 @@ export const COMPONENT_SIZE_KEYS = {
   "chart-stacked-bar": ["default"],
   "chart-combo": ["default"],
   "chart-donut": ["default"],
+  "chart-radar": ["default"],
   pill: ["default", "xs", "sm", "md", "lg", "xl"],
   badge: ["default", "xs", "sm", "md", "lg", "xl"],
   alert: ["xs", "sm", "md", "lg", "xl"],
@@ -2388,6 +2494,7 @@ export const COMPONENT_SIZE_KEYS = {
   modal: ["default", "xs", "sm", "md", "lg", "xl"],
   image: ["default", "xs", "sm", "md", "lg", "xl"],
   avatar: ["default", "xs", "sm", "md", "lg", "xl"],
+  skeleton: ["default", "xs", "sm", "md", "lg", "xl"],
   anchor: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["default", "xs", "sm", "md", "lg", "xl"],
   select: ["default", "xs", "sm", "md", "lg", "xl"],
@@ -2413,7 +2520,7 @@ function isChartSubtype(componentName) {
 // Max number of data series each chart subtype can render. Series colors beyond
 // this limit are hidden from the subtype's editor panel. Line/Area support up to
 // 4 series; the Bar chart (no entry) keeps the full 6-color palette.
-const CHART_SERIES_LIMIT = { "chart-line": 4, "chart-area": 2, "chart-stacked-bar": 4, "chart-combo": 2, "chart-donut": 6 };
+const CHART_SERIES_LIMIT = { "chart-line": 4, "chart-area": 2, "chart-stacked-bar": 4, "chart-combo": 2, "chart-donut": 6, "chart-radar": 4 };
 
 // Subtypes that render bars (and therefore keep the chart-bar-* tokens). Line and
 // area subtypes drop those bar-specific tokens.

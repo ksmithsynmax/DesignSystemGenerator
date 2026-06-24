@@ -122,6 +122,7 @@ const BUILDABLE_COMPONENTS = [
   "chart-stacked-bar",
   "chart-combo",
   "chart-donut",
+  "chart-radar",
   "pill",
   "badge",
   "textinput",
@@ -136,6 +137,7 @@ const BUILDABLE_COMPONENTS = [
   "text",
   "image",
   "avatar",
+  "skeleton",
   "table",
 ];
 
@@ -159,6 +161,7 @@ const COMPONENT_LABELS = {
   "chart-stacked-bar": "Stacked Bar Chart",
   "chart-combo": "Combo Chart",
   "chart-donut": "Donut Chart",
+  "chart-radar": "Radar Chart",
   rangeslider: "RangeSlider",
   textinput: "TextInput",
   multiselect: "MultiSelect",

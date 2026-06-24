@@ -3,9 +3,18 @@ import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-export const ALERT_VARIANTS = ["default", "filled", "light", "outline", "transparent", "white"];
-export const ALERT_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
-export const ALERT_COLORS = ["blue", "teal", "red", "yellow", "gray"];
+export const ALERT_VARIANTS = [
+  "default",
+  "filled",
+  // "light",
+  "outline",
+  // "transparent",
+  // "white",
+];
+export const ALERT_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
+// Alert color is semantic status, not a raw palette hue — each maps to a
+// feedback-* semantic token so it themes per brand/appearance.
+export const ALERT_COLORS = ["info", "success", "warning", "error"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (

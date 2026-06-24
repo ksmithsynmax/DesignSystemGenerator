@@ -174,6 +174,10 @@ import {
   AvatarPreviewContent,
   AvatarPropertiesPanel,
 } from "./components/panels/AvatarPreviewPanel";
+import {
+  SkeletonPreviewContent,
+  SkeletonPropertiesPanel,
+} from "./components/panels/SkeletonPreviewPanel";
 import { TablePreviewContent, TablePropertiesPanel } from "./components/panels/TablePreviewPanel";
 import { FoundationsPreviewContent } from "./components/panels/FoundationsPreviewPanel";
 import { DocsThemePreviewContent } from "./components/panels/DocsThemePreviewPanel";
@@ -467,6 +471,7 @@ export default function App() {
     "chart-stacked-bar": "Stacked Bar Chart",
     "chart-combo": "Combo Chart",
     "chart-donut": "Donut Chart",
+    "chart-radar": "Radar Chart",
     multiselect: "MultiSelect",
     segmentedcontrol: "SegmentedControl",
   };
@@ -591,6 +596,9 @@ export default function App() {
   const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "default";
   const modalDefault = getComponentDefaultSize(brands, activeBrand, "modal") || "md";
   const imageDefault = getComponentDefaultSize(brands, activeBrand, "image") || "default";
+  const skeletonDefault = getComponentDefaultSize(brands, activeBrand, "skeleton") || "default";
+  const skeletonRadiusDefault =
+    getDefaultSizeKey(brands, activeBrand, "skeleton-radius") || skeletonDefault;
   const anchorDefault = getComponentDefaultSize(brands, activeBrand, "anchor") || "md";
   const textDefault = getComponentDefaultSize(brands, activeBrand, "text") || "md";
   const progressHeightDefault =
@@ -793,8 +801,8 @@ export default function App() {
     "You are now obligated to give a star to Mantine project on GitHub"
   );
   const [activeTableShowRowHover, setActiveTableShowRowHover] = useState(true);
-  const [activeAlertRadius, setActiveAlertRadius] = useState("md");
-  const [activeAlertColor, setActiveAlertColor] = useState(defaultBrandColor);
+  const [activeAlertRadius, setActiveAlertRadius] = useState("default");
+  const [activeAlertColor, setActiveAlertColor] = useState("info");
   const [activeAlertWithCloseButton, setActiveAlertWithCloseButton] = useState(false);
   const [activeAlertWithIcon, setActiveAlertWithIcon] = useState(true);
   const [activeAlertTitle, setActiveAlertTitle] = useState("Alert title");
@@ -824,6 +832,10 @@ export default function App() {
   const [activeImageSize, setActiveImageSize] = useState(imageDefault);
   const [activeImageRadius, setActiveImageRadius] = useState(imageDefault);
   const [activeImageFit, setActiveImageFit] = useState("cover");
+  const [activeSkeletonSize, setActiveSkeletonSize] = useState(skeletonDefault);
+  const [activeSkeletonRadius, setActiveSkeletonRadius] = useState(skeletonRadiusDefault);
+  const [activeSkeletonCircle, setActiveSkeletonCircle] = useState(false);
+  const [activeSkeletonAnimate, setActiveSkeletonAnimate] = useState(true);
 
   // Sync active sizes when brand changes
   const handleBrandChange = useCallback((newBrand) => {
@@ -844,6 +856,8 @@ export default function App() {
     const baDef = getComponentDefaultSize(brands, newBrand, "badge") || "default";
     const moDef = getComponentDefaultSize(brands, newBrand, "modal") || "md";
     const imDef = getComponentDefaultSize(brands, newBrand, "image") || "default";
+    const skDef = getComponentDefaultSize(brands, newBrand, "skeleton") || "default";
+    const skRDef = getDefaultSizeKey(brands, newBrand, "skeleton-radius") || skDef;
     const anDef = getComponentDefaultSize(brands, newBrand, "anchor") || "md";
     const txDef = getComponentDefaultSize(brands, newBrand, "text") || "md";
     setActiveSize(btnDef);
@@ -895,12 +909,15 @@ export default function App() {
     setActiveModalRadius(moDef);
     setActiveImageSize(imDef);
     setActiveImageRadius(imDef);
+    setActiveSkeletonSize(skDef);
+    setActiveSkeletonRadius(skRDef);
     setActiveAnchorSize(anDef);
     setActiveTextSizeToken(txDef);
     const nextBrandColors = Object.keys(brands[newBrand]?.primitives || {});
     const nextDefaultColor = nextBrandColors.includes("blue") ? "blue" : (nextBrandColors[0] || "blue");
     setActiveNotificationColor(nextDefaultColor);
-    setActiveAlertColor(nextDefaultColor);
+    // Alert color is a semantic status (info/success/warning/error), not a brand hue.
+    setActiveAlertColor("info");
   }, [brands]);
 
   // Sync active size when component changes
@@ -1028,13 +1045,13 @@ export default function App() {
       setActiveNotificationTitle("We notify you that");
       setActiveNotificationDescription("You are now obligated to give a star to Mantine project on GitHub");
     } else if (newComp === "alert") {
-      setActiveAlertRadius("md");
-      setActiveAlertColor(defaultBrandColor);
+      setActiveAlertRadius("default");
+      setActiveAlertColor("info");
       setActiveAlertWithCloseButton(false);
       setActiveAlertWithIcon(true);
       setActiveAlertTitle("Alert title");
       setActiveAlertMessage("Lorem ipsum dolor sit, amet consectetur adipisicing elit. At officiis, quae tempore necessitatibus placeat saepe.");
-      setActiveVariant("light");
+      setActiveVariant("default");
     } else if (newComp === "textinput") {
       setActiveTextInputSize(textInputDefault);
       setActiveTextInputRadius(textInputDefault);
@@ -1096,7 +1113,8 @@ export default function App() {
       newComp === "chart-area" ||
       newComp === "chart-stacked-bar" ||
       newComp === "chart-combo" ||
-      newComp === "chart-donut"
+      newComp === "chart-donut" ||
+      newComp === "chart-radar"
     ) {
       const isStacked = newComp === "chart-stacked-bar";
       const isCombo = newComp === "chart-combo";
@@ -1164,11 +1182,16 @@ export default function App() {
       setActiveImageSize(imageDefault);
       setActiveImageRadius(imageDefault);
       setActiveImageFit("cover");
+    } else if (newComp === "skeleton") {
+      setActiveSkeletonSize(skeletonDefault);
+      setActiveSkeletonRadius(skeletonRadiusDefault);
+      setActiveSkeletonCircle(false);
+      setActiveSkeletonAnimate(true);
     } else if (newComp === "table") {
       setActiveVariant("default");
       setActiveTableShowRowHover(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, burgerDefault, segmentedControlDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, multiSelectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, chartSizeDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, burgerDefault, segmentedControlDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, multiSelectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, skeletonDefault, skeletonRadiusDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, chartSizeDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -1201,6 +1224,17 @@ export default function App() {
     } else {
       setActiveBadgeColor("default");
     }
+  }, [activeComponent, activeColorToken]);
+
+  useEffect(() => {
+    if (activeComponent !== "alert" || !activeColorToken?.startsWith("alert-")) return;
+    const p = activeColorToken.split("-");
+    if (p.length < 4) return;
+    const v = p[1];
+    if (!["default", "filled", "outline"].includes(v)) return;
+    if (!["info", "success", "warning", "error"].includes(p[2])) return;
+    if (v !== activeVariant) setActiveVariant(v);
+    if (p[2] !== activeAlertColor) setActiveAlertColor(p[2]);
   }, [activeComponent, activeColorToken]);
 
   const updatePrimitive = useCallback(
@@ -1836,6 +1870,17 @@ export default function App() {
       return false;
     }
 
+    if (activeComponent === "alert") {
+      const vSeg = parts[1];
+      if (vSeg !== activeVariant) return false;
+      // Only the active status's per-status tokens are editable (background,
+      // text, border, icon, close). The generic variant tokens are superseded.
+      const isStatusToken =
+        parts.length === 4 &&
+        ["info", "success", "warning", "error"].includes(parts[2]);
+      return isStatusToken && parts[2] === activeAlertColor;
+    }
+
     if (activeComponent === "textinput" && token.startsWith("textinput-error-")) {
       return (effectiveComponentState || "default") === "error";
     }
@@ -2146,7 +2191,16 @@ export default function App() {
     if (variants.includes(variantSegment) && variantSegment !== expectedVariantSegment) {
       setActiveColorToken(null);
     }
-  }, [activeAccordionVariant, activeComponent, activeColorToken, activeVariant, activeTabsTokenVariant, effectiveComponentState]);
+    // Clear when the selected alert token belongs to a different status.
+    if (activeComponent === "alert") {
+      const p = activeColorToken.split("-");
+      const isStatusToken =
+        p.length === 4 && ["info", "success", "warning", "error"].includes(p[2]);
+      if (isStatusToken && p[2] !== activeAlertColor) {
+        setActiveColorToken(null);
+      }
+    }
+  }, [activeAccordionVariant, activeAlertColor, activeComponent, activeColorToken, activeVariant, activeTabsTokenVariant, effectiveComponentState]);
 
   useEffect(() => {
     if (!activeDimensionToken) return;
@@ -2288,11 +2342,13 @@ export default function App() {
     "chart-stacked-bar": activeChartSize,
     "chart-combo": activeChartSize,
     "chart-donut": activeChartSize,
+    "chart-radar": activeChartSize,
     avatar: activeAvatarSize,
     pill: activePillSize,
     badge: activeBadgeSize,
     modal: activeModalSize,
     image: activeImageSize,
+    skeleton: activeSkeletonSize,
     alert: activeAlertRadius,
   };
   const activeDimensionSize = activeSizeByComponent[activeComponent] || sizeKeys[0];
@@ -2348,6 +2404,12 @@ export default function App() {
     }
     if (activeComponent === "image" && (tokenName === "image-width" || tokenName === "image-height")) {
       return activeImageSize;
+    }
+    if (activeComponent === "skeleton" && tokenName === "skeleton-radius") {
+      return activeSkeletonRadius;
+    }
+    if (activeComponent === "skeleton" && (tokenName === "skeleton-width" || tokenName === "skeleton-height")) {
+      return activeSkeletonSize;
     }
     if (activeComponent === "slider" && tokenName === "slider-radius") {
       return activeSliderRadius;
@@ -3440,6 +3502,22 @@ export default function App() {
                   showLegend={activeChartShowLegend}
                 />
               )}
+              {activeComponent === "chart-radar" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="radar"
+                  size={activeChartSize}
+                  colorMode={activeChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  showPoints={activeChartShowPoints}
+                  showGrid={activeChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                />
+              )}
               {activeComponent === "pill" && (
                 <PillPreviewContent
                   brands={brands}
@@ -3489,6 +3567,17 @@ export default function App() {
                   src={activeAvatarSrc}
                   content={activeAvatarContent}
                   colorKey={activeAvatarColor}
+                />
+              )}
+              {activeComponent === "skeleton" && (
+                <SkeletonPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  previewTheme={previewTheme}
+                  size={activeSkeletonSize}
+                  radius={activeSkeletonRadius}
+                  circle={activeSkeletonCircle}
+                  animate={activeSkeletonAnimate}
                 />
               )}
               {activeComponent === "table" && (
@@ -3900,7 +3989,6 @@ export default function App() {
                   setVariant={setActiveVariant}
                   color={activeAlertColor}
                   setColor={setActiveAlertColor}
-                  colorOptions={colorNames}
                   radius={activeAlertRadius}
                   setRadius={setActiveAlertRadius}
                   withCloseButton={activeAlertWithCloseButton}
@@ -4147,6 +4235,25 @@ export default function App() {
                   setShowLegend={setActiveChartShowLegend}
                 />
               )}
+              {activeComponent === "chart-radar" && (
+                <ChartPropertiesPanel
+                  type="radar"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  colorMode={activeChartColorMode}
+                  setColorMode={handleChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  setSeriesCount={setActiveChartSeriesCount}
+                  showPoints={activeChartShowPoints}
+                  setShowPoints={setActiveChartShowPoints}
+                  showGrid={activeChartShowGrid}
+                  setShowGrid={setActiveChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  setShowAxis={setActiveChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                  setShowLegend={setActiveChartShowLegend}
+                />
+              )}
               {activeComponent === "pill" && (
                 <PillPropertiesPanel
                   size={activePillSize}
@@ -4208,13 +4315,25 @@ export default function App() {
                   colorOptions={avatarColorOptions}
                 />
               )}
+              {activeComponent === "skeleton" && (
+                <SkeletonPropertiesPanel
+                  size={activeSkeletonSize}
+                  setSize={setActiveSkeletonSize}
+                  radius={activeSkeletonRadius}
+                  setRadius={setActiveSkeletonRadius}
+                  circle={activeSkeletonCircle}
+                  setCircle={setActiveSkeletonCircle}
+                  animate={activeSkeletonAnimate}
+                  setAnimate={setActiveSkeletonAnimate}
+                />
+              )}
               {activeComponent === "table" && (
                 <TablePropertiesPanel
                   showRowHover={activeTableShowRowHover}
                   setShowRowHover={setActiveTableShowRowHover}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-area", "chart-stacked-bar", "chart-combo", "chart-donut", "pill", "badge", "image", "avatar", "table"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "pill", "badge", "image", "avatar", "skeleton", "table"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

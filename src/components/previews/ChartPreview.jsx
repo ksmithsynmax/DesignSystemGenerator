@@ -9,6 +9,11 @@ import {
   PieChart,
   Pie,
   Cell,
+  RadarChart,
+  Radar,
+  PolarGrid,
+  PolarAngleAxis,
+  PolarRadiusAxis,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -43,6 +48,17 @@ const DONUT_DATA = [
   { name: "Series 6", value: 6 },
 ];
 export const MAX_DONUT_SLICES = DONUT_DATA.length;
+
+// Radar (spider) sample: one row per axis/category, with up to 4 comparable series.
+const RADAR_DATA = [
+  { name: "Speed", value: 78, value2: 52, value3: 64, value4: 40 },
+  { name: "Power", value: 62, value2: 70, value3: 38, value4: 55 },
+  { name: "Range", value: 84, value2: 44, value3: 60, value4: 30 },
+  { name: "Agility", value: 48, value2: 66, value3: 52, value4: 72 },
+  { name: "Defense", value: 70, value2: 36, value3: 46, value4: 58 },
+  { name: "Stealth", value: 55, value2: 60, value3: 70, value4: 42 },
+];
+export const MAX_RADAR_SERIES = SERIES_DATA_KEYS.length;
 
 const SERIES_KEYS = [
   "chart-series-1",
@@ -178,6 +194,13 @@ export default function ChartPreview({
   // Donut-specific tokens.
   const donutInnerPct = Number(resolveDimension(brands, brandId, "chart-donut-inner-radius", size)) || 60;
   const donutPadAngle = Number(resolveDimension(brands, brandId, "chart-donut-pad-angle", size)) || 0;
+  const donutCornerRadius = Math.max(0, Number(resolveDimension(brands, brandId, "chart-donut-corner-radius", size)) || 0);
+
+  // Radar-specific tokens.
+  const radarLineWidth = Number(resolveDimension(brands, brandId, "chart-radar-line-width", size)) || 2;
+  const radarFillOpacity =
+    (Number(resolveDimension(brands, brandId, "chart-radar-fill-opacity", size)) || 25) / 100;
+  const radarDotRadius = Math.max(0, Number(resolveDimension(brands, brandId, "chart-radar-dot-radius", size)) || 0);
 
   const tickStyle = {
     fill: labelColor,
@@ -240,7 +263,7 @@ export default function ChartPreview({
 
   const legend =
     showLegend &&
-    (type === "line" || type === "area" || type === "stacked-bar" || type === "combo" || type === "donut") ? (
+    (type === "line" || type === "area" || type === "stacked-bar" || type === "combo" || type === "donut" || type === "radar") ? (
       <div
         style={{
           width,
@@ -278,7 +301,40 @@ export default function ChartPreview({
 
   return (
     <div style={{ padding, display: "inline-block", fontFamily: `'${fontFamily}', sans-serif` }}>
-      {type === "donut" ? (
+      {type === "radar" ? (
+        <RadarChart
+          width={width}
+          height={height}
+          data={RADAR_DATA}
+          margin={{ top: 8, right: 8, bottom: 8, left: 8 }}
+          outerRadius="72%"
+        >
+          {showGrid && (
+            <PolarGrid stroke={gridColor} strokeWidth={gridWidth} strokeDasharray={gridDashArray} />
+          )}
+          <PolarAngleAxis dataKey="name" tick={tickStyle} tickLine={false} />
+          {showAxis && (
+            <PolarRadiusAxis
+              tick={tickStyle}
+              tickCount={4}
+              axisLine={{ stroke: axisColor, strokeWidth: axisWidth }}
+              stroke={axisColor}
+            />
+          )}
+          {seriesIndexes.map((i) => (
+            <Radar
+              key={i}
+              dataKey={SERIES_DATA_KEYS[i]}
+              stroke={colorAt(i)}
+              strokeWidth={radarLineWidth}
+              fill={colorAt(i)}
+              fillOpacity={radarFillOpacity}
+              dot={radarDotRadius > 0 ? { r: radarDotRadius, fill: colorAt(i), strokeWidth: 0 } : false}
+              isAnimationActive={false}
+            />
+          ))}
+        </RadarChart>
+      ) : type === "donut" ? (
         <PieChart width={width} height={height}>
           <Pie
             data={donutData}
@@ -289,6 +345,7 @@ export default function ChartPreview({
             innerRadius={`${Math.round(donutInnerPct * 0.8)}%`}
             outerRadius="80%"
             paddingAngle={donutPadAngle}
+            cornerRadius={donutCornerRadius}
             startAngle={90}
             endAngle={-270}
             stroke="none"
