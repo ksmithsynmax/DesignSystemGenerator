@@ -113,14 +113,10 @@ export function ChartPropertiesPanel({
   const hasSeries = isMultiSeries || isStacked;
   // Combo is a fixed 2-series scheme (bar = series-1, line = series-2), so it has
   // no color-mode / series-count controls.
-  // Area only offers single + shades (palette isn't used for stacked areas).
   // Donut is always multi-slice, so it drops the single mode.
-  const colorModeOptions =
-    type === "area"
-      ? COLOR_MODE_OPTIONS.filter((m) => m !== "palette")
-      : isDonut
-      ? COLOR_MODE_OPTIONS.filter((m) => m !== "single")
-      : COLOR_MODE_OPTIONS;
+  const colorModeOptions = isDonut
+    ? COLOR_MODE_OPTIONS.filter((m) => m !== "single")
+    : COLOR_MODE_OPTIONS;
   // Area is capped at 2 series; donut uses its own slice range; others the full range.
   const seriesCountOptions = isDonut
     ? DONUT_SLICE_OPTIONS

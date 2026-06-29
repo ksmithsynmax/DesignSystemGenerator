@@ -7,7 +7,9 @@ import {
   relativeLuminance,
   availableAvatarColors,
   chartSeriesMappingForToken,
+  chartSeriesOpacityMappingForToken,
   chartShadeMappingForToken,
+  chartShadeOpacityMappingForToken,
 } from "./resolveToken";
 import { gradientCssFromDef, gradientFirstStopHex, gradientFigmaExport } from "./resolveGradient";
 import {
@@ -235,8 +237,12 @@ export function buildExportPayload(brands, options) {
 
           // Resolve a color token for one theme. Supports semantic-less tokens that
           // default to a palette primitive (defaultMapping) or to auto-contrast text.
-          const seriesMapping = chartSeriesMappingForToken(brand, tokenName);
-          const shadeMapping = chartShadeMappingForToken(brand, tokenName);
+          const seriesMapping =
+            chartSeriesMappingForToken(brand, tokenName) ||
+            chartSeriesOpacityMappingForToken(brand, tokenName);
+          const shadeMapping =
+            chartShadeMappingForToken(brand, tokenName) ||
+            chartShadeOpacityMappingForToken(brand, tokenName);
           const resolveColorTokenTheme = (override, semanticMapping, isDark) => {
             if (override) return resolveMappingToColor(brand, override);
             if (def.semantic) return resolveMappingToColor(brand, semanticMapping);

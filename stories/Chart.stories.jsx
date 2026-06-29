@@ -21,7 +21,7 @@ ${inner}
       "AreaChart, Area, XAxis, YAxis, CartesianGrid",
       `  <AreaChart data={data}>
 ${grid}${axes}    <Area type="monotone" dataKey="value" stroke="var(--chart-series-1)"
-      strokeWidth={2} fill="var(--chart-series-1)" fillOpacity={0.2}
+      strokeWidth={2} fill="var(--chart-series-opacity-1)" fillOpacity={1}
       dot={${args.showPoints ? "{ r: 3 }" : "false"}} />
   </AreaChart>`
     );
@@ -61,12 +61,13 @@ ${grid}${axes}    <Bar dataKey="value" stackId="s" fill="var(--chart-shade-1)" /
   }
   if (args.type === "radar") {
     const ramp = args.colorMode === "shades" ? "shade" : "series";
+    const fillRamp = args.colorMode === "shades" ? "shade-1" : "series-opacity-1";
     return wrap(
       "RadarChart, Radar, PolarGrid, PolarAngleAxis, PolarRadiusAxis",
       `  <RadarChart data={data}>
 ${args.showGrid ? "    <PolarGrid stroke=\"var(--chart-grid)\" />\n" : ""}    <PolarAngleAxis dataKey="name" />
 ${args.showAxis ? "    <PolarRadiusAxis stroke=\"var(--chart-axis)\" />\n" : ""}    <Radar dataKey="value" stroke={\`var(--chart-${ramp}-1)\`}
-      strokeWidth={2} fill={\`var(--chart-${ramp}-1)\`} fillOpacity={0.25}
+      strokeWidth={2} fill={\`var(--chart-${fillRamp})\`} fillOpacity={1}
       dot={${args.showPoints ? "{ r: 3 }" : "false"}} />
   </RadarChart>`
     );

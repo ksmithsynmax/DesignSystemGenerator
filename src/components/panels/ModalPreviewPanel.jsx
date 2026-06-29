@@ -3,8 +3,8 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 import ModalPreview from "../previews/ModalPreview";
 
-export const MODAL_SIZE_OPTIONS = ["xs", "sm", "md", "lg", "xl"];
-export const MODAL_RADIUS_OPTIONS = ["xs", "sm", "md", "lg", "xl"];
+export const MODAL_SIZE_OPTIONS = ["default", "xs", "sm", "md", "lg", "xl"];
+export const MODAL_RADIUS_OPTIONS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const MODAL_VARIANT_OPTIONS = ["default", "filled"];
 export const MODAL_LAYOUT_OPTIONS = ["basic", "actions-right", "centered-ack", "centered-action"];
 

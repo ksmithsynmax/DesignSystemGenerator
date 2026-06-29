@@ -100,6 +100,52 @@ const server = createServer((req, res) => {
     return;
   }
 
+  // POST /api/save-brands  — durable, origin-independent autosave of all brand
+  // state. Written on every edit so colors survive port changes, browser
+  // clears, and multiple tabs (localStorage alone could not guarantee this).
+  if (req.method === "POST" && req.url === "/api/save-brands") {
+    let body = "";
+    req.on("data", (chunk) => (body += chunk));
+    req.on("end", () => {
+      try {
+        const parsed = JSON.parse(body);
+        if (!parsed || typeof parsed !== "object" || !parsed.brands || typeof parsed.brands !== "object") {
+          throw new Error("Invalid payload (expected { brands, activeBrand, previewTheme, savedAt }).");
+        }
+        const brandsPath = join(PROJECT_ROOT, "brands.local.json");
+        writeFileSync(brandsPath, JSON.stringify(parsed, null, 2) + "\n", "utf-8");
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ ok: true, path: "brands.local.json" }));
+      } catch (err) {
+        console.error("[brands] Save error:", err.message);
+        res.writeHead(500, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    });
+    return;
+  }
+
+  // GET /api/brands  — returns the on-disk autosave so the app can restore it on
+  // startup regardless of which port/browser is being used.
+  if (req.method === "GET" && req.url === "/api/brands") {
+    try {
+      const brandsPath = join(PROJECT_ROOT, "brands.local.json");
+      if (!existsSync(brandsPath)) {
+        res.writeHead(200, { "Content-Type": "application/json" });
+        res.end(JSON.stringify({ missing: true }));
+        return;
+      }
+      const raw = readFileSync(brandsPath, "utf-8");
+      res.writeHead(200, { "Content-Type": "application/json" });
+      res.end(raw);
+    } catch (err) {
+      console.error("[brands] Read error:", err.message);
+      res.writeHead(500, { "Content-Type": "application/json" });
+      res.end(JSON.stringify({ error: err.message }));
+    }
+    return;
+  }
+
   // POST /api/save-token-lock  — writes the approved token baseline to the repo root
   if (req.method === "POST" && req.url === "/api/save-token-lock") {
     let body = "";

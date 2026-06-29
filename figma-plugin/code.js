@@ -13282,6 +13282,10 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               bindVar(actionRow, "paddingBottom", footerPaddingBottomVar);
               bindPaintVar(actionRow, "fills", 0, modalFooterBgVar);
               comp.appendChild(actionRow);
+              // Hug vertically so the row grows with taller button instances
+              // (brand-dependent) instead of pinning at the resize height, which
+              // would let CENTER alignment eat into the bound top/bottom padding.
+              try { actionRow.layoutSizingVertical = "HUG"; } catch (_actionRowHugErr) {}
 
               if (layout === "centered-action") {
                 if (confirmButtonVariant) {
@@ -13396,6 +13400,9 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               footer.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
               bindPaintVar(footer, "fills", 0, modalFooterBgVar);
               comp.appendChild(footer);
+              // Hug vertically so the footer grows with taller button instances
+              // instead of pinning at the resize height (which squeezes padding).
+              try { footer.layoutSizingVertical = "HUG"; } catch (_footerHugErr) {}
 
               if (cancelButtonVariant && confirmButtonVariant) {
                 var declineBtnInstance = cancelButtonVariant.createInstance();
@@ -15414,7 +15421,6 @@ function buildChartAreaComponentSet(varMap, page, font, resolvedComponentFloat, 
       var gridWidth = resolveCompFloat("chart/grid-width", 1);
       var lineWidth = resolveCompFloat("chart-area/width", 2);
       var pointRadius = resolveCompFloat("chart-area/point-radius", 3);
-      var fillOpacity = Math.max(0, Math.min(1, resolveCompFloat("chart-area/fill-opacity", 20) / 100));
       var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
       var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
       var legendGap = resolveCompFloat("chart/legend-gap", 16);
@@ -15495,8 +15501,10 @@ function buildChartAreaComponentSet(varMap, page, font, resolvedComponentFloat, 
       areaVec.y = 0;
       areaVec.vectorPaths = [{ windingRule: "NONZERO", data: areaPath }];
       areaVec.strokes = [];
-      areaVec.fills = [{ type: "SOLID", color: seriesFallback, opacity: fillOpacity }];
-      bindPaintVar(areaVec, "fills", 0, varMap["chart/series-1"]);
+      // Fill uses the translucent opacity palette (alpha rides in the variable);
+      // the outline below keeps the solid series color.
+      areaVec.fills = [{ type: "SOLID", color: seriesFallback, opacity: 1 }];
+      bindPaintVar(areaVec, "fills", 0, varMap["chart/series-opacity-1"] || varMap["chart/series-1"]);
 
       // ── Top stroke line ──
       var lineVec = figma.createVector();
@@ -16587,6 +16595,12 @@ function buildChartRadarComponentSet(varMap, page, font, resolvedComponentFloat,
   var seriesPaths = [
     "chart/series-1", "chart/series-2", "chart/series-3", "chart/series-4",
   ];
+  // Polygon fills use the translucent opacity palette (alpha baked into the
+  // variable); outlines/dots keep the solid series palette above.
+  var opacitySeriesPaths = [
+    "chart/series-opacity-1", "chart/series-opacity-2",
+    "chart/series-opacity-3", "chart/series-opacity-4",
+  ];
   var seriesFallbacks = [
     { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
     { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
@@ -16640,7 +16654,6 @@ function buildChartRadarComponentSet(varMap, page, font, resolvedComponentFloat,
           var axisWidth = resolveCompFloat("chart/axis-width", 1);
           var gridWidth = resolveCompFloat("chart/grid-width", 1);
           var lineWidth = resolveCompFloat("chart-radar/line-width", 2);
-          var fillOpacity = Math.max(0, Math.min(100, resolveCompFloat("chart-radar/fill-opacity", 25))) / 100;
           var dotRadius = Math.max(0, resolveCompFloat("chart-radar/dot-radius", 3));
           var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
           var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
@@ -16687,21 +16700,24 @@ function buildChartRadarComponentSet(varMap, page, font, resolvedComponentFloat,
               tip.x.toFixed(3) + " " + tip.y.toFixed(3) + " ";
           }
           var spokes = figma.createVector();
-          spokes.name = "Axis Spokes";
+          spokes.name = "Grid Spokes";
           spokes.x = 0;
           spokes.y = 0;
           spokes.vectorPaths = [{ windingRule: "NONE", data: spokeD }];
           spokes.fills = [];
-          spokes.strokes = [{ type: "SOLID", color: axisFallback }];
-          spokes.strokeWeight = Math.max(1, axisWidth);
-          bindPaintVar(spokes, "strokes", 0, varMap["chart/axis"]);
-          bindVar(spokes, "strokeWeight", varMap["chart/axis-width"]);
+          // Recharts' PolarGrid paints the rings AND the radial spokes with a single
+          // stroke (the grid color), so bind both to chart/grid for 1:1 parity.
+          spokes.strokes = [{ type: "SOLID", color: gridFallback }];
+          spokes.strokeWeight = Math.max(1, gridWidth);
+          bindPaintVar(spokes, "strokes", 0, varMap["chart/grid"]);
+          bindVar(spokes, "strokeWeight", varMap["chart/grid-width"]);
           comp.appendChild(spokes);
 
           // ── Series polygons (one filled + stroked vector per series) ──
           for (var li = 0; li < nSeries; li++) {
             var seriesColor = seriesFallbacks[li % seriesFallbacks.length];
             var seriesVar = varMap[seriesPaths[li % seriesPaths.length]];
+            var fillVar = varMap[opacitySeriesPaths[li % opacitySeriesPaths.length]] || seriesVar;
             var coords = [];
             var polyD = "";
             for (var ki = 0; ki < N; ki++) {
@@ -16718,11 +16734,11 @@ function buildChartRadarComponentSet(varMap, page, font, resolvedComponentFloat,
             poly.x = 0;
             poly.y = 0;
             poly.vectorPaths = [{ windingRule: "NONZERO", data: polyD }];
-            poly.fills = [{ type: "SOLID", color: seriesColor, opacity: fillOpacity }];
+            poly.fills = [{ type: "SOLID", color: seriesColor, opacity: 1 }];
             poly.strokes = [{ type: "SOLID", color: seriesColor }];
             poly.strokeWeight = Math.max(1, lineWidth);
             poly.strokeJoin = "ROUND";
-            bindPaintVar(poly, "fills", 0, seriesVar);
+            bindPaintVar(poly, "fills", 0, fillVar);
             bindPaintVar(poly, "strokes", 0, seriesVar);
             bindVar(poly, "strokeWeight", varMap["chart-radar/line-width"]);
             comp.appendChild(poly);

@@ -177,6 +177,17 @@ export function chartSeriesMappingForToken(brand, tokenName) {
   return chartSeriesMapping(brand, parseInt(m[1], 10));
 }
 
+/**
+ * Translucent fill palette (Area/Radar). Defaults mirror the solid series hues;
+ * opacity-1 follows interactive-primary via its `semantic` (handled elsewhere),
+ * so this only needs to cover 2..6. Designers lower each token's opacity afterward.
+ */
+export function chartSeriesOpacityMappingForToken(brand, tokenName) {
+  const m = /^chart-series-opacity-(\d+)$/.exec(tokenName || "");
+  if (!m) return null;
+  return chartSeriesMapping(brand, parseInt(m[1], 10));
+}
+
 // "shades" color mode: a monochromatic ramp built from the series-1 hue. We
 // spread the requested number of steps across a mid-range band of the family
 // so adjacent shades stay distinct and readable (dark -> light).
@@ -252,6 +263,16 @@ export function chartShadeMappingForToken(brand, tokenName) {
   return { color: family, index, opacity: 100 };
 }
 
+/**
+ * Translucent shade ramp (Area/Radar "shades" mode). Defaults mirror the solid
+ * chart-shade-N ramp; the designer lowers each token's opacity to taste.
+ */
+export function chartShadeOpacityMappingForToken(brand, tokenName) {
+  const m = /^chart-shade-opacity-(\d+)$/.exec(tokenName || "");
+  if (!m) return null;
+  return chartShadeMappingForToken(brand, "chart-shade-" + m[1]);
+}
+
 function mappingToHex(brand, mapping) {
   if (!mapping) return "#FF00FF";
   if (mapping.gradient && String(mapping.gradient).trim()) {
@@ -269,9 +290,13 @@ function mappingToHex(brand, mapping) {
 function resolveComponentTokenDefault(brand, brands, brandId, componentToken, activeTheme) {
   const def = findTokenDef(componentToken);
   if (!def) return "transparent";
-  const seriesMapping = chartSeriesMappingForToken(brand, componentToken);
+  const seriesMapping =
+    chartSeriesMappingForToken(brand, componentToken) ||
+    chartSeriesOpacityMappingForToken(brand, componentToken);
   if (seriesMapping) return mappingToHex(brand, seriesMapping);
-  const shadeMapping = chartShadeMappingForToken(brand, componentToken);
+  const shadeMapping =
+    chartShadeMappingForToken(brand, componentToken) ||
+    chartShadeOpacityMappingForToken(brand, componentToken);
   if (shadeMapping) return mappingToHex(brand, shadeMapping);
   if (def.defaultMapping) return mappingToHex(brand, def.defaultMapping);
   if (def.autoContrastOf) {

@@ -1423,6 +1423,18 @@ export const COMPONENT_TOKENS = {
     "chart-series-5": { type: "COLOR", defaultMapping: { color: "purple", index: 5 }, figmaPath: "chart/series-5" },
     "chart-series-6": { type: "COLOR", defaultMapping: { color: "pink", index: 5 }, figmaPath: "chart/series-6" },
 
+    // ── TRANSLUCENT FILL PALETTE (COLOR) — Area + Radar only ──
+    // Area/Radar paint their filled regions with these instead of chart-series-N
+    // so the solid series palette used by line/bar/etc. is never disturbed. They
+    // default to the same brand-aware hues as chart-series-N; the designer sets
+    // each token's opacity directly (the alpha rides along in the color value).
+    "chart-series-opacity-1": { type: "COLOR", semantic: "interactive-primary", areaRadarOnly: true, figmaPath: "chart/series-opacity-1" },
+    "chart-series-opacity-2": { type: "COLOR", defaultMapping: { color: "cyan", index: 5 }, areaRadarOnly: true, figmaPath: "chart/series-opacity-2" },
+    "chart-series-opacity-3": { type: "COLOR", defaultMapping: { color: "green", index: 5 }, areaRadarOnly: true, figmaPath: "chart/series-opacity-3" },
+    "chart-series-opacity-4": { type: "COLOR", defaultMapping: { color: "orange", index: 5 }, areaRadarOnly: true, figmaPath: "chart/series-opacity-4" },
+    "chart-series-opacity-5": { type: "COLOR", defaultMapping: { color: "purple", index: 5 }, areaRadarOnly: true, figmaPath: "chart/series-opacity-5" },
+    "chart-series-opacity-6": { type: "COLOR", defaultMapping: { color: "pink", index: 5 }, areaRadarOnly: true, figmaPath: "chart/series-opacity-6" },
+
     // ── SHADE RAMP (COLOR) ──
     // Used only by "shades" color mode. A monochromatic ramp (dark -> light) that
     // defaults to steps of the brand's primary hue but is independently editable —
@@ -1433,6 +1445,17 @@ export const COMPONENT_TOKENS = {
     "chart-shade-4": { type: "COLOR", isShade: true, figmaPath: "chart/shade-4" },
     "chart-shade-5": { type: "COLOR", isShade: true, figmaPath: "chart/shade-5" },
     "chart-shade-6": { type: "COLOR", isShade: true, figmaPath: "chart/shade-6" },
+
+    // ── TRANSLUCENT SHADE RAMP (COLOR) — Area + Radar only ──
+    // The opacity counterpart of chart-shade-N, used to fill area/radar regions in
+    // "shades" color mode. Defaults to the same ramp; the designer sets opacity per
+    // token. Kept separate so lowering opacity never affects other charts' shades.
+    "chart-shade-opacity-1": { type: "COLOR", isShadeOpacity: true, areaRadarOnly: true, figmaPath: "chart/shade-opacity-1" },
+    "chart-shade-opacity-2": { type: "COLOR", isShadeOpacity: true, areaRadarOnly: true, figmaPath: "chart/shade-opacity-2" },
+    "chart-shade-opacity-3": { type: "COLOR", isShadeOpacity: true, areaRadarOnly: true, figmaPath: "chart/shade-opacity-3" },
+    "chart-shade-opacity-4": { type: "COLOR", isShadeOpacity: true, areaRadarOnly: true, figmaPath: "chart/shade-opacity-4" },
+    "chart-shade-opacity-5": { type: "COLOR", isShadeOpacity: true, areaRadarOnly: true, figmaPath: "chart/shade-opacity-5" },
+    "chart-shade-opacity-6": { type: "COLOR", isShadeOpacity: true, areaRadarOnly: true, figmaPath: "chart/shade-opacity-6" },
 
     // ── SERIES LINE STYLE (STRING) — line/combo charts only ──
     // Each series can render solid, dashed, or dotted independently. The dash
@@ -1489,7 +1512,6 @@ export const COMPONENT_TOKENS = {
   // and merged into this component's editor via getColorTokens/getDimensionTokens.
   "chart-area": {
     "chart-area-line-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "chart-area/width" },
-    "chart-area-fill-opacity": { type: "FLOAT", unit: "%", value: 20, figmaPath: "chart-area/fill-opacity" },
     "chart-area-point-radius": { type: "FLOAT", unit: "px", value: 3, figmaPath: "chart-area/point-radius" },
   },
 
@@ -1526,7 +1548,6 @@ export const COMPONENT_TOKENS = {
   // with the other chart subtypes; these tokens style the per-series polygons.
   "chart-radar": {
     "chart-radar-line-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "chart-radar/line-width" },
-    "chart-radar-fill-opacity": { type: "FLOAT", unit: "%", value: 25, figmaPath: "chart-radar/fill-opacity" },
     "chart-radar-dot-radius": { type: "FLOAT", unit: "px", value: 3, figmaPath: "chart-radar/dot-radius" },
   },
 
@@ -2576,20 +2597,28 @@ const BAR_BASED_CHART_SUBTYPES = ["chart-stacked-bar", "chart-combo"];
 // the shared axis/grid styling tokens, since nothing renders them.
 const AXIS_FREE_CHART_SUBTYPES = ["chart-donut"];
 
+// Subtypes that paint translucent filled regions and therefore expose the
+// chart-series-opacity-N palette (in addition to the solid chart-series-N used
+// for their outlines). All other charts hide the opacity palette entirely.
+const OPACITY_SERIES_CHART_SUBTYPES = ["chart-area", "chart-radar"];
+
 function sharedChartTokens(componentName) {
   const chart = COMPONENT_TOKENS.chart || {};
   const seriesLimit = CHART_SERIES_LIMIT[componentName];
   const isBarBased = BAR_BASED_CHART_SUBTYPES.includes(componentName);
   const isAxisFree = AXIS_FREE_CHART_SUBTYPES.includes(componentName);
+  const allowsOpacitySeries = OPACITY_SERIES_CHART_SUBTYPES.includes(componentName);
   return Object.fromEntries(
-    Object.entries(chart).filter(([name]) => {
+    Object.entries(chart).filter(([name, def]) => {
       // Bar-specific tokens only apply to the bar + bar-based subtypes.
       if (name.startsWith("chart-bar") && !isBarBased) return false;
       // Axis/grid styling only applies to cartesian charts.
       if (isAxisFree && /^chart-(axis|grid)/.test(name)) return false;
+      // The translucent fill palette is exposed only by area/radar.
+      if (def && def.areaRadarOnly && !allowsOpacitySeries) return false;
       // Hide series/shade colors (and per-series styles) beyond the subtype's max.
       if (seriesLimit != null) {
-        const m = /^chart-(?:series|shade)-(\d+)(?:-style)?$/.exec(name);
+        const m = /^chart-(?:series-opacity|series|shade-opacity|shade)-(\d+)(?:-style)?$/.exec(name);
         if (m && parseInt(m[1], 10) > seriesLimit) return false;
       }
       return true;
@@ -2612,7 +2641,11 @@ function resolveComponentTokenSet(componentName) {
     return filterLineOnly(merged, componentName);
   }
   if (componentName === "chart") {
-    return filterLineOnly(COMPONENT_TOKENS[componentName], componentName);
+    // The base chart (bar) never paints translucent fills, so hide the opacity palette.
+    const baseChart = Object.fromEntries(
+      Object.entries(COMPONENT_TOKENS[componentName] || {}).filter(([, def]) => !def.areaRadarOnly)
+    );
+    return filterLineOnly(baseChart, componentName);
   }
   return COMPONENT_TOKENS[componentName];
 }

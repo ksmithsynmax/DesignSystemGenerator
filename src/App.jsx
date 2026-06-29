@@ -27,7 +27,9 @@ import {
   availableAvatarColors,
   readableTextOn,
   chartSeriesMappingForToken,
+  chartSeriesOpacityMappingForToken,
   chartShadeMappingForToken,
+  chartShadeOpacityMappingForToken,
 } from "./utils/resolveToken";
 import { resolveGradientCss } from "./utils/resolveGradient";
 import Section from "./components/shared/Section";
@@ -209,6 +211,11 @@ const VARIANTS_BY_COMPONENT = {
 };
 
 const APP_STORAGE_KEY = "design-system-generator:v1";
+// Durable, origin-independent persistence. localStorage is per-origin (per dev
+// port) and can be cleared by the browser, which is why edits appeared to
+// "reset" between sessions. The relay also writes brands to disk so they
+// survive port changes, browser clears, and multiple tabs.
+const RELAY_HTTP = "http://localhost:9001";
 const DEFAULT_TITLE_TEXT = "Why guess when you can know.";
 
 function loadPersistedAppState() {
@@ -221,6 +228,22 @@ function loadPersistedAppState() {
     return parsed;
   } catch (_err) {
     return null;
+  }
+}
+
+function postBrandsToDisk(stateObj) {
+  if (typeof window === "undefined" || typeof fetch === "undefined") return;
+  try {
+    const body = JSON.stringify(stateObj);
+    fetch(`${RELAY_HTTP}/api/save-brands`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body,
+    }).catch(() => {
+      // Relay offline — localStorage remains the active fallback.
+    });
+  } catch (_err) {
+    // Never let autosave throw into the render/effect path.
   }
 }
 
@@ -481,7 +504,18 @@ export default function App() {
 
   const [brands, setBrands] = useState(() => {
     const persisted = loadPersistedAppState();
-    const source = persisted?.brands || INITIAL_BRANDS;
+    // When there's no saved local state (fresh browser, cleared storage, or the
+    // dev server came up on a different port so localStorage is a blank store),
+    // fall back to the committed STORYBOOK_BRANDS snapshot — the user's last
+    // exported data — NOT the empty INITIAL_BRANDS starter. INITIAL_BRANDS has
+    // zero component overrides, and because mergeRecoveredBrands lets `source`
+    // win per-brand, using it would clobber the rich snapshot and wipe every
+    // saved color (including the filled variants). STORYBOOK_BRANDS is the
+    // durable record, so colors survive an empty store.
+    const source =
+      persisted?.brands && Object.keys(persisted.brands).length > 0
+        ? persisted.brands
+        : STORYBOOK_BRANDS;
     return enforceTextDefaultMappings(mergeRecoveredBrands(source));
   });
   useEffect(() => {
@@ -498,6 +532,22 @@ export default function App() {
     const persisted = loadPersistedAppState();
     return persisted?.previewTheme === "light" ? "light" : "dark";
   });
+  // Snapshot of the localStorage state as it was BEFORE this mount's first save
+  // stamps a fresh timestamp. Used to decide whether the on-disk autosave is
+  // newer (and should be restored) without the mount-save corrupting the
+  // comparison.
+  const initialLocalRef = useRef(undefined);
+  if (initialLocalRef.current === undefined) {
+    const p = loadPersistedAppState();
+    initialLocalRef.current = {
+      savedAt: Number(p?.savedAt || 0),
+      hasBrands: !!(p?.brands && typeof p.brands === "object" && Object.keys(p.brands).length > 0),
+    };
+  }
+  // Gates the disk autosave until the initial disk load has run, so stale
+  // startup state can never overwrite newer on-disk data.
+  const diskLoadedRef = useRef(false);
+  const diskSaveTimerRef = useRef(null);
   const [brandDeleteModalOpened, setBrandDeleteModalOpened] = useState(false);
   const [brandDeleteTargetId, setBrandDeleteTargetId] = useState(null);
   const [brandDeleteConfirmInput, setBrandDeleteConfirmInput] = useState("");
@@ -507,6 +557,9 @@ export default function App() {
   const importBrandsInputRef = useRef(null);
   const mergeBrandsInputRef = useRef(null);
   const [localDataMessage, setLocalDataMessage] = useState(null);
+  // Surfaced when a localStorage write fails (quota, private mode, blocked) so
+  // edits can never silently vanish without the user finding out.
+  const [storageError, setStorageError] = useState(null);
   // Holds a parsed-but-not-yet-applied brand merge so the user can review/select
   // which incoming brands to add or update before anything touches their state.
   const [pendingBrandMerge, setPendingBrandMerge] = useState(null);
@@ -1521,8 +1574,10 @@ export default function App() {
   const colorTokens = isChartComponent
     ? Object.fromEntries(
         Object.entries(allColorTokens).filter(([name]) => {
-          const isShadeToken = /^chart-shade-\d+$/.test(name);
-          const isSeriesToken = /^chart-series-\d+$/.test(name);
+          // The translucent palettes track their solid counterparts: series(+opacity)
+          // show in single/palette, shade(+shade-opacity) show in shades mode.
+          const isShadeToken = /^chart-shade(?:-opacity)?-\d+$/.test(name);
+          const isSeriesToken = /^chart-series(?:-opacity)?-\d+$/.test(name);
           if (activeChartColorMode === "shades") return !isSeriesToken;
           return !isShadeToken;
         })
@@ -1532,19 +1587,104 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    const stateObj = { brands, activeBrand, previewTheme, savedAt: Date.now() };
+    let payload;
     try {
-      window.localStorage.setItem(
-        APP_STORAGE_KEY,
-        JSON.stringify({
-          brands,
-          activeBrand,
-          previewTheme,
-        })
+      payload = JSON.stringify(stateObj);
+    } catch (err) {
+      // A non-serializable value snuck into brands — this would otherwise drop
+      // the entire save (and every edit with it) silently.
+      console.error("[DSG] Could not serialize app state for persistence:", err);
+      setStorageError("Your changes could not be saved (data could not be serialized). Export your brands to back them up.");
+      return;
+    }
+    try {
+      window.localStorage.setItem(APP_STORAGE_KEY, payload);
+      // Verify the write actually landed; some browsers (private mode, blocked
+      // storage) accept setItem but persist nothing.
+      const readback = window.localStorage.getItem(APP_STORAGE_KEY);
+      if (readback !== payload) {
+        throw new Error("localStorage readback mismatch");
+      }
+      setStorageError((cur) => (cur ? null : cur));
+    } catch (err) {
+      console.error("[DSG] Failed to persist app state:", err);
+      setStorageError(
+        "Your changes are NOT being saved to this browser. Likely causes: the app is open in another tab, private/incognito mode, or storage is blocked/full. Export your brands now to avoid losing work."
       );
-    } catch (_err) {
-      // Ignore storage write errors (quota/private mode).
+    }
+    // Durable disk autosave (debounced). Gated until the initial disk load has
+    // run so stale startup state can't overwrite newer on-disk data.
+    if (diskLoadedRef.current) {
+      if (diskSaveTimerRef.current) clearTimeout(diskSaveTimerRef.current);
+      diskSaveTimerRef.current = setTimeout(() => postBrandsToDisk(stateObj), 600);
     }
   }, [brands, activeBrand, previewTheme]);
+
+  // On startup, restore from the on-disk autosave when it's newer than (or
+  // localStorage is empty for) this origin. This is what makes colors survive a
+  // port change or browser clear — the disk file is origin-independent.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    let cancelled = false;
+    (async () => {
+      let adopted = false;
+      try {
+        const res = await fetch(`${RELAY_HTTP}/api/brands`);
+        const data = res.ok ? await res.json() : null;
+        if (!cancelled && data && !data.missing && data.brands && typeof data.brands === "object") {
+          const localAt = initialLocalRef.current.savedAt;
+          const localHasBrands = initialLocalRef.current.hasBrands;
+          const diskAt = Number(data.savedAt || 0);
+          if (!localHasBrands || diskAt >= localAt) {
+            adopted = true;
+            setBrands(enforceTextDefaultMappings(mergeRecoveredBrands(data.brands)));
+            if (data.activeBrand) setActiveBrand(data.activeBrand);
+            if (data.previewTheme === "light" || data.previewTheme === "dark") {
+              setPreviewTheme(data.previewTheme);
+            }
+          }
+        }
+      } catch (_err) {
+        // Relay offline — localStorage remains the source of truth.
+      } finally {
+        if (!cancelled) {
+          diskLoadedRef.current = true;
+          // If we didn't adopt disk state, flush the current (localStorage)
+          // state to disk so the file exists and stays current. When we DID
+          // adopt, the resulting setBrands re-render triggers the save effect,
+          // which posts the adopted state.
+          if (!adopted) {
+            postBrandsToDisk({ brands, activeBrand, previewTheme, savedAt: Date.now() });
+          }
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Keep multiple open tabs in sync. Without this, a stale second tab will
+  // overwrite a fresh tab's saved edits on its next write, which looks exactly
+  // like "my colors keep resetting" across random brands.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const onStorage = (e) => {
+      if (e.key !== APP_STORAGE_KEY || e.newValue == null) return;
+      try {
+        const parsed = JSON.parse(e.newValue);
+        if (parsed && parsed.brands && typeof parsed.brands === "object") {
+          setBrands(enforceTextDefaultMappings(mergeRecoveredBrands(parsed.brands)));
+        }
+      } catch (_err) {
+        // Ignore malformed cross-tab payloads.
+      }
+    };
+    window.addEventListener("storage", onStorage);
+    return () => window.removeEventListener("storage", onStorage);
+  }, []);
 
   useEffect(() => {
     if (!buttonFillGradientId || !brand?.gradients) return;
@@ -2664,6 +2804,41 @@ export default function App() {
         overflow: "hidden",
       }}
     >
+      {storageError && (
+        <div
+          role="alert"
+          style={{
+            background: "#3B1418",
+            borderBottom: "1px solid #FA5252",
+            color: "#FFC9C9",
+            fontSize: 12,
+            lineHeight: 1.5,
+            padding: "10px 16px",
+            display: "flex",
+            alignItems: "center",
+            gap: 12,
+            flexShrink: 0,
+          }}
+        >
+          <span style={{ flex: 1 }}>{storageError}</span>
+          <button
+            type="button"
+            onClick={() => setStorageError(null)}
+            style={{
+              background: "transparent",
+              border: "1px solid #FA5252",
+              color: "#FFC9C9",
+              borderRadius: 4,
+              fontSize: 11,
+              padding: "4px 10px",
+              cursor: "pointer",
+              flexShrink: 0,
+            }}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
       <Modal
         opened={brandDeleteModalOpened}
         onClose={closeBrandDeleteModal}
@@ -2905,8 +3080,12 @@ export default function App() {
                 // Semantic-less per-color tokens use a primitive default (or auto-contrast text).
                 let fallbackMapping = null;
                 if (!semantic) {
-                  const seriesMapping = chartSeriesMappingForToken(brand, token);
-                  const shadeMapping = chartShadeMappingForToken(brand, token);
+                  const seriesMapping =
+                    chartSeriesMappingForToken(brand, token) ||
+                    chartSeriesOpacityMappingForToken(brand, token);
+                  const shadeMapping =
+                    chartShadeMappingForToken(brand, token) ||
+                    chartShadeOpacityMappingForToken(brand, token);
                   if (seriesMapping) {
                     fallbackMapping = seriesMapping;
                   } else if (shadeMapping) {

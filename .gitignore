@@ -12,6 +12,10 @@ dist
 dist-ssr
 *.local
 
+# Durable on-disk autosave of brand/token edits (local working state)
+brands.local.json
+brands-recovery.json
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

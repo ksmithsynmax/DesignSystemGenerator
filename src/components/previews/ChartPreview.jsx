@@ -69,6 +69,17 @@ const SERIES_KEYS = [
   "chart-series-6",
 ];
 
+// Translucent fill palette used only by Area + Radar. The alpha is baked into
+// each token's color value, so these render without a separate opacity prop.
+const OPACITY_SERIES_KEYS = [
+  "chart-series-opacity-1",
+  "chart-series-opacity-2",
+  "chart-series-opacity-3",
+  "chart-series-opacity-4",
+  "chart-series-opacity-5",
+  "chart-series-opacity-6",
+];
+
 // "shades" mode draws from its own dedicated, editable token set (separate from
 // the series palette) so the variables align 1:1 with what the chart renders.
 const SHADE_KEYS = [
@@ -78,6 +89,17 @@ const SHADE_KEYS = [
   "chart-shade-4",
   "chart-shade-5",
   "chart-shade-6",
+];
+
+// Translucent counterpart of the shade ramp, used to fill Area/Radar regions in
+// shades mode (alpha baked into each token; the outline keeps the solid shade).
+const SHADE_OPACITY_KEYS = [
+  "chart-shade-opacity-1",
+  "chart-shade-opacity-2",
+  "chart-shade-opacity-3",
+  "chart-shade-opacity-4",
+  "chart-shade-opacity-5",
+  "chart-shade-opacity-6",
 ];
 
 // Per-series line style tokens (line/combo only): solid | dashed | dotted.
@@ -139,7 +161,13 @@ export default function ChartPreview({
   const series = SERIES_KEYS.map((key) =>
     svgColor(resolveColor(brands, brandId, tokens[key]?.semantic, theme, key))
   );
+  const opacitySeries = OPACITY_SERIES_KEYS.map((key) =>
+    svgColor(resolveColor(brands, brandId, tokens[key]?.semantic, theme, key))
+  );
   const shades = SHADE_KEYS.map((key) =>
+    svgColor(resolveColor(brands, brandId, tokens[key]?.semantic, theme, key))
+  );
+  const shadeOpacity = SHADE_OPACITY_KEYS.map((key) =>
     svgColor(resolveColor(brands, brandId, tokens[key]?.semantic, theme, key))
   );
   const axisColor = svgColor(resolveColor(brands, brandId, tokens["chart-axis"]?.semantic, theme, "chart-axis"));
@@ -178,8 +206,6 @@ export default function ChartPreview({
 
   // Area-specific tokens.
   const areaLineWidth = Number(resolveDimension(brands, brandId, "chart-area-line-width", size)) || 2;
-  const areaFillOpacity =
-    (Number(resolveDimension(brands, brandId, "chart-area-fill-opacity", size)) || 20) / 100;
   const areaPointRadius = Number(resolveDimension(brands, brandId, "chart-area-point-radius", size)) || 3;
 
   // Combo-specific tokens.
@@ -198,8 +224,6 @@ export default function ChartPreview({
 
   // Radar-specific tokens.
   const radarLineWidth = Number(resolveDimension(brands, brandId, "chart-radar-line-width", size)) || 2;
-  const radarFillOpacity =
-    (Number(resolveDimension(brands, brandId, "chart-radar-fill-opacity", size)) || 25) / 100;
   const radarDotRadius = Math.max(0, Number(resolveDimension(brands, brandId, "chart-radar-dot-radius", size)) || 0);
 
   const tickStyle = {
@@ -222,6 +246,14 @@ export default function ChartPreview({
     if (colorMode === "shades") return shades[i % shades.length];
     if (colorMode === "palette") return series[i % series.length];
     return series[0];
+  };
+
+  // Area/Radar fills use the translucent palettes (alpha baked into each token):
+  // the opacity series in single/palette modes, the opacity shade ramp in shades.
+  const fillColorAt = (i) => {
+    if (colorMode === "shades") return shadeOpacity[i % shadeOpacity.length];
+    if (colorMode === "palette") return opacitySeries[i % opacitySeries.length];
+    return opacitySeries[0];
   };
 
   const grid = showGrid ? (
@@ -310,7 +342,7 @@ export default function ChartPreview({
           outerRadius="72%"
         >
           {showGrid && (
-            <PolarGrid stroke={gridColor} strokeWidth={gridWidth} strokeDasharray={gridDashArray} />
+            <PolarGrid stroke={gridColor} strokeWidth={gridWidth} />
           )}
           <PolarAngleAxis dataKey="name" tick={tickStyle} tickLine={false} />
           {showAxis && (
@@ -327,8 +359,8 @@ export default function ChartPreview({
               dataKey={SERIES_DATA_KEYS[i]}
               stroke={colorAt(i)}
               strokeWidth={radarLineWidth}
-              fill={colorAt(i)}
-              fillOpacity={radarFillOpacity}
+              fill={fillColorAt(i)}
+              fillOpacity={1}
               dot={radarDotRadius > 0 ? { r: radarDotRadius, fill: colorAt(i), strokeWidth: 0 } : false}
               isAnimationActive={false}
             />
@@ -439,8 +471,8 @@ export default function ChartPreview({
               dataKey={SERIES_DATA_KEYS[i]}
               stroke={colorAt(i)}
               strokeWidth={areaLineWidth}
-              fill={colorAt(i)}
-              fillOpacity={areaFillOpacity}
+              fill={fillColorAt(i)}
+              fillOpacity={1}
               dot={showPoints ? { r: areaPointRadius, fill: colorAt(i), strokeWidth: 0 } : false}
               activeDot={false}
               isAnimationActive={false}
