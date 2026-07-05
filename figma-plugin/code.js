@@ -1051,21 +1051,45 @@ function resolveManagedComponentKeyFromName(name) {
   var chartAliases = {
     barchart: "chart",
     linechart: "chartline",
+    timeserieschart: "charttimeseries",
+    timeseriesdualaxischart: "charttimeseriesdualaxis",
     areachart: "chartarea",
+    stackedareachart: "chartstackedarea",
     stackedbarchart: "chartstackedbar",
     combochart: "chartcombo",
     donutchart: "chartdonut",
     radarchart: "chartradar",
+    scatterchart: "chartscatter",
+    candlestickchart: "chartcandlestick",
+    sparkline: "chartsparkline",
+    sparklinechart: "chartsparkline",
+    horizontalbarchart: "chartbarhorizontal",
+    rankedbarchart: "chartbarhorizontal",
+    piechart: "chartpie",
+    funnelchart: "chartfunnel",
+    radialchart: "chartradial",
+    radialbarchart: "chartradial",
+    gaugechart: "chartradial",
   };
   if (chartAliases[normalized]) return chartAliases[normalized];
   var managedKeys = [
     "button", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "checkbox", "radio",
     "chip", "notification", "alert", "modal", "tooltip", "popover", "menu", "divider", "list", "loader",
     "progress",
+    "chartstackedarea",
     "chartstackedbar",
+    "chartscatter",
+    "chartcandlestick",
+    "chartsparkline",
+    "chartbarhorizontal",
+    "chartpie",
+    "chartfunnel",
+    "chartradial",
     "chartcombo",
     "chartdonut",
     "chartradar",
+    "charttimeseriesdualaxis",
+    "charttimeseries",
     "chartline",
     "chartarea",
     "chart",
@@ -1356,8 +1380,17 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var chartLineSet = await buildSet("Chart Line", function () {
     return buildChartLineComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
   });
+  var chartTimeSeriesSet = await buildSet("Chart Time Series", function () {
+    return buildChartTimeSeriesComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartTimeSeriesDualAxisSet = await buildSet("Chart Time Series Dual Axis", function () {
+    return buildChartTimeSeriesDualAxisComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
   var chartAreaSet = await buildSet("Chart Area", function () {
     return buildChartAreaComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartStackedAreaSet = await buildSet("Chart Stacked Area", function () {
+    return buildChartStackedAreaComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
   });
   var chartStackedBarSet = await buildSet("Chart Stacked Bar", function () {
     return buildChartStackedBarComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
@@ -1370,6 +1403,27 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   });
   var chartRadarSet = await buildSet("Chart Radar", function () {
     return buildChartRadarComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartScatterSet = await buildSet("Chart Scatter", function () {
+    return buildChartScatterComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartCandlestickSet = await buildSet("Chart Candlestick", function () {
+    return buildChartCandlestickComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartSparklineSet = await buildSet("Chart Sparkline", function () {
+    return buildChartSparklineComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartBarHorizontalSet = await buildSet("Chart Bar Horizontal", function () {
+    return buildChartBarHorizontalComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartPieSet = await buildSet("Chart Pie", function () {
+    return buildChartPieComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartFunnelSet = await buildSet("Chart Funnel", function () {
+    return buildChartFunnelComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
+  });
+  var chartRadialSet = await buildSet("Chart Radial", function () {
+    return buildChartRadialComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
   });
   var notificationSet = await buildSet("Notification", function () {
     return buildNotificationComponentSet(varMap, page, font, loaderSet, resolvedComponentFloat);
@@ -1487,11 +1541,21 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     progressSet,
     chartSet,
     chartLineSet,
+    chartTimeSeriesSet,
+    chartTimeSeriesDualAxisSet,
     chartAreaSet,
+    chartStackedAreaSet,
     chartStackedBarSet,
     chartComboSet,
     chartDonutSet,
     chartRadarSet,
+    chartScatterSet,
+    chartCandlestickSet,
+    chartSparklineSet,
+    chartBarHorizontalSet,
+    chartPieSet,
+    chartFunnelSet,
+    chartRadialSet,
     notificationSet,
     alertSet,
     modalSet,
@@ -2756,6 +2820,16 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         variantPropName = "Type";
       }
     }
+    // Charts expose their color mode (Single / Palette / Shades) as the primary
+    // visual variant; surface it so docs render one labeled example per mode
+    // instead of a single default preview.
+    if (variants.length === 0) {
+      var chartColorModes = getPropValues(variantProps, "Colors");
+      if (chartColorModes.length > 0) {
+        variants = chartColorModes.slice();
+        variantPropName = "Colors";
+      }
+    }
     var states = getPropValues(variantProps, "State");
     var sizes = getPropValues(variantProps, "Size");
     var textWeights = getPropValues(variantProps, "Weight");
@@ -2864,7 +2938,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         templatedDoc.appendChild(templateListIconsBlock);
       }
 
-      var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Oval", "Bars", "Dots"];
+      var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Oval", "Bars", "Dots", "Single", "Palette", "Shades"];
       var templateVariantLimit = lowerSetName === "tablebody"
         ? Math.max(6, variants.length)
         : (lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3));
@@ -3026,6 +3100,42 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (lowerSetName === "calendar") {
             var templateCalHeaderKey = getPropKey(variantProps, "Header");
             if (templateCalHeaderKey) props[templateCalHeaderKey] = "Off";
+          }
+          // Charts with a Slices / Stages / Rings count axis: the component-set
+          // default is the minimum (2), which renders as a stub in docs. Default
+          // the preview to a fuller, representative count so funnel / pie / radial
+          // read like real charts.
+          var templateChartCountName = getPropValues(variantProps, "Stages").length
+            ? "Stages"
+            : getPropValues(variantProps, "Slices").length
+            ? "Slices"
+            : getPropValues(variantProps, "Rings").length
+            ? "Rings"
+            : null;
+          if (templateChartCountName) {
+            var templateChartCountKey = getPropKey(variantProps, templateChartCountName);
+            var templateChartCountVals = getPropValues(variantProps, templateChartCountName);
+            var templateChartCountPick = null;
+            for (var tccI = 0; tccI < templateChartCountVals.length; tccI++) {
+              if (String(templateChartCountVals[tccI]) === "4") {
+                templateChartCountPick = templateChartCountVals[tccI];
+                break;
+              }
+            }
+            if (templateChartCountPick == null && templateChartCountVals.length) {
+              templateChartCountPick =
+                templateChartCountVals[Math.min(templateChartCountVals.length - 1, Math.floor(templateChartCountVals.length / 2))];
+            }
+            if (templateChartCountKey && templateChartCountPick != null) {
+              props[templateChartCountKey] = templateChartCountPick;
+            }
+          }
+          // Charts: show the legend in docs so series/slice/stage labels are visible.
+          var templateLegendKey = getPropKey(variantProps, "Legend");
+          if (templateLegendKey) {
+            var templateLegendVals = getPropValues(variantProps, "Legend");
+            var templateLegendOn = templateLegendVals.indexOf("On") >= 0 ? "On" : (templateLegendVals[0] || null);
+            if (templateLegendOn != null) props[templateLegendKey] = templateLegendOn;
           }
           var patchKeys = Object.keys(propPatch || {});
           for (var p = 0; p < patchKeys.length; p++) {
@@ -4383,7 +4493,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var insetKey = getPropKey(variantProps, "Inset");
       var colorKey = getPropKey(variantProps, "Color");
 
-      var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills"];
+      var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Single", "Palette", "Shades"];
       var variantLimit = lowerSetName === "tablebody"
         ? Math.max(6, variants.length)
         : (lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3));
@@ -4556,6 +4666,38 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         if (lowerSetName === "calendar") {
           var calHeaderKey = getPropKey(variantProps, "Header");
           if (calHeaderKey) props[calHeaderKey] = "Off";
+        }
+        // Charts with a Slices / Stages / Rings count axis: default the preview to
+        // a representative count (4) instead of the component-set minimum (2).
+        var chartCountName = getPropValues(variantProps, "Stages").length
+          ? "Stages"
+          : getPropValues(variantProps, "Slices").length
+          ? "Slices"
+          : getPropValues(variantProps, "Rings").length
+          ? "Rings"
+          : null;
+        if (chartCountName) {
+          var chartCountKey = getPropKey(variantProps, chartCountName);
+          var chartCountVals = getPropValues(variantProps, chartCountName);
+          var chartCountPick = null;
+          for (var cci2 = 0; cci2 < chartCountVals.length; cci2++) {
+            if (String(chartCountVals[cci2]) === "4") {
+              chartCountPick = chartCountVals[cci2];
+              break;
+            }
+          }
+          if (chartCountPick == null && chartCountVals.length) {
+            chartCountPick =
+              chartCountVals[Math.min(chartCountVals.length - 1, Math.floor(chartCountVals.length / 2))];
+          }
+          if (chartCountKey && chartCountPick != null) props[chartCountKey] = chartCountPick;
+        }
+        // Charts: show the legend in docs so series/slice/stage labels are visible.
+        var legendDocKey = getPropKey(variantProps, "Legend");
+        if (legendDocKey) {
+          var legendDocVals = getPropValues(variantProps, "Legend");
+          var legendDocOn = legendDocVals.indexOf("On") >= 0 ? "On" : (legendDocVals[0] || null);
+          if (legendDocOn != null) props[legendDocKey] = legendDocOn;
         }
         if (lowerSetName === "divider") {
           if (orientationKey && orientationHorizontal != null) props[orientationKey] = orientationHorizontal;
@@ -15047,13 +15189,15 @@ function buildChartLineComponentSet(varMap, page, font, resolvedComponentFloat, 
   var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
   var gridDash = resolveCompFloat("chart/grid-dash", 4);
 
+  // Categorical labels (not dates) so the line chart reads distinctly from the
+  // time series chart, which uses a date X-axis.
   var SAMPLE = [
-    { label: "Jan", v: [42, 24, 60, 12] },
-    { label: "Feb", v: [58, 38, 30, 50] },
-    { label: "Mar", v: [35, 52, 64, 22] },
-    { label: "Apr", v: [71, 30, 20, 58] },
-    { label: "May", v: [49, 62, 44, 28] },
-    { label: "Jun", v: [63, 41, 54, 70] },
+    { label: "Page A", v: [42, 24, 60, 12] },
+    { label: "Page B", v: [58, 38, 30, 50] },
+    { label: "Page C", v: [35, 52, 64, 22] },
+    { label: "Page D", v: [71, 30, 20, 58] },
+    { label: "Page E", v: [49, 62, 44, 28] },
+    { label: "Page F", v: [63, 41, 54, 70] },
   ];
   var Y_TICKS = [0, 20, 40, 60, 80];
   var MAX_SCALE = 80;
@@ -15350,6 +15494,671 @@ function buildChartLineComponentSet(varMap, page, font, resolvedComponentFloat, 
 }
 
 // ---------------------------------------------------------------------------
+// Chart Component Set (Time Series)
+// ---------------------------------------------------------------------------
+// A standalone copy of the line chart builder. Time series shares the line
+// rendering AND the chart-line/* + chart/* variables verbatim, so this binds to
+// the exact same variables; it exists as its own component set for spec parity
+// and as the base for the dual-axis variant. Kept as a separate function (not a
+// shared helper) to insulate the working line chart from changes here.
+function buildChartTimeSeriesComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+
+  // Date labels: a time series is a line chart over a time X-axis.
+  var SAMPLE = [
+    { label: "Jan 1", v: [42, 24, 60, 12] },
+    { label: "Jan 8", v: [58, 38, 30, 50] },
+    { label: "Jan 15", v: [35, 52, 64, 22] },
+    { label: "Jan 22", v: [71, 30, 20, 58] },
+    { label: "Jan 29", v: [49, 62, 44, 28] },
+    { label: "Feb 5", v: [63, 41, 54, 70] },
+  ];
+  var Y_TICKS = [0, 20, 40, 60, 80];
+  var MAX_SCALE = 80;
+  var Y_GUTTER = 34;
+  var X_GUTTER = 20;
+
+  var seriesPaths = [
+    "chart/series-1", "chart/series-2", "chart/series-3", "chart/series-4",
+  ];
+  var stylePaths = [
+    "chart/series-1-style", "chart/series-2-style",
+    "chart/series-3-style", "chart/series-4-style",
+  ];
+  var styleDefaults = ["solid", "dashed", "dotted", "solid"];
+  var seriesFallbacks = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+  ];
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  // Per-series dash + curve are structural, so they're baked at build time
+  // (Figma can't bind a dash pattern or curve to a variable).
+  var seriesDash = resolveCompFloat("chart/series-dash", 6);
+  var curveSmooth = resolveCompString("chart/line-curve", "smooth") !== "straight";
+
+  function dashForStyle(style) {
+    if (style === "dashed") return [seriesDash, seriesDash];
+    if (style === "dotted") return [2, Math.max(2, seriesDash)];
+    return null;
+  }
+  // Catmull-Rom -> cubic bezier for smooth curves; plain polyline for straight.
+  function buildLinePath(pts, smooth) {
+    if (!pts.length) return "";
+    if (!smooth || pts.length < 3) {
+      var ds = "";
+      for (var k = 0; k < pts.length; k++) {
+        ds += (k === 0 ? "M " : " L ") + pts[k].x + " " + pts[k].y;
+      }
+      return ds;
+    }
+    var d = "M " + pts[0].x + " " + pts[0].y;
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[i - 1] || pts[i];
+      var p1 = pts[i];
+      var p2 = pts[i + 1];
+      var p3 = pts[i + 2] || p2;
+      var cp1x = p1.x + (p2.x - p0.x) / 6;
+      var cp1y = p1.y + (p2.y - p0.y) / 6;
+      var cp2x = p2.x - (p3.x - p1.x) / 6;
+      var cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += " C " + cp1x + " " + cp1y + " " + cp2x + " " + cp2y + " " + p2.x + " " + p2.y;
+    }
+    return d;
+  }
+
+  var sizes = ["default"];
+  var pointModes = ["off", "on"];
+  var seriesCounts = [1, 2, 3, 4];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var legi = 0; legi < legendModes.length; legi++) {
+    var withLegend = legendModes[legi] === "on";
+    var capLegend = withLegend ? "On" : "Off";
+
+  for (var pi = 0; pi < pointModes.length; pi++) {
+    var pointMode = pointModes[pi];
+    var withPoints = pointMode === "on";
+    var capPoints = withPoints ? "On" : "Off";
+
+    for (var sci = 0; sci < seriesCounts.length; sci++) {
+      var nSeries = seriesCounts[sci];
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
+
+      var plotW = resolveCompFloat("chart/width-" + size, 320);
+      var plotH = resolveCompFloat("chart/height-" + size, 180);
+      var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+      var pad = resolveCompFloat("chart/padding", 16);
+      var axisWidth = resolveCompFloat("chart/axis-width", 1);
+      var gridWidth = resolveCompFloat("chart/grid-width", 1);
+      var lineWidth = resolveCompFloat("chart-line/width", 2);
+      var pointRadius = resolveCompFloat("chart-line/point-radius", 3);
+      var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+      var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+      var legendGap = resolveCompFloat("chart/legend-gap", 16);
+      var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+      var plotX = pad + Y_GUTTER;
+      var plotY = pad;
+      var totalW = pad * 2 + Y_GUTTER + plotW;
+      var totalH = pad * 2 + X_GUTTER + plotH + legendRowH;
+      maxColWidth = Math.max(maxColWidth, totalW);
+      maxRowHeight = Math.max(maxRowHeight, totalH);
+
+      var comp = figma.createComponent();
+      comp.name = "Points=" + capPoints + ", Series=" + nSeries + ", Legend=" + capLegend;
+      comp.layoutMode = "NONE";
+      comp.resize(totalW, totalH);
+      comp.fills = [];
+      comp.clipsContent = false;
+
+      // ── Gridlines + Y tick labels ──
+      for (var gi = 0; gi < Y_TICKS.length; gi++) {
+        var gy = plotY + plotH - (Y_TICKS[gi] / MAX_SCALE) * plotH;
+        var grid = figma.createLine();
+        grid.name = "Gridline";
+        grid.resize(plotW, 0);
+        grid.x = plotX;
+        grid.y = gy;
+        grid.strokeCap = "NONE";
+        grid.strokes = [{ type: "SOLID", color: gridFallback }];
+        grid.strokeWeight = Math.max(1, gridWidth);
+        if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+        bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+        bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+        comp.appendChild(grid);
+
+        var yLabel = figma.createText();
+        yLabel.fontName = font;
+        yLabel.name = "Y Label";
+        yLabel.characters = String(Y_TICKS[gi]);
+        yLabel.fontSize = labelFontSize;
+        yLabel.textAlignHorizontal = "RIGHT";
+        yLabel.resize(Y_GUTTER - 6, labelFontSize + 4);
+        yLabel.x = pad;
+        yLabel.y = gy - (labelFontSize + 4) / 2;
+        yLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(yLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(yLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(yLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(yLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(yLabel);
+      }
+
+      // ── Line series (one stroked vector per series) ──
+      var slot = plotW / SAMPLE.length;
+      for (var li = 0; li < nSeries; li++) {
+        var seriesColor = seriesFallbacks[li % seriesFallbacks.length];
+        var seriesVar = varMap[seriesPaths[li % seriesPaths.length]];
+        var lineCoords = [];
+        for (var di = 0; di < SAMPLE.length; di++) {
+          var px = plotX + di * slot + slot / 2;
+          var py = plotY + plotH - (SAMPLE[di].v[li] / MAX_SCALE) * plotH;
+          lineCoords.push({ x: px, y: py });
+        }
+        var lineVec = figma.createVector();
+        lineVec.name = "Line " + (li + 1);
+        comp.appendChild(lineVec);
+        lineVec.x = 0;
+        lineVec.y = 0;
+        lineVec.vectorPaths = [{ windingRule: "NONE", data: buildLinePath(lineCoords, curveSmooth) }];
+        lineVec.strokeWeight = Math.max(1, lineWidth);
+        lineVec.strokeCap = "ROUND";
+        lineVec.strokeJoin = "ROUND";
+        lineVec.fills = [];
+        lineVec.strokes = [{ type: "SOLID", color: seriesColor }];
+        var dashPat = dashForStyle(resolveCompString(stylePaths[li % stylePaths.length], styleDefaults[li % styleDefaults.length]));
+        if (dashPat) lineVec.dashPattern = dashPat;
+        bindPaintVar(lineVec, "strokes", 0, seriesVar);
+        bindVar(lineVec, "strokeWeight", varMap["chart-line/width"]);
+
+        // ── Point markers ──
+        if (withPoints) {
+          for (var ci2 = 0; ci2 < lineCoords.length; ci2++) {
+            var dot = figma.createEllipse();
+            dot.name = "Point";
+            dot.resize(pointRadius * 2, pointRadius * 2);
+            dot.x = lineCoords[ci2].x - pointRadius;
+            dot.y = lineCoords[ci2].y - pointRadius;
+            dot.fills = [{ type: "SOLID", color: seriesColor }];
+            dot.strokes = [];
+            bindPaintVar(dot, "fills", 0, seriesVar);
+            comp.appendChild(dot);
+          }
+        }
+      }
+
+      // ── X tick labels ──
+      for (var xi = 0; xi < SAMPLE.length; xi++) {
+        var xLabel = figma.createText();
+        xLabel.fontName = font;
+        xLabel.name = "X Label";
+        xLabel.characters = SAMPLE[xi].label;
+        xLabel.fontSize = labelFontSize;
+        xLabel.textAlignHorizontal = "CENTER";
+        xLabel.resize(slot, labelFontSize + 4);
+        xLabel.x = plotX + xi * slot;
+        xLabel.y = plotY + plotH + 4;
+        xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(xLabel);
+      }
+
+      // ── Axis lines ──
+      var yAxis = figma.createRectangle();
+      yAxis.name = "Y Axis";
+      yAxis.resize(Math.max(1, axisWidth), plotH);
+      yAxis.x = plotX;
+      yAxis.y = plotY;
+      yAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      yAxis.strokes = [];
+      bindPaintVar(yAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(yAxis, "width", varMap["chart/axis-width"]);
+      comp.appendChild(yAxis);
+
+      var xAxis = figma.createRectangle();
+      xAxis.name = "X Axis";
+      xAxis.resize(plotW, Math.max(1, axisWidth));
+      xAxis.x = plotX;
+      xAxis.y = plotY + plotH;
+      xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      xAxis.strokes = [];
+      bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(xAxis, "height", varMap["chart/axis-width"]);
+      comp.appendChild(xAxis);
+
+      // ── Legend (swatch + label per series, centered below the plot) ──
+      if (withLegend) {
+        var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+        var legendY = plotY + plotH + X_GUTTER + 8;
+        var legendItems = [];
+        var totalLegendW = 0;
+        for (var lgi = 0; lgi < nSeries; lgi++) {
+          var lbl = "Series " + (lgi + 1);
+          var lblW = Math.ceil(lbl.length * legendFontSize * 0.6);
+          var iw = legendSwatch + 6 + lblW;
+          legendItems.push({ w: iw, label: lbl, labelW: lblW });
+          totalLegendW += iw;
+        }
+        totalLegendW += legendGap * Math.max(0, nSeries - 1);
+        var lx = plotX + (plotW - totalLegendW) / 2;
+        if (lx < pad) lx = pad;
+        for (var lgj = 0; lgj < nSeries; lgj++) {
+          var sw = figma.createRectangle();
+          sw.name = "Legend Swatch";
+          sw.resize(legendSwatch, legendSwatch);
+          sw.x = lx;
+          sw.y = legendY + (legendItemH - legendSwatch) / 2;
+          sw.cornerRadius = 2;
+          sw.fills = [{ type: "SOLID", color: seriesFallbacks[lgj % seriesFallbacks.length] }];
+          sw.strokes = [];
+          bindPaintVar(sw, "fills", 0, varMap[seriesPaths[lgj % seriesPaths.length]]);
+          bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+          bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+          comp.appendChild(sw);
+
+          var lt = figma.createText();
+          lt.fontName = font;
+          lt.name = "Legend Label";
+          lt.characters = legendItems[lgj].label;
+          lt.fontSize = legendFontSize;
+          lt.textAlignHorizontal = "LEFT";
+          lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+          lt.x = lx + legendSwatch + 6;
+          lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+          lt.fills = [{ type: "SOLID", color: labelFallback }];
+          bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+          bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+          bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+          bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+          comp.appendChild(lt);
+
+          lx += legendItems[lgj].w + legendGap;
+        }
+      }
+
+        comp.x = si * (maxColWidth + colGap);
+        comp.y = rowIndex * (maxRowHeight + rowGap);
+        page.appendChild(comp);
+        components.push(comp);
+      }
+      rowIndex++;
+    }
+  }
+  }
+
+  progress("Created " + components.length + " time series chart variants");
+  var timeSeriesSet = figma.combineAsVariants(components, page);
+  timeSeriesSet.name = "Time Series Chart";
+  return timeSeriesSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Time Series Dual Axis)
+// ---------------------------------------------------------------------------
+// Two line series over a shared time X-axis, each bound to its own Y-axis:
+// series-1 -> left axis (scale 0-80), series-2 -> right axis (scale 0-800). The
+// right series is scaled up so the two independent axes read distinctly. Reuses
+// the chart-line/* + chart/* variables verbatim. Variant axes: Points x Legend
+// (fixed 2 series).
+function buildChartTimeSeriesDualAxisComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+
+  // Date labels (time X-axis); left series (scale 0-80), right series (scale 0-800).
+  var SAMPLE = [
+    { label: "Jan 1", l: 42, r: 288 },
+    { label: "Jan 8", l: 58, r: 456 },
+    { label: "Jan 15", l: 35, r: 624 },
+    { label: "Jan 22", l: 71, r: 360 },
+    { label: "Jan 29", l: 49, r: 744 },
+    { label: "Feb 5", l: 63, r: 492 },
+  ];
+  var Y_TICKS_L = [0, 20, 40, 60, 80];
+  var Y_TICKS_R = [0, 200, 400, 600, 800];
+  var MAX_L = 80;
+  var MAX_R = 800;
+  var Y_GUTTER = 34;
+  var Y_GUTTER_R = 40;
+  var X_GUTTER = 20;
+
+  var leftSeriesVar = varMap["chart/series-1"];
+  var rightSeriesVar = varMap["chart/series-2"];
+  var leftFallback = { r: 0.13, g: 0.55, b: 0.9 };
+  var rightFallback = { r: 0.0, g: 0.74, b: 0.83 };
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var curveSmooth = resolveCompString("chart/line-curve", "smooth") !== "straight";
+
+  function buildLinePath(pts, smooth) {
+    if (!pts.length) return "";
+    if (!smooth || pts.length < 3) {
+      var ds = "";
+      for (var k = 0; k < pts.length; k++) {
+        ds += (k === 0 ? "M " : " L ") + pts[k].x + " " + pts[k].y;
+      }
+      return ds;
+    }
+    var d = "M " + pts[0].x + " " + pts[0].y;
+    for (var i = 0; i < pts.length - 1; i++) {
+      var p0 = pts[i - 1] || pts[i];
+      var p1 = pts[i];
+      var p2 = pts[i + 1];
+      var p3 = pts[i + 2] || p2;
+      var cp1x = p1.x + (p2.x - p0.x) / 6;
+      var cp1y = p1.y + (p2.y - p0.y) / 6;
+      var cp2x = p2.x - (p3.x - p1.x) / 6;
+      var cp2y = p2.y - (p3.y - p1.y) / 6;
+      d += " C " + cp1x + " " + cp1y + " " + cp2x + " " + cp2y + " " + p2.x + " " + p2.y;
+    }
+    return d;
+  }
+
+  var sizes = ["default"];
+  var pointModes = ["off", "on"];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var legi = 0; legi < legendModes.length; legi++) {
+    var withLegend = legendModes[legi] === "on";
+    var capLegend = withLegend ? "On" : "Off";
+
+  for (var pi = 0; pi < pointModes.length; pi++) {
+    var pointMode = pointModes[pi];
+    var withPoints = pointMode === "on";
+    var capPoints = withPoints ? "On" : "Off";
+
+    for (var si = 0; si < sizes.length; si++) {
+      var size = sizes[si];
+
+      var plotW = resolveCompFloat("chart/width-" + size, 320);
+      var plotH = resolveCompFloat("chart/height-" + size, 180);
+      var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+      var pad = resolveCompFloat("chart/padding", 16);
+      var axisWidth = resolveCompFloat("chart/axis-width", 1);
+      var gridWidth = resolveCompFloat("chart/grid-width", 1);
+      var lineWidth = resolveCompFloat("chart-line/width", 2);
+      var pointRadius = resolveCompFloat("chart-line/point-radius", 3);
+      var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+      var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+      var legendGap = resolveCompFloat("chart/legend-gap", 16);
+      var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+      var plotX = pad + Y_GUTTER;
+      var plotY = pad;
+      var totalW = pad * 2 + Y_GUTTER + plotW + Y_GUTTER_R;
+      var totalH = pad * 2 + X_GUTTER + plotH + legendRowH;
+      maxColWidth = Math.max(maxColWidth, totalW);
+      maxRowHeight = Math.max(maxRowHeight, totalH);
+
+      var comp = figma.createComponent();
+      comp.name = "Points=" + capPoints + ", Legend=" + capLegend;
+      comp.layoutMode = "NONE";
+      comp.resize(totalW, totalH);
+      comp.fills = [];
+      comp.clipsContent = false;
+
+      // ── Gridlines + left/right Y tick labels (paired per tick index) ──
+      for (var gi = 0; gi < Y_TICKS_L.length; gi++) {
+        var gy = plotY + plotH - (Y_TICKS_L[gi] / MAX_L) * plotH;
+        var grid = figma.createLine();
+        grid.name = "Gridline";
+        grid.resize(plotW, 0);
+        grid.x = plotX;
+        grid.y = gy;
+        grid.strokeCap = "NONE";
+        grid.strokes = [{ type: "SOLID", color: gridFallback }];
+        grid.strokeWeight = Math.max(1, gridWidth);
+        if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+        bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+        bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+        comp.appendChild(grid);
+
+        var yLabelL = figma.createText();
+        yLabelL.fontName = font;
+        yLabelL.name = "Y Label Left";
+        yLabelL.characters = String(Y_TICKS_L[gi]);
+        yLabelL.fontSize = labelFontSize;
+        yLabelL.textAlignHorizontal = "RIGHT";
+        yLabelL.resize(Y_GUTTER - 6, labelFontSize + 4);
+        yLabelL.x = pad;
+        yLabelL.y = gy - (labelFontSize + 4) / 2;
+        yLabelL.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(yLabelL, "fills", 0, varMap["chart/label"]);
+        bindVar(yLabelL, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(yLabelL, "fontFamily", varMap["chart/font-family"]);
+        bindVar(yLabelL, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(yLabelL);
+
+        var yLabelR = figma.createText();
+        yLabelR.fontName = font;
+        yLabelR.name = "Y Label Right";
+        yLabelR.characters = String(Y_TICKS_R[gi]);
+        yLabelR.fontSize = labelFontSize;
+        yLabelR.textAlignHorizontal = "LEFT";
+        yLabelR.resize(Y_GUTTER_R - 6, labelFontSize + 4);
+        yLabelR.x = plotX + plotW + 6;
+        yLabelR.y = gy - (labelFontSize + 4) / 2;
+        yLabelR.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(yLabelR, "fills", 0, varMap["chart/label"]);
+        bindVar(yLabelR, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(yLabelR, "fontFamily", varMap["chart/font-family"]);
+        bindVar(yLabelR, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(yLabelR);
+      }
+
+      var slot = plotW / SAMPLE.length;
+
+      // ── Two line series: left (series-1, scale L), right (series-2, scale R) ──
+      var seriesDefs = [
+        { key: "l", max: MAX_L, color: leftFallback, varRef: leftSeriesVar, name: "Line 1" },
+        { key: "r", max: MAX_R, color: rightFallback, varRef: rightSeriesVar, name: "Line 2" },
+      ];
+      for (var ser = 0; ser < seriesDefs.length; ser++) {
+        var sd = seriesDefs[ser];
+        var lineCoords = [];
+        for (var di = 0; di < SAMPLE.length; di++) {
+          var px = plotX + di * slot + slot / 2;
+          var py = plotY + plotH - (SAMPLE[di][sd.key] / sd.max) * plotH;
+          lineCoords.push({ x: px, y: py });
+        }
+        var lineVec = figma.createVector();
+        lineVec.name = sd.name;
+        comp.appendChild(lineVec);
+        lineVec.x = 0;
+        lineVec.y = 0;
+        lineVec.vectorPaths = [{ windingRule: "NONE", data: buildLinePath(lineCoords, curveSmooth) }];
+        lineVec.strokeWeight = Math.max(1, lineWidth);
+        lineVec.strokeCap = "ROUND";
+        lineVec.strokeJoin = "ROUND";
+        lineVec.fills = [];
+        lineVec.strokes = [{ type: "SOLID", color: sd.color }];
+        bindPaintVar(lineVec, "strokes", 0, sd.varRef);
+        bindVar(lineVec, "strokeWeight", varMap["chart-line/width"]);
+
+        if (withPoints) {
+          for (var ci2 = 0; ci2 < lineCoords.length; ci2++) {
+            var dot = figma.createEllipse();
+            dot.name = "Point";
+            dot.resize(pointRadius * 2, pointRadius * 2);
+            dot.x = lineCoords[ci2].x - pointRadius;
+            dot.y = lineCoords[ci2].y - pointRadius;
+            dot.fills = [{ type: "SOLID", color: sd.color }];
+            dot.strokes = [];
+            bindPaintVar(dot, "fills", 0, sd.varRef);
+            comp.appendChild(dot);
+          }
+        }
+      }
+
+      // ── X tick labels ──
+      for (var xi = 0; xi < SAMPLE.length; xi++) {
+        var xLabel = figma.createText();
+        xLabel.fontName = font;
+        xLabel.name = "X Label";
+        xLabel.characters = SAMPLE[xi].label;
+        xLabel.fontSize = labelFontSize;
+        xLabel.textAlignHorizontal = "CENTER";
+        xLabel.resize(slot, labelFontSize + 4);
+        xLabel.x = plotX + xi * slot;
+        xLabel.y = plotY + plotH + 4;
+        xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(xLabel);
+      }
+
+      // ── Left + right Y axis lines and X axis ──
+      var yAxisL = figma.createRectangle();
+      yAxisL.name = "Y Axis Left";
+      yAxisL.resize(Math.max(1, axisWidth), plotH);
+      yAxisL.x = plotX;
+      yAxisL.y = plotY;
+      yAxisL.fills = [{ type: "SOLID", color: axisFallback }];
+      yAxisL.strokes = [];
+      bindPaintVar(yAxisL, "fills", 0, varMap["chart/axis"]);
+      bindVar(yAxisL, "width", varMap["chart/axis-width"]);
+      comp.appendChild(yAxisL);
+
+      var yAxisR = figma.createRectangle();
+      yAxisR.name = "Y Axis Right";
+      yAxisR.resize(Math.max(1, axisWidth), plotH);
+      yAxisR.x = plotX + plotW;
+      yAxisR.y = plotY;
+      yAxisR.fills = [{ type: "SOLID", color: axisFallback }];
+      yAxisR.strokes = [];
+      bindPaintVar(yAxisR, "fills", 0, varMap["chart/axis"]);
+      bindVar(yAxisR, "width", varMap["chart/axis-width"]);
+      comp.appendChild(yAxisR);
+
+      var xAxis = figma.createRectangle();
+      xAxis.name = "X Axis";
+      xAxis.resize(plotW, Math.max(1, axisWidth));
+      xAxis.x = plotX;
+      xAxis.y = plotY + plotH;
+      xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      xAxis.strokes = [];
+      bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(xAxis, "height", varMap["chart/axis-width"]);
+      comp.appendChild(xAxis);
+
+      // ── Legend (2 fixed series, centered below the plot) ──
+      if (withLegend) {
+        var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+        var legendY = plotY + plotH + X_GUTTER + 8;
+        var legendLabels = ["Series 1", "Series 2"];
+        var legendVars = [leftSeriesVar, rightSeriesVar];
+        var legendFallbacks = [leftFallback, rightFallback];
+        var legendItems = [];
+        var totalLegendW = 0;
+        for (var lgi = 0; lgi < legendLabels.length; lgi++) {
+          var lbl = legendLabels[lgi];
+          var lblW = Math.ceil(lbl.length * legendFontSize * 0.6);
+          var iw = legendSwatch + 6 + lblW;
+          legendItems.push({ w: iw, label: lbl, labelW: lblW });
+          totalLegendW += iw;
+        }
+        totalLegendW += legendGap * Math.max(0, legendLabels.length - 1);
+        var lx = plotX + (plotW - totalLegendW) / 2;
+        if (lx < pad) lx = pad;
+        for (var lgj = 0; lgj < legendLabels.length; lgj++) {
+          var sw = figma.createRectangle();
+          sw.name = "Legend Swatch";
+          sw.resize(legendSwatch, legendSwatch);
+          sw.x = lx;
+          sw.y = legendY + (legendItemH - legendSwatch) / 2;
+          sw.cornerRadius = 2;
+          sw.fills = [{ type: "SOLID", color: legendFallbacks[lgj] }];
+          sw.strokes = [];
+          bindPaintVar(sw, "fills", 0, legendVars[lgj]);
+          bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+          bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+          comp.appendChild(sw);
+
+          var lt = figma.createText();
+          lt.fontName = font;
+          lt.name = "Legend Label";
+          lt.characters = legendItems[lgj].label;
+          lt.fontSize = legendFontSize;
+          lt.textAlignHorizontal = "LEFT";
+          lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+          lt.x = lx + legendSwatch + 6;
+          lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+          lt.fills = [{ type: "SOLID", color: labelFallback }];
+          bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+          bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+          bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+          bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+          comp.appendChild(lt);
+
+          lx += legendItems[lgj].w + legendGap;
+        }
+      }
+
+      comp.x = si * (maxColWidth + colGap);
+      comp.y = rowIndex * (maxRowHeight + rowGap);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+    rowIndex++;
+  }
+  }
+
+  progress("Created " + components.length + " time series dual axis chart variants");
+  var dualSet = figma.combineAsVariants(components, page);
+  dualSet.name = "Time Series Dual Axis Chart";
+  return dualSet;
+}
+
+// ---------------------------------------------------------------------------
 // Chart Component Set (Area)
 // ---------------------------------------------------------------------------
 // Line chart plus a filled region down to the baseline. The fill and the top
@@ -15631,6 +16440,1262 @@ function buildChartAreaComponentSet(varMap, page, font, resolvedComponentFloat, 
   var areaSet = figma.combineAsVariants(components, page);
   areaSet.name = "Area Chart";
   return areaSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Stacked Area)
+// ---------------------------------------------------------------------------
+// The area equivalent of the stacked bar: series are summed (cumulative) into
+// layered bands rather than overlaid. Each band fills with the translucent
+// opacity ramp (series-opacity / shade-opacity) so designers can opt into
+// semi-transparent bands, and carries a top stroke bound to the solid
+// series/shade + chart-area/width. Shares the chart/* axis/grid/label/legend
+// scaffold. Variants: Colors x Series x Legend.
+
+function buildChartStackedAreaComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+
+  // Per-series values are summed into cumulative bands; stack totals stay within 0-80.
+  var SAMPLE = [
+    { label: "Jan", v: [18, 14, 8, 5] },
+    { label: "Feb", v: [22, 16, 12, 6] },
+    { label: "Mar", v: [14, 10, 7, 4] },
+    { label: "Apr", v: [26, 18, 14, 8] },
+    { label: "May", v: [20, 12, 9, 5] },
+    { label: "Jun", v: [24, 16, 10, 6] },
+  ];
+  var Y_TICKS = [0, 20, 40, 60, 80];
+  var MAX_SCALE = 80;
+  var Y_GUTTER = 34;
+  var X_GUTTER = 20;
+
+  var seriesPaths = ["chart/series-1", "chart/series-2", "chart/series-3", "chart/series-4"];
+  var shadePaths = ["chart/shade-1", "chart/shade-2", "chart/shade-3", "chart/shade-4"];
+  var seriesFallbacks = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+  ];
+  var shadeFallbacks = [
+    { r: 0.05, g: 0.28, b: 0.63 }, { r: 0.13, g: 0.55, b: 0.9 },
+    { r: 0.4, g: 0.7, b: 0.95 }, { r: 0.66, g: 0.83, b: 0.98 },
+  ];
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var sizes = ["default"];
+  var colorModes = ["palette", "shades"];
+  var seriesCounts = [2, 3, 4];
+  var legendModes = ["off", "on"];
+  var pointModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var cmi = 0; cmi < colorModes.length; cmi++) {
+    var colorMode = colorModes[cmi];
+    var capColor = colorMode === "shades" ? "Shades" : "Palette";
+    var colorPaths = colorMode === "shades" ? shadePaths : seriesPaths;
+    var colorFallbacks = colorMode === "shades" ? shadeFallbacks : seriesFallbacks;
+
+    for (var sci = 0; sci < seriesCounts.length; sci++) {
+      var nSeries = seriesCounts[sci];
+
+      for (var lgm = 0; lgm < legendModes.length; lgm++) {
+        var withLegend = legendModes[lgm] === "on";
+        var capLegend = withLegend ? "On" : "Off";
+
+      for (var pmi = 0; pmi < pointModes.length; pmi++) {
+        var withPoints = pointModes[pmi] === "on";
+        var capPoints = withPoints ? "On" : "Off";
+
+        for (var si = 0; si < sizes.length; si++) {
+          var size = sizes[si];
+
+          var plotW = resolveCompFloat("chart/width-" + size, 320);
+          var plotH = resolveCompFloat("chart/height-" + size, 180);
+          var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+          var pad = resolveCompFloat("chart/padding", 16);
+          var axisWidth = resolveCompFloat("chart/axis-width", 1);
+          var gridWidth = resolveCompFloat("chart/grid-width", 1);
+          var lineWidth = resolveCompFloat("chart-area/width", 2);
+          var pointRadius = resolveCompFloat("chart-area/point-radius", 3);
+          var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+          var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+          var legendGap = resolveCompFloat("chart/legend-gap", 16);
+          var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+          var plotX = pad + Y_GUTTER;
+          var plotY = pad;
+          var totalW = pad * 2 + Y_GUTTER + plotW;
+          var totalH = pad * 2 + X_GUTTER + plotH + legendRowH;
+          maxColWidth = Math.max(maxColWidth, totalW);
+          maxRowHeight = Math.max(maxRowHeight, totalH);
+
+          var comp = figma.createComponent();
+          comp.name = "Colors=" + capColor + ", Series=" + nSeries + ", Legend=" + capLegend + ", Points=" + capPoints;
+          comp.layoutMode = "NONE";
+          comp.resize(totalW, totalH);
+          comp.fills = [];
+          comp.clipsContent = false;
+
+          // ── Gridlines + Y tick labels ──
+          for (var gi = 0; gi < Y_TICKS.length; gi++) {
+            var gy = plotY + plotH - (Y_TICKS[gi] / MAX_SCALE) * plotH;
+            var grid = figma.createLine();
+            grid.name = "Gridline";
+            grid.resize(plotW, 0);
+            grid.x = plotX;
+            grid.y = gy;
+            grid.strokeCap = "NONE";
+            grid.strokes = [{ type: "SOLID", color: gridFallback }];
+            grid.strokeWeight = Math.max(1, gridWidth);
+            if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+            bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+            bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+            comp.appendChild(grid);
+
+            var yLabel = figma.createText();
+            yLabel.fontName = font;
+            yLabel.name = "Y Label";
+            yLabel.characters = String(Y_TICKS[gi]);
+            yLabel.fontSize = labelFontSize;
+            yLabel.textAlignHorizontal = "RIGHT";
+            yLabel.resize(Y_GUTTER - 6, labelFontSize + 4);
+            yLabel.x = pad;
+            yLabel.y = gy - (labelFontSize + 4) / 2;
+            yLabel.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(yLabel, "fills", 0, varMap["chart/label"]);
+            bindVar(yLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+            bindVar(yLabel, "fontFamily", varMap["chart/font-family"]);
+            bindVar(yLabel, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(yLabel);
+          }
+
+          // ── Cumulative area bands (bottom band first so upper bands layer on top) ──
+          var slot = plotW / SAMPLE.length;
+          for (var s = 0; s < nSeries; s++) {
+            var topPts = [];
+            var botPts = [];
+            for (var di = 0; di < SAMPLE.length; di++) {
+              var px = plotX + di * slot + slot / 2;
+              var topVal = 0;
+              var botVal = 0;
+              for (var k = 0; k <= s; k++) topVal += SAMPLE[di].v[k];
+              for (var k2 = 0; k2 < s; k2++) botVal += SAMPLE[di].v[k2];
+              topPts.push({ x: px, y: plotY + plotH - (topVal / MAX_SCALE) * plotH });
+              botPts.push({ x: px, y: plotY + plotH - (botVal / MAX_SCALE) * plotH });
+            }
+
+            // Filled band: top edge L→R, then bottom edge R→L, closed.
+            var areaPath = "";
+            for (var ti = 0; ti < topPts.length; ti++) {
+              areaPath += (ti === 0 ? "M " : " L ") + topPts[ti].x + " " + topPts[ti].y;
+            }
+            for (var bj = botPts.length - 1; bj >= 0; bj--) {
+              areaPath += " L " + botPts[bj].x + " " + botPts[bj].y;
+            }
+            areaPath += " Z";
+
+            var areaVec = figma.createVector();
+            areaVec.name = "Band " + (s + 1);
+            comp.appendChild(areaVec);
+            areaVec.x = 0;
+            areaVec.y = 0;
+            areaVec.vectorPaths = [{ windingRule: "NONZERO", data: areaPath }];
+            areaVec.strokes = [];
+            // Fill uses the translucent opacity ramp (like the area chart) so bands can
+            // be semi-transparent; the top stroke below keeps the solid series/shade.
+            var bandFillPath = (colorMode === "shades" ? "chart/shade-opacity-" : "chart/series-opacity-") + ((s % 4) + 1);
+            areaVec.fills = [{ type: "SOLID", color: colorFallbacks[s % colorFallbacks.length], opacity: 1 }];
+            bindPaintVar(areaVec, "fills", 0, varMap[bandFillPath] || varMap[colorPaths[s % colorPaths.length]]);
+
+            // Top stroke line (band boundary definition).
+            var linePath = "";
+            for (var li = 0; li < topPts.length; li++) {
+              linePath += (li === 0 ? "M " : " L ") + topPts[li].x + " " + topPts[li].y;
+            }
+            var lineVec = figma.createVector();
+            lineVec.name = "Line " + (s + 1);
+            comp.appendChild(lineVec);
+            lineVec.x = 0;
+            lineVec.y = 0;
+            lineVec.vectorPaths = [{ windingRule: "NONE", data: linePath }];
+            lineVec.strokeWeight = Math.max(1, lineWidth);
+            lineVec.strokeCap = "ROUND";
+            lineVec.strokeJoin = "ROUND";
+            lineVec.fills = [];
+            lineVec.strokes = [{ type: "SOLID", color: colorFallbacks[s % colorFallbacks.length] }];
+            bindPaintVar(lineVec, "strokes", 0, varMap[colorPaths[s % colorPaths.length]]);
+            bindVar(lineVec, "strokeWeight", varMap["chart-area/width"]);
+
+            // Point markers on the band's top edge (matches the area chart's toggle).
+            if (withPoints) {
+              for (var pdi = 0; pdi < topPts.length; pdi++) {
+                var dot = figma.createEllipse();
+                dot.name = "Point " + (s + 1);
+                dot.resize(pointRadius * 2, pointRadius * 2);
+                dot.x = topPts[pdi].x - pointRadius;
+                dot.y = topPts[pdi].y - pointRadius;
+                dot.fills = [{ type: "SOLID", color: colorFallbacks[s % colorFallbacks.length] }];
+                dot.strokes = [];
+                bindPaintVar(dot, "fills", 0, varMap[colorPaths[s % colorPaths.length]]);
+                comp.appendChild(dot);
+              }
+            }
+          }
+
+          // ── X tick labels ──
+          for (var xi = 0; xi < SAMPLE.length; xi++) {
+            var xLabel = figma.createText();
+            xLabel.fontName = font;
+            xLabel.name = "X Label";
+            xLabel.characters = SAMPLE[xi].label;
+            xLabel.fontSize = labelFontSize;
+            xLabel.textAlignHorizontal = "CENTER";
+            xLabel.resize(slot, labelFontSize + 4);
+            xLabel.x = plotX + xi * slot;
+            xLabel.y = plotY + plotH + 4;
+            xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+            bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+            bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+            bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(xLabel);
+          }
+
+          // ── Axis lines ──
+          var yAxis = figma.createRectangle();
+          yAxis.name = "Y Axis";
+          yAxis.resize(Math.max(1, axisWidth), plotH);
+          yAxis.x = plotX;
+          yAxis.y = plotY;
+          yAxis.fills = [{ type: "SOLID", color: axisFallback }];
+          yAxis.strokes = [];
+          bindPaintVar(yAxis, "fills", 0, varMap["chart/axis"]);
+          bindVar(yAxis, "width", varMap["chart/axis-width"]);
+          comp.appendChild(yAxis);
+
+          var xAxis = figma.createRectangle();
+          xAxis.name = "X Axis";
+          xAxis.resize(plotW, Math.max(1, axisWidth));
+          xAxis.x = plotX;
+          xAxis.y = plotY + plotH;
+          xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+          xAxis.strokes = [];
+          bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+          bindVar(xAxis, "height", varMap["chart/axis-width"]);
+          comp.appendChild(xAxis);
+
+          // ── Legend (one entry per series, centered below the plot) ──
+          if (withLegend) {
+            var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+            var legendY = plotY + plotH + X_GUTTER + 8;
+            var legendItems = [];
+            var totalLegendW = 0;
+            for (var lgi = 0; lgi < nSeries; lgi++) {
+              var lbl = "Series " + (lgi + 1);
+              var lblW = Math.ceil(lbl.length * legendFontSize * 0.6);
+              var iw = legendSwatch + 6 + lblW;
+              legendItems.push({ w: iw, label: lbl, labelW: lblW });
+              totalLegendW += iw;
+            }
+            totalLegendW += legendGap * Math.max(0, nSeries - 1);
+            var lx = plotX + (plotW - totalLegendW) / 2;
+            if (lx < pad) lx = pad;
+            for (var lgj = 0; lgj < nSeries; lgj++) {
+              var sw = figma.createRectangle();
+              sw.name = "Legend Swatch";
+              sw.resize(legendSwatch, legendSwatch);
+              sw.x = lx;
+              sw.y = legendY + (legendItemH - legendSwatch) / 2;
+              sw.cornerRadius = 2;
+              sw.fills = [{ type: "SOLID", color: colorFallbacks[lgj % colorFallbacks.length] }];
+              sw.strokes = [];
+              bindPaintVar(sw, "fills", 0, varMap[colorPaths[lgj % colorPaths.length]]);
+              bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+              bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+              comp.appendChild(sw);
+
+              var lt = figma.createText();
+              lt.fontName = font;
+              lt.name = "Legend Label";
+              lt.characters = legendItems[lgj].label;
+              lt.fontSize = legendFontSize;
+              lt.textAlignHorizontal = "LEFT";
+              lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+              lt.x = lx + legendSwatch + 6;
+              lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+              lt.fills = [{ type: "SOLID", color: labelFallback }];
+              bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+              bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+              bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+              bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+              comp.appendChild(lt);
+
+              lx += legendItems[lgj].w + legendGap;
+            }
+          }
+
+          comp.x = si * (maxColWidth + colGap);
+          comp.y = rowIndex * (maxRowHeight + rowGap);
+          page.appendChild(comp);
+          components.push(comp);
+        }
+        rowIndex++;
+      }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " stacked area chart variants");
+  var stackedAreaSet = figma.combineAsVariants(components, page);
+  stackedAreaSet.name = "Stacked Area Chart";
+  return stackedAreaSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Scatter)
+// ---------------------------------------------------------------------------
+// Points plotted on two numeric (0–100) axes. Each series is a cluster filled
+// with a solid series (palette) or shade (shades) variable; the marker radius is
+// baked from chart-scatter/point-radius. Shares the chart/* axis/grid/label/
+// legend scaffold. Variants: Colors x Series x Legend.
+
+function buildChartScatterComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+
+  // One {x, y} cluster per series on a 0–100 / 0–100 grid (mirrors the preview).
+  var SCATTER = [
+    [{ x: 12, y: 22 }, { x: 22, y: 35 }, { x: 30, y: 28 }, { x: 41, y: 48 }, { x: 52, y: 42 }, { x: 63, y: 58 }, { x: 72, y: 52 }],
+    [{ x: 15, y: 60 }, { x: 26, y: 72 }, { x: 35, y: 64 }, { x: 46, y: 81 }, { x: 56, y: 73 }, { x: 67, y: 88 }, { x: 79, y: 80 }],
+    [{ x: 18, y: 40 }, { x: 28, y: 30 }, { x: 38, y: 52 }, { x: 49, y: 37 }, { x: 59, y: 50 }, { x: 69, y: 43 }, { x: 81, y: 57 }],
+    [{ x: 20, y: 12 }, { x: 32, y: 23 }, { x: 43, y: 16 }, { x: 54, y: 29 }, { x: 64, y: 19 }, { x: 75, y: 34 }, { x: 86, y: 26 }],
+  ];
+  var X_TICKS = [0, 25, 50, 75, 100];
+  var Y_TICKS = [0, 25, 50, 75, 100];
+  var MAX_SCALE = 100;
+  var Y_GUTTER = 34;
+  var X_GUTTER = 20;
+  var cursorFallback = { r: 0.55, g: 0.58, b: 0.63 };
+  // Static crosshair anchor (data units) — documents the interactive hover cursor.
+  var CURSOR_X = 60;
+  var CURSOR_Y = 58;
+
+  var seriesPaths = ["chart/series-1", "chart/series-2", "chart/series-3", "chart/series-4"];
+  var shadePaths = ["chart/shade-1", "chart/shade-2", "chart/shade-3", "chart/shade-4"];
+  var seriesFallbacks = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+  ];
+  var shadeFallbacks = [
+    { r: 0.05, g: 0.28, b: 0.63 }, { r: 0.13, g: 0.55, b: 0.9 },
+    { r: 0.4, g: 0.7, b: 0.95 }, { r: 0.66, g: 0.83, b: 0.98 },
+  ];
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var sizes = ["default"];
+  var colorModes = ["palette", "shades"];
+  var seriesCounts = [2, 3, 4];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var cmi = 0; cmi < colorModes.length; cmi++) {
+    var colorMode = colorModes[cmi];
+    var capColor = colorMode === "shades" ? "Shades" : "Palette";
+    var colorPaths = colorMode === "shades" ? shadePaths : seriesPaths;
+    var colorFallbacks = colorMode === "shades" ? shadeFallbacks : seriesFallbacks;
+
+    for (var sci = 0; sci < seriesCounts.length; sci++) {
+      var nSeries = seriesCounts[sci];
+
+      for (var lgm = 0; lgm < legendModes.length; lgm++) {
+        var withLegend = legendModes[lgm] === "on";
+        var capLegend = withLegend ? "On" : "Off";
+
+        for (var si = 0; si < sizes.length; si++) {
+          var size = sizes[si];
+
+          var plotW = resolveCompFloat("chart/width-" + size, 320);
+          var plotH = resolveCompFloat("chart/height-" + size, 180);
+          var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+          var pad = resolveCompFloat("chart/padding", 16);
+          var axisWidth = resolveCompFloat("chart/axis-width", 1);
+          var gridWidth = resolveCompFloat("chart/grid-width", 1);
+          var pointRadius = Math.max(1, resolveCompFloat("chart-scatter/point-radius", 4));
+          var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+          var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+          var legendGap = resolveCompFloat("chart/legend-gap", 16);
+          var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+          var plotX = pad + Y_GUTTER;
+          var plotY = pad;
+          var totalW = pad * 2 + Y_GUTTER + plotW;
+          var totalH = pad * 2 + X_GUTTER + plotH + legendRowH;
+          maxColWidth = Math.max(maxColWidth, totalW);
+          maxRowHeight = Math.max(maxRowHeight, totalH);
+
+          var comp = figma.createComponent();
+          comp.name = "Colors=" + capColor + ", Series=" + nSeries + ", Legend=" + capLegend;
+          comp.layoutMode = "NONE";
+          comp.resize(totalW, totalH);
+          comp.fills = [];
+          comp.clipsContent = false;
+
+          // ── Horizontal gridlines + Y tick labels ──
+          for (var gi = 0; gi < Y_TICKS.length; gi++) {
+            var gy = plotY + plotH - (Y_TICKS[gi] / MAX_SCALE) * plotH;
+            var grid = figma.createLine();
+            grid.name = "Gridline";
+            grid.resize(plotW, 0);
+            grid.x = plotX;
+            grid.y = gy;
+            grid.strokeCap = "NONE";
+            grid.strokes = [{ type: "SOLID", color: gridFallback }];
+            grid.strokeWeight = Math.max(1, gridWidth);
+            if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+            bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+            bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+            comp.appendChild(grid);
+
+            var yLabel = figma.createText();
+            yLabel.fontName = font;
+            yLabel.name = "Y Label";
+            yLabel.characters = String(Y_TICKS[gi]);
+            yLabel.fontSize = labelFontSize;
+            yLabel.textAlignHorizontal = "RIGHT";
+            yLabel.resize(Y_GUTTER - 6, labelFontSize + 4);
+            yLabel.x = pad;
+            yLabel.y = gy - (labelFontSize + 4) / 2;
+            yLabel.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(yLabel, "fills", 0, varMap["chart/label"]);
+            bindVar(yLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+            bindVar(yLabel, "fontFamily", varMap["chart/font-family"]);
+            bindVar(yLabel, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(yLabel);
+          }
+
+          // ── Hover crosshair (static) — sits above the grid, behind the points ──
+          var crossCx = plotX + (CURSOR_X / MAX_SCALE) * plotW;
+          var crossCy = plotY + plotH - (CURSOR_Y / MAX_SCALE) * plotH;
+          var cursor = figma.createVector();
+          cursor.name = "Cursor";
+          comp.appendChild(cursor);
+          cursor.x = 0;
+          cursor.y = 0;
+          cursor.vectorPaths = [{
+            windingRule: "NONE",
+            data:
+              "M " + crossCx + " " + plotY + " L " + crossCx + " " + (plotY + plotH) +
+              " M " + plotX + " " + crossCy + " L " + (plotX + plotW) + " " + crossCy,
+          }];
+          cursor.fills = [];
+          cursor.strokes = [{ type: "SOLID", color: cursorFallback }];
+          cursor.strokeWeight = 1;
+          cursor.strokeCap = "NONE";
+          cursor.dashPattern = [4, 4];
+          bindPaintVar(cursor, "strokes", 0, varMap["chart-scatter/cursor"]);
+
+          // ── Scatter points (one cluster per series) ──
+          for (var s = 0; s < nSeries; s++) {
+            var cluster = SCATTER[s % SCATTER.length];
+            for (var pti = 0; pti < cluster.length; pti++) {
+              var cx = plotX + (cluster[pti].x / MAX_SCALE) * plotW;
+              var cy = plotY + plotH - (cluster[pti].y / MAX_SCALE) * plotH;
+              var dot = figma.createEllipse();
+              dot.name = "Point " + (s + 1);
+              dot.resize(pointRadius * 2, pointRadius * 2);
+              dot.x = cx - pointRadius;
+              dot.y = cy - pointRadius;
+              dot.fills = [{ type: "SOLID", color: colorFallbacks[s % colorFallbacks.length] }];
+              dot.strokes = [];
+              bindPaintVar(dot, "fills", 0, varMap[colorPaths[s % colorPaths.length]]);
+              comp.appendChild(dot);
+            }
+          }
+
+          // ── X tick labels ──
+          for (var xi = 0; xi < X_TICKS.length; xi++) {
+            var tx = plotX + (X_TICKS[xi] / MAX_SCALE) * plotW;
+            var xLabel = figma.createText();
+            xLabel.fontName = font;
+            xLabel.name = "X Label";
+            xLabel.characters = String(X_TICKS[xi]);
+            xLabel.fontSize = labelFontSize;
+            xLabel.textAlignHorizontal = "CENTER";
+            xLabel.resize(30, labelFontSize + 4);
+            xLabel.x = tx - 15;
+            xLabel.y = plotY + plotH + 4;
+            xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+            bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+            bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+            bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(xLabel);
+          }
+
+          // ── Axis lines ──
+          var yAxis = figma.createRectangle();
+          yAxis.name = "Y Axis";
+          yAxis.resize(Math.max(1, axisWidth), plotH);
+          yAxis.x = plotX;
+          yAxis.y = plotY;
+          yAxis.fills = [{ type: "SOLID", color: axisFallback }];
+          yAxis.strokes = [];
+          bindPaintVar(yAxis, "fills", 0, varMap["chart/axis"]);
+          bindVar(yAxis, "width", varMap["chart/axis-width"]);
+          comp.appendChild(yAxis);
+
+          var xAxis = figma.createRectangle();
+          xAxis.name = "X Axis";
+          xAxis.resize(plotW, Math.max(1, axisWidth));
+          xAxis.x = plotX;
+          xAxis.y = plotY + plotH;
+          xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+          xAxis.strokes = [];
+          bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+          bindVar(xAxis, "height", varMap["chart/axis-width"]);
+          comp.appendChild(xAxis);
+
+          // ── Legend (one entry per series, centered below the plot) ──
+          if (withLegend) {
+            var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+            var legendY = plotY + plotH + X_GUTTER + 8;
+            var legendItems = [];
+            var totalLegendW = 0;
+            for (var lgi = 0; lgi < nSeries; lgi++) {
+              var lbl = "Series " + (lgi + 1);
+              var lblW = Math.ceil(lbl.length * legendFontSize * 0.6);
+              var iw = legendSwatch + 6 + lblW;
+              legendItems.push({ w: iw, label: lbl, labelW: lblW });
+              totalLegendW += iw;
+            }
+            totalLegendW += legendGap * Math.max(0, nSeries - 1);
+            var lx = plotX + (plotW - totalLegendW) / 2;
+            if (lx < pad) lx = pad;
+            for (var lgj = 0; lgj < nSeries; lgj++) {
+              var sw = figma.createEllipse();
+              sw.name = "Legend Swatch";
+              sw.resize(legendSwatch, legendSwatch);
+              sw.x = lx;
+              sw.y = legendY + (legendItemH - legendSwatch) / 2;
+              sw.fills = [{ type: "SOLID", color: colorFallbacks[lgj % colorFallbacks.length] }];
+              sw.strokes = [];
+              bindPaintVar(sw, "fills", 0, varMap[colorPaths[lgj % colorPaths.length]]);
+              bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+              bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+              comp.appendChild(sw);
+
+              var lt = figma.createText();
+              lt.fontName = font;
+              lt.name = "Legend Label";
+              lt.characters = legendItems[lgj].label;
+              lt.fontSize = legendFontSize;
+              lt.textAlignHorizontal = "LEFT";
+              lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+              lt.x = lx + legendSwatch + 6;
+              lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+              lt.fills = [{ type: "SOLID", color: labelFallback }];
+              bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+              bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+              bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+              bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+              comp.appendChild(lt);
+
+              lx += legendItems[lgj].w + legendGap;
+            }
+          }
+
+          comp.x = si * (maxColWidth + colGap);
+          comp.y = rowIndex * (maxRowHeight + rowGap);
+          page.appendChild(comp);
+          components.push(comp);
+        }
+        rowIndex++;
+      }
+    }
+  }
+
+  progress("Created " + components.length + " scatter chart variants");
+  var scatterSet = figma.combineAsVariants(components, page);
+  scatterSet.name = "Scatter Chart";
+  return scatterSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Candlestick / OHLC)
+// ---------------------------------------------------------------------------
+// Recharts has no native candlestick; it's composed from a Bar (open→close body)
+// plus a high→low wick. Here each candle is a wick rectangle + a body rectangle,
+// both colored by direction: bullish (close ≥ open) binds to chart-candlestick/up,
+// bearish to chart-candlestick/down. Body/wick widths are baked from their tokens.
+// Shares the chart/* axis/grid/label/legend scaffold. Variants: Legend.
+
+function buildChartCandlestickComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+
+  var SAMPLE = [
+    { label: "Jan", o: 30, h: 42, l: 26, c: 38 },
+    { label: "Feb", o: 38, h: 46, l: 34, c: 36 },
+    { label: "Mar", o: 36, h: 40, l: 28, c: 32 },
+    { label: "Apr", o: 32, h: 50, l: 30, c: 48 },
+    { label: "May", o: 48, h: 58, l: 44, c: 52 },
+    { label: "Jun", o: 52, h: 56, l: 40, c: 44 },
+    { label: "Jul", o: 44, h: 62, l: 42, c: 60 },
+    { label: "Aug", o: 60, h: 66, l: 50, c: 54 },
+  ];
+  var Y_TICKS = [0, 20, 40, 60, 80];
+  var MAX_SCALE = 80;
+  var Y_GUTTER = 34;
+  var X_GUTTER = 20;
+
+  var upPath = "chart-candlestick/up";
+  var downPath = "chart-candlestick/down";
+  var upFallback = { r: 0.13, g: 0.7, b: 0.4 };
+  var downFallback = { r: 0.9, g: 0.31, b: 0.31 };
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var sizes = ["default"];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var lgm = 0; lgm < legendModes.length; lgm++) {
+    var withLegend = legendModes[lgm] === "on";
+    var capLegend = withLegend ? "On" : "Off";
+
+    for (var si = 0; si < sizes.length; si++) {
+      var size = sizes[si];
+
+      var plotW = resolveCompFloat("chart/width-" + size, 320);
+      var plotH = resolveCompFloat("chart/height-" + size, 180);
+      var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+      var pad = resolveCompFloat("chart/padding", 16);
+      var axisWidth = resolveCompFloat("chart/axis-width", 1);
+      var gridWidth = resolveCompFloat("chart/grid-width", 1);
+      var bodyWidth = Math.max(1, resolveCompFloat("chart-candlestick/body-width", 7));
+      var wickWidth = Math.max(1, resolveCompFloat("chart-candlestick/wick-width", 1));
+      var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+      var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+      var legendGap = resolveCompFloat("chart/legend-gap", 16);
+      var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+      var plotX = pad + Y_GUTTER;
+      var plotY = pad;
+      var totalW = pad * 2 + Y_GUTTER + plotW;
+      var totalH = pad * 2 + X_GUTTER + plotH + legendRowH;
+      maxColWidth = Math.max(maxColWidth, totalW);
+      maxRowHeight = Math.max(maxRowHeight, totalH);
+
+      var comp = figma.createComponent();
+      comp.name = "Legend=" + capLegend;
+      comp.layoutMode = "NONE";
+      comp.resize(totalW, totalH);
+      comp.fills = [];
+      comp.clipsContent = false;
+
+      // ── Gridlines + Y tick labels ──
+      for (var gi = 0; gi < Y_TICKS.length; gi++) {
+        var gy = plotY + plotH - (Y_TICKS[gi] / MAX_SCALE) * plotH;
+        var grid = figma.createLine();
+        grid.name = "Gridline";
+        grid.resize(plotW, 0);
+        grid.x = plotX;
+        grid.y = gy;
+        grid.strokeCap = "NONE";
+        grid.strokes = [{ type: "SOLID", color: gridFallback }];
+        grid.strokeWeight = Math.max(1, gridWidth);
+        if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+        bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+        bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+        comp.appendChild(grid);
+
+        var yLabel = figma.createText();
+        yLabel.fontName = font;
+        yLabel.name = "Y Label";
+        yLabel.characters = String(Y_TICKS[gi]);
+        yLabel.fontSize = labelFontSize;
+        yLabel.textAlignHorizontal = "RIGHT";
+        yLabel.resize(Y_GUTTER - 6, labelFontSize + 4);
+        yLabel.x = pad;
+        yLabel.y = gy - (labelFontSize + 4) / 2;
+        yLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(yLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(yLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(yLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(yLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(yLabel);
+      }
+
+      // ── Candles (wick + body), colored by direction ──
+      var slot = plotW / SAMPLE.length;
+      for (var di = 0; di < SAMPLE.length; di++) {
+        var d = SAMPLE[di];
+        var cx = plotX + di * slot + slot / 2;
+        var isUp = d.c >= d.o;
+        var dirPath = isUp ? upPath : downPath;
+        var dirFallback = isUp ? upFallback : downFallback;
+
+        var yHigh = plotY + plotH - (d.h / MAX_SCALE) * plotH;
+        var yLow = plotY + plotH - (d.l / MAX_SCALE) * plotH;
+        var yOpen = plotY + plotH - (d.o / MAX_SCALE) * plotH;
+        var yClose = plotY + plotH - (d.c / MAX_SCALE) * plotH;
+
+        var wick = figma.createRectangle();
+        wick.name = "Wick";
+        wick.resize(Math.max(1, wickWidth), Math.max(1, yLow - yHigh));
+        wick.x = cx - Math.max(1, wickWidth) / 2;
+        wick.y = yHigh;
+        wick.fills = [{ type: "SOLID", color: dirFallback }];
+        wick.strokes = [];
+        bindPaintVar(wick, "fills", 0, varMap[dirPath]);
+        comp.appendChild(wick);
+
+        var bodyTop = Math.min(yOpen, yClose);
+        var bodyH = Math.max(1, Math.abs(yOpen - yClose));
+        var body = figma.createRectangle();
+        body.name = "Body";
+        body.resize(bodyWidth, bodyH);
+        body.x = cx - bodyWidth / 2;
+        body.y = bodyTop;
+        body.fills = [{ type: "SOLID", color: dirFallback }];
+        body.strokes = [];
+        bindPaintVar(body, "fills", 0, varMap[dirPath]);
+        comp.appendChild(body);
+      }
+
+      // ── X tick labels ──
+      for (var xi = 0; xi < SAMPLE.length; xi++) {
+        var xLabel = figma.createText();
+        xLabel.fontName = font;
+        xLabel.name = "X Label";
+        xLabel.characters = SAMPLE[xi].label;
+        xLabel.fontSize = labelFontSize;
+        xLabel.textAlignHorizontal = "CENTER";
+        xLabel.resize(slot, labelFontSize + 4);
+        xLabel.x = plotX + xi * slot;
+        xLabel.y = plotY + plotH + 4;
+        xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+        bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+        bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+        bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+        bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+        comp.appendChild(xLabel);
+      }
+
+      // ── Axis lines ──
+      var yAxis = figma.createRectangle();
+      yAxis.name = "Y Axis";
+      yAxis.resize(Math.max(1, axisWidth), plotH);
+      yAxis.x = plotX;
+      yAxis.y = plotY;
+      yAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      yAxis.strokes = [];
+      bindPaintVar(yAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(yAxis, "width", varMap["chart/axis-width"]);
+      comp.appendChild(yAxis);
+
+      var xAxis = figma.createRectangle();
+      xAxis.name = "X Axis";
+      xAxis.resize(plotW, Math.max(1, axisWidth));
+      xAxis.x = plotX;
+      xAxis.y = plotY + plotH;
+      xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+      xAxis.strokes = [];
+      bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+      bindVar(xAxis, "height", varMap["chart/axis-width"]);
+      comp.appendChild(xAxis);
+
+      // ── Legend (Up / Down, centered below the plot) ──
+      if (withLegend) {
+        var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+        var legendY = plotY + plotH + X_GUTTER + 8;
+        var legLabels = ["Up", "Down"];
+        var legPaths = [upPath, downPath];
+        var legFallbacks = [upFallback, downFallback];
+        var legItems = [];
+        var totalLegendW = 0;
+        for (var lgi = 0; lgi < legLabels.length; lgi++) {
+          var lblW = Math.ceil(legLabels[lgi].length * legendFontSize * 0.6);
+          var iw = legendSwatch + 6 + lblW;
+          legItems.push({ w: iw, labelW: lblW });
+          totalLegendW += iw;
+        }
+        totalLegendW += legendGap * (legLabels.length - 1);
+        var lx = plotX + (plotW - totalLegendW) / 2;
+        if (lx < pad) lx = pad;
+        for (var lgj = 0; lgj < legLabels.length; lgj++) {
+          var sw = figma.createRectangle();
+          sw.name = "Legend Swatch";
+          sw.resize(legendSwatch, legendSwatch);
+          sw.x = lx;
+          sw.y = legendY + (legendItemH - legendSwatch) / 2;
+          sw.cornerRadius = 2;
+          sw.fills = [{ type: "SOLID", color: legFallbacks[lgj] }];
+          sw.strokes = [];
+          bindPaintVar(sw, "fills", 0, varMap[legPaths[lgj]]);
+          bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+          bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+          comp.appendChild(sw);
+
+          var lt = figma.createText();
+          lt.fontName = font;
+          lt.name = "Legend Label";
+          lt.characters = legLabels[lgj];
+          lt.fontSize = legendFontSize;
+          lt.textAlignHorizontal = "LEFT";
+          lt.resize(legItems[lgj].labelW + 4, legendFontSize + 4);
+          lt.x = lx + legendSwatch + 6;
+          lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+          lt.fills = [{ type: "SOLID", color: labelFallback }];
+          bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+          bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+          bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+          bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+          comp.appendChild(lt);
+
+          lx += legItems[lgj].w + legendGap;
+        }
+      }
+
+      comp.x = si * (maxColWidth + colGap);
+      comp.y = rowIndex * (maxRowHeight + rowGap);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+    rowIndex++;
+  }
+
+  progress("Created " + components.length + " candlestick chart variants");
+  var candlestickSet = figma.combineAsVariants(components, page);
+  candlestickSet.name = "Candlestick Chart";
+  return candlestickSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Sparkline)
+// ---------------------------------------------------------------------------
+// A compact, chrome-free trend chart (single series, no axes / grid / labels /
+// legend). The `Style` property switches between Line, Area, and Bar. Color
+// comes from chart/series-1 (stroke/bar/end-dot) + chart/series-opacity-1 (area
+// fill); compact height + stroke/dot/bar sizing come from the chart-sparkline/*
+// tokens. Variants: Style x End (end-dot on/off; ignored for Bar).
+
+function buildChartSparklineComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+
+  // Single dense series with an upward drift (mirrors the preview sample).
+  var VALUES = [18, 22, 17, 26, 24, 31, 28, 36, 33, 42, 39, 48];
+  var minVal = VALUES[0];
+  var maxVal = VALUES[0];
+  for (var vi = 0; vi < VALUES.length; vi++) {
+    if (VALUES[vi] < minVal) minVal = VALUES[vi];
+    if (VALUES[vi] > maxVal) maxVal = VALUES[vi];
+  }
+  var spanVal = (maxVal - minVal) || 1;
+
+  var seriesFallback = { r: 0.13, g: 0.55, b: 0.9 };
+
+  var styles = ["Line", "Area", "Bar"];
+  var endModes = ["On", "Off"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+
+  for (var sti = 0; sti < styles.length; sti++) {
+    var style = styles[sti];
+
+    for (var emi = 0; emi < endModes.length; emi++) {
+      var endMode = endModes[emi];
+      var withEnd = endMode === "On";
+
+      var pad = resolveCompFloat("chart/padding", 16);
+      var plotW = resolveCompFloat("chart/width-default", 320);
+      var plotH = resolveCompFloat("chart-sparkline/height-default", 48);
+      var lineWidth = Math.max(1, resolveCompFloat("chart-sparkline/line-width", 2));
+      var dotR = Math.max(0, resolveCompFloat("chart-sparkline/dot-radius", 3.5));
+      var barRadius = Math.max(0, resolveCompFloat("chart-sparkline/bar-radius", 1));
+      var barGap = Math.max(0, resolveCompFloat("chart-sparkline/bar-gap", 3));
+
+      // Inset the plot so the line stroke + end dot never clip at the edges.
+      var m = Math.max(lineWidth, dotR) + 1;
+      var plotX = pad;
+      var plotY = pad;
+      var totalW = pad * 2 + plotW;
+      var totalH = pad * 2 + plotH;
+      maxColWidth = Math.max(maxColWidth, totalW);
+      maxRowHeight = Math.max(maxRowHeight, totalH);
+
+      var comp = figma.createComponent();
+      comp.name = "Style=" + style + ", End=" + endMode;
+      comp.layoutMode = "NONE";
+      comp.resize(totalW, totalH);
+      comp.fills = [];
+      comp.clipsContent = false;
+
+      if (style === "Bar") {
+        // ── Bars from baseline (scaled 0→max so the trend reads cleanly) ──
+        var slot = plotW / VALUES.length;
+        var barW = Math.max(1, slot - barGap);
+        var baseY = plotY + plotH;
+        for (var bi = 0; bi < VALUES.length; bi++) {
+          var frac = VALUES[bi] / maxVal;
+          var barH = Math.max(1, frac * plotH);
+          var bar = figma.createRectangle();
+          bar.name = "Bar";
+          bar.resize(barW, barH);
+          bar.x = plotX + bi * slot + (slot - barW) / 2;
+          bar.y = baseY - barH;
+          bar.topLeftRadius = barRadius;
+          bar.topRightRadius = barRadius;
+          bar.bottomLeftRadius = 0;
+          bar.bottomRightRadius = 0;
+          bar.fills = [{ type: "SOLID", color: seriesFallback }];
+          bar.strokes = [];
+          bindPaintVar(bar, "fills", 0, varMap["chart/series-1"]);
+          comp.appendChild(bar);
+        }
+      } else {
+        // ── Compute line points (min→bottom, max→top within the inset plot) ──
+        var top = plotY + m;
+        var bottom = plotY + plotH - m;
+        var usableH = bottom - top;
+        var coords = [];
+        for (var di = 0; di < VALUES.length; di++) {
+          var px = plotX + m + (VALUES.length === 1 ? 0 : (di / (VALUES.length - 1)) * (plotW - 2 * m));
+          var py = bottom - ((VALUES[di] - minVal) / spanVal) * usableH;
+          coords.push({ x: px, y: py });
+        }
+        var linePath = "";
+        for (var li = 0; li < coords.length; li++) {
+          linePath += (li === 0 ? "M " : " L ") + coords[li].x + " " + coords[li].y;
+        }
+
+        if (style === "Area") {
+          var baselineY = plotY + plotH - 1;
+          var areaPath = "";
+          for (var ai = 0; ai < coords.length; ai++) {
+            areaPath += (ai === 0 ? "M " : " L ") + coords[ai].x + " " + coords[ai].y;
+          }
+          areaPath +=
+            " L " + coords[coords.length - 1].x + " " + baselineY +
+            " L " + coords[0].x + " " + baselineY + " Z";
+          var areaVec = figma.createVector();
+          areaVec.name = "Area";
+          comp.appendChild(areaVec);
+          areaVec.x = 0;
+          areaVec.y = 0;
+          areaVec.vectorPaths = [{ windingRule: "NONZERO", data: areaPath }];
+          areaVec.strokes = [];
+          areaVec.fills = [{ type: "SOLID", color: seriesFallback, opacity: 1 }];
+          bindPaintVar(areaVec, "fills", 0, varMap["chart/series-opacity-1"] || varMap["chart/series-1"]);
+        }
+
+        var lineVec = figma.createVector();
+        lineVec.name = "Line";
+        comp.appendChild(lineVec);
+        lineVec.x = 0;
+        lineVec.y = 0;
+        lineVec.vectorPaths = [{ windingRule: "NONE", data: linePath }];
+        lineVec.strokeWeight = Math.max(1, lineWidth);
+        lineVec.strokeCap = "ROUND";
+        lineVec.strokeJoin = "ROUND";
+        lineVec.fills = [];
+        lineVec.strokes = [{ type: "SOLID", color: seriesFallback }];
+        bindPaintVar(lineVec, "strokes", 0, varMap["chart/series-1"]);
+        bindVar(lineVec, "strokeWeight", varMap["chart-sparkline/line-width"]);
+
+        // ── End dot (final value) ──
+        if (withEnd && dotR > 0) {
+          var last = coords[coords.length - 1];
+          var dot = figma.createEllipse();
+          dot.name = "End Dot";
+          dot.resize(dotR * 2, dotR * 2);
+          dot.x = last.x - dotR;
+          dot.y = last.y - dotR;
+          dot.fills = [{ type: "SOLID", color: seriesFallback }];
+          dot.strokes = [];
+          bindPaintVar(dot, "fills", 0, varMap["chart/series-1"]);
+          comp.appendChild(dot);
+        }
+      }
+
+      var col = sti;
+      var row = emi;
+      comp.x = col * (maxColWidth + colGap);
+      comp.y = row * (maxRowHeight + rowGap);
+      page.appendChild(comp);
+      components.push(comp);
+    }
+  }
+
+  progress("Created " + components.length + " sparkline variants");
+  var sparklineSet = figma.combineAsVariants(components, page);
+  sparklineSet.name = "Sparkline";
+  return sparklineSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Horizontal / Ranked Bar)
+// ---------------------------------------------------------------------------
+// A bar chart drawn on swapped axes: categories run down the Y axis (left
+// labels), values along the X axis, with vertical gridlines. Bars are colored by
+// the active color mode — Single (series-1), Palette (series-N), Shades (shade-N).
+// Reuses the chart-bar-* tokens (radius/gap) + the chart/* axis/grid/label
+// scaffold. Variants: Colors.
+
+function buildChartBarHorizontalComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var resolveCompString =
+    typeof resolvedComponentString === "function"
+      ? resolvedComponentString
+      : function (_path, fallback) {
+          return fallback;
+        };
+  var gridDashed = resolveCompString("chart/grid-style", "solid") === "dashed";
+  var gridDash = resolveCompFloat("chart/grid-dash", 4);
+
+  // Ranked (sorted high→low), text-heavy categories — mirrors the preview.
+  var SAMPLE = [
+    { label: "Singapore", value: 92 },
+    { label: "Rotterdam", value: 78 },
+    { label: "Shanghai", value: 64 },
+    { label: "Los Angeles", value: 51 },
+    { label: "Hamburg", value: 37 },
+  ];
+  var X_TICKS = [0, 25, 50, 75, 100];
+  var MAX_SCALE = 100;
+  var CAT_GUTTER = 84;
+  var X_GUTTER = 20;
+
+  var seriesPaths = ["chart/series-1", "chart/series-2", "chart/series-3", "chart/series-4", "chart/series-5", "chart/series-6"];
+  var shadePaths = ["chart/shade-1", "chart/shade-2", "chart/shade-3", "chart/shade-4", "chart/shade-5", "chart/shade-6"];
+  var seriesFallbacks = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+    { r: 0.61, g: 0.35, b: 0.71 }, { r: 0.9, g: 0.3, b: 0.45 },
+  ];
+  var shadeFallbacks = [
+    { r: 0.05, g: 0.28, b: 0.63 }, { r: 0.13, g: 0.55, b: 0.9 },
+    { r: 0.4, g: 0.7, b: 0.95 }, { r: 0.66, g: 0.83, b: 0.98 },
+    { r: 0.8, g: 0.9, b: 0.99 }, { r: 0.88, g: 0.94, b: 1.0 },
+  ];
+  var axisFallback = { r: 0.78, g: 0.82, b: 0.87 };
+  var gridFallback = { r: 0.88, g: 0.9, b: 0.93 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var colorModes = ["Single", "Palette", "Shades"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+
+  for (var cmi = 0; cmi < colorModes.length; cmi++) {
+    var colorMode = colorModes[cmi];
+    var colorPaths = colorMode === "Shades" ? shadePaths : seriesPaths;
+    var colorFallbacks = colorMode === "Shades" ? shadeFallbacks : seriesFallbacks;
+    var colorAt = function (i) {
+      if (colorMode === "Single") return 0;
+      return i;
+    };
+
+    var size = "default";
+    var plotW = resolveCompFloat("chart/width-" + size, 320);
+    var plotH = resolveCompFloat("chart/height-" + size, 180);
+    var labelFontSize = resolveCompFloat("chart/label-font-size-" + size, 11);
+    var pad = resolveCompFloat("chart/padding", 16);
+    var axisWidth = resolveCompFloat("chart/axis-width", 1);
+    var gridWidth = resolveCompFloat("chart/grid-width", 1);
+    var barRadius = Math.max(0, resolveCompFloat("chart/bar-radius", 2));
+    var barGap = Math.max(0, resolveCompFloat("chart/bar-gap-" + size, 12));
+
+    var plotX = pad + CAT_GUTTER;
+    var plotY = pad;
+    var totalW = pad * 2 + CAT_GUTTER + plotW;
+    var totalH = pad * 2 + X_GUTTER + plotH;
+    maxColWidth = Math.max(maxColWidth, totalW);
+    maxRowHeight = Math.max(maxRowHeight, totalH);
+
+    var comp = figma.createComponent();
+    comp.name = "Colors=" + colorMode;
+    comp.layoutMode = "NONE";
+    comp.resize(totalW, totalH);
+    comp.fills = [];
+    comp.clipsContent = false;
+
+    // ── Vertical gridlines + X tick labels ──
+    for (var gi = 0; gi < X_TICKS.length; gi++) {
+      var gx = plotX + (X_TICKS[gi] / MAX_SCALE) * plotW;
+      var grid = figma.createLine();
+      grid.name = "Gridline";
+      grid.resize(plotH, 0);
+      grid.rotation = -90;
+      grid.x = gx;
+      grid.y = plotY + plotH;
+      grid.strokeCap = "NONE";
+      grid.strokes = [{ type: "SOLID", color: gridFallback }];
+      grid.strokeWeight = Math.max(1, gridWidth);
+      if (gridDashed) grid.dashPattern = [gridDash, gridDash];
+      bindPaintVar(grid, "strokes", 0, varMap["chart/grid"]);
+      bindVar(grid, "strokeWeight", varMap["chart/grid-width"]);
+      comp.appendChild(grid);
+
+      var xLabel = figma.createText();
+      xLabel.fontName = font;
+      xLabel.name = "X Label";
+      xLabel.characters = String(X_TICKS[gi]);
+      xLabel.fontSize = labelFontSize;
+      xLabel.textAlignHorizontal = "CENTER";
+      xLabel.resize(30, labelFontSize + 4);
+      xLabel.x = gx - 15;
+      xLabel.y = plotY + plotH + 4;
+      xLabel.fills = [{ type: "SOLID", color: labelFallback }];
+      bindPaintVar(xLabel, "fills", 0, varMap["chart/label"]);
+      bindVar(xLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+      bindVar(xLabel, "fontFamily", varMap["chart/font-family"]);
+      bindVar(xLabel, "fontStyle", varMap["chart/label-font-weight"]);
+      comp.appendChild(xLabel);
+    }
+
+    // ── Bars (one row per category) + category labels ──
+    var rowH = plotH / SAMPLE.length;
+    var barThickness = Math.max(2, rowH - barGap);
+    for (var di = 0; di < SAMPLE.length; di++) {
+      var rowCy = plotY + di * rowH + rowH / 2;
+      var barLen = Math.max(1, (SAMPLE[di].value / MAX_SCALE) * plotW);
+      var bar = figma.createRectangle();
+      bar.name = "Bar";
+      bar.resize(barLen, barThickness);
+      bar.x = plotX;
+      bar.y = rowCy - barThickness / 2;
+      bar.topLeftRadius = 0;
+      bar.bottomLeftRadius = 0;
+      bar.topRightRadius = barRadius;
+      bar.bottomRightRadius = barRadius;
+      var ci = colorAt(di);
+      bar.fills = [{ type: "SOLID", color: colorFallbacks[ci % colorFallbacks.length] }];
+      bar.strokes = [];
+      bindPaintVar(bar, "fills", 0, varMap[colorPaths[ci % colorPaths.length]]);
+      comp.appendChild(bar);
+
+      var catLabel = figma.createText();
+      catLabel.fontName = font;
+      catLabel.name = "Category Label";
+      catLabel.characters = SAMPLE[di].label;
+      catLabel.fontSize = labelFontSize;
+      catLabel.textAlignHorizontal = "RIGHT";
+      catLabel.resize(CAT_GUTTER - 8, labelFontSize + 4);
+      catLabel.x = pad;
+      catLabel.y = rowCy - (labelFontSize + 4) / 2;
+      catLabel.fills = [{ type: "SOLID", color: labelFallback }];
+      bindPaintVar(catLabel, "fills", 0, varMap["chart/label"]);
+      bindVar(catLabel, "fontSize", varMap["chart/label-font-size-" + size]);
+      bindVar(catLabel, "fontFamily", varMap["chart/font-family"]);
+      bindVar(catLabel, "fontStyle", varMap["chart/label-font-weight"]);
+      comp.appendChild(catLabel);
+    }
+
+    // ── Axis lines ──
+    var yAxis = figma.createRectangle();
+    yAxis.name = "Y Axis";
+    yAxis.resize(Math.max(1, axisWidth), plotH);
+    yAxis.x = plotX;
+    yAxis.y = plotY;
+    yAxis.fills = [{ type: "SOLID", color: axisFallback }];
+    yAxis.strokes = [];
+    bindPaintVar(yAxis, "fills", 0, varMap["chart/axis"]);
+    bindVar(yAxis, "width", varMap["chart/axis-width"]);
+    comp.appendChild(yAxis);
+
+    var xAxis = figma.createRectangle();
+    xAxis.name = "X Axis";
+    xAxis.resize(plotW, Math.max(1, axisWidth));
+    xAxis.x = plotX;
+    xAxis.y = plotY + plotH;
+    xAxis.fills = [{ type: "SOLID", color: axisFallback }];
+    xAxis.strokes = [];
+    bindPaintVar(xAxis, "fills", 0, varMap["chart/axis"]);
+    bindVar(xAxis, "height", varMap["chart/axis-width"]);
+    comp.appendChild(xAxis);
+
+    comp.x = cmi * (maxColWidth + colGap);
+    comp.y = 0;
+    page.appendChild(comp);
+    components.push(comp);
+  }
+
+  progress("Created " + components.length + " horizontal bar chart variants");
+  var hbarSet = figma.combineAsVariants(components, page);
+  hbarSet.name = "Horizontal Bar Chart";
+  return hbarSet;
 }
 
 // ---------------------------------------------------------------------------
@@ -16560,6 +18625,608 @@ function buildChartDonutComponentSet(varMap, page, font, resolvedComponentFloat,
   var donutSet = figma.combineAsVariants(components, page);
   donutSet.name = "Donut Chart";
   return donutSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Pie)
+// ---------------------------------------------------------------------------
+// The donut with no hole (inner radius 0): full wedges colored by the active
+// color mode (palette = series-N, shades = shade-N). Only the slice gap is
+// tokenized (chart-pie/pad-angle). Variants: Colors x Slices x Legend.
+
+function buildChartPieComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+
+  var SAMPLE = [38, 26, 18, 12, 8, 6];
+
+  var seriesPaths = [
+    "chart/series-1", "chart/series-2", "chart/series-3",
+    "chart/series-4", "chart/series-5", "chart/series-6",
+  ];
+  var seriesFallback = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+    { r: 0.61, g: 0.35, b: 0.86 }, { r: 0.92, g: 0.28, b: 0.6 },
+  ];
+  var shadePaths = [
+    "chart/shade-1", "chart/shade-2", "chart/shade-3",
+    "chart/shade-4", "chart/shade-5", "chart/shade-6",
+  ];
+  var shadeFallback = [
+    { r: 0.05, g: 0.28, b: 0.63 }, { r: 0.08, g: 0.40, b: 0.78 },
+    { r: 0.13, g: 0.55, b: 0.90 }, { r: 0.35, g: 0.67, b: 0.94 },
+    { r: 0.55, g: 0.78, b: 0.97 }, { r: 0.72, g: 0.86, b: 0.99 },
+  ];
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var sizes = ["default"];
+  var colorModes = ["palette", "shades"];
+  var sliceCounts = [2, 3, 4, 5, 6];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var ci = 0; ci < colorModes.length; ci++) {
+    var colorMode = colorModes[ci];
+    var capColor = colorMode === "palette" ? "Palette" : "Shades";
+    var palettePaths = colorMode === "shades" ? shadePaths : seriesPaths;
+    var paletteFallback = colorMode === "shades" ? shadeFallback : seriesFallback;
+
+    for (var sci = 0; sci < sliceCounts.length; sci++) {
+      var nSlices = sliceCounts[sci];
+
+      for (var legi = 0; legi < legendModes.length; legi++) {
+        var withLegend = legendModes[legi] === "on";
+        var capLegend = withLegend ? "On" : "Off";
+
+        for (var si = 0; si < sizes.length; si++) {
+          var size = sizes[si];
+
+          var diameter = resolveCompFloat("chart/height-" + size, 180);
+          var pad = resolveCompFloat("chart/padding", 16);
+          var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+          var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+          var legendGap = resolveCompFloat("chart/legend-gap", 16);
+          var padDeg = resolveCompFloat("chart-pie/pad-angle", 0);
+          var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+          var padRad = (Math.max(0, padDeg) * Math.PI) / 180;
+          var outerR = diameter / 2;
+          var cx = pad + outerR;
+          var cy = pad + outerR;
+          var totalW = pad * 2 + diameter;
+          var totalH = pad * 2 + diameter + legendRowH;
+          maxColWidth = Math.max(maxColWidth, totalW);
+          maxRowHeight = Math.max(maxRowHeight, totalH);
+
+          var comp = figma.createComponent();
+          comp.name = "Colors=" + capColor + ", Slices=" + nSlices + ", Legend=" + capLegend;
+          comp.layoutMode = "NONE";
+          comp.resize(totalW, totalH);
+          comp.fills = [];
+          comp.clipsContent = false;
+
+          // ── Wedges (full sectors via ellipse arcData, inner radius 0) ──
+          var total = 0;
+          for (var ti = 0; ti < nSlices; ti++) total += SAMPLE[ti];
+          var startA = -Math.PI / 2;
+          for (var di = 0; di < nSlices; di++) {
+            var frac = SAMPLE[di] / total;
+            var sweep = frac * Math.PI * 2;
+            var a0 = startA + padRad / 2;
+            var a1 = startA + sweep - padRad / 2;
+            if (a1 <= a0) a1 = a0 + 0.0001;
+
+            var slice = figma.createEllipse();
+            slice.resize(diameter, diameter);
+            slice.x = cx - outerR;
+            slice.y = cy - outerR;
+            slice.arcData = { startingAngle: a0, endingAngle: a1, innerRadius: 0 };
+            slice.name = "Slice " + (di + 1);
+            slice.fills = [{ type: "SOLID", color: paletteFallback[di % paletteFallback.length] }];
+            slice.strokes = [];
+            bindPaintVar(slice, "fills", 0, varMap[palettePaths[di % palettePaths.length]]);
+            comp.appendChild(slice);
+
+            startA += sweep;
+          }
+
+          // ── Legend (swatch + label per slice, centered below the pie) ──
+          if (withLegend) {
+            var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+            var legendY = pad + diameter + 8;
+            var legendItems = [];
+            var totalLegendW = 0;
+            for (var lgi = 0; lgi < nSlices; lgi++) {
+              var lbl = "Series " + (lgi + 1);
+              var lblW = Math.ceil(lbl.length * legendFontSize * 0.6);
+              var iw = legendSwatch + 6 + lblW;
+              legendItems.push({ w: iw, label: lbl, labelW: lblW });
+              totalLegendW += iw;
+            }
+            totalLegendW += legendGap * Math.max(0, nSlices - 1);
+            var lx = cx - totalLegendW / 2;
+            if (lx < pad) lx = pad;
+            for (var lgj = 0; lgj < nSlices; lgj++) {
+              var sw = figma.createRectangle();
+              sw.name = "Legend Swatch";
+              sw.resize(legendSwatch, legendSwatch);
+              sw.x = lx;
+              sw.y = legendY + (legendItemH - legendSwatch) / 2;
+              sw.cornerRadius = 2;
+              sw.fills = [{ type: "SOLID", color: paletteFallback[lgj % paletteFallback.length] }];
+              sw.strokes = [];
+              bindPaintVar(sw, "fills", 0, varMap[palettePaths[lgj % palettePaths.length]]);
+              bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+              bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+              comp.appendChild(sw);
+
+              var lt = figma.createText();
+              lt.fontName = font;
+              lt.name = "Legend Label";
+              lt.characters = legendItems[lgj].label;
+              lt.fontSize = legendFontSize;
+              lt.textAlignHorizontal = "LEFT";
+              lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+              lt.x = lx + legendSwatch + 6;
+              lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+              lt.fills = [{ type: "SOLID", color: labelFallback }];
+              bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+              bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+              bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+              bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+              comp.appendChild(lt);
+
+              lx += legendItems[lgj].w + legendGap;
+            }
+          }
+
+          comp.x = si * (maxColWidth + colGap);
+          comp.y = rowIndex * (maxRowHeight + rowGap);
+          page.appendChild(comp);
+          components.push(comp);
+        }
+        rowIndex++;
+      }
+    }
+  }
+
+  progress("Created " + components.length + " pie chart variants");
+  var pieSet = figma.combineAsVariants(components, page);
+  pieSet.name = "Pie Chart";
+  return pieSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Funnel)
+// ---------------------------------------------------------------------------
+// Stacked trapezoid stages tapering to a point (conversion / drop-off). Each
+// stage is a polygon whose top width is proportional to its value and whose
+// bottom width matches the next stage (the last stage tapers to a point), with a
+// centered value label. Stages bind to series-N (palette) / shade-N (shades);
+// the label to chart-funnel/label. Variants: Colors x Stages x Legend.
+
+function buildChartFunnelComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+
+  var SAMPLE = [
+    { label: "Visited", value: 421 },
+    { label: "Signed up", value: 278 },
+    { label: "Activated", value: 183 },
+    { label: "Subscribed", value: 97 },
+    { label: "Renewed", value: 54 },
+    { label: "Advocates", value: 28 },
+  ];
+
+  var seriesPaths = [
+    "chart/series-1", "chart/series-2", "chart/series-3",
+    "chart/series-4", "chart/series-5", "chart/series-6",
+  ];
+  var seriesFallback = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+    { r: 0.61, g: 0.35, b: 0.86 }, { r: 0.92, g: 0.28, b: 0.6 },
+  ];
+  var shadePaths = [
+    "chart/shade-1", "chart/shade-2", "chart/shade-3",
+    "chart/shade-4", "chart/shade-5", "chart/shade-6",
+  ];
+  var shadeFallback = [
+    { r: 0.05, g: 0.28, b: 0.63 }, { r: 0.08, g: 0.40, b: 0.78 },
+    { r: 0.13, g: 0.55, b: 0.90 }, { r: 0.35, g: 0.67, b: 0.94 },
+    { r: 0.55, g: 0.78, b: 0.97 }, { r: 0.72, g: 0.86, b: 0.99 },
+  ];
+  var labelOnFallback = { r: 1, g: 1, b: 1 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var colorModes = ["palette", "shades"];
+  var stageCounts = [2, 3, 4, 5, 6];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  for (var ci = 0; ci < colorModes.length; ci++) {
+    var colorMode = colorModes[ci];
+    var capColor = colorMode === "palette" ? "Palette" : "Shades";
+    var palettePaths = colorMode === "shades" ? shadePaths : seriesPaths;
+    var paletteFallback = colorMode === "shades" ? shadeFallback : seriesFallback;
+
+    for (var sci = 0; sci < stageCounts.length; sci++) {
+      var nStages = stageCounts[sci];
+
+      for (var legi = 0; legi < legendModes.length; legi++) {
+        var withLegend = legendModes[legi] === "on";
+        var capLegend = withLegend ? "On" : "Off";
+
+        var size = "default";
+        var plotW = resolveCompFloat("chart/width-" + size, 320);
+        var plotH = resolveCompFloat("chart/height-" + size, 180);
+        var pad = resolveCompFloat("chart/padding", 16);
+        var labelFontSize = resolveCompFloat("chart-funnel/label-font-size", 14);
+        var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+        var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+        var legendGap = resolveCompFloat("chart/legend-gap", 16);
+        var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+        var plotX = pad;
+        var plotY = pad;
+        var totalW = pad * 2 + plotW;
+        var totalH = pad * 2 + plotH + legendRowH;
+        maxColWidth = Math.max(maxColWidth, totalW);
+        maxRowHeight = Math.max(maxRowHeight, totalH);
+
+        var comp = figma.createComponent();
+        comp.name = "Colors=" + capColor + ", Stages=" + nStages + ", Legend=" + capLegend;
+        comp.layoutMode = "NONE";
+        comp.resize(totalW, totalH);
+        comp.fills = [];
+        comp.clipsContent = false;
+
+        var maxVal = SAMPLE[0].value;
+        var cx = plotX + plotW / 2;
+        var bandH = plotH / nStages;
+        for (var di = 0; di < nStages; di++) {
+          var topHalf = ((SAMPLE[di].value / maxVal) * plotW) / 2;
+          var nextVal = di < nStages - 1 ? SAMPLE[di + 1].value : 0;
+          var botHalf = ((nextVal / maxVal) * plotW) / 2;
+          var bandTop = plotY + di * bandH;
+          var bandBot = bandTop + bandH;
+
+          var poly = figma.createVector();
+          poly.name = "Stage " + (di + 1);
+          comp.appendChild(poly);
+          poly.x = 0;
+          poly.y = 0;
+          poly.vectorPaths = [{
+            windingRule: "NONZERO",
+            data:
+              "M " + (cx - topHalf) + " " + bandTop +
+              " L " + (cx + topHalf) + " " + bandTop +
+              " L " + (cx + botHalf) + " " + bandBot +
+              " L " + (cx - botHalf) + " " + bandBot + " Z",
+          }];
+          poly.strokes = [];
+          poly.fills = [{ type: "SOLID", color: paletteFallback[di % paletteFallback.length] }];
+          bindPaintVar(poly, "fills", 0, varMap[palettePaths[di % palettePaths.length]]);
+
+          // ── Centered value label ──
+          var vLabel = figma.createText();
+          vLabel.fontName = font;
+          vLabel.name = "Value Label";
+          vLabel.characters = String(SAMPLE[di].value);
+          vLabel.fontSize = labelFontSize;
+          vLabel.textAlignHorizontal = "CENTER";
+          vLabel.resize(plotW, labelFontSize + 4);
+          vLabel.x = plotX;
+          vLabel.y = bandTop + (bandH - (labelFontSize + 4)) / 2;
+          vLabel.fills = [{ type: "SOLID", color: labelOnFallback }];
+          bindPaintVar(vLabel, "fills", 0, varMap["chart-funnel/label"]);
+          bindVar(vLabel, "fontSize", varMap["chart-funnel/label-font-size"]);
+          bindVar(vLabel, "fontFamily", varMap["chart/font-family"]);
+          bindVar(vLabel, "fontStyle", varMap["chart/label-font-weight"]);
+          comp.appendChild(vLabel);
+        }
+
+        // ── Legend (swatch + stage label, centered below the funnel) ──
+        if (withLegend) {
+          var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+          var legendY = plotY + plotH + 8;
+          var legendItems = [];
+          var totalLegendW = 0;
+          for (var lgi = 0; lgi < nStages; lgi++) {
+            var lbl = SAMPLE[lgi].label;
+            var lblW = Math.ceil(lbl.length * legendFontSize * 0.6);
+            var iw = legendSwatch + 6 + lblW;
+            legendItems.push({ w: iw, label: lbl, labelW: lblW });
+            totalLegendW += iw;
+          }
+          totalLegendW += legendGap * Math.max(0, nStages - 1);
+          var lx = cx - totalLegendW / 2;
+          if (lx < pad) lx = pad;
+          for (var lgj = 0; lgj < nStages; lgj++) {
+            var sw = figma.createRectangle();
+            sw.name = "Legend Swatch";
+            sw.resize(legendSwatch, legendSwatch);
+            sw.x = lx;
+            sw.y = legendY + (legendItemH - legendSwatch) / 2;
+            sw.cornerRadius = 2;
+            sw.fills = [{ type: "SOLID", color: paletteFallback[lgj % paletteFallback.length] }];
+            sw.strokes = [];
+            bindPaintVar(sw, "fills", 0, varMap[palettePaths[lgj % palettePaths.length]]);
+            bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+            bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+            comp.appendChild(sw);
+
+            var lt = figma.createText();
+            lt.fontName = font;
+            lt.name = "Legend Label";
+            lt.characters = legendItems[lgj].label;
+            lt.fontSize = legendFontSize;
+            lt.textAlignHorizontal = "LEFT";
+            lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+            lt.x = lx + legendSwatch + 6;
+            lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+            lt.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+            bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+            bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+            bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(lt);
+
+            lx += legendItems[lgj].w + legendGap;
+          }
+        }
+
+        comp.x = 0;
+        comp.y = rowIndex * (maxRowHeight + rowGap);
+        page.appendChild(comp);
+        components.push(comp);
+        rowIndex++;
+      }
+    }
+  }
+
+  progress("Created " + components.length + " funnel chart variants");
+  var funnelSet = figma.combineAsVariants(components, page);
+  funnelSet.name = "Funnel Chart";
+  return funnelSet;
+}
+
+// ---------------------------------------------------------------------------
+// Chart Component Set (Radial / Gauge)
+// ---------------------------------------------------------------------------
+// Concentric ring arcs (a multi-ring gauge): each ring is a 0–100 value drawn
+// clockwise from the top over a muted full-circle background track. The first
+// ring is outermost (matches Recharts RadialBarChart data order). Rings bind to
+// series-N (palette) / shade-N (shades); the track to chart-radial/track. The
+// rounded ends (chart-radial/corner-radius) and ring gap (chart-radial/ring-gap)
+// are baked into geometry — Figma can't bind arc cap radius / band spacing.
+// Variants: Colors x Rings x Legend.
+
+function buildChartRadialComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString) {
+  var resolveCompFloat =
+    typeof resolvedComponentFloat === "function"
+      ? resolvedComponentFloat
+      : function (_path, fallback) {
+          return fallback;
+        };
+
+  // Ring values 0–100; index 0 is the outermost ring.
+  var SAMPLE = [86, 72, 58, 44, 31, 20];
+
+  var seriesPaths = [
+    "chart/series-1", "chart/series-2", "chart/series-3",
+    "chart/series-4", "chart/series-5", "chart/series-6",
+  ];
+  var seriesFallback = [
+    { r: 0.13, g: 0.55, b: 0.9 }, { r: 0.0, g: 0.74, b: 0.83 },
+    { r: 0.22, g: 0.74, b: 0.33 }, { r: 0.98, g: 0.62, b: 0.11 },
+    { r: 0.61, g: 0.35, b: 0.86 }, { r: 0.92, g: 0.28, b: 0.6 },
+  ];
+  var shadePaths = [
+    "chart/shade-1", "chart/shade-2", "chart/shade-3",
+    "chart/shade-4", "chart/shade-5", "chart/shade-6",
+  ];
+  var shadeFallback = [
+    { r: 0.05, g: 0.28, b: 0.63 }, { r: 0.08, g: 0.40, b: 0.78 },
+    { r: 0.13, g: 0.55, b: 0.90 }, { r: 0.35, g: 0.67, b: 0.94 },
+    { r: 0.55, g: 0.78, b: 0.97 }, { r: 0.72, g: 0.86, b: 0.99 },
+  ];
+  var trackFallback = { r: 0.118, g: 0.16, b: 0.231 };
+  var labelFallback = { r: 0.4, g: 0.44, b: 0.52 };
+
+  var colorModes = ["palette", "shades"];
+  var ringCounts = [2, 3, 4, 5, 6];
+  var legendModes = ["off", "on"];
+  var components = [];
+  var colGap = 60;
+  var rowGap = 60;
+  var maxColWidth = 0;
+  var maxRowHeight = 0;
+  var rowIndex = 0;
+
+  // Builds a donut-band arc (ring segment) as an ellipse with arcData. `a0`/`a1`
+  // are Figma arc angles (-π/2 = top, increasing clockwise). Returns the node.
+  function makeBand(comp, cx, cy, outerR, innerR, a0, a1, fallbackColor, varPath) {
+    var node = figma.createEllipse();
+    node.resize(outerR * 2, outerR * 2);
+    node.x = cx - outerR;
+    node.y = cy - outerR;
+    node.arcData = { startingAngle: a0, endingAngle: a1, innerRadius: outerR > 0 ? innerR / outerR : 0 };
+    node.fills = [{ type: "SOLID", color: fallbackColor }];
+    node.strokes = [];
+    if (varPath && varMap[varPath]) bindPaintVar(node, "fills", 0, varMap[varPath]);
+    comp.appendChild(node);
+    return node;
+  }
+
+  for (var ci = 0; ci < colorModes.length; ci++) {
+    var colorMode = colorModes[ci];
+    var capColor = colorMode === "palette" ? "Palette" : "Shades";
+    var palettePaths = colorMode === "shades" ? shadePaths : seriesPaths;
+    var paletteFallback = colorMode === "shades" ? shadeFallback : seriesFallback;
+
+    for (var rci = 0; rci < ringCounts.length; rci++) {
+      var nRings = ringCounts[rci];
+
+      for (var legi = 0; legi < legendModes.length; legi++) {
+        var withLegend = legendModes[legi] === "on";
+        var capLegend = withLegend ? "On" : "Off";
+
+        var size = "default";
+        var diameter = resolveCompFloat("chart/height-" + size, 180);
+        var pad = resolveCompFloat("chart/padding", 16);
+        var ringGap = Math.max(0, resolveCompFloat("chart-radial/ring-gap", 4));
+        var cornerRadius = Math.max(0, resolveCompFloat("chart-radial/corner-radius", 8));
+        var legendFontSize = resolveCompFloat("chart/legend-font-size-" + size, 12);
+        var legendSwatch = resolveCompFloat("chart/legend-swatch-size", 10);
+        var legendGap = resolveCompFloat("chart/legend-gap", 16);
+        var legendRowH = withLegend ? Math.max(legendSwatch, legendFontSize + 4) + 14 : 0;
+
+        var outerR = diameter / 2;
+        var cx = pad + outerR;
+        var cy = pad + outerR;
+        var totalW = pad * 2 + diameter;
+        var totalH = pad * 2 + diameter + legendRowH;
+        maxColWidth = Math.max(maxColWidth, totalW);
+        maxRowHeight = Math.max(maxRowHeight, totalH);
+
+        var comp = figma.createComponent();
+        comp.name = "Colors=" + capColor + ", Rings=" + nRings + ", Legend=" + capLegend;
+        comp.layoutMode = "NONE";
+        comp.resize(totalW, totalH);
+        comp.fills = [];
+        comp.clipsContent = false;
+
+        // Radial extent: rings fill the band from 30% of the radius out to the edge.
+        var innerStartR = outerR * 0.3;
+        var span = outerR - innerStartR;
+        var ringThickness = (span - ringGap * Math.max(0, nRings - 1)) / nRings;
+        if (ringThickness < 1) ringThickness = 1;
+        var capR = Math.min(cornerRadius, ringThickness / 2);
+        var topAngle = -Math.PI / 2;
+
+        for (var di = 0; di < nRings; di++) {
+          var ringOuterR = outerR - di * (ringThickness + ringGap);
+          var ringInnerR = ringOuterR - ringThickness;
+          var bandCenterR = (ringOuterR + ringInnerR) / 2;
+          var fallbackColor = paletteFallback[di % paletteFallback.length];
+          var varPath = palettePaths[di % palettePaths.length];
+
+          // Background track (full ring).
+          makeBand(comp, cx, cy, ringOuterR, ringInnerR, 0, Math.PI * 2, trackFallback, "chart-radial/track");
+
+          // Value arc (clockwise from top).
+          var frac = Math.max(0, Math.min(1, SAMPLE[di] / 100));
+          if (frac > 0) {
+            var sweep = frac >= 1 ? Math.PI * 2 - 0.0001 : frac * Math.PI * 2;
+            var a0 = topAngle;
+            var a1 = topAngle + sweep;
+            var arc = makeBand(comp, cx, cy, ringOuterR, ringInnerR, a0, a1, fallbackColor, varPath);
+            arc.name = "Ring " + (di + 1);
+
+            // Rounded end caps (baked; Figma can't round arc ends natively).
+            if (capR > 0.5 && frac < 1) {
+              var caps = [a0, a1];
+              for (var cpi = 0; cpi < caps.length; cpi++) {
+                var ca = caps[cpi];
+                var cpx = cx + bandCenterR * Math.cos(ca);
+                var cpy = cy + bandCenterR * Math.sin(ca);
+                var cap = figma.createEllipse();
+                cap.name = "Ring " + (di + 1) + " Cap";
+                cap.resize(capR * 2, capR * 2);
+                cap.x = cpx - capR;
+                cap.y = cpy - capR;
+                cap.fills = [{ type: "SOLID", color: fallbackColor }];
+                cap.strokes = [];
+                bindPaintVar(cap, "fills", 0, varMap[varPath]);
+                comp.appendChild(cap);
+              }
+            }
+          }
+        }
+
+        // ── Legend (swatch + ring label, centered below the gauge) ──
+        if (withLegend) {
+          var legendItemH = Math.max(legendSwatch, legendFontSize + 4);
+          var legendY = pad + diameter + 8;
+          var legendItems = [];
+          var totalLegendW = 0;
+          for (var lgi = 0; lgi < nRings; lgi++) {
+            var lbl = "Ring " + (lgi + 1);
+            var lblW = Math.ceil(lbl.length * legendFontSize * 0.6);
+            var iw = legendSwatch + 6 + lblW;
+            legendItems.push({ w: iw, label: lbl, labelW: lblW });
+            totalLegendW += iw;
+          }
+          totalLegendW += legendGap * Math.max(0, nRings - 1);
+          var lx = cx - totalLegendW / 2;
+          if (lx < pad) lx = pad;
+          for (var lgj = 0; lgj < nRings; lgj++) {
+            var sw = figma.createRectangle();
+            sw.name = "Legend Swatch";
+            sw.resize(legendSwatch, legendSwatch);
+            sw.x = lx;
+            sw.y = legendY + (legendItemH - legendSwatch) / 2;
+            sw.cornerRadius = 2;
+            sw.fills = [{ type: "SOLID", color: paletteFallback[lgj % paletteFallback.length] }];
+            sw.strokes = [];
+            bindPaintVar(sw, "fills", 0, varMap[palettePaths[lgj % palettePaths.length]]);
+            bindVar(sw, "width", varMap["chart/legend-swatch-size"]);
+            bindVar(sw, "height", varMap["chart/legend-swatch-size"]);
+            comp.appendChild(sw);
+
+            var lt = figma.createText();
+            lt.fontName = font;
+            lt.name = "Legend Label";
+            lt.characters = legendItems[lgj].label;
+            lt.fontSize = legendFontSize;
+            lt.textAlignHorizontal = "LEFT";
+            lt.resize(legendItems[lgj].labelW + 4, legendFontSize + 4);
+            lt.x = lx + legendSwatch + 6;
+            lt.y = legendY + (legendItemH - (legendFontSize + 4)) / 2;
+            lt.fills = [{ type: "SOLID", color: labelFallback }];
+            bindPaintVar(lt, "fills", 0, varMap["chart/label"]);
+            bindVar(lt, "fontSize", varMap["chart/legend-font-size-" + size]);
+            bindVar(lt, "fontFamily", varMap["chart/font-family"]);
+            bindVar(lt, "fontStyle", varMap["chart/label-font-weight"]);
+            comp.appendChild(lt);
+
+            lx += legendItems[lgj].w + legendGap;
+          }
+        }
+
+        comp.x = 0;
+        comp.y = rowIndex * (maxRowHeight + rowGap);
+        page.appendChild(comp);
+        components.push(comp);
+        rowIndex++;
+      }
+    }
+  }
+
+  progress("Created " + components.length + " radial chart variants");
+  var radialSet = figma.combineAsVariants(components, page);
+  radialSet.name = "Radial Bar Chart";
+  return radialSet;
 }
 
 // ---------------------------------------------------------------------------

@@ -64,6 +64,7 @@ export function ChartPreviewContent({
   showAxis,
   showLegend,
   showRightAxis,
+  sparklineStyle,
 }) {
   const sharedProps = {
     brands,
@@ -76,6 +77,7 @@ export function ChartPreviewContent({
     showAxis,
     showLegend,
     showRightAxis,
+    sparklineStyle,
     previewTheme,
   };
 
@@ -104,45 +106,92 @@ export function ChartPropertiesPanel({
   setShowLegend,
   showRightAxis,
   setShowRightAxis,
+  sparklineStyle,
+  setSparklineStyle,
 }) {
-  const isMultiSeries = type === "line" || type === "area";
+  // Sparkline is chrome-free: only a style (line/area/bar) + an end-dot toggle.
+  const isSparkline = type === "sparkline";
+  const isMultiSeries = type === "line" || type === "time-series" || type === "area";
   const isStacked = type === "stacked-bar";
+  // Stacked area behaves like the stacked bar: layered series with a color mode
+  // and series count, no per-point markers.
+  const isStackedArea = type === "stacked-area";
   const isCombo = type === "combo";
+  // Dual-axis time series is a fixed 2-series scheme (series-1 = left axis,
+  // series-2 = right axis), so like combo it has no color-mode / series-count.
+  const isDualAxis = type === "time-series-dual-axis";
   const isDonut = type === "donut";
+  // Pie is a donut with no hole: same multi-slice color-mode / slices / legend
+  // controls and no cartesian axes/grid.
+  const isPie = type === "pie";
+  const isPieLike = isDonut || isPie;
+  // Funnel: stacked stages tapering to a point. Shares the multi-stage color
+  // mode / count / legend controls and has no cartesian axes/grid.
+  const isFunnel = type === "funnel";
+  // Radial (gauge): concentric ring arcs. Shares the multi-ring color mode /
+  // count / legend controls and has no cartesian axes/grid.
+  const isRadial = type === "radial";
+  const isSliceLike = isPieLike || isFunnel || isRadial;
   const isRadar = type === "radar";
-  const hasSeries = isMultiSeries || isStacked;
+  // Scatter is a multi-series chart of points (no lines/areas), so it gets a color
+  // mode + series count + legend, but no per-point toggle (the points ARE the chart).
+  const isScatter = type === "scatter";
+  // Candlestick has directional up/down colors (not a series palette), so no color
+  // mode or series count — just legend (Up/Down) + grid + axis.
+  const isCandlestick = type === "candlestick";
+  const hasSeries = isMultiSeries || isStacked || isStackedArea || isScatter;
   // Combo is a fixed 2-series scheme (bar = series-1, line = series-2), so it has
   // no color-mode / series-count controls.
   // Donut is always multi-slice, so it drops the single mode.
-  const colorModeOptions = isDonut
+  const colorModeOptions = isSliceLike
     ? COLOR_MODE_OPTIONS.filter((m) => m !== "single")
     : COLOR_MODE_OPTIONS;
-  // Area is capped at 2 series; donut uses its own slice range; others the full range.
-  const seriesCountOptions = isDonut
+  // Area is capped at 2 series; donut/pie/funnel use their own slice range; others full.
+  const seriesCountOptions = isSliceLike
     ? DONUT_SLICE_OPTIONS
     : type === "area"
     ? SERIES_COUNT_OPTIONS.filter((n) => Number(n) <= 2)
     : SERIES_COUNT_OPTIONS;
+  if (isSparkline) {
+    return (
+      <div style={{ display: "grid", gap: 10 }}>
+        <PropertyRow
+          label="Style"
+          value={sparklineStyle}
+          onChange={setSparklineStyle}
+          options={["line", "area", "bar"]}
+        />
+        {sparklineStyle !== "bar" && (
+          <PropertyRow
+            label="End dot"
+            value={showPoints ? "on" : "off"}
+            onChange={(v) => setShowPoints(v === "on")}
+            options={["off", "on"]}
+          />
+        )}
+      </div>
+    );
+  }
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      {!isCombo && (
+      {!isCombo && !isDualAxis && !isCandlestick && (
         <PropertyRow
-          label={isDonut ? "Slice colors" : hasSeries || isRadar ? "Color" : "Bar colors"}
+          label={isFunnel ? "Stage colors" : isRadial ? "Ring colors" : isPieLike ? "Slice colors" : hasSeries || isRadar ? "Color" : "Bar colors"}
           value={colorMode}
           onChange={setColorMode}
           options={colorModeOptions}
           formatOption={formatColorMode}
         />
       )}
-      {((hasSeries && colorMode !== "single") || (isRadar && colorMode !== "single") || isDonut) && (
+      {((hasSeries && colorMode !== "single") || (isRadar && colorMode !== "single") || isSliceLike) && (
         <PropertyRow
-          label={isStacked ? "Segments" : isDonut ? "Slices" : "Series"}
+          label={isStacked ? "Segments" : isFunnel ? "Stages" : isRadial ? "Rings" : isPieLike ? "Slices" : "Series"}
           value={String(seriesCount)}
           onChange={(v) => setSeriesCount(Number(v))}
           options={seriesCountOptions}
         />
       )}
-      {(isMultiSeries || isCombo || isRadar) && (
+      {(isMultiSeries || isStackedArea || isCombo || isRadar || isDualAxis) && (
         <PropertyRow
           label="Points"
           value={showPoints ? "on" : "off"}
@@ -158,7 +207,7 @@ export function ChartPropertiesPanel({
           options={["off", "on"]}
         />
       )}
-      {(hasSeries || isCombo || isDonut || isRadar) && (
+      {(hasSeries || isCombo || isSliceLike || isRadar || isDualAxis || isCandlestick) && (
         <PropertyRow
           label="Legend"
           value={showLegend ? "on" : "off"}
@@ -166,8 +215,8 @@ export function ChartPropertiesPanel({
           options={["off", "on"]}
         />
       )}
-      {/* Donut has no cartesian axes/grid. */}
-      {!isDonut && (
+      {/* Donut/pie/funnel have no cartesian axes/grid. */}
+      {!isSliceLike && (
         <PropertyRow
           label="Grid"
           value={showGrid ? "on" : "off"}
@@ -175,7 +224,7 @@ export function ChartPropertiesPanel({
           options={["off", "on"]}
         />
       )}
-      {!isDonut && (
+      {!isSliceLike && (
         <PropertyRow
           label="Axis"
           value={showAxis ? "on" : "off"}

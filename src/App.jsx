@@ -491,11 +491,21 @@ export default function App() {
     rangeslider: "RangeSlider",
     chart: "Bar Chart",
     "chart-line": "Line Chart",
+    "chart-time-series": "Time Series Chart",
+    "chart-time-series-dual-axis": "Time Series Dual Axis Chart",
     "chart-area": "Area Chart",
+    "chart-stacked-area": "Stacked Area Chart",
     "chart-stacked-bar": "Stacked Bar Chart",
     "chart-combo": "Combo Chart",
     "chart-donut": "Donut Chart",
     "chart-radar": "Radar Chart",
+    "chart-scatter": "Scatter Chart",
+    "chart-candlestick": "Candlestick Chart",
+    "chart-sparkline": "Sparkline",
+    "chart-bar-horizontal": "Horizontal Bar Chart",
+    "chart-pie": "Pie Chart",
+    "chart-funnel": "Funnel Chart",
+    "chart-radial": "Radial Bar Chart",
     multiselect: "MultiSelect",
     segmentedcontrol: "SegmentedControl",
   };
@@ -786,6 +796,8 @@ export default function App() {
   const [activeChartShowAxis, setActiveChartShowAxis] = useState(true);
   const [activeChartShowLegend, setActiveChartShowLegend] = useState(false);
   const [activeChartShowRightAxis, setActiveChartShowRightAxis] = useState(false);
+  // Sparkline render style (line | area | bar). End-dot reuses activeChartShowPoints.
+  const [activeSparklineStyle, setActiveSparklineStyle] = useState("line");
   const [activeAvatarSize, setActiveAvatarSize] = useState(avatarSizeDefault);
   const [activeAvatarRadius, setActiveAvatarRadius] = useState(avatarRadiusDefault);
   const [activeAvatarName, setActiveAvatarName] = useState("Alex Carter");
@@ -1166,25 +1178,48 @@ export default function App() {
     } else if (
       newComp === "chart" ||
       newComp === "chart-line" ||
+      newComp === "chart-time-series" ||
+      newComp === "chart-time-series-dual-axis" ||
       newComp === "chart-area" ||
+      newComp === "chart-stacked-area" ||
       newComp === "chart-stacked-bar" ||
       newComp === "chart-combo" ||
       newComp === "chart-donut" ||
-      newComp === "chart-radar"
+      newComp === "chart-radar" ||
+      newComp === "chart-scatter" ||
+      newComp === "chart-candlestick" ||
+      newComp === "chart-sparkline" ||
+      newComp === "chart-bar-horizontal" ||
+      newComp === "chart-pie" ||
+      newComp === "chart-funnel" ||
+      newComp === "chart-radial"
     ) {
       const isStacked = newComp === "chart-stacked-bar";
+      const isStackedArea = newComp === "chart-stacked-area";
       const isCombo = newComp === "chart-combo";
       const isDonut = newComp === "chart-donut";
+      const isDualAxis = newComp === "chart-time-series-dual-axis";
+      const isScatter = newComp === "chart-scatter";
+      const isCandlestick = newComp === "chart-candlestick";
+      const isSparkline = newComp === "chart-sparkline";
+      const isHBar = newComp === "chart-bar-horizontal";
+      const isPie = newComp === "chart-pie";
+      const isFunnel = newComp === "chart-funnel";
+      const isRadial = newComp === "chart-radial";
       setActiveVariant("default");
       setActiveChartSize(chartSizeDefault);
-      // Stacked bars need distinctly-colored segments; combo is a fixed 2-series
-      // palette (bar = series-1, line = series-2); donut is always multi-slice.
-      setActiveChartColorMode(isStacked ? "shades" : isCombo || isDonut ? "palette" : "single");
-      setActiveChartSeriesCount(isStacked ? 3 : isCombo ? 2 : isDonut ? 4 : 1);
-      setActiveChartShowPoints(newComp !== "chart-area" && !isDonut);
+      setActiveSparklineStyle("line");
+      // Stacked charts need distinctly-colored layers (shades by default); ranked
+      // horizontal bars read well as a shade ramp; combo + dual-axis + scatter +
+      // pie + funnel are palette charts; donut is multi-slice. Candlestick uses
+      // fixed directional up/down colors (no color mode / series count).
+      setActiveChartColorMode(isStacked || isStackedArea || isHBar ? "shades" : isCombo || isDonut || isPie || isFunnel || isRadial || isDualAxis || isScatter ? "palette" : "single");
+      setActiveChartSeriesCount(isStacked || isStackedArea || isScatter ? 3 : isCombo || isDualAxis ? 2 : isDonut || isPie || isFunnel || isRadial ? 4 : 1);
+      setActiveChartShowPoints(newComp !== "chart-area" && !isStackedArea && !isDonut && !isPie && !isFunnel && !isRadial);
       setActiveChartShowGrid(true);
       setActiveChartShowAxis(true);
-      setActiveChartShowLegend(isStacked || isCombo || isDonut);
+      // Funnel shows values on each stage, so it defaults to no legend.
+      setActiveChartShowLegend(isStacked || isStackedArea || isCombo || isDonut || isPie || isRadial || isDualAxis || isScatter || isCandlestick);
       setActiveChartShowRightAxis(false);
     } else if (newComp === "avatar") {
       setActiveVariant("filled");
@@ -2484,11 +2519,21 @@ export default function App() {
     progress: activeProgressSize,
     chart: activeChartSize,
     "chart-line": activeChartSize,
+    "chart-time-series": activeChartSize,
+    "chart-time-series-dual-axis": activeChartSize,
     "chart-area": activeChartSize,
+    "chart-stacked-area": activeChartSize,
     "chart-stacked-bar": activeChartSize,
     "chart-combo": activeChartSize,
     "chart-donut": activeChartSize,
     "chart-radar": activeChartSize,
+    "chart-scatter": activeChartSize,
+    "chart-candlestick": activeChartSize,
+    "chart-sparkline": activeChartSize,
+    "chart-bar-horizontal": activeChartSize,
+    "chart-pie": activeChartSize,
+    "chart-funnel": activeChartSize,
+    "chart-radial": activeChartSize,
     avatar: activeAvatarSize,
     pill: activePillSize,
     badge: activeBadgeSize,
@@ -3626,6 +3671,38 @@ export default function App() {
                   showLegend={activeChartShowLegend}
                 />
               )}
+              {activeComponent === "chart-time-series" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="time-series"
+                  size={activeChartSize}
+                  colorMode={activeChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  showPoints={activeChartShowPoints}
+                  showGrid={activeChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-time-series-dual-axis" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="time-series-dual-axis"
+                  size={activeChartSize}
+                  colorMode={activeChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  showPoints={activeChartShowPoints}
+                  showGrid={activeChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                />
+              )}
               {activeComponent === "chart-area" && (
                 <ChartPreviewContent
                   brands={brands}
@@ -3633,6 +3710,22 @@ export default function App() {
                   activeColorToken={activeColorToken}
                   previewTheme={previewTheme}
                   type="area"
+                  size={activeChartSize}
+                  colorMode={activeChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  showPoints={activeChartShowPoints}
+                  showGrid={activeChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-stacked-area" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="stacked-area"
                   size={activeChartSize}
                   colorMode={activeChartColorMode}
                   seriesCount={activeChartSeriesCount}
@@ -3700,6 +3793,98 @@ export default function App() {
                   showPoints={activeChartShowPoints}
                   showGrid={activeChartShowGrid}
                   showAxis={activeChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-scatter" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="scatter"
+                  size={activeChartSize}
+                  colorMode={activeChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  showGrid={activeChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-candlestick" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="candlestick"
+                  size={activeChartSize}
+                  showGrid={activeChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-sparkline" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="sparkline"
+                  size={activeChartSize}
+                  sparklineStyle={activeSparklineStyle}
+                  showPoints={activeChartShowPoints}
+                />
+              )}
+              {activeComponent === "chart-bar-horizontal" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="bar-horizontal"
+                  size={activeChartSize}
+                  colorMode={activeChartColorMode}
+                  showGrid={activeChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                />
+              )}
+              {activeComponent === "chart-pie" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="pie"
+                  size={activeChartSize}
+                  colorMode={activeChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  showLegend={activeChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-funnel" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="funnel"
+                  size={activeChartSize}
+                  colorMode={activeChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  showLegend={activeChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-radial" && (
+                <ChartPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  type="radial"
+                  size={activeChartSize}
+                  colorMode={activeChartColorMode}
+                  seriesCount={activeChartSeriesCount}
                   showLegend={activeChartShowLegend}
                 />
               )}
@@ -4360,9 +4545,66 @@ export default function App() {
                   setShowLegend={setActiveChartShowLegend}
                 />
               )}
+              {activeComponent === "chart-time-series" && (
+                <ChartPropertiesPanel
+                  type="time-series"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  colorMode={activeChartColorMode}
+                  setColorMode={handleChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  setSeriesCount={setActiveChartSeriesCount}
+                  showPoints={activeChartShowPoints}
+                  setShowPoints={setActiveChartShowPoints}
+                  showGrid={activeChartShowGrid}
+                  setShowGrid={setActiveChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  setShowAxis={setActiveChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                  setShowLegend={setActiveChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-time-series-dual-axis" && (
+                <ChartPropertiesPanel
+                  type="time-series-dual-axis"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  colorMode={activeChartColorMode}
+                  setColorMode={handleChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  setSeriesCount={setActiveChartSeriesCount}
+                  showPoints={activeChartShowPoints}
+                  setShowPoints={setActiveChartShowPoints}
+                  showGrid={activeChartShowGrid}
+                  setShowGrid={setActiveChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  setShowAxis={setActiveChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                  setShowLegend={setActiveChartShowLegend}
+                />
+              )}
               {activeComponent === "chart-area" && (
                 <ChartPropertiesPanel
                   type="area"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  colorMode={activeChartColorMode}
+                  setColorMode={handleChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  setSeriesCount={setActiveChartSeriesCount}
+                  showPoints={activeChartShowPoints}
+                  setShowPoints={setActiveChartShowPoints}
+                  showGrid={activeChartShowGrid}
+                  setShowGrid={setActiveChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  setShowAxis={setActiveChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                  setShowLegend={setActiveChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-stacked-area" && (
+                <ChartPropertiesPanel
+                  type="stacked-area"
                   size={activeChartSize}
                   setSize={setActiveChartSize}
                   colorMode={activeChartColorMode}
@@ -4445,6 +4687,99 @@ export default function App() {
                   setShowGrid={setActiveChartShowGrid}
                   showAxis={activeChartShowAxis}
                   setShowAxis={setActiveChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                  setShowLegend={setActiveChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-scatter" && (
+                <ChartPropertiesPanel
+                  type="scatter"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  colorMode={activeChartColorMode}
+                  setColorMode={handleChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  setSeriesCount={setActiveChartSeriesCount}
+                  showGrid={activeChartShowGrid}
+                  setShowGrid={setActiveChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  setShowAxis={setActiveChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                  setShowLegend={setActiveChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-candlestick" && (
+                <ChartPropertiesPanel
+                  type="candlestick"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  showGrid={activeChartShowGrid}
+                  setShowGrid={setActiveChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  setShowAxis={setActiveChartShowAxis}
+                  showLegend={activeChartShowLegend}
+                  setShowLegend={setActiveChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-sparkline" && (
+                <ChartPropertiesPanel
+                  type="sparkline"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  sparklineStyle={activeSparklineStyle}
+                  setSparklineStyle={setActiveSparklineStyle}
+                  showPoints={activeChartShowPoints}
+                  setShowPoints={setActiveChartShowPoints}
+                />
+              )}
+              {activeComponent === "chart-bar-horizontal" && (
+                <ChartPropertiesPanel
+                  type="bar-horizontal"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  colorMode={activeChartColorMode}
+                  setColorMode={handleChartColorMode}
+                  showGrid={activeChartShowGrid}
+                  setShowGrid={setActiveChartShowGrid}
+                  showAxis={activeChartShowAxis}
+                  setShowAxis={setActiveChartShowAxis}
+                />
+              )}
+              {activeComponent === "chart-pie" && (
+                <ChartPropertiesPanel
+                  type="pie"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  colorMode={activeChartColorMode}
+                  setColorMode={handleChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  setSeriesCount={setActiveChartSeriesCount}
+                  showLegend={activeChartShowLegend}
+                  setShowLegend={setActiveChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-funnel" && (
+                <ChartPropertiesPanel
+                  type="funnel"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  colorMode={activeChartColorMode}
+                  setColorMode={handleChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  setSeriesCount={setActiveChartSeriesCount}
+                  showLegend={activeChartShowLegend}
+                  setShowLegend={setActiveChartShowLegend}
+                />
+              )}
+              {activeComponent === "chart-radial" && (
+                <ChartPropertiesPanel
+                  type="radial"
+                  size={activeChartSize}
+                  setSize={setActiveChartSize}
+                  colorMode={activeChartColorMode}
+                  setColorMode={handleChartColorMode}
+                  seriesCount={activeChartSeriesCount}
+                  setSeriesCount={setActiveChartSeriesCount}
                   showLegend={activeChartShowLegend}
                   setShowLegend={setActiveChartShowLegend}
                 />
@@ -4536,7 +4871,7 @@ export default function App() {
                   setShowHeader={setActiveCalendarShowHeader}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "pill", "badge", "image", "avatar", "skeleton", "table", "calendar"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "calendar"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

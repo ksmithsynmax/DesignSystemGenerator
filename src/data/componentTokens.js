@@ -1507,12 +1507,54 @@ export const COMPONENT_TOKENS = {
     "chart-line-point-radius": { type: "FLOAT", unit: "px", value: 3, figmaPath: "chart-line/point-radius" },
   },
 
+  // Time series chart. A thin variant of the line chart: it reuses the line
+  // rendering AND the chart-line/* tokens (and their Figma variables) verbatim —
+  // there are no time-series-specific tokens. It exists as its own catalog entry
+  // (and Figma component) for spec parity and as the base for the dual-axis
+  // variant. Token resolution maps it to the chart-line group (see
+  // resolveComponentTokenSet) so its editor mirrors the line chart exactly.
+  "chart-time-series": {},
+
+  // Time series dual-axis chart. A fixed 2-series line chart where series-1 binds
+  // to a left Y-axis and series-2 to an independent right Y-axis. Like the time
+  // series, it reuses the chart-line/* tokens (and Figma variables) verbatim — no
+  // dedicated tokens. Token resolution maps it to the chart-line group.
+  "chart-time-series-dual-axis": {},
+
   // Area-specific tokens only. Shared chart styling (series palette, axis, grid,
   // label, typography, width/height/padding) is inherited from the `chart` group
   // and merged into this component's editor via getColorTokens/getDimensionTokens.
   "chart-area": {
     "chart-area-line-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "chart-area/width" },
     "chart-area-point-radius": { type: "FLOAT", unit: "px", value: 3, figmaPath: "chart-area/point-radius" },
+  },
+
+  // Stacked area chart. The area equivalent of the stacked bar: series are
+  // summed (cumulative) into layered bands rather than overlaid. It reuses the
+  // chart-area/* tokens (and Figma variables) verbatim, and — like the stacked
+  // bar — fills with the SOLID series/shade palette (bands don't overlap, so no
+  // translucency is needed). Token resolution maps it to the chart-area group.
+  "chart-stacked-area": {},
+
+  // Scatter chart. Points plotted on two numeric axes; each series is a cluster
+  // colored from the solid series/shade palette. Only one subtype-specific knob:
+  // the marker radius. Shares the chart/* axis/grid/label/legend scaffold.
+  "chart-scatter": {
+    "chart-scatter-point-radius": { type: "FLOAT", unit: "px", value: 4, figmaPath: "chart-scatter/point-radius" },
+    // Hover crosshair (cursor) color — intentionally a separate, editable color
+    // from the grid dashes so the cursor reads as a distinct reference line.
+    "chart-scatter-cursor": { type: "COLOR", semantic: "border-default", figmaPath: "chart-scatter/cursor" },
+  },
+
+  // Candlestick (OHLC) chart. Recharts has no native candlestick — it's composed
+  // from a Bar (body = open→close range) + a high→low wick via a custom shape.
+  // Colors are directional (not a series palette): bullish (close ≥ open) uses
+  // `up`, bearish uses `down`. Body/wick widths are the only sizing knobs.
+  "chart-candlestick": {
+    "chart-candlestick-up": { type: "COLOR", semantic: "feedback-success", figmaPath: "chart-candlestick/up" },
+    "chart-candlestick-down": { type: "COLOR", semantic: "feedback-error", figmaPath: "chart-candlestick/down" },
+    "chart-candlestick-body-width": { type: "FLOAT", unit: "px", value: 7, figmaPath: "chart-candlestick/body-width" },
+    "chart-candlestick-wick-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "chart-candlestick/wick-width" },
   },
 
   // Stacked bar chart. A bar-based subtype: it inherits the shared chart styling
@@ -1544,12 +1586,60 @@ export const COMPONENT_TOKENS = {
     "chart-donut-corner-radius": { type: "FLOAT", unit: "px", value: 8, figmaPath: "chart-donut/corner-radius" },
   },
 
+  // Pie chart (parts-of-a-whole). The donut variant with no hole (inner radius 0):
+  // slices are colored by the active color mode (palette/shades) from the shared
+  // series/shade ramps, with no cartesian axes/grid. Only the slice gap + corner
+  // rounding are tokenized (inner radius is fixed at 0 — that's what makes it a pie).
+  "chart-pie": {
+    "chart-pie-pad-angle": { type: "FLOAT", unit: "°", value: 0, figmaPath: "chart-pie/pad-angle" },
+    "chart-pie-corner-radius": { type: "FLOAT", unit: "px", value: 0, figmaPath: "chart-pie/corner-radius" },
+  },
+
+  // Funnel chart. Stacked trapezoid stages tapering to a point (conversion / drop-
+  // off). Stages are colored by the active color mode (palette/shades) from the
+  // shared series/shade ramps; no cartesian axes/grid. Its own tokens cover the
+  // centered value label (color + size) painted on each stage.
+  "chart-funnel": {
+    "chart-funnel-label": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "chart-funnel/label" },
+    "chart-funnel-label-font-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "chart-funnel/label-font-size" },
+  },
+
+  // Radial (gauge) chart. Concentric ring arcs, each ring a value 0–100 drawn over
+  // a muted background track. Rings are colored by the active color mode
+  // (palette/shades) from the shared series/shade ramps; no cartesian axes/grid.
+  // Its own tokens cover the track color, the rounded ring ends, and the ring gap.
+  "chart-radial": {
+    "chart-radial-track": { type: "COLOR", semantic: "border-subtle", figmaPath: "chart-radial/track" },
+    "chart-radial-corner-radius": { type: "FLOAT", unit: "px", value: 8, figmaPath: "chart-radial/corner-radius" },
+    "chart-radial-ring-gap": { type: "FLOAT", unit: "px", value: 4, figmaPath: "chart-radial/ring-gap" },
+  },
+
   // Radar (spider) chart. Shares the series/shade palette + grid/axis/label tokens
   // with the other chart subtypes; these tokens style the per-series polygons.
   "chart-radar": {
     "chart-radar-line-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "chart-radar/line-width" },
     "chart-radar-dot-radius": { type: "FLOAT", unit: "px", value: 3, figmaPath: "chart-radar/dot-radius" },
   },
+
+  // Sparkline. A compact, chrome-free trend chart (single series, no axes / grid /
+  // labels / legend) for inline use in tables, KPI cards, etc. The `style` knob
+  // (line | area | bar) lives in the preview/Figma as an instance property. It
+  // reuses the shared series-1 color (stroke/bar/end-dot) and series-opacity-1
+  // (area fill); its own tokens cover the compact height + stroke/dot/bar sizing.
+  "chart-sparkline": {
+    "chart-sparkline-height": { type: "FLOAT", unit: "px", sizes: { default: 48 }, figmaPath: "chart-sparkline/height" },
+    "chart-sparkline-line-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "chart-sparkline/line-width" },
+    "chart-sparkline-dot-radius": { type: "FLOAT", unit: "px", value: 3.5, figmaPath: "chart-sparkline/dot-radius" },
+    "chart-sparkline-bar-radius": { type: "FLOAT", unit: "px", value: 1, figmaPath: "chart-sparkline/bar-radius" },
+    "chart-sparkline-bar-gap": { type: "FLOAT", unit: "px", value: 3, figmaPath: "chart-sparkline/bar-gap" },
+  },
+
+  // Horizontal (ranked) bar chart. A bar-based subtype drawn on swapped axes
+  // (categories on Y, values on X) — the preferred form for long / text-heavy
+  // ranked category labels. Reuses the shared chart-bar-* tokens (radius/gap) and
+  // the series/shade palette; its own group is empty (resolved via the bar-based
+  // subtype path, like the stacked bar).
+  "chart-bar-horizontal": {},
 
   pill: {
     // ── COLOR TOKENS ──
@@ -2493,7 +2583,7 @@ const PLACEHOLDER_COMPONENTS = [
 // `chart-line` the Line chart, `chart-area` the Area chart. Any future
 // not-yet-built chart types go in CHART_PLACEHOLDER_COMPONENTS.
 const CHART_PLACEHOLDER_COMPONENTS = [];
-export const CHART_COMPONENTS = ["chart", "chart-line", "chart-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", ...CHART_PLACEHOLDER_COMPONENTS];
+export const CHART_COMPONENTS = ["chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", ...CHART_PLACEHOLDER_COMPONENTS];
 
 export const COMPONENT_NAMES = [
   ...new Set([
@@ -2514,11 +2604,21 @@ export const COMPONENT_DISPLAY_NAMES = {
   accordionitem: "Accordion Item",
   chart: "Bar Chart",
   "chart-line": "Line Chart",
+  "chart-time-series": "Time Series Chart",
+  "chart-time-series-dual-axis": "Time Series Dual Axis Chart",
   "chart-area": "Area Chart",
+  "chart-stacked-area": "Stacked Area Chart",
   "chart-stacked-bar": "Stacked Bar Chart",
   "chart-combo": "Combo Chart",
   "chart-donut": "Donut Chart",
   "chart-radar": "Radar Chart",
+  "chart-scatter": "Scatter Chart",
+  "chart-candlestick": "Candlestick Chart",
+  "chart-sparkline": "Sparkline",
+  "chart-bar-horizontal": "Horizontal Bar Chart",
+  "chart-pie": "Pie Chart",
+  "chart-funnel": "Funnel Chart",
+  "chart-radial": "Radial Bar Chart",
 };
 
 export function getComponentDisplayName(name) {
@@ -2548,11 +2648,21 @@ export const COMPONENT_SIZE_KEYS = {
   progress: ["default", "xs", "sm", "md", "lg", "xl"],
   chart: ["default"],
   "chart-line": ["default"],
+  "chart-time-series": ["default"],
+  "chart-time-series-dual-axis": ["default"],
   "chart-area": ["default"],
+  "chart-stacked-area": ["default"],
   "chart-stacked-bar": ["default"],
   "chart-combo": ["default"],
   "chart-donut": ["default"],
   "chart-radar": ["default"],
+  "chart-scatter": ["default"],
+  "chart-candlestick": ["default"],
+  "chart-sparkline": ["default"],
+  "chart-bar-horizontal": ["default"],
+  "chart-pie": ["default"],
+  "chart-funnel": ["default"],
+  "chart-radial": ["default"],
   pill: ["default", "xs", "sm", "md", "lg", "xl"],
   badge: ["default", "xs", "sm", "md", "lg", "xl"],
   alert: ["xs", "sm", "md", "lg", "xl"],
@@ -2587,20 +2697,20 @@ function isChartSubtype(componentName) {
 // Max number of data series each chart subtype can render. Series colors beyond
 // this limit are hidden from the subtype's editor panel. Line/Area support up to
 // 4 series; the Bar chart (no entry) keeps the full 6-color palette.
-const CHART_SERIES_LIMIT = { "chart-line": 4, "chart-area": 2, "chart-stacked-bar": 4, "chart-combo": 2, "chart-donut": 6, "chart-radar": 4 };
+const CHART_SERIES_LIMIT = { "chart-line": 4, "chart-time-series": 4, "chart-time-series-dual-axis": 2, "chart-area": 2, "chart-stacked-area": 4, "chart-stacked-bar": 4, "chart-combo": 2, "chart-donut": 6, "chart-radar": 4, "chart-scatter": 4, "chart-candlestick": 0, "chart-sparkline": 1, "chart-pie": 6, "chart-funnel": 6, "chart-radial": 6 };
 
 // Subtypes that render bars (and therefore keep the chart-bar-* tokens). Line and
 // area subtypes drop those bar-specific tokens.
-const BAR_BASED_CHART_SUBTYPES = ["chart-stacked-bar", "chart-combo"];
+const BAR_BASED_CHART_SUBTYPES = ["chart-stacked-bar", "chart-combo", "chart-bar-horizontal"];
 
 // Subtypes with no cartesian axes/grid (e.g. donut). Their editor should not show
 // the shared axis/grid styling tokens, since nothing renders them.
-const AXIS_FREE_CHART_SUBTYPES = ["chart-donut"];
+const AXIS_FREE_CHART_SUBTYPES = ["chart-donut", "chart-pie", "chart-funnel", "chart-radial"];
 
 // Subtypes that paint translucent filled regions and therefore expose the
 // chart-series-opacity-N palette (in addition to the solid chart-series-N used
 // for their outlines). All other charts hide the opacity palette entirely.
-const OPACITY_SERIES_CHART_SUBTYPES = ["chart-area", "chart-radar"];
+const OPACITY_SERIES_CHART_SUBTYPES = ["chart-area", "chart-stacked-area", "chart-radar", "chart-sparkline"];
 
 function sharedChartTokens(componentName) {
   const chart = COMPONENT_TOKENS.chart || {};
@@ -2608,8 +2718,15 @@ function sharedChartTokens(componentName) {
   const isBarBased = BAR_BASED_CHART_SUBTYPES.includes(componentName);
   const isAxisFree = AXIS_FREE_CHART_SUBTYPES.includes(componentName);
   const allowsOpacitySeries = OPACITY_SERIES_CHART_SUBTYPES.includes(componentName);
+  // The sparkline is chrome-free: it pulls only the single series color + its
+  // translucent fill from the shared chart group (plus width/padding). All other
+  // shared tokens (axis/grid/label/legend/shade/bar/height/font) are hidden, since
+  // its compact sizing lives in the chart-sparkline group.
+  const isSparkline = componentName === "chart-sparkline";
+  const SPARKLINE_SHARED_KEEP = ["chart-series-1", "chart-series-opacity-1", "chart-width", "chart-padding"];
   return Object.fromEntries(
     Object.entries(chart).filter(([name, def]) => {
+      if (isSparkline) return SPARKLINE_SHARED_KEEP.indexOf(name) !== -1;
       // Bar-specific tokens only apply to the bar + bar-based subtypes.
       if (name.startsWith("chart-bar") && !isBarBased) return false;
       // Axis/grid styling only applies to cartesian charts.
@@ -2629,13 +2746,32 @@ function sharedChartTokens(componentName) {
 // Per-series line styling (dash/curve) only applies to line-based charts. Strip
 // these `lineOnly` tokens from every other chart (e.g. the bar chart).
 function filterLineOnly(tokens, componentName) {
-  if (componentName === "chart-line") return tokens;
+  // Time series (and its dual-axis variant) are line variants, so they keep the
+  // per-series style/curve tokens.
+  if (
+    componentName === "chart-line" ||
+    componentName === "chart-time-series" ||
+    componentName === "chart-time-series-dual-axis"
+  )
+    return tokens;
   return Object.fromEntries(
     Object.entries(tokens).filter(([, def]) => !def.lineOnly)
   );
 }
 
 function resolveComponentTokenSet(componentName) {
+  if (componentName === "chart-time-series" || componentName === "chart-time-series-dual-axis") {
+    // Time series (and the dual-axis variant) share the line chart's tokens (and
+    // Figma variables) exactly: their own group is empty, so we merge in chart-line.
+    const merged = { ...sharedChartTokens(componentName), ...(COMPONENT_TOKENS["chart-line"] || {}) };
+    return filterLineOnly(merged, componentName);
+  }
+  if (componentName === "chart-stacked-area") {
+    // Stacked area shares the area chart's tokens (and Figma variables): its own
+    // group is empty, so we merge in chart-area (line-width, point-radius).
+    const merged = { ...sharedChartTokens(componentName), ...(COMPONENT_TOKENS["chart-area"] || {}) };
+    return filterLineOnly(merged, componentName);
+  }
   if (isChartSubtype(componentName)) {
     const merged = { ...sharedChartTokens(componentName), ...(COMPONENT_TOKENS[componentName] || {}) };
     return filterLineOnly(merged, componentName);

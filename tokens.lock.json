@@ -3896,9 +3896,9 @@
           "opacity": 100
         },
         "chart-axis": {
-          "color": "steel",
-          "index": 7,
-          "opacity": 100
+          "color": "transparent",
+          "index": 0,
+          "opacity": 0
         },
         "chart-grid": {
           "color": "steel",
@@ -7981,6 +7981,16 @@
           "color": "transparent",
           "index": 0,
           "opacity": 0
+        },
+        "chart-radial-track": {
+          "color": "steel",
+          "index": 8,
+          "opacity": 100
+        },
+        "chart-series-1": {
+          "color": "blue",
+          "index": 5,
+          "opacity": 100
         }
       },
       "semanticRadiusMap": {
@@ -8717,6 +8727,9 @@
         },
         "tabs-outlined-list-gap": {
           "_value": 0
+        },
+        "chart-grid-style": {
+          "_value": "dashed"
         }
       },
       "componentOverridesDark": {
@@ -10989,6 +11002,46 @@
           "color": "slate-purple",
           "index": 9,
           "opacity": 100
+        },
+        "chart-axis": {
+          "color": "transparent",
+          "index": 0,
+          "opacity": 0
+        },
+        "chart-grid": {
+          "color": "slate-purple",
+          "index": 1,
+          "opacity": 100
+        },
+        "chart-series-opacity-1": {
+          "color": "green",
+          "index": 6,
+          "opacity": 10
+        },
+        "chart-series-opacity-2": {
+          "color": "blue",
+          "index": 5,
+          "opacity": 10
+        },
+        "chart-shade-opacity-1": {
+          "color": "green",
+          "index": 7,
+          "opacity": 11
+        },
+        "chart-shade-opacity-2": {
+          "color": "green",
+          "index": 5,
+          "opacity": 10
+        },
+        "chart-shade-2": {
+          "color": "green",
+          "index": 5,
+          "opacity": 100
+        },
+        "chart-shade-1": {
+          "color": "green",
+          "index": 7,
+          "opacity": 100
         }
       },
       "componentOverrides": {
@@ -13018,7 +13071,7 @@
         "chart-series-opacity-1": {
           "color": "green",
           "index": 6,
-          "opacity": 20
+          "opacity": 10
         },
         "chart-series-2": {
           "color": "blue",
@@ -13028,7 +13081,7 @@
         "chart-series-opacity-2": {
           "color": "blue",
           "index": 6,
-          "opacity": 20
+          "opacity": 10
         },
         "calendar-day-outside-text": {
           "color": "slate-purple",
@@ -13234,6 +13287,36 @@
           "color": "slate-purple",
           "index": 1,
           "opacity": 100
+        },
+        "chart-grid": {
+          "color": "slate-purple",
+          "index": 1,
+          "opacity": 100
+        },
+        "chart-axis": {
+          "color": "transparent",
+          "index": 0,
+          "opacity": 0
+        },
+        "chart-shade-1": {
+          "color": "green",
+          "index": 7,
+          "opacity": 100
+        },
+        "chart-shade-2": {
+          "color": "green",
+          "index": 5,
+          "opacity": 100
+        },
+        "chart-shade-opacity-1": {
+          "color": "green",
+          "index": 7,
+          "opacity": 10
+        },
+        "chart-shade-opacity-2": {
+          "color": "green",
+          "index": 5,
+          "opacity": 10
         }
       },
       "semanticRadiusMap": {
@@ -33510,11 +33593,11 @@
         "chart/series-1": {
           "type": "COLOR",
           "value": "#006CD7FF",
-          "alias": "interactive-primary",
+          "alias": null,
           "primitiveAlias": "blue/5",
           "light": {
             "value": "#006CD7FF",
-            "alias": "interactive-primary",
+            "alias": null,
             "primitiveAlias": "blue/5",
             "gradientSpec": null
           },
@@ -33981,9 +34064,9 @@
             "gradientSpec": null
           },
           "dark": {
-            "value": "#393C56FF",
+            "value": "transparent",
             "alias": null,
-            "primitiveAlias": "steel/7",
+            "primitiveAlias": "transparent",
             "gradientSpec": null
           }
         },
@@ -34128,6 +34211,75 @@
           "value": 3,
           "alias": null
         },
+        "chart-scatter/point-radius": {
+          "type": "FLOAT",
+          "value": 4,
+          "alias": "spacing/4"
+        },
+        "chart-scatter/cursor": {
+          "type": "COLOR",
+          "value": "#393C56FF",
+          "alias": "border-default",
+          "primitiveAlias": "steel/7",
+          "light": {
+            "value": "#393C56FF",
+            "alias": "border-default",
+            "primitiveAlias": "steel/7",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#808080FF",
+            "alias": "border-default",
+            "primitiveAlias": "neutral/6",
+            "gradientSpec": null
+          }
+        },
+        "chart-candlestick/up": {
+          "type": "COLOR",
+          "value": "#1CC86BFF",
+          "alias": "feedback-success",
+          "primitiveAlias": "green/5",
+          "light": {
+            "value": "#1CC86BFF",
+            "alias": "feedback-success",
+            "primitiveAlias": "green/5",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#1CC86BFF",
+            "alias": "feedback-success",
+            "primitiveAlias": "green/5",
+            "gradientSpec": null
+          }
+        },
+        "chart-candlestick/down": {
+          "type": "COLOR",
+          "value": "#F75349FF",
+          "alias": "feedback-error",
+          "primitiveAlias": "red/5",
+          "light": {
+            "value": "#F75349FF",
+            "alias": "feedback-error",
+            "primitiveAlias": "red/5",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#F75349FF",
+            "alias": "feedback-error",
+            "primitiveAlias": "red/5",
+            "gradientSpec": null
+          }
+        },
+        "chart-candlestick/body-width": {
+          "type": "FLOAT",
+          "value": 7,
+          "alias": "spacing/7"
+        },
+        "chart-candlestick/wick-width": {
+          "type": "FLOAT",
+          "value": 1,
+          "alias": null
+        },
         "chart-combo/line-width": {
           "type": "FLOAT",
           "value": 2,
@@ -34168,12 +34320,98 @@
           "value": 8,
           "alias": "spacing/8"
         },
+        "chart-pie/pad-angle": {
+          "type": "FLOAT",
+          "value": 0,
+          "alias": null
+        },
+        "chart-pie/corner-radius": {
+          "type": "FLOAT",
+          "value": 0,
+          "alias": null
+        },
+        "chart-funnel/label": {
+          "type": "COLOR",
+          "value": "#FFFFFFFF",
+          "alias": "text-on-interactive",
+          "primitiveAlias": "neutral/0",
+          "light": {
+            "value": "#FFFFFFFF",
+            "alias": "text-on-interactive",
+            "primitiveAlias": "neutral/0",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#FFFFFFFF",
+            "alias": "text-on-interactive",
+            "primitiveAlias": "neutral/0",
+            "gradientSpec": null
+          }
+        },
+        "chart-funnel/label-font-size": {
+          "type": "FLOAT",
+          "value": 14,
+          "alias": "font-size-14"
+        },
+        "chart-radial/track": {
+          "type": "COLOR",
+          "value": "#24263CFF",
+          "alias": null,
+          "primitiveAlias": "steel/8",
+          "light": {
+            "value": "#24263CFF",
+            "alias": null,
+            "primitiveAlias": "steel/8",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#4D4D4DFF",
+            "alias": "border-subtle",
+            "primitiveAlias": "neutral/7",
+            "gradientSpec": null
+          }
+        },
+        "chart-radial/corner-radius": {
+          "type": "FLOAT",
+          "value": 8,
+          "alias": "spacing/8"
+        },
+        "chart-radial/ring-gap": {
+          "type": "FLOAT",
+          "value": 4,
+          "alias": "spacing/4"
+        },
         "chart-radar/line-width": {
           "type": "FLOAT",
           "value": 2,
           "alias": "spacing/2"
         },
         "chart-radar/dot-radius": {
+          "type": "FLOAT",
+          "value": 3,
+          "alias": null
+        },
+        "chart-sparkline/height-default": {
+          "type": "FLOAT",
+          "value": 48,
+          "alias": "spacing/48"
+        },
+        "chart-sparkline/line-width": {
+          "type": "FLOAT",
+          "value": 2,
+          "alias": "spacing/2"
+        },
+        "chart-sparkline/dot-radius": {
+          "type": "FLOAT",
+          "value": 3.5,
+          "alias": null
+        },
+        "chart-sparkline/bar-radius": {
+          "type": "FLOAT",
+          "value": 1,
+          "alias": null
+        },
+        "chart-sparkline/bar-gap": {
           "type": "FLOAT",
           "value": 3,
           "alias": null
@@ -61021,37 +61259,37 @@
         },
         "chart/series-opacity-1": {
           "type": "COLOR",
-          "value": "#25A72C33",
+          "value": "#25A72C1A",
           "alias": null,
           "primitiveAlias": null,
           "light": {
-            "value": "#25A72C33",
+            "value": "#25A72C1A",
             "alias": null,
             "primitiveAlias": null,
             "gradientSpec": null
           },
           "dark": {
-            "value": "#25A72CFF",
-            "alias": "interactive-primary",
-            "primitiveAlias": "green/6",
+            "value": "#25A72C1A",
+            "alias": null,
+            "primitiveAlias": null,
             "gradientSpec": null
           }
         },
         "chart/series-opacity-2": {
           "type": "COLOR",
-          "value": "#2483F833",
+          "value": "#2483F81A",
           "alias": null,
           "primitiveAlias": null,
           "light": {
-            "value": "#2483F833",
+            "value": "#2483F81A",
             "alias": null,
             "primitiveAlias": null,
             "gradientSpec": null
           },
           "dark": {
-            "value": "#509CF9FF",
+            "value": "#509CF91A",
             "alias": null,
-            "primitiveAlias": "blue/5",
+            "primitiveAlias": null,
             "gradientSpec": null
           }
         },
@@ -61129,24 +61367,6 @@
         },
         "chart/shade-1": {
           "type": "COLOR",
-          "value": "#0D5211FF",
-          "alias": null,
-          "primitiveAlias": "green/8",
-          "light": {
-            "value": "#0D5211FF",
-            "alias": null,
-            "primitiveAlias": "green/8",
-            "gradientSpec": null
-          },
-          "dark": {
-            "value": "#0D5211FF",
-            "alias": null,
-            "primitiveAlias": "green/8",
-            "gradientSpec": null
-          }
-        },
-        "chart/shade-2": {
-          "type": "COLOR",
           "value": "#197B1EFF",
           "alias": null,
           "primitiveAlias": "green/7",
@@ -61160,6 +61380,24 @@
             "value": "#197B1EFF",
             "alias": null,
             "primitiveAlias": "green/7",
+            "gradientSpec": null
+          }
+        },
+        "chart/shade-2": {
+          "type": "COLOR",
+          "value": "#5FB95EFF",
+          "alias": null,
+          "primitiveAlias": "green/5",
+          "light": {
+            "value": "#5FB95EFF",
+            "alias": null,
+            "primitiveAlias": "green/5",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#5FB95EFF",
+            "alias": null,
+            "primitiveAlias": "green/5",
             "gradientSpec": null
           }
         },
@@ -61237,37 +61475,37 @@
         },
         "chart/shade-opacity-1": {
           "type": "COLOR",
-          "value": "#0D5211FF",
+          "value": "#197B1E1A",
           "alias": null,
-          "primitiveAlias": "green/8",
+          "primitiveAlias": null,
           "light": {
-            "value": "#0D5211FF",
+            "value": "#197B1E1A",
             "alias": null,
-            "primitiveAlias": "green/8",
+            "primitiveAlias": null,
             "gradientSpec": null
           },
           "dark": {
-            "value": "#0D5211FF",
+            "value": "#197B1E1C",
             "alias": null,
-            "primitiveAlias": "green/8",
+            "primitiveAlias": null,
             "gradientSpec": null
           }
         },
         "chart/shade-opacity-2": {
           "type": "COLOR",
-          "value": "#197B1EFF",
+          "value": "#5FB95E1A",
           "alias": null,
-          "primitiveAlias": "green/7",
+          "primitiveAlias": null,
           "light": {
-            "value": "#197B1EFF",
+            "value": "#5FB95E1A",
             "alias": null,
-            "primitiveAlias": "green/7",
+            "primitiveAlias": null,
             "gradientSpec": null
           },
           "dark": {
-            "value": "#197B1EFF",
+            "value": "#5FB95E1A",
             "alias": null,
-            "primitiveAlias": "green/7",
+            "primitiveAlias": null,
             "gradientSpec": null
           }
         },
@@ -61375,37 +61613,37 @@
         },
         "chart/axis": {
           "type": "COLOR",
-          "value": "#CCCCCCFF",
-          "alias": "border-default",
-          "primitiveAlias": "neutral/3",
+          "value": "transparent",
+          "alias": null,
+          "primitiveAlias": "transparent",
           "light": {
-            "value": "#CCCCCCFF",
-            "alias": "border-default",
-            "primitiveAlias": "neutral/3",
+            "value": "transparent",
+            "alias": null,
+            "primitiveAlias": "transparent",
             "gradientSpec": null
           },
           "dark": {
-            "value": "#808080FF",
-            "alias": "border-default",
-            "primitiveAlias": "neutral/6",
+            "value": "transparent",
+            "alias": null,
+            "primitiveAlias": "transparent",
             "gradientSpec": null
           }
         },
         "chart/grid": {
           "type": "COLOR",
-          "value": "#E5E5E5FF",
-          "alias": "border-subtle",
-          "primitiveAlias": "neutral/2",
+          "value": "#E8E7EBFF",
+          "alias": null,
+          "primitiveAlias": "slate-purple/1",
           "light": {
-            "value": "#E5E5E5FF",
-            "alias": "border-subtle",
-            "primitiveAlias": "neutral/2",
+            "value": "#E8E7EBFF",
+            "alias": null,
+            "primitiveAlias": "slate-purple/1",
             "gradientSpec": null
           },
           "dark": {
-            "value": "#4D4D4DFF",
-            "alias": "border-subtle",
-            "primitiveAlias": "neutral/7",
+            "value": "#E8E7EBFF",
+            "alias": null,
+            "primitiveAlias": "slate-purple/1",
             "gradientSpec": null
           }
         },
@@ -61494,7 +61732,7 @@
         },
         "chart/grid-style": {
           "type": "STRING",
-          "value": "solid",
+          "value": "dashed",
           "alias": null
         },
         "chart/line-curve": {
@@ -61530,6 +61768,75 @@
         "chart-area/point-radius": {
           "type": "FLOAT",
           "value": 3,
+          "alias": null
+        },
+        "chart-scatter/point-radius": {
+          "type": "FLOAT",
+          "value": 4,
+          "alias": "spacing/4"
+        },
+        "chart-scatter/cursor": {
+          "type": "COLOR",
+          "value": "#CCCCCCFF",
+          "alias": "border-default",
+          "primitiveAlias": "neutral/3",
+          "light": {
+            "value": "#CCCCCCFF",
+            "alias": "border-default",
+            "primitiveAlias": "neutral/3",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#808080FF",
+            "alias": "border-default",
+            "primitiveAlias": "neutral/6",
+            "gradientSpec": null
+          }
+        },
+        "chart-candlestick/up": {
+          "type": "COLOR",
+          "value": "#5FB95EFF",
+          "alias": "feedback-success",
+          "primitiveAlias": "green/5",
+          "light": {
+            "value": "#5FB95EFF",
+            "alias": "feedback-success",
+            "primitiveAlias": "green/5",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#5FB95EFF",
+            "alias": "feedback-success",
+            "primitiveAlias": "green/5",
+            "gradientSpec": null
+          }
+        },
+        "chart-candlestick/down": {
+          "type": "COLOR",
+          "value": "#FF6868FF",
+          "alias": "feedback-error",
+          "primitiveAlias": "red/5",
+          "light": {
+            "value": "#FF6868FF",
+            "alias": "feedback-error",
+            "primitiveAlias": "red/5",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#FF6868FF",
+            "alias": "feedback-error",
+            "primitiveAlias": "red/5",
+            "gradientSpec": null
+          }
+        },
+        "chart-candlestick/body-width": {
+          "type": "FLOAT",
+          "value": 7,
+          "alias": "spacing/7"
+        },
+        "chart-candlestick/wick-width": {
+          "type": "FLOAT",
+          "value": 1,
           "alias": null
         },
         "chart-combo/line-width": {
@@ -61572,12 +61879,98 @@
           "value": 6,
           "alias": "spacing/6"
         },
+        "chart-pie/pad-angle": {
+          "type": "FLOAT",
+          "value": 0,
+          "alias": null
+        },
+        "chart-pie/corner-radius": {
+          "type": "FLOAT",
+          "value": 0,
+          "alias": null
+        },
+        "chart-funnel/label": {
+          "type": "COLOR",
+          "value": "#FFFFFFFF",
+          "alias": "text-on-interactive",
+          "primitiveAlias": "neutral/0",
+          "light": {
+            "value": "#FFFFFFFF",
+            "alias": "text-on-interactive",
+            "primitiveAlias": "neutral/0",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#FFFFFFFF",
+            "alias": "text-on-interactive",
+            "primitiveAlias": "neutral/0",
+            "gradientSpec": null
+          }
+        },
+        "chart-funnel/label-font-size": {
+          "type": "FLOAT",
+          "value": 14,
+          "alias": "font-size-14"
+        },
+        "chart-radial/track": {
+          "type": "COLOR",
+          "value": "#E5E5E5FF",
+          "alias": "border-subtle",
+          "primitiveAlias": "neutral/2",
+          "light": {
+            "value": "#E5E5E5FF",
+            "alias": "border-subtle",
+            "primitiveAlias": "neutral/2",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#4D4D4DFF",
+            "alias": "border-subtle",
+            "primitiveAlias": "neutral/7",
+            "gradientSpec": null
+          }
+        },
+        "chart-radial/corner-radius": {
+          "type": "FLOAT",
+          "value": 8,
+          "alias": "spacing/8"
+        },
+        "chart-radial/ring-gap": {
+          "type": "FLOAT",
+          "value": 4,
+          "alias": "spacing/4"
+        },
         "chart-radar/line-width": {
           "type": "FLOAT",
           "value": 2,
           "alias": "spacing/2"
         },
         "chart-radar/dot-radius": {
+          "type": "FLOAT",
+          "value": 3,
+          "alias": null
+        },
+        "chart-sparkline/height-default": {
+          "type": "FLOAT",
+          "value": 48,
+          "alias": "spacing/48"
+        },
+        "chart-sparkline/line-width": {
+          "type": "FLOAT",
+          "value": 2,
+          "alias": "spacing/2"
+        },
+        "chart-sparkline/dot-radius": {
+          "type": "FLOAT",
+          "value": 3.5,
+          "alias": null
+        },
+        "chart-sparkline/bar-radius": {
+          "type": "FLOAT",
+          "value": 1,
+          "alias": null
+        },
+        "chart-sparkline/bar-gap": {
           "type": "FLOAT",
           "value": 3,
           "alias": null
