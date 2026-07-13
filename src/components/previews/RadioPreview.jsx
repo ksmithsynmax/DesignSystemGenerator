@@ -86,6 +86,9 @@ export default function RadioPreview({
         root: {
           opacity: 1,
         },
+        body: {
+          alignItems: "center",
+        },
         radio: {
           backgroundColor: checked && variant !== "outline" ? undefined : uncheckedBg,
           borderColor: checked && variant !== "outline" ? "transparent" : borderColor,
@@ -93,6 +96,11 @@ export default function RadioPreview({
           opacity: 1,
         },
         icon: {
+          // Force the dot color from the resolved icon-color token. Mantine's
+          // outline variant otherwise overrides --radio-icon-color with
+          // --radio-color (the accent), which diverges from the Figma docs.
+          color: radioIconColor,
+          fill: radioIconColor,
           opacity: checked ? 1 : 0,
         },
         label: {

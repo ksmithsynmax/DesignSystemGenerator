@@ -101,6 +101,9 @@ export default function CheckboxPreview({
         root: {
           opacity: 1,
         },
+        body: {
+          alignItems: "center",
+        },
         input: {
           backgroundColor: bg,
           borderColor: bd,

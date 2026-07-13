@@ -912,16 +912,16 @@ export const COMPONENT_TOKENS = {
     "slider-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "slider/focus-ring" },
 
     // ── FLOAT TOKENS (size variants) ──
-    "slider-track-height": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 }, figmaPath: "slider/track-height" },
-    "slider-thumb-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 }, figmaPath: "slider/thumb-size" },
-    "slider-mark-label-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "slider/mark-label-font-size" },
+    "slider-track-height": { type: "FLOAT", unit: "px", sizes: { default: 6, xs: 2, sm: 4, md: 6, lg: 8, xl: 10 }, figmaPath: "slider/track-height" },
+    "slider-thumb-size": { type: "FLOAT", unit: "px", sizes: { default: 16, xs: 12, sm: 14, md: 16, lg: 20, xl: 24 }, figmaPath: "slider/thumb-size" },
+    "slider-mark-label-font-size": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "slider/mark-label-font-size" },
     "slider-mark-label-font-family": { type: "STRING", value: "Inter", figmaPath: "slider/mark-label-font-family" },
     "slider-mark-label-font-weight": { type: "STRING", value: "Regular", figmaPath: "slider/mark-label-font-weight" },
-    "slider-mark-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "slider/mark-label-line-height" },
-    "slider-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "slider/radius" },
+    "slider-mark-label-line-height": { type: "FLOAT", unit: "px", sizes: { default: 16, xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "slider/mark-label-line-height" },
+    "slider-radius": { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "slider/radius" },
 
     // ── FLOAT TOKENS (single value) ──
-    "slider-thumb-border-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "slider/thumb-border-width" },
+    "slider-thumb-border-width": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1.5, sm: 1.75, md: 2, lg: 2.5, xl: 3 }, figmaPath: "slider/thumb-border-width" },
     "slider-mark-size": { type: "FLOAT", unit: "px", value: 8, figmaPath: "slider/mark-size" },
   },
 
@@ -952,16 +952,16 @@ export const COMPONENT_TOKENS = {
     "rangeslider-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "rangeslider/focus-ring" },
 
     // ── FLOAT TOKENS (size variants) ──
-    "rangeslider-track-height": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 }, figmaPath: "rangeslider/track-height" },
-    "rangeslider-thumb-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 20, xl: 24 }, figmaPath: "rangeslider/thumb-size" },
-    "rangeslider-mark-label-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "rangeslider/mark-label-font-size" },
+    "rangeslider-track-height": { type: "FLOAT", unit: "px", sizes: { default: 6, xs: 2, sm: 4, md: 6, lg: 8, xl: 10 }, figmaPath: "rangeslider/track-height" },
+    "rangeslider-thumb-size": { type: "FLOAT", unit: "px", sizes: { default: 16, xs: 12, sm: 14, md: 16, lg: 20, xl: 24 }, figmaPath: "rangeslider/thumb-size" },
+    "rangeslider-mark-label-font-size": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 10, sm: 11, md: 12, lg: 13, xl: 14 }, figmaPath: "rangeslider/mark-label-font-size" },
     "rangeslider-mark-label-font-family": { type: "STRING", value: "Inter", figmaPath: "rangeslider/mark-label-font-family" },
     "rangeslider-mark-label-font-weight": { type: "STRING", value: "Regular", figmaPath: "rangeslider/mark-label-font-weight" },
-    "rangeslider-mark-label-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "rangeslider/mark-label-line-height" },
+    "rangeslider-mark-label-line-height": { type: "FLOAT", unit: "px", sizes: { default: 16, xs: 14, sm: 14, md: 16, lg: 16, xl: 20 }, figmaPath: "rangeslider/mark-label-line-height" },
     "rangeslider-radius": { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "rangeslider/radius" },
 
     // ── FLOAT TOKENS (single value) ──
-    "rangeslider-thumb-border-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "rangeslider/thumb-border-width" },
+    "rangeslider-thumb-border-width": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1.5, sm: 1.75, md: 2, lg: 2.5, xl: 3 }, figmaPath: "rangeslider/thumb-border-width" },
     "rangeslider-mark-size": { type: "FLOAT", unit: "px", value: 8, figmaPath: "rangeslider/mark-size" },
   },
 
@@ -1658,6 +1658,7 @@ export const COMPONENT_TOKENS = {
     "pill-radius": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8, sm: 10, md: 12, lg: 14, xl: 18 }, figmaPath: "pill/radius" },
     "pill-gap": { type: "FLOAT", unit: "px", sizes: { default: 6, xs: 4, sm: 5, md: 6, lg: 7, xl: 8 }, figmaPath: "pill/gap" },
     "pill-remove-size": { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 12, sm: 13, md: 14, lg: 16, xl: 18 }, figmaPath: "pill/remove-size" },
+    "pill-remove-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, figmaPath: "pill/remove-icon-stroke-width" },
 
     // ── FLOAT TOKENS (single value) ──
     "pill-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "pill/border-width" },
@@ -2252,6 +2253,7 @@ export const COMPONENT_TOKENS = {
     "multiselect-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, figmaPath: "multiselect/icon-stroke-width" },
     "multiselect-pill-font-size": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 10, sm: 12, md: 14, lg: 16, xl: 18 }, figmaPath: "multiselect/pill-font-size" },
     "multiselect-pill-gap":       { type: "FLOAT", unit: "px", value: 4, figmaPath: "multiselect/pill-gap" },
+    "multiselect-pill-remove-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, figmaPath: "multiselect/pill-remove-icon-stroke-width" },
 
     // ── FLOAT TOKENS (radius variants: default, xs, sm, md, lg, xl — independent from size) ──
     "multiselect-radius": { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "multiselect/radius" },
@@ -2639,8 +2641,8 @@ export const COMPONENT_SIZE_KEYS = {
   checkbox: ["xs", "sm", "md", "lg", "xl"],
   radio: ["xs", "sm", "md", "lg", "xl"],
   chip: ["default", "xs", "sm", "md", "lg", "xl"],
-  slider: ["xs", "sm", "md", "lg", "xl"],
-  rangeslider: ["xs", "sm", "md", "lg", "xl"],
+  slider: ["default", "xs", "sm", "md", "lg", "xl"],
+  rangeslider: ["default", "xs", "sm", "md", "lg", "xl"],
   card: ["default", "xs", "sm", "md", "lg", "xl"],
   notification: ["default", "xs", "sm", "md", "lg", "xl"],
   tooltip: [],

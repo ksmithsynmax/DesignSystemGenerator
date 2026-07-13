@@ -44,7 +44,7 @@ export default function RangeSliderPreview({
   const labelFontWeight = resolveDimension(brands, brandId, "rangeslider-mark-label-font-weight");
   const labelLineHeight = resolveDimension(brands, brandId, "rangeslider-mark-label-line-height", size);
   const sliderRadius = resolveDimension(brands, brandId, "rangeslider-radius", radius);
-  const thumbBorderWidth = resolveDimension(brands, brandId, "rangeslider-thumb-border-width");
+  const thumbBorderWidth = resolveDimension(brands, brandId, "rangeslider-thumb-border-width", size);
   const markSize = resolveDimension(brands, brandId, "rangeslider-mark-size");
 
   const marks = showMarks

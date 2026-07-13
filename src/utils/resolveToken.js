@@ -334,6 +334,16 @@ export function resolveColor(brands, brandId, semanticKey, theme = "light", comp
   return mappingToHex(brand, mapping);
 }
 
+// The checkbox check/minus glyph is sized as a proportion of the box, so
+// shrinking `checkbox-size` automatically shrinks the icon to match. Derived
+// from the historical md default (box 20 → icon 14 = 0.7).
+export const CHECKBOX_ICON_SIZE_RATIO = 0.7;
+
+// The radio inner dot is sized as a proportion of the control, so resizing
+// `radio-size` keeps the dot visually constant. Derived from the historical
+// md default (radio 24 → dot 10 ≈ 0.42).
+export const RADIO_ICON_SIZE_RATIO = 0.42;
+
 export function resolveDimension(brands, brandId, tokenName, size) {
   const brand = brands[brandId];
   const tokenDef = findTokenDef(tokenName);
@@ -345,9 +355,28 @@ export function resolveDimension(brands, brandId, tokenName, size) {
       ? (getDefaultSizeKey(brands, brandId, tokenName) || (hasExplicitDefaultSize ? "default" : fallbackSizeKey))
       : size;
 
-  // Check brand overrides first
+  // Check brand overrides first — an explicit icon-size override still wins,
+  // so designers can opt out of the auto-scaling for a specific size.
   if (effectiveSize && brand.dimensionOverrides?.[tokenName]?.[effectiveSize] !== undefined) {
     return brand.dimensionOverrides[tokenName][effectiveSize];
+  }
+
+  // Derive the checkbox icon size from the (override-aware) box size so it
+  // always scales proportionally with `checkbox-size`.
+  if (tokenName === "checkbox-icon-size") {
+    const boxSize = resolveDimension(brands, brandId, "checkbox-size", size);
+    if (typeof boxSize === "number" && Number.isFinite(boxSize)) {
+      return Math.round(boxSize * CHECKBOX_ICON_SIZE_RATIO * 100) / 100;
+    }
+  }
+
+  // Derive the radio dot size from the (override-aware) control size so it
+  // always scales proportionally with `radio-size`.
+  if (tokenName === "radio-icon-size") {
+    const controlSize = resolveDimension(brands, brandId, "radio-size", size);
+    if (typeof controlSize === "number" && Number.isFinite(controlSize)) {
+      return Math.round(controlSize * RADIO_ICON_SIZE_RATIO * 100) / 100;
+    }
   }
 
   // Size-variant token

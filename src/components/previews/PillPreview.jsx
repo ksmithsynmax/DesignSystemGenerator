@@ -34,6 +34,7 @@ export default function PillPreview({
   const radius = resolveSizedToken("pill-radius", sizeKey);
   const gap = resolveSizedToken("pill-gap", sizeKey);
   const removeSize = resolveSizedToken("pill-remove-size", sizeKey);
+  const removeStrokeWidth = resolveSizedToken("pill-remove-icon-stroke-width", sizeKey);
   const computedMinHeight = Math.max(
     0,
     (lineHeight || fontSize || 12) + (paddingY || 0) * 2 + (borderWidth || 0) * 2
@@ -89,6 +90,7 @@ export default function PillPreview({
           "& svg": {
             width: removeSize ? `${removeSize}px` : undefined,
             height: removeSize ? `${removeSize}px` : undefined,
+            strokeWidth: removeStrokeWidth ?? undefined,
           },
         },
       }}

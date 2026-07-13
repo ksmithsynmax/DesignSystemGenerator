@@ -991,7 +991,6 @@ export default function App() {
   // Sync active size when component changes
   const handleComponentChange = useCallback((newComp) => {
     setActiveComponent(newComp);
-    if (newComp !== "accordion") setActiveAccordionNavItem("accordion");
     setActiveColorToken(null);
     setActiveDimensionToken(null);
     if (newComp === "button") {

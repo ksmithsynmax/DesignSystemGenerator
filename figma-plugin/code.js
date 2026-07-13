@@ -2957,23 +2957,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var templateRadii = getPropValues(variantProps, "Radius");
       var templateOrderedRadiiAll = pickOrdered(templateRadii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
       var templateOrderedSizes = templateOrderedSizesAll.slice();
-      if (templateOrderedSizes.length > 1 && lowerSetName !== "badge") {
+      if (templateOrderedSizes.length > 1) {
         templateOrderedSizes = templateOrderedSizes.filter(function (s) { return String(s).toLowerCase() !== "default"; });
-      }
-      if (lowerSetName === "badge" && templateOrderedSizes.length > 1) {
-        var templateDefaultSizeIdx = -1;
-        var templateMdSizeIdx = -1;
-        for (var tsi = 0; tsi < templateOrderedSizes.length; tsi++) {
-          var templateSizeName = String(templateOrderedSizes[tsi] || "").toLowerCase();
-          if (templateSizeName === "default") templateDefaultSizeIdx = tsi;
-          if (templateSizeName === "md") templateMdSizeIdx = tsi;
-        }
-        if (templateDefaultSizeIdx >= 0 && templateMdSizeIdx >= 0 && templateDefaultSizeIdx !== templateMdSizeIdx + 1) {
-          var templateDefaultSizeValue = templateOrderedSizes[templateDefaultSizeIdx];
-          templateOrderedSizes.splice(templateDefaultSizeIdx, 1);
-          if (templateDefaultSizeIdx < templateMdSizeIdx) templateMdSizeIdx -= 1;
-          templateOrderedSizes.splice(templateMdSizeIdx + 1, 0, templateDefaultSizeValue);
-        }
       }
 
       var templateDefaultVariant = templateOrderedVariants.length > 0 ? templateOrderedVariants[0] : null;
@@ -3375,7 +3360,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (stackSizeRows && templateSizeSlot.layoutMode === "VERTICAL") {
             templateSizeSlot.counterAxisAlignItems = "CENTER";
           }
-          if (lowerSetName === "switch") {
+          if (lowerSetName === "switch" || lowerSetName === "pill") {
             templateSizeSlot.fills = [];
             templateSizeSlot.strokes = [];
             templateSizeSlot.strokeWeight = 0;
@@ -3469,6 +3454,26 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             addInstancesRow(templateSwitchSizeOnPanel, "Checked On", templateOrderedSizes, function (sizeName) {
               return makeTemplateInstance({ Size: sizeName, Checked: templateCheckedOn });
             }, true, { font: mediumFont, size: 14 });
+          } else if (lowerSetName === "pill") {
+            // Pills are optionally removable, so document both states in their own
+            // cards (same pattern as Switch's Checked Off/On).
+            var templatePillRemoveVals = getPropValues(variantProps, "Remove");
+            var templatePillRemoveOff = templatePillRemoveVals.indexOf("Off") >= 0 ? "Off" : (templatePillRemoveVals[0] || null);
+            var templatePillRemoveOn = templatePillRemoveVals.indexOf("On") >= 0 ? "On" : null;
+            var templatePillSizeOffPanel = createPanel("pill-size-remove-off-panel", 10);
+            templatePillSizeOffPanel.resize(1192, templatePillSizeOffPanel.height);
+            templateSizeSlot.appendChild(templatePillSizeOffPanel);
+            addInstancesRow(templatePillSizeOffPanel, "Without Close", templateOrderedSizes, function (sizeName) {
+              return makeTemplateInstance({ Size: sizeName, Remove: templatePillRemoveOff });
+            }, true, { font: mediumFont, size: 14 });
+            if (templatePillRemoveOn != null) {
+              var templatePillSizeOnPanel = createPanel("pill-size-remove-on-panel", 10);
+              templatePillSizeOnPanel.resize(1192, templatePillSizeOnPanel.height);
+              templateSizeSlot.appendChild(templatePillSizeOnPanel);
+              addInstancesRow(templatePillSizeOnPanel, "With Close", templateOrderedSizes, function (sizeName) {
+                return makeTemplateInstance({ Size: sizeName, Remove: templatePillRemoveOn });
+              }, true, { font: mediumFont, size: 14 });
+            }
           } else if (lowerSetName === "divider") {
             renderDividerDocsRows(templateSizeSlot, templateOrderedSizes, function (sizeName) {
               return makeTemplateInstance({ Size: sizeName });
@@ -4512,23 +4517,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var radii = getPropValues(variantProps, "Radius");
       var orderedRadiiAll = pickOrdered(radii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
       var orderedSizes = orderedSizesAll.slice();
-      if (orderedSizes.length > 1 && lowerSetName !== "badge") {
+      if (orderedSizes.length > 1) {
         orderedSizes = orderedSizes.filter(function (s) { return String(s).toLowerCase() !== "default"; });
-      }
-      if (lowerSetName === "badge" && orderedSizes.length > 1) {
-        var defaultSizeIdx = -1;
-        var mdSizeIdx = -1;
-        for (var osi = 0; osi < orderedSizes.length; osi++) {
-          var sizeName = String(orderedSizes[osi] || "").toLowerCase();
-          if (sizeName === "default") defaultSizeIdx = osi;
-          if (sizeName === "md") mdSizeIdx = osi;
-        }
-        if (defaultSizeIdx >= 0 && mdSizeIdx >= 0 && defaultSizeIdx !== mdSizeIdx + 1) {
-          var defaultSizeValue = orderedSizes[defaultSizeIdx];
-          orderedSizes.splice(defaultSizeIdx, 1);
-          if (defaultSizeIdx < mdSizeIdx) mdSizeIdx -= 1;
-          orderedSizes.splice(mdSizeIdx + 1, 0, defaultSizeValue);
-        }
       }
 
       var defaultVariant = orderedVariants.length > 0 ? orderedVariants[0] : null;
@@ -4935,7 +4925,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       if (sizeSlot && orderedSizes.length > 0) {
         clearChildren(sizeSlot);
-        if (lowerSetName === "switch") {
+        if (lowerSetName === "switch" || lowerSetName === "pill") {
           sizeSlot.fills = [];
           sizeSlot.strokes = [];
           sizeSlot.strokeWeight = 0;
@@ -5029,6 +5019,26 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           addInstancesRow(switchSizeOnPanel, "Checked On", orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName, Checked: checkedOn });
           }, true, { font: mediumFont, size: 14 });
+        } else if (lowerSetName === "pill") {
+          // Pills are optionally removable, so document both states in their own
+          // cards (same pattern as Switch's Checked Off/On).
+          var pillRemoveVals = getPropValues(variantProps, "Remove");
+          var pillRemoveOff = pillRemoveVals.indexOf("Off") >= 0 ? "Off" : (pillRemoveVals[0] || null);
+          var pillRemoveOn = pillRemoveVals.indexOf("On") >= 0 ? "On" : null;
+          var pillSizeOffPanel = createPanel("pill-size-remove-off-panel", 10);
+          pillSizeOffPanel.resize(1192, pillSizeOffPanel.height);
+          sizeSlot.appendChild(pillSizeOffPanel);
+          addInstancesRow(pillSizeOffPanel, "Without Close", orderedSizes, function (sizeName) {
+            return makeInstance({ Size: sizeName, Remove: pillRemoveOff });
+          }, true, { font: mediumFont, size: 14 });
+          if (pillRemoveOn != null) {
+            var pillSizeOnPanel = createPanel("pill-size-remove-on-panel", 10);
+            pillSizeOnPanel.resize(1192, pillSizeOnPanel.height);
+            sizeSlot.appendChild(pillSizeOnPanel);
+            addInstancesRow(pillSizeOnPanel, "With Close", orderedSizes, function (sizeName) {
+              return makeInstance({ Size: sizeName, Remove: pillRemoveOn });
+            }, true, { font: mediumFont, size: 14 });
+          }
         } else if (lowerSetName === "divider") {
           renderDividerDocsRows(sizeSlot, orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName });
@@ -7706,7 +7716,7 @@ function buildSliderComponentSet(varMap, page, font) {
           bindPaintVar(thumb, "strokes", 0, varMap[sliderThumbBorderPath(state)]);
           bindVar(thumb, "width", varMap["slider/thumb-size-" + size]);
           bindVar(thumb, "height", varMap["slider/thumb-size-" + size]);
-          bindVar(thumb, "strokeWeight", varMap["slider/thumb-border-width"]);
+          bindVar(thumb, "strokeWeight", varMap["slider/thumb-border-width-" + size]);
           if (state === "focus") {
             thumb.effects = [{
               type: "DROP_SHADOW",
@@ -7905,7 +7915,7 @@ function buildRangeSliderComponentSet(varMap, page, font) {
           bindPaintVar(thumbFrom, "strokes", 0, varMap[rangeSliderThumbBorderPath(state)]);
           bindVar(thumbFrom, "width", varMap["rangeslider/thumb-size-" + size]);
           bindVar(thumbFrom, "height", varMap["rangeslider/thumb-size-" + size]);
-          bindVar(thumbFrom, "strokeWeight", varMap["rangeslider/thumb-border-width"]);
+          bindVar(thumbFrom, "strokeWeight", varMap["rangeslider/thumb-border-width-" + size]);
           comp.appendChild(thumbFrom);
 
           var thumbTo = figma.createEllipse();
@@ -7920,7 +7930,7 @@ function buildRangeSliderComponentSet(varMap, page, font) {
           bindPaintVar(thumbTo, "strokes", 0, varMap[rangeSliderThumbBorderPath(state)]);
           bindVar(thumbTo, "width", varMap["rangeslider/thumb-size-" + size]);
           bindVar(thumbTo, "height", varMap["rangeslider/thumb-size-" + size]);
-          bindVar(thumbTo, "strokeWeight", varMap["rangeslider/thumb-border-width"]);
+          bindVar(thumbTo, "strokeWeight", varMap["rangeslider/thumb-border-width-" + size]);
           if (state === "focus") {
             thumbTo.effects = [{
               type: "DROP_SHADOW",
@@ -19517,7 +19527,27 @@ function buildChartRadarComponentSet(varMap, page, font, resolvedComponentFloat,
 // Pill Component Set
 // ---------------------------------------------------------------------------
 
-function buildPillComponentSet(varMap, page, font) {
+async function buildPillComponentSet(varMap, page, font) {
+  function createPillSwapRefs(iconComp) {
+    var refs = [];
+    if (!iconComp) return refs;
+    try {
+      var mainComp = iconComp.mainComponent || iconComp;
+      if (mainComp && mainComp.key) refs.push(mainComp.key);
+    } catch (_err) {}
+    if (iconComp.key) refs.push(iconComp.key);
+    if (iconComp.id) refs.push(iconComp.id);
+    return refs;
+  }
+
+  // Untitled UI close/x icon used for the removable pill (instance-swappable).
+  var removeIconComp = await findPillRemoveIconComponent();
+  if (removeIconComp) {
+    progress("[Pill] Remove icon source: " + removeIconComp.name);
+  } else {
+    progress("[Pill] Warning: no close icon component found; using text fallback.");
+  }
+
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var removeModes = ["off", "on"];
   var components = [];
@@ -19578,15 +19608,63 @@ function buildPillComponentSet(varMap, page, font) {
       comp.appendChild(label);
 
       if (withRemove) {
-        var remove = figma.createText();
-        remove.name = "Remove";
-        remove.fontName = font;
-        remove.characters = "×";
-        remove.fontSize = 12;
-        remove.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-        bindPaintVar(remove, "fills", 0, varMap["pill/remove"]);
-        bindVar(remove, "fontSize", varMap["pill/remove-size-" + size]);
-        comp.appendChild(remove);
+        if (removeIconComp) {
+          var removeInst = removeIconComp.createInstance();
+          removeInst.name = "Remove";
+          try { removeInst.resizeWithoutConstraints(12, 12); } catch (e) {}
+          bindVar(removeInst, "width", varMap["pill/remove-size-" + size]);
+          bindVar(removeInst, "height", varMap["pill/remove-size-" + size]);
+          // The pill is a center-aligned auto-layout, so a fixed-size icon
+          // instance sits vertically centered (unlike the text glyph, which
+          // rode high off its baseline).
+          try { removeInst.layoutGrow = 0; } catch (_pillGrowErr) {}
+          try { removeInst.layoutAlign = "INHERIT"; } catch (_pillAlignErr) {}
+
+          var removeVectors = removeInst.findAll(function (n) {
+            return (
+              n.type === "VECTOR" ||
+              n.type === "LINE" ||
+              n.type === "ELLIPSE" ||
+              n.type === "RECTANGLE" ||
+              n.type === "POLYGON" ||
+              n.type === "STAR"
+            );
+          });
+          for (var rvi = 0; rvi < removeVectors.length; rvi++) {
+            bindVar(removeVectors[rvi], "strokeWeight", varMap["pill/remove-icon-stroke-width-" + size]);
+            if (removeVectors[rvi].strokes && removeVectors[rvi].strokes.length > 0) {
+              bindPaintVar(removeVectors[rvi], "strokes", 0, varMap["pill/remove"]);
+            }
+            if (removeVectors[rvi].fills && removeVectors[rvi].fills.length > 0) {
+              bindPaintVar(removeVectors[rvi], "fills", 0, varMap["pill/remove"]);
+            }
+          }
+          comp.appendChild(removeInst);
+
+          if (typeof comp.addComponentProperty === "function") {
+            var pillSwapRefs = createPillSwapRefs(removeIconComp);
+            var pillSwapProp = null;
+            for (var psri = 0; psri < pillSwapRefs.length; psri++) {
+              try {
+                pillSwapProp = comp.addComponentProperty("Remove Icon", "INSTANCE_SWAP", pillSwapRefs[psri]);
+                break;
+              } catch (eSwap) {}
+            }
+            if (pillSwapProp) {
+              try { removeInst.componentPropertyReferences = { mainComponent: pillSwapProp }; } catch (_pillSwapRefErr) {}
+            }
+          }
+        } else {
+          var remove = figma.createText();
+          remove.name = "Remove";
+          remove.fontName = font;
+          remove.characters = "\u00d7";
+          remove.fontSize = 12;
+          remove.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+          bindPaintVar(remove, "fills", 0, varMap["pill/remove"]);
+          bindVar(remove, "fontSize", varMap["pill/remove-size-" + size]);
+          comp.appendChild(remove);
+        }
       }
 
       var colIndex = ri;
@@ -19602,6 +19680,55 @@ function buildPillComponentSet(varMap, page, font) {
   var componentSet = figma.combineAsVariants(components, page);
   componentSet.name = "Pill";
   return componentSet;
+}
+
+// Finds an Untitled UI "x-close" / close icon component for the removable Pill.
+// Returns null when nothing suitable exists so the caller falls back to a text
+// glyph rather than swapping in an unrelated icon.
+async function findPillRemoveIconComponent() {
+  var iconCandidates = [];
+  var iconsPage = null;
+
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var page = figma.root.children[pi];
+    if (page.type !== "PAGE") continue;
+    await page.loadAsync();
+    if (!iconsPage && page.name && page.name.toLowerCase() === "icons") {
+      iconsPage = page;
+    }
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function (n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") iconCandidates.push(setChildren[ci]);
+      }
+    }
+  }
+
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var normalized = String(iconCandidates[j].name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+    if (
+      normalized.indexOf("xclose") >= 0 ||
+      normalized.indexOf("closex") >= 0 ||
+      normalized.indexOf("close") >= 0 ||
+      normalized.indexOf("xmark") >= 0 ||
+      normalized.indexOf("cross") >= 0 ||
+      normalized === "x"
+    ) {
+      return iconCandidates[j];
+    }
+  }
+
+  return null;
 }
 
 // ---------------------------------------------------------------------------
@@ -20810,6 +20937,13 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
     progress("[MultiSelect] No check icon component found; selected options use a vector checkmark fallback.");
   }
 
+  var pillRemoveIconComp = await findPillRemoveIconComponent();
+  if (pillRemoveIconComp) {
+    progress("[MultiSelect] Pill remove icon source: " + pillRemoveIconComp.name);
+  } else {
+    progress("[MultiSelect] No close icon component found; pill remove uses a text fallback.");
+  }
+
   var sizeHeights = { default: 36, xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
   var gap = 20;
   var colWidth = 220;
@@ -21066,15 +21200,63 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
                 }
                 pill.appendChild(pillTextNode);
 
-                var pillRemoveNode = figma.createText();
-                pillRemoveNode.name = "Remove";
-                pillRemoveNode.fontName = font;
-                pillRemoveNode.characters = "\u00d7";
-                pillRemoveNode.fontSize = 12;
-                pillRemoveNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
-                if (pillRemoveIconVar) bindPaintVar(pillRemoveNode, "fills", 0, pillRemoveIconVar);
-                if (pillFontSizeVar) bindVar(pillRemoveNode, "fontSize", pillFontSizeVar);
-                pill.appendChild(pillRemoveNode);
+                if (pillRemoveIconComp) {
+                  var pillRemoveInst = pillRemoveIconComp.createInstance();
+                  pillRemoveInst.name = "Remove";
+                  try { pillRemoveInst.resizeWithoutConstraints(12, 12); } catch (e) {}
+                  // Center-aligned pill auto-layout keeps a fixed-size icon
+                  // vertically centered (the text glyph rode high off baseline).
+                  try { pillRemoveInst.layoutGrow = 0; } catch (_msPillGrowErr) {}
+                  try { pillRemoveInst.layoutAlign = "INHERIT"; } catch (_msPillAlignErr) {}
+                  var pillRemoveVectors = pillRemoveInst.findAll(function (n) {
+                    return (
+                      n.type === "VECTOR" ||
+                      n.type === "LINE" ||
+                      n.type === "ELLIPSE" ||
+                      n.type === "RECTANGLE" ||
+                      n.type === "POLYGON" ||
+                      n.type === "STAR"
+                    );
+                  });
+                  var pillRemoveStrokeVar =
+                    varMap["multiselect/pill-remove-icon-stroke-width-" + size] ||
+                    varMap["multiselect/pill-remove-icon-stroke-width-default"] ||
+                    varMap["multiselect/pill-remove-icon-stroke-width"];
+                  for (var prvi = 0; prvi < pillRemoveVectors.length; prvi++) {
+                    if (pillRemoveStrokeVar) bindVar(pillRemoveVectors[prvi], "strokeWeight", pillRemoveStrokeVar);
+                    if (pillRemoveVectors[prvi].strokes && pillRemoveVectors[prvi].strokes.length > 0 && pillRemoveIconVar) {
+                      bindPaintVar(pillRemoveVectors[prvi], "strokes", 0, pillRemoveIconVar);
+                    }
+                    if (pillRemoveVectors[prvi].fills && pillRemoveVectors[prvi].fills.length > 0 && pillRemoveIconVar) {
+                      bindPaintVar(pillRemoveVectors[prvi], "fills", 0, pillRemoveIconVar);
+                    }
+                  }
+                  pill.appendChild(pillRemoveInst);
+
+                  if (typeof comp.addComponentProperty === "function") {
+                    var pillRemoveSwapRefs = createMultiSelectSwapRefs(pillRemoveIconComp);
+                    var pillRemoveSwapProp = null;
+                    for (var prsi = 0; prsi < pillRemoveSwapRefs.length; prsi++) {
+                      try {
+                        pillRemoveSwapProp = comp.addComponentProperty("Pill Remove Icon", "INSTANCE_SWAP", pillRemoveSwapRefs[prsi]);
+                        break;
+                      } catch (ePillSwap) {}
+                    }
+                    if (pillRemoveSwapProp) {
+                      try { pillRemoveInst.componentPropertyReferences = { mainComponent: pillRemoveSwapProp }; } catch (_msPillSwapRefErr) {}
+                    }
+                  }
+                } else {
+                  var pillRemoveNode = figma.createText();
+                  pillRemoveNode.name = "Remove";
+                  pillRemoveNode.fontName = font;
+                  pillRemoveNode.characters = "\u00d7";
+                  pillRemoveNode.fontSize = 12;
+                  pillRemoveNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+                  if (pillRemoveIconVar) bindPaintVar(pillRemoveNode, "fills", 0, pillRemoveIconVar);
+                  if (pillFontSizeVar) bindVar(pillRemoveNode, "fontSize", pillFontSizeVar);
+                  pill.appendChild(pillRemoveNode);
+                }
 
                 pillsFrame.appendChild(pill);
               }

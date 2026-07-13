@@ -249,6 +249,7 @@ export default function TokenChainCard({
                 value={opacity}
                 disabled={isTransparent || isGradient}
                 onChange={(e) => updateOpacity(e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 style={{
                   width: 58,
                   background: "#1A1B1E",

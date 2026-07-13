@@ -1,6 +1,26 @@
+import { useRef, useEffect } from "react";
 import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
 import { resolveDimension, getDefaultSizeKey } from "../../utils/resolveToken";
 import { GLOBAL_FONTS, GLOBAL_WEIGHTS } from "../../data/brands";
+
+// A number input that never mutates its value on scroll. React's onWheel is
+// registered as a passive listener, so preventDefault there is ignored — we
+// attach a native non-passive wheel listener and block the browser's default
+// increment/decrement outright. This kills the "value keeps changing while I
+// scroll until it crashes" bug without removing the spinner buttons.
+function NumberField({ value, onChange, style }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return undefined;
+    const blockWheel = (e) => e.preventDefault();
+    el.addEventListener("wheel", blockWheel, { passive: false });
+    return () => el.removeEventListener("wheel", blockWheel);
+  }, []);
+  return (
+    <input ref={ref} type="number" value={value} onChange={onChange} style={style} />
+  );
+}
 
 export default function DimensionTokenRow({
   tokenName,
@@ -162,8 +182,7 @@ export default function DimensionTokenRow({
                 />
               ) : (
                 <>
-                  <input
-                    type="number"
+                  <NumberField
                     value={resolveDimension(brands, brandId, tokenName) ?? ""}
                     onChange={(e) => {
                       const v = parseFloat(e.target.value);
@@ -253,8 +272,7 @@ export default function DimensionTokenRow({
                         }}
                       />
                     ) : (
-                      <input
-                        type="number"
+                      <NumberField
                         value={val ?? ""}
                         onChange={(e) => {
                           const v = parseFloat(e.target.value);

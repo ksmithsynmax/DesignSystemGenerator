@@ -308,6 +308,7 @@ export default function BrandGradientsSection({ brand, paletteColorNames, onUpse
                 type="number"
                 value={angle}
                 onChange={(e) => setAngle(Number(e.target.value))}
+                onWheel={(e) => e.currentTarget.blur()}
                 style={{ ...inputStyle, marginBottom: 12 }}
               />
             </>
@@ -356,6 +357,7 @@ export default function BrandGradientsSection({ brand, paletteColorNames, onUpse
                 type="number"
                 value={s.position}
                 onChange={(e) => updateStop(i, "position", e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 title="Position %"
                 style={inputStyle}
               />
@@ -363,6 +365,7 @@ export default function BrandGradientsSection({ brand, paletteColorNames, onUpse
                 type="number"
                 value={s.opacity}
                 onChange={(e) => updateStop(i, "opacity", e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 title="Opacity %"
                 style={inputStyle}
               />
