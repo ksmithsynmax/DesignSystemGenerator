@@ -260,6 +260,7 @@ export const COMPONENT_TOKENS = {
     "tabs-default-tab-border-active": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-border-active" },
     "tabs-default-tab-border-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-border-pressed" },
     "tabs-default-tab-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "tabs/default-tab-border-disabled" },
+    "tabs-default-overflow-control-icon": { type: "COLOR", semantic: "text-default", figmaPath: "tabs/default-overflow-control-icon" },
 
     // ── OUTLINED VARIANT ──
     "tabs-outlined-list-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/outlined-list-background" },
@@ -279,6 +280,7 @@ export const COMPONENT_TOKENS = {
     "tabs-outlined-tab-border-active": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/outlined-tab-border-active" },
     "tabs-outlined-tab-border-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/outlined-tab-border-pressed" },
     "tabs-outlined-tab-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "tabs/outlined-tab-border-disabled" },
+    "tabs-outlined-overflow-control-icon": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/outlined-overflow-control-icon" },
 
     // ── PILLS VARIANT ──
     "tabs-pills-list-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/pills-list-background" },
@@ -1710,6 +1712,8 @@ export const COMPONENT_TOKENS = {
     "badge-padding-x": { type: "FLOAT", unit: "px", sizes: { default: 9, xs: 6, sm: 7, md: 9, lg: 11, xl: 13 }, figmaPath: "badge/padding-x" },
     "badge-padding-y": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1, sm: 2, md: 2, lg: 4, xl: 4 }, figmaPath: "badge/padding-y" },
     "badge-radius": { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "badge/radius" },
+    "badge-remove-size": { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 12, sm: 13, md: 14, lg: 16, xl: 18 }, figmaPath: "badge/remove-size" },
+    "badge-remove-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, figmaPath: "badge/remove-icon-stroke-width" },
 
     // ── FLOAT TOKENS (single value) ──
     "badge-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "badge/border-width" },

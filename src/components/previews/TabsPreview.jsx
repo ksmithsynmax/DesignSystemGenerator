@@ -4,6 +4,8 @@ import Image01Icon from "@untitledui-icons/react/line/Image01Icon";
 import MessageCircle01Icon from "@untitledui-icons/react/line/MessageCircle01Icon";
 import Settings01Icon from "@untitledui-icons/react/line/Settings01Icon";
 import XCloseIcon from "@untitledui-icons/react/line/XCloseIcon";
+import ChevronLeftIcon from "@untitledui-icons/react/line/ChevronLeftIcon";
+import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 import MenuPreview from "./MenuPreview";
@@ -60,6 +62,8 @@ export default function TabsPreview({
   showMenu = false,
   showLeftIcon = false,
   showRightIcon = false,
+  showLeftArrow = false,
+  showRightArrow = false,
   interactive = false,
 }) {
   const [activeTab, setActiveTab] = useState("details");
@@ -103,8 +107,9 @@ export default function TabsPreview({
     resolveDimension(brands, brandId, "tabs-tab-border-width-active");
   const overflowControlPaddingX =
     resolveDimension(brands, brandId, "tabs-outlined-overflow-control-padding-x") ?? 16;
-  const overflowControlPaddingY =
-    resolveDimension(brands, brandId, "tabs-outlined-overflow-control-padding-y") ?? 16;
+  // NOTE: overflow-control-padding-y is intentionally not used for the preview
+  // height. The arrow/menu controls stretch to match the tab height instead, so
+  // they always line up with the tabs regardless of the padding-y token value.
   const panelPadding = resolveDimension(brands, brandId, "tabs-panel-padding");
   const iconSize = resolveDimension(brands, brandId, "tabs-icon-size");
   const iconStroke = resolveDimension(brands, brandId, "tabs-icon-stroke-width");
@@ -153,34 +158,137 @@ export default function TabsPreview({
     };
   };
 
+  // Use an inset box-shadow for the list edge line instead of a real border so
+  // it doesn't add to the list's box height (mirrors Figma's INSIDE stroke).
+  // Otherwise the arrow/menu controls, which stretch to the list height, render
+  // ~1px taller than the tabs.
+  const listEdgeShadow = isPillsVariant
+    ? "none"
+    : orientation === "horizontal"
+      ? `inset 0 -${listBorderWidth}px 0 0 ${listBorder}`
+      : `inset -${listBorderWidth}px 0 0 0 ${listBorder}`;
+  // Whether an overflow control is attached to each end of the tab list. When a
+  // control is attached we drop the list's padding on that side so the control
+  // sits flush against the end tab (no gap), and the overflow menu is always
+  // present for horizontal non-pills tabs.
+  const hasLeftControl =
+    orientation === "horizontal" && !isPillsVariant && showLeftArrow;
+  const hasRightControl = orientation === "horizontal" && !isPillsVariant;
   const listStyle = {
     display: "flex",
     flexDirection: orientation === "vertical" ? "column" : "row",
     alignItems: "stretch",
     gap: `${listGap}px`,
     backgroundColor: listBg,
-    borderBottom:
-      !isPillsVariant && orientation === "horizontal"
-        ? `${listBorderWidth}px solid ${listBorder}`
-        : "none",
-    borderRight:
-      !isPillsVariant && orientation === "vertical"
-        ? `${listBorderWidth}px solid ${listBorder}`
-        : "none",
-    padding: `${listPadding}px`,
+    boxShadow: listEdgeShadow,
+    paddingTop: listPadding,
+    paddingBottom: listPadding,
+    paddingLeft: hasLeftControl ? 0 : listPadding,
+    paddingRight: hasRightControl ? 0 : listPadding,
     width: "fit-content",
   };
 
-  const showOverflowMenuControl = orientation === "horizontal";
+  const showOverflowMenuControl = orientation === "horizontal" && !isPillsVariant;
+  // Overflow arrow controls (chevron left/right) mirror the Figma Tabs
+  // LeftArrow / RightArrow variant props: only default & outlined, horizontal.
+  const showArrowControls = orientation === "horizontal" && !isPillsVariant;
+  const overflowIconColor =
+    getColor(brands, brandId, `${prefix}-overflow-control-icon`, tokens) ||
+    (isDefaultVariant ? tabText : tabTextActive);
+  const makeArrowControlStyle = (side) =>
+    isOutlinedVariant
+      ? {
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: tabBg,
+          // Use pure per-side longhand border props (no `border` shorthand).
+          // Mixing the shorthand with a longhand override is fragile in React:
+          // when the shorthand re-applies on a re-render it resets the "removed"
+          // side back to a full border, doubling up against the adjacent tab.
+          borderStyle: "solid",
+          borderColor: tabBorder,
+          borderTopWidth: `${tabBorderWidth}px`,
+          borderBottomWidth: `${tabBorderWidth}px`,
+          // Merge the edge shared with the tab list so borders don't double up.
+          borderRightWidth: side === "left" ? "0px" : `${tabBorderWidth}px`,
+          borderLeftWidth: side === "right" ? "0px" : `${tabBorderWidth}px`,
+          // Round only the outer corners; the side facing the tabs stays square.
+          borderTopLeftRadius: side === "left" ? tabsRadius : 0,
+          borderBottomLeftRadius: side === "left" ? tabsRadius : 0,
+          borderTopRightRadius: 0,
+          borderBottomRightRadius: 0,
+          // Vertical padding is 0 and the control stretches to the row height;
+          // the margins cancel out the list's padding so the control lands at
+          // the exact tab-cell height (not the taller padded list box).
+          paddingTop: 0,
+          paddingBottom: 0,
+          paddingLeft: `${overflowControlPaddingX}px`,
+          paddingRight: `${overflowControlPaddingX}px`,
+          marginTop: listPadding,
+          marginBottom: listPadding,
+          cursor: forcedDisabled ? "not-allowed" : "pointer",
+          lineHeight: 0,
+        }
+      : {
+          display: "inline-flex",
+          alignItems: "center",
+          justifyContent: "center",
+          backgroundColor: listBg,
+          border: "none",
+          boxShadow: listEdgeShadow,
+          paddingTop: 0,
+          paddingBottom: 0,
+          paddingLeft: 4,
+          paddingRight: 4,
+          marginTop: listPadding,
+          marginBottom: listPadding,
+          cursor: forcedDisabled ? "not-allowed" : "pointer",
+          lineHeight: 0,
+        };
+  const renderArrowControl = (side) => {
+    const Icon = side === "left" ? ChevronLeftIcon : ChevronRightIcon;
+    return (
+      <button
+        type="button"
+        style={makeArrowControlStyle(side)}
+        aria-label={side === "left" ? "Previous tabs" : "Next tabs"}
+        disabled={forcedDisabled}
+      >
+        <Icon
+          width={iconSize}
+          height={iconSize}
+          strokeWidth={iconStroke || 2}
+          style={{ color: overflowIconColor, display: "block" }}
+        />
+      </button>
+    );
+  };
   const menuControlStyle = isOutlinedVariant
     ? {
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: tabBg,
-        border: `${tabBorderWidth}px solid ${tabBorder}`,
+        // Pure per-side longhand (see arrow control note): avoids the shorthand
+        // re-applying and resurrecting the merged-away left border.
+        borderStyle: "solid",
+        borderColor: tabBorder,
+        borderTopWidth: `${tabBorderWidth}px`,
+        borderBottomWidth: `${tabBorderWidth}px`,
+        borderRightWidth: `${tabBorderWidth}px`,
         borderLeftWidth: "0px",
-        padding: `${overflowControlPaddingY}px ${overflowControlPaddingX}px`,
+        // Menu is the rightmost control: round its right corners, square left.
+        borderTopLeftRadius: 0,
+        borderBottomLeftRadius: 0,
+        borderTopRightRadius: tabsRadius,
+        borderBottomRightRadius: tabsRadius,
+        paddingTop: 0,
+        paddingBottom: 0,
+        paddingLeft: `${overflowControlPaddingX}px`,
+        paddingRight: `${overflowControlPaddingX}px`,
+        marginTop: listPadding,
+        marginBottom: listPadding,
         cursor: forcedDisabled ? "not-allowed" : "pointer",
         lineHeight: 0,
       }
@@ -190,11 +298,13 @@ export default function TabsPreview({
         justifyContent: "center",
         backgroundColor: listBg,
         border: "none",
-        borderBottom:
-          orientation === "horizontal"
-            ? `${listBorderWidth}px solid ${listBorder}`
-            : "none",
-        padding: "11px 4px",
+        boxShadow: listEdgeShadow,
+        paddingTop: 0,
+        paddingBottom: 0,
+        marginTop: listPadding,
+        marginBottom: listPadding,
+        paddingLeft: 4,
+        paddingRight: 4,
         cursor: forcedDisabled ? "not-allowed" : "pointer",
         lineHeight: 0,
       };
@@ -218,6 +328,7 @@ export default function TabsPreview({
         }}
       >
         <div style={{ display: "inline-flex", alignItems: "stretch", width: "fit-content" }}>
+          {showArrowControls && showLeftArrow && renderArrowControl("left")}
           <Tabs.List style={listStyle}>
             {TAB_ITEMS.map(({ key, label, Icon }, tabIndex) => {
               const tabVisual = getTabVisual(key);
@@ -230,6 +341,19 @@ export default function TabsPreview({
                 (tabVisual.visualState === "disabled" && isWouldBeActiveTab);
               const resolvedTabBorderWidth =
                 isDefaultUnderlineState ? tabBorderWidthActive : tabBorderWidth;
+              // A highlighted (active/hover) outlined tab draws its own left
+              // border. To avoid doubling it up with the previous tab's right
+              // border, the tab immediately before a highlighted one drops its
+              // right border (the highlighted tab owns that shared edge).
+              const nextItem = TAB_ITEMS[tabIndex + 1];
+              let nextTabHighlighted = false;
+              if (nextItem) {
+                const nextVisualState = getVisualState(nextItem.key);
+                nextTabHighlighted =
+                  nextVisualState === "active" ||
+                  nextVisualState === "hover" ||
+                  (nextVisualState === "disabled" && nextItem.key === activeDemoKey);
+              }
               const tabStyle = isDefaultVariant
                 ? {
                     display: "inline-flex",
@@ -261,11 +385,14 @@ export default function TabsPreview({
                     borderStyle: "solid",
                     borderColor: tabVisual.border,
                     borderTopWidth: `${resolvedTabBorderWidth}px`,
-                    borderRightWidth: `${resolvedTabBorderWidth}px`,
+                    borderRightWidth:
+                      isOutlinedVariant && orientation === "horizontal" && nextTabHighlighted
+                        ? "0px"
+                        : `${resolvedTabBorderWidth}px`,
                     borderBottomWidth: `${resolvedTabBorderWidth}px`,
                     borderLeftWidth:
                       isOutlinedVariant && orientation === "horizontal"
-                        ? tabIndex === 0
+                        ? tabIndex === 0 || isDefaultUnderlineState
                           ? `${resolvedTabBorderWidth}px`
                           : "0px"
                         : `${resolvedTabBorderWidth}px`,
@@ -279,7 +406,20 @@ export default function TabsPreview({
                           borderBottomWidth: "0px",
                         }
                       : {}),
-                    borderRadius: `${tabsRadius}px`,
+                    // Square the outer corner where an overflow control attaches
+                    // so the control's rounded corner completes the group edge.
+                    borderTopLeftRadius:
+                      isOutlinedVariant && hasLeftControl && tabIndex === 0 ? 0 : tabsRadius,
+                    borderBottomLeftRadius:
+                      isOutlinedVariant && hasLeftControl && tabIndex === 0 ? 0 : tabsRadius,
+                    borderTopRightRadius:
+                      isOutlinedVariant && hasRightControl && tabIndex === TAB_ITEMS.length - 1
+                        ? 0
+                        : tabsRadius,
+                    borderBottomRightRadius:
+                      isOutlinedVariant && hasRightControl && tabIndex === TAB_ITEMS.length - 1
+                        ? 0
+                        : tabsRadius,
                     padding: `${tabPaddingY}px ${tabPaddingX}px`,
                     color: tabVisual.text,
                     cursor: interactiveDisabled ? "not-allowed" : "pointer",
@@ -362,9 +502,10 @@ export default function TabsPreview({
               );
             })}
           </Tabs.List>
+          {showArrowControls && showRightArrow && renderArrowControl("right")}
           {showOverflowMenuControl && (
             <button type="button" style={menuControlStyle} aria-label="Tabs menu" disabled={forcedDisabled}>
-              <MenuControlGlyph size={16} color={isDefaultVariant ? tabText : tabTextActive} strokeWidth={iconStroke || 1.75} />
+              <MenuControlGlyph size={16} color={overflowIconColor} strokeWidth={iconStroke || 1.75} />
             </button>
           )}
         </div>

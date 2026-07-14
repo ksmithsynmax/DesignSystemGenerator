@@ -92,6 +92,8 @@ export function TabsPreviewContent({
   showMenu,
   showLeftIcon,
   showRightIcon,
+  showLeftArrow,
+  showRightArrow,
 }) {
   const matrixRows = TABS_VARIANTS.map((v) => ({ label: v, variant: v }));
   return (
@@ -112,6 +114,8 @@ export function TabsPreviewContent({
           showMenu={showMenu}
           showLeftIcon={showLeftIcon}
           showRightIcon={showRightIcon}
+          showLeftArrow={showLeftArrow}
+          showRightArrow={showRightArrow}
           interactive={false}
         />
       </PreviewStage>
@@ -132,6 +136,8 @@ export function TabsPreviewContent({
             showMenu={showMenu}
             showLeftIcon={showLeftIcon}
             showRightIcon={showRightIcon}
+            showLeftArrow={showLeftArrow}
+            showRightArrow={showRightArrow}
             interactive={false}
           />
         )}
@@ -155,12 +161,18 @@ export function TabsPropertiesPanel({
   setShowLeftIcon,
   showRightIcon,
   setShowRightIcon,
+  showLeftArrow,
+  setShowLeftArrow,
+  showRightArrow,
+  setShowRightArrow,
   selectedState,
   setSelectedState,
   forcedState,
   buildVariants = TABS_VARIANTS,
   setBuildVariants = () => {},
 }) {
+  // Overflow arrows only apply to horizontal default/outlined tabs (matches Figma).
+  const arrowsDisabled = activeVariant === "pills" || activeTabsOrientation === "vertical";
   const toggleBuildVariant = (variant) => {
     if (buildVariants.includes(variant)) {
       if (buildVariants.length <= 1) return;
@@ -211,6 +223,20 @@ export function TabsPropertiesPanel({
         options={["off", "on"]}
       />
       <PropertyRow
+        label="Left Arrow"
+        value={showLeftArrow ? "on" : "off"}
+        onChange={(v) => setShowLeftArrow(v === "on")}
+        options={["off", "on"]}
+        disabled={arrowsDisabled}
+      />
+      <PropertyRow
+        label="Right Arrow"
+        value={showRightArrow ? "on" : "off"}
+        onChange={(v) => setShowRightArrow(v === "on")}
+        options={["off", "on"]}
+        disabled={arrowsDisabled}
+      />
+      <PropertyRow
         label="State"
         value={selectedState}
         onChange={setSelectedState}
@@ -240,11 +266,17 @@ export default function TabsPreviewPanel({
   setShowLeftIcon,
   showRightIcon,
   setShowRightIcon,
+  showLeftArrow,
+  setShowLeftArrow,
+  showRightArrow,
+  setShowRightArrow,
 }) {
   const [internalShowPanel, setInternalShowPanel] = useState(false);
   const [internalShowMenu, setInternalShowMenu] = useState(false);
   const [internalShowLeftIcon, setInternalShowLeftIcon] = useState(false);
   const [internalShowRightIcon, setInternalShowRightIcon] = useState(false);
+  const [internalShowLeftArrow, setInternalShowLeftArrow] = useState(false);
+  const [internalShowRightArrow, setInternalShowRightArrow] = useState(false);
   const [internalState, setInternalState] = useState("default");
   const resolvedShowPanel = typeof showPanel === "boolean" ? showPanel : internalShowPanel;
   const resolvedSetShowPanel = setShowPanel || setInternalShowPanel;
@@ -254,6 +286,10 @@ export default function TabsPreviewPanel({
   const resolvedSetShowLeftIcon = setShowLeftIcon || setInternalShowLeftIcon;
   const resolvedShowRightIcon = typeof showRightIcon === "boolean" ? showRightIcon : internalShowRightIcon;
   const resolvedSetShowRightIcon = setShowRightIcon || setInternalShowRightIcon;
+  const resolvedShowLeftArrow = typeof showLeftArrow === "boolean" ? showLeftArrow : internalShowLeftArrow;
+  const resolvedSetShowLeftArrow = setShowLeftArrow || setInternalShowLeftArrow;
+  const resolvedShowRightArrow = typeof showRightArrow === "boolean" ? showRightArrow : internalShowRightArrow;
+  const resolvedSetShowRightArrow = setShowRightArrow || setInternalShowRightArrow;
   const resolvedState = forcedState || internalState;
 
   return (
@@ -273,6 +309,10 @@ export default function TabsPreviewPanel({
         setShowLeftIcon={resolvedSetShowLeftIcon}
         showRightIcon={resolvedShowRightIcon}
         setShowRightIcon={resolvedSetShowRightIcon}
+        showLeftArrow={resolvedShowLeftArrow}
+        setShowLeftArrow={resolvedSetShowLeftArrow}
+        showRightArrow={resolvedShowRightArrow}
+        setShowRightArrow={resolvedSetShowRightArrow}
         selectedState={resolvedState}
         setSelectedState={setInternalState}
         forcedState={forcedState}
@@ -290,6 +330,8 @@ export default function TabsPreviewPanel({
           showMenu={resolvedShowMenu}
           showLeftIcon={resolvedShowLeftIcon}
           showRightIcon={resolvedShowRightIcon}
+          showLeftArrow={resolvedShowLeftArrow}
+          showRightArrow={resolvedShowRightArrow}
         />
       </div>
     </div>

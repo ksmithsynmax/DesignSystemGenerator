@@ -349,7 +349,9 @@
         "rangeslider-mark-label-font-size-default": "md",
         "rangeslider-mark-label-line-height-default": "md",
         "rangeslider-radius-default": "md",
-        "rangeslider-thumb-border-width-default": "md"
+        "rangeslider-thumb-border-width-default": "md",
+        "badge-remove-size-default": "default",
+        "badge-remove-icon-stroke-width-default": "default"
       },
       "dimensionOverrides": {
         "button-focus-ring-radius": {
@@ -1122,6 +1124,12 @@
           "md": 1.5,
           "lg": 2,
           "xl": 2
+        },
+        "tabs-outlined-overflow-control-padding-x": {
+          "_value": 16
+        },
+        "tabs-outlined-overflow-control-padding-y": {
+          "_value": 16
         }
       },
       "componentOverridesDark": {
@@ -8131,6 +8139,11 @@
           "color": "neutral",
           "index": 0,
           "opacity": 100
+        },
+        "tabs-outlined-overflow-control-icon": {
+          "color": "neutral",
+          "index": 0,
+          "opacity": 100
         }
       },
       "semanticRadiusMap": {
@@ -8605,7 +8618,9 @@
         "rangeslider-mark-label-font-size-default": "md",
         "rangeslider-mark-label-line-height-default": "md",
         "rangeslider-radius-default": "md",
-        "rangeslider-thumb-border-width-default": "md"
+        "rangeslider-thumb-border-width-default": "md",
+        "badge-remove-size-default": "default",
+        "badge-remove-icon-stroke-width-default": "default"
       },
       "dimensionOverrides": {
         "button-border-radius": {
@@ -8736,7 +8751,7 @@
           "_value": 4
         },
         "tabs-pills-list-gap": {
-          "_value": 0
+          "_value": 4
         },
         "tabs-default-list-gap": {
           "_value": 0
@@ -8882,6 +8897,15 @@
         },
         "chart-grid-style": {
           "_value": "dashed"
+        },
+        "tabs-outlined-tab-border-width-active": {
+          "_value": 1
+        },
+        "tabs-outlined-overflow-control-padding-x": {
+          "_value": 16
+        },
+        "tabs-outlined-overflow-control-padding-y": {
+          "_value": 4
         }
       },
       "componentOverridesDark": {
@@ -13469,6 +13493,16 @@
           "color": "green",
           "index": 5,
           "opacity": 10
+        },
+        "tabs-outlined-tab-border-active": {
+          "color": "slate-purple",
+          "index": 1,
+          "opacity": 100
+        },
+        "tabs-outlined-overflow-control-icon": {
+          "color": "slate-purple",
+          "index": 9,
+          "opacity": 100
         }
       },
       "semanticRadiusMap": {
@@ -20341,6 +20375,24 @@
             "gradientSpec": null
           }
         },
+        "tabs/default-overflow-control-icon": {
+          "type": "COLOR",
+          "value": "#FFFFFFFF",
+          "alias": "text-default",
+          "primitiveAlias": "neutral/0",
+          "light": {
+            "value": "#FFFFFFFF",
+            "alias": "text-default",
+            "primitiveAlias": "neutral/0",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#FFFFFFFF",
+            "alias": "text-default",
+            "primitiveAlias": "neutral/0",
+            "gradientSpec": null
+          }
+        },
         "tabs/outlined-list-background": {
           "type": "COLOR",
           "value": "transparent",
@@ -20644,6 +20696,24 @@
             "value": "transparent",
             "alias": null,
             "primitiveAlias": "transparent",
+            "gradientSpec": null
+          }
+        },
+        "tabs/outlined-overflow-control-icon": {
+          "type": "COLOR",
+          "value": "#FFFFFFFF",
+          "alias": null,
+          "primitiveAlias": "neutral/0",
+          "light": {
+            "value": "#FFFFFFFF",
+            "alias": null,
+            "primitiveAlias": "neutral/0",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#006CD7FF",
+            "alias": "interactive-primary",
+            "primitiveAlias": "blue/5",
             "gradientSpec": null
           }
         },
@@ -35645,6 +35715,66 @@
           "value": 32,
           "alias": "spacing/32"
         },
+        "badge/remove-size-default": {
+          "type": "FLOAT",
+          "value": 14,
+          "alias": "spacing/14"
+        },
+        "badge/remove-size-xs": {
+          "type": "FLOAT",
+          "value": 12,
+          "alias": "spacing/12"
+        },
+        "badge/remove-size-sm": {
+          "type": "FLOAT",
+          "value": 13,
+          "alias": null
+        },
+        "badge/remove-size-md": {
+          "type": "FLOAT",
+          "value": 14,
+          "alias": "spacing/14"
+        },
+        "badge/remove-size-lg": {
+          "type": "FLOAT",
+          "value": 16,
+          "alias": "spacing/16"
+        },
+        "badge/remove-size-xl": {
+          "type": "FLOAT",
+          "value": 18,
+          "alias": "spacing/18"
+        },
+        "badge/remove-icon-stroke-width-default": {
+          "type": "FLOAT",
+          "value": 2,
+          "alias": "border-width/2"
+        },
+        "badge/remove-icon-stroke-width-xs": {
+          "type": "FLOAT",
+          "value": 1.5,
+          "alias": "border-width/1_5"
+        },
+        "badge/remove-icon-stroke-width-sm": {
+          "type": "FLOAT",
+          "value": 1.75,
+          "alias": "border-width/1_75"
+        },
+        "badge/remove-icon-stroke-width-md": {
+          "type": "FLOAT",
+          "value": 2,
+          "alias": "border-width/2"
+        },
+        "badge/remove-icon-stroke-width-lg": {
+          "type": "FLOAT",
+          "value": 2.25,
+          "alias": "border-width/2_25"
+        },
+        "badge/remove-icon-stroke-width-xl": {
+          "type": "FLOAT",
+          "value": 2.5,
+          "alias": null
+        },
         "badge/border-width": {
           "type": "FLOAT",
           "value": 1,
@@ -48010,6 +48140,24 @@
             "gradientSpec": null
           }
         },
+        "tabs/default-overflow-control-icon": {
+          "type": "COLOR",
+          "value": "#14113BFF",
+          "alias": "text-default",
+          "primitiveAlias": "slate-purple/9",
+          "light": {
+            "value": "#14113BFF",
+            "alias": "text-default",
+            "primitiveAlias": "slate-purple/9",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#14113BFF",
+            "alias": "text-default",
+            "primitiveAlias": "slate-purple/9",
+            "gradientSpec": null
+          }
+        },
         "tabs/outlined-list-background": {
           "type": "COLOR",
           "value": "transparent",
@@ -48264,13 +48412,13 @@
         },
         "tabs/outlined-tab-border-active": {
           "type": "COLOR",
-          "value": "#25A72CFF",
-          "alias": "interactive-primary",
-          "primitiveAlias": "green/6",
+          "value": "#E8E7EBFF",
+          "alias": null,
+          "primitiveAlias": "slate-purple/1",
           "light": {
-            "value": "#25A72CFF",
-            "alias": "interactive-primary",
-            "primitiveAlias": "green/6",
+            "value": "#E8E7EBFF",
+            "alias": null,
+            "primitiveAlias": "slate-purple/1",
             "gradientSpec": null
           },
           "dark": {
@@ -48313,6 +48461,24 @@
             "value": "#B9B8C4FF",
             "alias": null,
             "primitiveAlias": "slate-purple/3",
+            "gradientSpec": null
+          }
+        },
+        "tabs/outlined-overflow-control-icon": {
+          "type": "COLOR",
+          "value": "#14113BFF",
+          "alias": null,
+          "primitiveAlias": "slate-purple/9",
+          "light": {
+            "value": "#14113BFF",
+            "alias": null,
+            "primitiveAlias": "slate-purple/9",
+            "gradientSpec": null
+          },
+          "dark": {
+            "value": "#25A72CFF",
+            "alias": "interactive-primary",
+            "primitiveAlias": "green/6",
             "gradientSpec": null
           }
         },
@@ -48807,8 +48973,8 @@
         },
         "tabs/pills-list-gap": {
           "type": "FLOAT",
-          "value": 0,
-          "alias": null
+          "value": 4,
+          "alias": "spacing/4"
         },
         "tabs/list-border-width": {
           "type": "FLOAT",
@@ -48832,8 +48998,8 @@
         },
         "tabs/outlined-tab-border-width-active": {
           "type": "FLOAT",
-          "value": 2,
-          "alias": "border-width/2"
+          "value": 1,
+          "alias": "border-width/1"
         },
         "tabs/pills-tab-border-width-active": {
           "type": "FLOAT",
@@ -48867,8 +49033,8 @@
         },
         "tabs/outlined-overflow-control-padding-y": {
           "type": "FLOAT",
-          "value": 16,
-          "alias": "spacing/16"
+          "value": 4,
+          "alias": "spacing/4"
         },
         "accordion/default-header-background": {
           "type": "COLOR",
@@ -63313,6 +63479,66 @@
           "type": "FLOAT",
           "value": 32,
           "alias": "spacing/32"
+        },
+        "badge/remove-size-default": {
+          "type": "FLOAT",
+          "value": 14,
+          "alias": "spacing/14"
+        },
+        "badge/remove-size-xs": {
+          "type": "FLOAT",
+          "value": 12,
+          "alias": "spacing/12"
+        },
+        "badge/remove-size-sm": {
+          "type": "FLOAT",
+          "value": 13,
+          "alias": null
+        },
+        "badge/remove-size-md": {
+          "type": "FLOAT",
+          "value": 14,
+          "alias": "spacing/14"
+        },
+        "badge/remove-size-lg": {
+          "type": "FLOAT",
+          "value": 16,
+          "alias": "spacing/16"
+        },
+        "badge/remove-size-xl": {
+          "type": "FLOAT",
+          "value": 18,
+          "alias": "spacing/18"
+        },
+        "badge/remove-icon-stroke-width-default": {
+          "type": "FLOAT",
+          "value": 2,
+          "alias": "border-width/2"
+        },
+        "badge/remove-icon-stroke-width-xs": {
+          "type": "FLOAT",
+          "value": 1.5,
+          "alias": "border-width/1_5"
+        },
+        "badge/remove-icon-stroke-width-sm": {
+          "type": "FLOAT",
+          "value": 1.75,
+          "alias": "border-width/1_75"
+        },
+        "badge/remove-icon-stroke-width-md": {
+          "type": "FLOAT",
+          "value": 2,
+          "alias": "border-width/2"
+        },
+        "badge/remove-icon-stroke-width-lg": {
+          "type": "FLOAT",
+          "value": 2.25,
+          "alias": "border-width/2_25"
+        },
+        "badge/remove-icon-stroke-width-xl": {
+          "type": "FLOAT",
+          "value": 2.5,
+          "alias": null
         },
         "badge/border-width": {
           "type": "FLOAT",

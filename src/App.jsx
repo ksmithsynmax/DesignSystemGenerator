@@ -693,6 +693,8 @@ export default function App() {
   const [activeTabsShowMenu, setActiveTabsShowMenu] = useState(false);
   const [activeTabsShowLeftIcon, setActiveTabsShowLeftIcon] = useState(false);
   const [activeTabsShowRightIcon, setActiveTabsShowRightIcon] = useState(false);
+  const [activeTabsShowLeftArrow, setActiveTabsShowLeftArrow] = useState(false);
+  const [activeTabsShowRightArrow, setActiveTabsShowRightArrow] = useState(false);
   const [activeTabsState, setActiveTabsState] = useState("default");
   const [activeAccordionVariant, setActiveAccordionVariant] = useState("default");
   const [activeAccordionPosition, setActiveAccordionPosition] = useState("single");
@@ -811,6 +813,7 @@ export default function App() {
   const [activeBadgeRadius, setActiveBadgeRadius] = useState(badgeDefault);
   const [activeBadgeCircle, setActiveBadgeCircle] = useState(false);
   const [activeBadgeFullWidth, setActiveBadgeFullWidth] = useState(false);
+  const [activeBadgeWithRemoveButton, setActiveBadgeWithRemoveButton] = useState(false);
   const [activeBadgeText, setActiveBadgeText] = useState("Badge");
   const [activeBadgeColor, setActiveBadgeColor] = useState("default");
   const [activeTextInputSize, setActiveTextInputSize] = useState(textInputDefault);
@@ -1012,6 +1015,8 @@ export default function App() {
       setActiveTabsShowMenu(false);
       setActiveTabsShowLeftIcon(false);
       setActiveTabsShowRightIcon(false);
+      setActiveTabsShowLeftArrow(false);
+      setActiveTabsShowRightArrow(false);
       setActiveTabsState("default");
       setActiveVariant("default");
     } else if (newComp === "accordion") {
@@ -1237,6 +1242,7 @@ export default function App() {
       setActiveBadgeRadius(badgeDefault);
       setActiveBadgeCircle(false);
       setActiveBadgeFullWidth(false);
+      setActiveBadgeWithRemoveButton(false);
       setActiveBadgeText("Badge");
       setActiveBadgeColor("default");
       setActiveVariant("default");
@@ -3265,6 +3271,8 @@ export default function App() {
                   showMenu={activeTabsShowMenu}
                   showLeftIcon={activeTabsShowLeftIcon}
                   showRightIcon={activeTabsShowRightIcon}
+                  showLeftArrow={activeTabsShowLeftArrow}
+                  showRightArrow={activeTabsShowRightArrow}
                 />
               )}
               {activeComponent === "accordion" && (
@@ -3908,6 +3916,7 @@ export default function App() {
                   radius={activeBadgeRadius}
                   circle={activeBadgeCircle}
                   fullWidth={activeBadgeFullWidth}
+                  withRemoveButton={activeBadgeWithRemoveButton}
                   text={activeBadgeText}
                   previewTheme={previewTheme}
                 />
@@ -4047,6 +4056,10 @@ export default function App() {
                   setShowLeftIcon={setActiveTabsShowLeftIcon}
                   showRightIcon={activeTabsShowRightIcon}
                   setShowRightIcon={setActiveTabsShowRightIcon}
+                  showLeftArrow={activeTabsShowLeftArrow}
+                  setShowLeftArrow={setActiveTabsShowLeftArrow}
+                  showRightArrow={activeTabsShowRightArrow}
+                  setShowRightArrow={setActiveTabsShowRightArrow}
                   selectedState={forcedState || activeTabsState}
                   setSelectedState={setActiveTabsState}
                   forcedState={forcedState}
@@ -4807,6 +4820,8 @@ export default function App() {
                   setCircle={setActiveBadgeCircle}
                   fullWidth={activeBadgeFullWidth}
                   setFullWidth={setActiveBadgeFullWidth}
+                  withRemoveButton={activeBadgeWithRemoveButton}
+                  setWithRemoveButton={setActiveBadgeWithRemoveButton}
                   text={activeBadgeText}
                   setText={setActiveBadgeText}
                 />

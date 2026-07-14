@@ -3360,7 +3360,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           if (stackSizeRows && templateSizeSlot.layoutMode === "VERTICAL") {
             templateSizeSlot.counterAxisAlignItems = "CENTER";
           }
-          if (lowerSetName === "switch" || lowerSetName === "pill") {
+          if (lowerSetName === "switch" || lowerSetName === "pill" || lowerSetName === "badge") {
             templateSizeSlot.fills = [];
             templateSizeSlot.strokes = [];
             templateSizeSlot.strokeWeight = 0;
@@ -3454,24 +3454,31 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             addInstancesRow(templateSwitchSizeOnPanel, "Checked On", templateOrderedSizes, function (sizeName) {
               return makeTemplateInstance({ Size: sizeName, Checked: templateCheckedOn });
             }, true, { font: mediumFont, size: 14 });
-          } else if (lowerSetName === "pill") {
-            // Pills are optionally removable, so document both states in their own
-            // cards (same pattern as Switch's Checked Off/On).
+          } else if (lowerSetName === "pill" || lowerSetName === "badge") {
+            // Pills/badges are optionally removable, so document both states in
+            // their own cards (same pattern as Switch's Checked Off/On).
             var templatePillRemoveVals = getPropValues(variantProps, "Remove");
             var templatePillRemoveOff = templatePillRemoveVals.indexOf("Off") >= 0 ? "Off" : (templatePillRemoveVals[0] || null);
             var templatePillRemoveOn = templatePillRemoveVals.indexOf("On") >= 0 ? "On" : null;
+            var templatePillExtraPatch = lowerSetName === "badge" ? { Circle: "Off" } : {};
+            function makeTemplatePillRemoveInstance(sizeName, removeValue) {
+              var patch = { Size: sizeName, Remove: removeValue };
+              var extraKeys = Object.keys(templatePillExtraPatch);
+              for (var pek = 0; pek < extraKeys.length; pek++) patch[extraKeys[pek]] = templatePillExtraPatch[extraKeys[pek]];
+              return makeTemplateInstance(patch);
+            }
             var templatePillSizeOffPanel = createPanel("pill-size-remove-off-panel", 10);
             templatePillSizeOffPanel.resize(1192, templatePillSizeOffPanel.height);
             templateSizeSlot.appendChild(templatePillSizeOffPanel);
             addInstancesRow(templatePillSizeOffPanel, "Without Close", templateOrderedSizes, function (sizeName) {
-              return makeTemplateInstance({ Size: sizeName, Remove: templatePillRemoveOff });
+              return makeTemplatePillRemoveInstance(sizeName, templatePillRemoveOff);
             }, true, { font: mediumFont, size: 14 });
             if (templatePillRemoveOn != null) {
               var templatePillSizeOnPanel = createPanel("pill-size-remove-on-panel", 10);
               templatePillSizeOnPanel.resize(1192, templatePillSizeOnPanel.height);
               templateSizeSlot.appendChild(templatePillSizeOnPanel);
               addInstancesRow(templatePillSizeOnPanel, "With Close", templateOrderedSizes, function (sizeName) {
-                return makeTemplateInstance({ Size: sizeName, Remove: templatePillRemoveOn });
+                return makeTemplatePillRemoveInstance(sizeName, templatePillRemoveOn);
               }, true, { font: mediumFont, size: 14 });
             }
           } else if (lowerSetName === "divider") {
@@ -4925,7 +4932,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       if (sizeSlot && orderedSizes.length > 0) {
         clearChildren(sizeSlot);
-        if (lowerSetName === "switch" || lowerSetName === "pill") {
+        if (lowerSetName === "switch" || lowerSetName === "pill" || lowerSetName === "badge") {
           sizeSlot.fills = [];
           sizeSlot.strokes = [];
           sizeSlot.strokeWeight = 0;
@@ -5019,24 +5026,31 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           addInstancesRow(switchSizeOnPanel, "Checked On", orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName, Checked: checkedOn });
           }, true, { font: mediumFont, size: 14 });
-        } else if (lowerSetName === "pill") {
-          // Pills are optionally removable, so document both states in their own
-          // cards (same pattern as Switch's Checked Off/On).
+        } else if (lowerSetName === "pill" || lowerSetName === "badge") {
+          // Pills/badges are optionally removable, so document both states in
+          // their own cards (same pattern as Switch's Checked Off/On).
           var pillRemoveVals = getPropValues(variantProps, "Remove");
           var pillRemoveOff = pillRemoveVals.indexOf("Off") >= 0 ? "Off" : (pillRemoveVals[0] || null);
           var pillRemoveOn = pillRemoveVals.indexOf("On") >= 0 ? "On" : null;
+          var pillExtraPatch = lowerSetName === "badge" ? { Circle: "Off" } : {};
+          function makePillRemoveInstance(sizeName, removeValue) {
+            var patch = { Size: sizeName, Remove: removeValue };
+            var extraKeys = Object.keys(pillExtraPatch);
+            for (var pek = 0; pek < extraKeys.length; pek++) patch[extraKeys[pek]] = pillExtraPatch[extraKeys[pek]];
+            return makeInstance(patch);
+          }
           var pillSizeOffPanel = createPanel("pill-size-remove-off-panel", 10);
           pillSizeOffPanel.resize(1192, pillSizeOffPanel.height);
           sizeSlot.appendChild(pillSizeOffPanel);
           addInstancesRow(pillSizeOffPanel, "Without Close", orderedSizes, function (sizeName) {
-            return makeInstance({ Size: sizeName, Remove: pillRemoveOff });
+            return makePillRemoveInstance(sizeName, pillRemoveOff);
           }, true, { font: mediumFont, size: 14 });
           if (pillRemoveOn != null) {
             var pillSizeOnPanel = createPanel("pill-size-remove-on-panel", 10);
             pillSizeOnPanel.resize(1192, pillSizeOnPanel.height);
             sizeSlot.appendChild(pillSizeOnPanel);
             addInstancesRow(pillSizeOnPanel, "With Close", orderedSizes, function (sizeName) {
-              return makeInstance({ Size: sizeName, Remove: pillRemoveOn });
+              return makePillRemoveInstance(sizeName, pillRemoveOn);
             }, true, { font: mediumFont, size: 14 });
           }
         } else if (lowerSetName === "divider") {
@@ -19735,7 +19749,27 @@ async function findPillRemoveIconComponent() {
 // Badge Component Set
 // ---------------------------------------------------------------------------
 
-function buildBadgeComponentSet(varMap, page, font) {
+async function buildBadgeComponentSet(varMap, page, font) {
+  function createBadgeSwapRefs(iconComp) {
+    var refs = [];
+    if (!iconComp) return refs;
+    try {
+      var mainComp = iconComp.mainComponent || iconComp;
+      if (mainComp && mainComp.key) refs.push(mainComp.key);
+    } catch (_err) {}
+    if (iconComp.key) refs.push(iconComp.key);
+    if (iconComp.id) refs.push(iconComp.id);
+    return refs;
+  }
+
+  // Untitled UI close/x icon used for the removable badge (instance-swappable).
+  var removeIconComp = await findPillRemoveIconComponent();
+  if (removeIconComp) {
+    progress("[Badge] Remove icon source: " + removeIconComp.name);
+  } else {
+    progress("[Badge] Warning: no close icon component found; using text fallback.");
+  }
+
   var variantColorPairs = [];
   variantColorPairs.push({ variant: "default", color: "default" });
   variantColorPairs.push({ variant: "light", color: "default" });
@@ -19752,6 +19786,7 @@ function buildBadgeComponentSet(varMap, page, font) {
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var circles = ["off", "on"];
+  var removeModes = ["off", "on"];
   var components = [];
 
   var circleSizeBySize = { default: 20, xs: 16, sm: 18, md: 20, lg: 24, xl: 28 };
@@ -19795,13 +19830,21 @@ function buildBadgeComponentSet(varMap, page, font) {
           var radius = radii[ri];
           var capRadius = radius === "default" ? "Default" : radius.toUpperCase();
 
+        for (var rmi = 0; rmi < removeModes.length; rmi++) {
+          var removeMode = removeModes[rmi];
+          var withRemove = removeMode === "on";
+          var capRemove = withRemove ? "On" : "Off";
+          // Circle badges are icon/number-only, so they are never removable.
+          if (isCircle && withRemove) continue;
+
           var comp = figma.createComponent();
           comp.name =
             "Variant=" + capVariant +
             ", Color=" + capColor +
             ", Size=" + capSize +
             ", Radius=" + capRadius +
-            ", Circle=" + capCircle;
+            ", Circle=" + capCircle +
+            ", Remove=" + capRemove;
           comp.layoutMode = "HORIZONTAL";
           comp.primaryAxisSizingMode = "AUTO";
           comp.counterAxisSizingMode = "AUTO";
@@ -19851,12 +19894,71 @@ function buildBadgeComponentSet(varMap, page, font) {
           bindVar(label, "lineHeight", varMap["badge/line-height-" + size]);
           comp.appendChild(label);
 
-          var colIndex = vi * circles.length + ci;
+          if (withRemove) {
+            var badgeTextPath = colorPath(variant, color, "text");
+            if (removeIconComp) {
+              var removeInst = removeIconComp.createInstance();
+              removeInst.name = "Remove";
+              try { removeInst.resizeWithoutConstraints(12, 12); } catch (e) {}
+              bindVar(removeInst, "width", varMap["badge/remove-size-" + size]);
+              bindVar(removeInst, "height", varMap["badge/remove-size-" + size]);
+              // Center-aligned badge auto-layout keeps a fixed-size icon centered.
+              try { removeInst.layoutGrow = 0; } catch (_badgeGrowErr) {}
+              try { removeInst.layoutAlign = "INHERIT"; } catch (_badgeAlignErr) {}
+              var removeVectors = removeInst.findAll(function (n) {
+                return (
+                  n.type === "VECTOR" ||
+                  n.type === "LINE" ||
+                  n.type === "ELLIPSE" ||
+                  n.type === "RECTANGLE" ||
+                  n.type === "POLYGON" ||
+                  n.type === "STAR"
+                );
+              });
+              for (var rvi = 0; rvi < removeVectors.length; rvi++) {
+                bindVar(removeVectors[rvi], "strokeWeight", varMap["badge/remove-icon-stroke-width-" + size]);
+                if (removeVectors[rvi].strokes && removeVectors[rvi].strokes.length > 0) {
+                  bindPaintVar(removeVectors[rvi], "strokes", 0, varMap[badgeTextPath]);
+                }
+                if (removeVectors[rvi].fills && removeVectors[rvi].fills.length > 0) {
+                  bindPaintVar(removeVectors[rvi], "fills", 0, varMap[badgeTextPath]);
+                }
+              }
+              comp.appendChild(removeInst);
+
+              if (typeof comp.addComponentProperty === "function") {
+                var badgeSwapRefs = createBadgeSwapRefs(removeIconComp);
+                var badgeSwapProp = null;
+                for (var bsri = 0; bsri < badgeSwapRefs.length; bsri++) {
+                  try {
+                    badgeSwapProp = comp.addComponentProperty("Remove Icon", "INSTANCE_SWAP", badgeSwapRefs[bsri]);
+                    break;
+                  } catch (eSwap) {}
+                }
+                if (badgeSwapProp) {
+                  try { removeInst.componentPropertyReferences = { mainComponent: badgeSwapProp }; } catch (_badgeSwapRefErr) {}
+                }
+              }
+            } else {
+              var remove = figma.createText();
+              remove.name = "Remove";
+              remove.fontName = font;
+              remove.characters = "\u00d7";
+              remove.fontSize = 12;
+              remove.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              bindPaintVar(remove, "fills", 0, varMap[badgeTextPath]);
+              bindVar(remove, "fontSize", varMap["badge/remove-size-" + size]);
+              comp.appendChild(remove);
+            }
+          }
+
+          var colIndex = (vi * circles.length + ci) * removeModes.length + rmi;
           var rowIndex = si * radii.length + ri;
           comp.x = colIndex * (colWidth + gap);
           comp.y = rowIndex * (rowHeight + gap);
           page.appendChild(comp);
           components.push(comp);
+        }
         }
       }
     }
@@ -23976,6 +24078,8 @@ function createTabsOverflowControl(options) {
   try { control.layoutSizingVertical = "HUG"; } catch (_tabsArrowControlHugHeightErr) {}
 
   var textPath = tabsOverflowColorPath(variant, "text", state);
+  // Dedicated overflow-control icon color (falls back to the tab text color).
+  var iconColorVar = varMap["tabs/" + (variant || "default") + "-overflow-control-icon"] || varMap[textPath];
   var controlFillPath = tabsOverflowColorPath(variant, "background", state);
   var controlBorderPath = tabsOverflowColorPath(variant, "border", state);
   bindPaintVar(control, "fills", 0, varMap[controlFillPath]);
@@ -24031,11 +24135,11 @@ function createTabsOverflowControl(options) {
       bindVar(arrowVectors[avi], "strokeWeight", varMap["tabs/icon-stroke-width"]);
       if (arrowVectors[avi].strokes && arrowVectors[avi].strokes.length > 0) {
         arrowVectors[avi].strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-        bindPaintVar(arrowVectors[avi], "strokes", 0, varMap[textPath]);
+        bindPaintVar(arrowVectors[avi], "strokes", 0, iconColorVar);
       }
       if (arrowVectors[avi].fills && arrowVectors[avi].fills.length > 0) {
         arrowVectors[avi].fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-        bindPaintVar(arrowVectors[avi], "fills", 0, varMap[textPath]);
+        bindPaintVar(arrowVectors[avi], "fills", 0, iconColorVar);
       }
     }
     control.appendChild(arrowInst);

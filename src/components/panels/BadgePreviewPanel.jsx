@@ -81,6 +81,7 @@ export function BadgePreviewContent({
   radius,
   circle,
   fullWidth,
+  withRemoveButton,
   text,
   previewTheme,
 }) {
@@ -96,6 +97,7 @@ export function BadgePreviewContent({
           radius={radius}
           circle={circle}
           fullWidth={fullWidth}
+          withRemoveButton={withRemoveButton && !circle}
           text={text}
           previewTheme={previewTheme}
         />
@@ -138,6 +140,8 @@ export function BadgePropertiesPanel({
   setCircle,
   fullWidth,
   setFullWidth,
+  withRemoveButton,
+  setWithRemoveButton,
   text,
   setText,
 }) {
@@ -164,6 +168,13 @@ export function BadgePropertiesPanel({
         label="Full Width"
         value={fullWidth ? "on" : "off"}
         onChange={(v) => setFullWidth(v === "on")}
+        options={["off", "on"]}
+        disabled={circle}
+      />
+      <PropertyRow
+        label="Close"
+        value={withRemoveButton ? "on" : "off"}
+        onChange={(v) => setWithRemoveButton(v === "on")}
         options={["off", "on"]}
         disabled={circle}
       />

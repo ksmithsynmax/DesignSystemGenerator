@@ -32,6 +32,7 @@ export default function BadgePreview({
   radius = "md",
   circle = false,
   fullWidth = false,
+  withRemoveButton = false,
   text = "Badge",
   /** Match surrounding preview: "light" | "dark" — drives semantic color resolution. */
   previewTheme = "light",
@@ -75,7 +76,34 @@ export default function BadgePreview({
   const borderWidth = resolveDimension(brands, brandId, "badge-border-width");
   const computedHeight = Math.max(16, (lineHeight || fontSize || 12) + (paddingY || 0) * 2 + (borderWidth || 0) * 2);
 
-  const content = circle ? "8" : text;
+  const removeSize = resolveSizedToken("badge-remove-size", sizeKey);
+  const removeStrokeWidth = resolveSizedToken("badge-remove-icon-stroke-width", sizeKey);
+  const showRemove = withRemoveButton && !circle;
+
+  const label = circle ? "8" : text;
+  const content = showRemove ? (
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>
+      <span>{label}</span>
+      <svg
+        width={removeSize ?? 14}
+        height={removeSize ?? 14}
+        viewBox="0 0 24 24"
+        fill="none"
+        style={{ display: "block", flexShrink: 0 }}
+        aria-hidden="true"
+      >
+        <path
+          d="M18 6 6 18M6 6l12 12"
+          stroke={color}
+          strokeWidth={removeStrokeWidth ?? 2}
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    </span>
+  ) : (
+    label
+  );
 
   return (
     <div style={{ width: fullWidth ? 220 : "auto" }}>
