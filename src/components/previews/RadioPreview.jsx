@@ -91,7 +91,12 @@ export default function RadioPreview({
         },
         radio: {
           backgroundColor: checked && variant !== "outline" ? undefined : uncheckedBg,
-          borderColor: checked && variant !== "outline" ? "transparent" : borderColor,
+          // A checked filled radio normally hides its ring (the accent fill is
+          // the whole circle). In the disabled state, though, Figma draws the
+          // ring using radio-<variant>-border-disabled, so keep the border
+          // visible there and let the disabled border token drive its color.
+          borderColor:
+            checked && variant !== "outline" && !isDisabled ? "transparent" : borderColor,
           boxShadow: state === "focus" ? `0 0 0 2px ${focusRing}40` : "none",
           opacity: 1,
         },

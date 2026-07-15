@@ -2287,7 +2287,7 @@ export default function App() {
     }
     const radiusMatch = token.match(/^tabs-(default|outlined|pills)-radius$/);
     if (radiusMatch) return radiusMatch[1] === activeTabsTokenVariant;
-    const listPaddingMatch = token.match(/^tabs-(default|outlined|pills)-list-padding$/);
+    const listPaddingMatch = token.match(/^tabs-(default|pills)-list-padding$/);
     if (listPaddingMatch) return listPaddingMatch[1] === activeTabsTokenVariant;
     const tabPadXMatch = token.match(/^tabs-(default|outlined|pills)-tab-padding-x$/);
     if (tabPadXMatch) return tabPadXMatch[1] === activeTabsTokenVariant;

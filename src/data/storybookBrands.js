@@ -512,9 +512,6 @@ export const STORYBOOK_BRANDS = {
       "tabs-pills-list-padding": {
         "_value": 0
       },
-      "tabs-outlined-list-padding": {
-        "_value": 0
-      },
       "text-font-size": {
         "xs": 8,
         "sm": 12,

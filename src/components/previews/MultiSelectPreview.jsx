@@ -69,7 +69,15 @@ export default function MultiSelectPreview({
         ]
       : [`${prefix}-placeholder`]
   );
-  const labelColor = resolveColor(brands, brandId, tokens["multiselect-label-color"]?.semantic, "light", "multiselect-label-color");
+  const labelColor = isDisabled
+    ? resolveColor(
+        brands,
+        brandId,
+        tokens[`${prefix}-label-disabled`]?.semantic ?? tokens["multiselect-label-color"]?.semantic,
+        "light",
+        tokens[`${prefix}-label-disabled`] ? `${prefix}-label-disabled` : "multiselect-label-color"
+      )
+    : resolveColor(brands, brandId, tokens["multiselect-label-color"]?.semantic, "light", "multiselect-label-color");
   const asteriskColor = resolveColor(brands, brandId, tokens["multiselect-asterisk-color"]?.semantic, "light", "multiselect-asterisk-color");
   const errorColor = resolveColor(brands, brandId, tokens["multiselect-error-color"]?.semantic, "light", "multiselect-error-color");
   const iconSemantic = isDisabled

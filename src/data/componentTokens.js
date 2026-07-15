@@ -250,6 +250,7 @@ export const COMPONENT_TOKENS = {
     // ── DEFAULT VARIANT ──
     "tabs-default-list-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/default-list-background" },
     "tabs-default-list-border": { type: "COLOR", semantic: "border-default", figmaPath: "tabs/default-list-border" },
+    "tabs-default-list-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "tabs/default-list-border-disabled" },
     "tabs-default-tab-background-active": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/default-tab-background-active" },
     "tabs-default-tab-text": { type: "COLOR", semantic: "text-default", figmaPath: "tabs/default-tab-text" },
     "tabs-default-tab-text-hover": { type: "COLOR", semantic: "text-default", figmaPath: "tabs/default-tab-text-hover" },
@@ -261,6 +262,7 @@ export const COMPONENT_TOKENS = {
     "tabs-default-tab-border-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/default-tab-border-pressed" },
     "tabs-default-tab-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "tabs/default-tab-border-disabled" },
     "tabs-default-overflow-control-icon": { type: "COLOR", semantic: "text-default", figmaPath: "tabs/default-overflow-control-icon" },
+    "tabs-default-overflow-control-icon-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "tabs/default-overflow-control-icon-disabled" },
 
     // ── OUTLINED VARIANT ──
     "tabs-outlined-list-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/outlined-list-background" },
@@ -281,6 +283,7 @@ export const COMPONENT_TOKENS = {
     "tabs-outlined-tab-border-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/outlined-tab-border-pressed" },
     "tabs-outlined-tab-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "tabs/outlined-tab-border-disabled" },
     "tabs-outlined-overflow-control-icon": { type: "COLOR", semantic: "interactive-primary", figmaPath: "tabs/outlined-overflow-control-icon" },
+    "tabs-outlined-overflow-control-icon-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "tabs/outlined-overflow-control-icon-disabled" },
 
     // ── PILLS VARIANT ──
     "tabs-pills-list-background": { type: "COLOR", semantic: "surface-default", figmaPath: "tabs/pills-list-background" },
@@ -334,7 +337,6 @@ export const COMPONENT_TOKENS = {
     "tabs-pills-tab-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "tabs/pills-tab-padding-x" },
     "tabs-pills-tab-padding-y": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/pills-tab-padding-y" },
     "tabs-default-list-padding": { type: "FLOAT", unit: "px", value: 0, figmaPath: "tabs/default-list-padding" },
-    "tabs-outlined-list-padding": { type: "FLOAT", unit: "px", value: 4, figmaPath: "tabs/outlined-list-padding" },
     "tabs-pills-list-padding": { type: "FLOAT", unit: "px", value: 4, figmaPath: "tabs/pills-list-padding" },
     "tabs-default-list-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/default-list-gap" },
     "tabs-outlined-list-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "tabs/outlined-list-gap" },
@@ -2042,6 +2044,8 @@ export const COMPONENT_TOKENS = {
     "select-default-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "select/default-placeholder-error" },
     "select-filled-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "select/filled-placeholder-error" },
     "select-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "select/label-color" },
+    "select-default-label-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "select/default-label-disabled" },
+    "select-filled-label-disabled":  { type: "COLOR", semantic: "text-disabled", figmaPath: "select/filled-label-disabled" },
     "select-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/asterisk-color" },
     "select-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "select/error-color" },
     /** Right-slot / chevron icon tint (Mantine `section`). */
@@ -2174,6 +2178,8 @@ export const COMPONENT_TOKENS = {
     "multiselect-default-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "multiselect/default-placeholder-error" },
     "multiselect-filled-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "multiselect/filled-placeholder-error" },
     "multiselect-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "multiselect/label-color" },
+    "multiselect-default-label-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "multiselect/default-label-disabled" },
+    "multiselect-filled-label-disabled":  { type: "COLOR", semantic: "text-disabled", figmaPath: "multiselect/filled-label-disabled" },
     "multiselect-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "multiselect/asterisk-color" },
     "multiselect-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "multiselect/error-color" },
     /** Right-slot / chevron icon tint (Mantine `section`). */

@@ -865,6 +865,34 @@ async function syncTokens(payload) {
   totalAliases += compAliases;
   progress("Components: " + compCreated + " created, " + compAliases + " aliases");
 
+  // ── Outlined overflow fade visibility (per-brand-mode BOOLEAN) ──
+  // The outlined tabs' edge fade is a baked dark Linear gradient that only
+  // belongs to Theia. Figma can't drive a gradient's colors from a variable per
+  // mode, so instead we gate the fade LAYER's visibility with a BOOLEAN
+  // variable: true ONLY for Theia's modes, false for every other brand (which
+  // hides the overlay entirely). Created after stale-removal so it isn't pruned.
+  try {
+    var fadeVisPath = "tabs/outlined-overflow-fade-visible";
+    var fadeVisVar = componentVarMap[fadeVisPath];
+    if (fadeVisVar && fadeVisVar.resolvedType !== "BOOLEAN") {
+      fadeVisVar.remove();
+      fadeVisVar = null;
+    }
+    if (!fadeVisVar) {
+      fadeVisVar = figma.variables.createVariable(fadeVisPath, componentsCol, "BOOLEAN");
+      componentVarMap[fadeVisPath] = fadeVisVar;
+    }
+    for (var fvi = 0; fvi < syncModes.length; fvi++) {
+      var fvModeId = compModes.modeMap[syncModes[fvi].key];
+      if (!fvModeId) continue;
+      // Only Theia keeps the fade overlay; all other brands hide it.
+      var fadeVisible = syncModes[fvi].brandId === "theia";
+      try { fadeVisVar.setValueForMode(fvModeId, fadeVisible); } catch (_fadeSetErr) {}
+    }
+  } catch (_fadeVisErr) {
+    progress("Fade visibility variable skipped: " + String(_fadeVisErr));
+  }
+
   try {
     syncGradientPaintStyles(payload, syncBrands);
   } catch (gradStyleErr) {
@@ -1254,6 +1282,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
       requestedSet.progress = true;
       requestedSet.text = true;
       requestedSet.avatar = true;
+      // TableBody nests a Button instance (Button variant), so Button must be
+      // built alongside Table; otherwise the variant falls back to plain text.
+      requestedSet.button = true;
     }
     progress("Building selected components: " + Object.keys(requestedSet).join(", "));
   } else {
@@ -1506,6 +1537,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
       progressSet: progressSet,
       textSet: textSet,
       avatarSet: avatarSet,
+      buttonSet: buttonSet,
     });
   });
   var tableFlatten = [];
@@ -2938,7 +2970,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         templatedDoc.appendChild(templateListIconsBlock);
       }
 
-      var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Oval", "Bars", "Dots", "Single", "Palette", "Shades"];
+      var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Oval", "Bars", "Dots", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
       var templateVariantLimit = lowerSetName === "tablebody"
         ? Math.max(6, variants.length)
         : (lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3));
@@ -4505,7 +4537,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var insetKey = getPropKey(variantProps, "Inset");
       var colorKey = getPropKey(variantProps, "Color");
 
-      var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Single", "Palette", "Shades"];
+      var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
       var variantLimit = lowerSetName === "tablebody"
         ? Math.max(6, variants.length)
         : (lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3));
@@ -9514,7 +9546,7 @@ function tableFirstComponentChild(componentSet) {
   return null;
 }
 
-/** Best Outline + Error badge; prefers XS + XL radius + Circle=Off. */
+/** Best Outline + Error badge; prefers SM + XL radius + Circle=Off. */
 function tablePickBestBadge(componentSet) {
   if (!componentSet || componentSet.type !== "COMPONENT_SET") return null;
   var outline = tableNormToken("Variant=Outline");
@@ -9527,7 +9559,7 @@ function tablePickBestBadge(componentSet) {
     var nm = tableNormToken(ch[bi].name);
     if (nm.indexOf(outline) < 0 || nm.indexOf(errCol) < 0) continue;
     var score = 100;
-    if (nm.indexOf(tableNormToken("Size=XS")) >= 0) score += 30;
+    if (nm.indexOf(tableNormToken("Size=SM")) >= 0) score += 30;
     if (nm.indexOf(tableNormToken("Radius=XL")) >= 0) score += 20;
     if (nm.indexOf(tableNormToken("Circle=Off")) >= 0) score += 10;
     if (score > bestScore) {
@@ -9797,6 +9829,107 @@ async function findTableBodyFlagSources(pageNode) {
   }
 
   return { defaultFlag: best, candidates: candidates };
+}
+
+/**
+ * Find a default + candidate list of detection components for the TableBody
+ * Detections variant INSTANCE_SWAP. Mirrors findTableBodyFlagSources.
+ *
+ * Priority:
+ * 1) Components inside a COMPONENT_SET named exactly "Detection(s)"
+ * 2) Components inside any set whose name contains "detection"
+ * 3) Components whose names contain "detection"
+ * 4) Any component fallback
+ */
+async function findTableBodyDetectionsSources(pageNode) {
+  // 1) Hard-priority: component set named exactly Detection / Detections on current page.
+  try {
+    var scoped = (pageNode && pageNode.findAll)
+      ? pageNode.findAll(function (n) {
+          return n.type === "COMPONENT_SET";
+        })
+      : [];
+    for (var si = 0; si < scoped.length; si++) {
+      var setName = String(scoped[si].name || "").toLowerCase().trim();
+      if (setName === "detection" || setName === "detections") {
+        var setChildren = scoped[si].children || [];
+        var directCandidates = [];
+        for (var dci = 0; dci < setChildren.length; dci++) {
+          if (setChildren[dci].type === "COMPONENT") directCandidates.push(setChildren[dci]);
+        }
+        if (directCandidates.length > 0) {
+          var directDefault = directCandidates[0];
+          progress(
+            "[TableBody] Detections swap default: " +
+              directDefault.name +
+              " (from set '" +
+              scoped[si].name +
+              "', candidates: " +
+              String(directCandidates.length) +
+              ")"
+          );
+          return { defaultDetection: directDefault, candidates: directCandidates };
+        }
+      }
+    }
+  } catch (_eScopedDet) {}
+
+  // 2) Fallback: search entire local document for anything detection-like.
+  var searchScope = figma.root;
+  var nodes = [];
+  try {
+    nodes = searchScope.findAll(function (n) {
+      return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+    });
+  } catch (_eFaDet) {
+    nodes = [];
+  }
+  var candidates = [];
+  var explicitDetectionSetChildren = [];
+  var nameMatchedDetectionComponents = [];
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      var compNameNorm = String(nodes[i].name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+      if (compNameNorm.indexOf("detection") >= 0) {
+        candidates.push(nodes[i]);
+        nameMatchedDetectionComponents.push(nodes[i]);
+      }
+    } else {
+      var setNameNorm = String(nodes[i].name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+      if (setNameNorm.indexOf("detection") >= 0) {
+        var children = nodes[i].children || [];
+        for (var sci = 0; sci < children.length; sci++) {
+          if (children[sci].type === "COMPONENT") {
+            explicitDetectionSetChildren.push(children[sci]);
+            candidates.push(children[sci]);
+          }
+        }
+      }
+    }
+  }
+
+  var best = null;
+  if (explicitDetectionSetChildren.length > 0) {
+    candidates = explicitDetectionSetChildren.slice();
+    best = explicitDetectionSetChildren[0];
+  } else if (nameMatchedDetectionComponents.length > 0) {
+    candidates = nameMatchedDetectionComponents.slice();
+    best = nameMatchedDetectionComponents[0];
+  }
+
+  if (best) {
+    progress(
+      "[TableBody] Detections swap default: " +
+        best.name +
+        " (candidates: " +
+        String(candidates.length) +
+        ")"
+    );
+  } else {
+    progress("[TableBody] Warning: no detection components found (looked for set/component names containing 'detection').");
+  }
+
+  return { defaultDetection: best, candidates: candidates };
 }
 
 /** Outline warning triangle vector for fallback when no icon components exist. */
@@ -10129,6 +10262,17 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
   var progressSet = tableResolveComponentSetFromPage(nestedSets.progressSet, page, "Progress");
   var textSet = tableResolveComponentSetFromPage(nestedSets.textSet, page, "Text");
   var avatarSet = tableResolveComponentSetFromPage(nestedSets.avatarSet, page, "Avatar");
+  var buttonSet = tableResolveComponentSetFromPage(nestedSets.buttonSet, page, "Button");
+  // Button may live on a different page (or the live ref is stale on a partial
+  // sync), so fall back to a whole-document search for a set named "Button".
+  if (!buttonSet || buttonSet.type !== "COMPONENT_SET") {
+    try {
+      var allButtonSets = figma.root.findAll(function (n) {
+        return n.type === "COMPONENT_SET" && String(n.name || "").toLowerCase().trim() === "button";
+      });
+      if (allButtonSets && allButtonSets.length) buttonSet = allButtonSets[0];
+    } catch (_eBtnDocFind) {}
+  }
   if (badgeSet) {
     try {
       await badgeSet.loadAsync();
@@ -10148,6 +10292,11 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
     try {
       await avatarSet.loadAsync();
     } catch (_la) {}
+  }
+  if (buttonSet) {
+    try {
+      await buttonSet.loadAsync();
+    } catch (_lbtn) {}
   }
   if (badgeSet) {
     progress(
@@ -10184,10 +10333,13 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
   }
   var iconSources = await findTableBodyIconSources();
   var flagSources = await findTableBodyFlagSources(page);
+  var detectionSources = await findTableBodyDetectionsSources(page);
   var iconDefaultComp = iconSources.defaultIcon;
   var iconCandidates = iconSources.candidates || [];
   var flagDefaultComp = flagSources.defaultFlag;
   var flagCandidates = flagSources.candidates || [];
+  var detectionDefaultComp = detectionSources.defaultDetection;
+  var detectionCandidates = detectionSources.candidates || [];
 
   function bindTableBodyBottomRule(node) {
     try {
@@ -10326,7 +10478,8 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
   }
 
   var badgeTemplate =
-    tableFindComponentByNameParts(badgeSet, ["Variant=Outline", "Color=Error", "Size=XS", "Radius=XL", "Circle=Off"]) ||
+    tableFindComponentByNameParts(badgeSet, ["Variant=Outline", "Color=Error", "Size=SM", "Radius=XL", "Circle=Off"]) ||
+    tableFindComponentByNameParts(badgeSet, ["Variant=Outline", "Color=Error", "Size=SM", "Circle=Off"]) ||
     tableFindComponentByNameParts(badgeSet, ["Variant=Outline", "Color=Error", "Circle=Off"]) ||
     tableFindComponentByNameParts(badgeSet, ["Variant=Outline", "Color=Error"]) ||
     tablePickBestBadge(badgeSet) ||
@@ -10343,6 +10496,13 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
     tableFindComponentByNameParts(avatarSet, ["Size=SM", "Radius=Default"]) ||
     tableFindComponentByNameParts(avatarSet, ["Size=Default", "Radius=Default"]) ||
     tableFirstComponentChild(avatarSet);
+  var buttonTemplate =
+    tableFindComponentByNameParts(buttonSet, ["Variant=Filled", "Color=Primary", "Size=XS", "LeftIcon=Off", "RightIcon=Off", "State=Default"]) ||
+    tableFindComponentByNameParts(buttonSet, ["Variant=Filled", "Size=XS", "State=Default"]) ||
+    tableFindComponentByNameParts(buttonSet, ["Variant=Filled", "Size=XS"]) ||
+    tableFindComponentByNameParts(buttonSet, ["Variant=Filled", "State=Default"]) ||
+    tableFindComponentByNameParts(buttonSet, ["Variant=Filled"]) ||
+    tableFirstComponentChild(buttonSet);
 
   if (!badgeTemplate) progress("[TableBody] Badge template unresolved — using plain text.");
   else progress("[TableBody] Badge template: " + badgeTemplate.name);
@@ -10352,12 +10512,20 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
   else progress("[TableBody] Text template: " + textTemplate.name);
   if (!avatarTemplate) progress("[TableBody] Avatar template unresolved — using text fallback.");
   else progress("[TableBody] Avatar template: " + avatarTemplate.name);
+  if (!buttonTemplate) progress("[TableBody] Button template unresolved — using text fallback.");
+  else progress("[TableBody] Button template: " + buttonTemplate.name);
 
   var bodyComponents = [];
   var badgeCandidates = [];
   if (badgeSet && badgeSet.type === "COMPONENT_SET" && badgeSet.children) {
     for (var bci = 0; bci < badgeSet.children.length; bci++) {
       if (badgeSet.children[bci].type === "COMPONENT") badgeCandidates.push(badgeSet.children[bci]);
+    }
+  }
+  var buttonCandidates = [];
+  if (buttonSet && buttonSet.type === "COMPONENT_SET" && buttonSet.children) {
+    for (var btci = 0; btci < buttonSet.children.length; btci++) {
+      if (buttonSet.children[btci].type === "COMPONENT") buttonCandidates.push(buttonSet.children[btci]);
     }
   }
 
@@ -10734,6 +10902,175 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
 
   bodyComponents.push(vIcon);
 
+  // ── Button variant: INSTANCE_SWAP Button instance ────────────────────────
+  var vButton = createTableBodyVariantShell("Button", { counterAxisAlignItems: "CENTER" });
+  var slotButton = appendTableContentSlot(vButton);
+  var buttonInst = null;
+  if (buttonTemplate) {
+    buttonInst = buttonTemplate.createInstance();
+    buttonInst.name = "Button";
+    try {
+      await buttonInst.loadAsync();
+    } catch (_btnLd) {}
+    slotButton.appendChild(buttonInst);
+    await tableTrySetTextOnInstance(buttonInst, ["Label", "label", "text"], "Button");
+  } else {
+    slotButton.appendChild(makeText("Button", varMap["table/cell-text"], { fontSize: 12, fontWeight: 600 }));
+  }
+  page.appendChild(vButton);
+  finalizeVariantSizing(vButton, 52);
+  placeTableBodyVariant(vButton, 6);
+
+  // INSTANCE_SWAP for the Button variant — lets consumers pick any Button
+  // variant (Filled/Outlined/Ghost, colors, states). Must be added before
+  // combineAsVariants.
+  if (buttonInst && buttonTemplate) {
+    var buttonPreferred = [];
+    var seenButton = {};
+    if (buttonTemplate.key) {
+      seenButton[buttonTemplate.key] = true;
+      buttonPreferred.push({ type: "COMPONENT", key: buttonTemplate.key });
+    }
+    for (var btpi = 0; btpi < buttonCandidates.length && buttonPreferred.length < 64; btpi++) {
+      var btcand = buttonCandidates[btpi];
+      if (!btcand || btcand.type !== "COMPONENT") continue;
+      var btk = btcand.key;
+      if (!btk || seenButton[btk]) continue;
+      seenButton[btk] = true;
+      buttonPreferred.push({ type: "COMPONENT", key: btk });
+    }
+    try {
+      var buttonSwapRefs = swapDefaultRefs(buttonTemplate);
+      if (!buttonSwapRefs.length) throw new Error("Button default component key/id unavailable");
+      var buttonSwapOpts = buttonPreferred.length > 0 ? { preferredValues: buttonPreferred } : undefined;
+      var buttonSwapPropName = null;
+      var buttonSwapErr = null;
+      for (var btri = 0; btri < buttonSwapRefs.length; btri++) {
+        try {
+          buttonSwapPropName = vButton.addComponentProperty("Button", "INSTANCE_SWAP", buttonSwapRefs[btri], buttonSwapOpts);
+          break;
+        } catch (eTryButtonSwap) {
+          buttonSwapErr = eTryButtonSwap;
+        }
+      }
+      if (!buttonSwapPropName) throw buttonSwapErr || new Error("Button INSTANCE_SWAP creation failed");
+      buttonInst.componentPropertyReferences = { mainComponent: buttonSwapPropName };
+    } catch (eButtonSwap) {
+      progress("TableBody Button INSTANCE_SWAP (with preferred list): " + String(eButtonSwap));
+      try {
+        var buttonSwapRefsFallback = swapDefaultRefs(buttonTemplate);
+        if (!buttonSwapRefsFallback.length) throw new Error("Button default component key/id unavailable");
+        var buttonSwapPropOnly = null;
+        var buttonSwapFallbackErr = null;
+        for (var btrf = 0; btrf < buttonSwapRefsFallback.length; btrf++) {
+          try {
+            buttonSwapPropOnly = vButton.addComponentProperty("Button", "INSTANCE_SWAP", buttonSwapRefsFallback[btrf]);
+            break;
+          } catch (eTryButtonSwapFallback) {
+            buttonSwapFallbackErr = eTryButtonSwapFallback;
+          }
+        }
+        if (!buttonSwapPropOnly) throw buttonSwapFallbackErr || new Error("Button INSTANCE_SWAP fallback failed");
+        buttonInst.componentPropertyReferences = { mainComponent: buttonSwapPropOnly };
+      } catch (eButtonSwap2) {
+        progress("TableBody Button INSTANCE_SWAP: " + String(eButtonSwap2));
+      }
+    }
+  }
+
+  bodyComponents.push(vButton);
+
+  // ── Detections variant: INSTANCE_SWAP detection + Text instance ──────────
+  var vDetection = createTableBodyVariantShell("Detections", {
+    itemSpacing: 6,
+    counterAxisAlignItems: "CENTER",
+  });
+  var detectionInst = null;
+  if (detectionDefaultComp) {
+    try {
+      detectionInst = detectionDefaultComp.createInstance();
+      detectionInst.name = "Detection";
+      try {
+        await detectionInst.loadAsync();
+      } catch (_dLd) {}
+      vDetection.appendChild(detectionInst);
+    } catch (_dIns) {
+      detectionInst = null;
+    }
+  }
+  var slotDetection = appendTableContentSlot(vDetection);
+  if (textTemplate) {
+    var textInstDetection = textTemplate.createInstance();
+    textInstDetection.name = "Text";
+    try {
+      await textInstDetection.loadAsync();
+    } catch (_tdLd) {}
+    slotDetection.appendChild(textInstDetection);
+    await tableTrySetTextOnInstance(textInstDetection, ["text"], "Text goes here");
+  } else {
+    slotDetection.appendChild(makeText("Text goes here", varMap["table/cell-text"], { fontSize: 12 }));
+  }
+  page.appendChild(vDetection);
+  finalizeVariantSizing(vDetection, 52);
+  placeTableBodyVariant(vDetection, 7);
+
+  // INSTANCE_SWAP for the Detections variant only — must be added before combineAsVariants.
+  if (detectionInst && detectionDefaultComp) {
+    var detectionPreferred = [];
+    var seenDetection = {};
+    if (detectionDefaultComp.key) {
+      seenDetection[detectionDefaultComp.key] = true;
+      detectionPreferred.push({ type: "COMPONENT", key: detectionDefaultComp.key });
+    }
+    for (var dpi = 0; dpi < detectionCandidates.length && detectionPreferred.length < 32; dpi++) {
+      var dcand = detectionCandidates[dpi];
+      if (!dcand || dcand.type !== "COMPONENT") continue;
+      var dk = dcand.key;
+      if (!dk || seenDetection[dk]) continue;
+      seenDetection[dk] = true;
+      detectionPreferred.push({ type: "COMPONENT", key: dk });
+    }
+    try {
+      var detectionSwapRefs = swapDefaultRefs(detectionDefaultComp);
+      if (!detectionSwapRefs.length) throw new Error("Detection default component key/id unavailable");
+      var detectionSwapOpts = detectionPreferred.length > 0 ? { preferredValues: detectionPreferred } : undefined;
+      var detectionSwapPropName = null;
+      var detectionSwapErr = null;
+      for (var dri = 0; dri < detectionSwapRefs.length; dri++) {
+        try {
+          detectionSwapPropName = vDetection.addComponentProperty("Detection", "INSTANCE_SWAP", detectionSwapRefs[dri], detectionSwapOpts);
+          break;
+        } catch (eTryDetectionSwap) {
+          detectionSwapErr = eTryDetectionSwap;
+        }
+      }
+      if (!detectionSwapPropName) throw detectionSwapErr || new Error("Detection INSTANCE_SWAP creation failed");
+      detectionInst.componentPropertyReferences = { mainComponent: detectionSwapPropName };
+    } catch (eDetectionSwap) {
+      progress("TableBody Detections INSTANCE_SWAP (with preferred list): " + String(eDetectionSwap));
+      try {
+        var detectionSwapRefsFallback = swapDefaultRefs(detectionDefaultComp);
+        if (!detectionSwapRefsFallback.length) throw new Error("Detection default component key/id unavailable");
+        var detectionSwapPropOnly = null;
+        var detectionSwapFallbackErr = null;
+        for (var drf = 0; drf < detectionSwapRefsFallback.length; drf++) {
+          try {
+            detectionSwapPropOnly = vDetection.addComponentProperty("Detection", "INSTANCE_SWAP", detectionSwapRefsFallback[drf]);
+            break;
+          } catch (eTryDetectionSwapFallback) {
+            detectionSwapFallbackErr = eTryDetectionSwapFallback;
+          }
+        }
+        if (!detectionSwapPropOnly) throw detectionSwapFallbackErr || new Error("Detection INSTANCE_SWAP fallback failed");
+        detectionInst.componentPropertyReferences = { mainComponent: detectionSwapPropOnly };
+      } catch (eDetectionSwap2) {
+        progress("TableBody Detections INSTANCE_SWAP: " + String(eDetectionSwap2));
+      }
+    }
+  }
+
+  bodyComponents.push(vDetection);
+
   var bodySet = null;
   try {
     bodySet = figma.combineAsVariants(bodyComponents, page);
@@ -10885,10 +11222,13 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
     function scoreBadge(comp) {
       var nm = String((comp && comp.name) || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
       if (!nm) return 0;
-      var score = 0;
-      if (nm.indexOf("color=" + targetColor) >= 0) score += 150;
-      if (nm.indexOf(targetColor) >= 0) score += 80;
+      // Require the exact color so High=Error / Medium=Warning / Low=Success
+      // each resolve to a distinct badge (not the default Error fallback).
+      if (nm.indexOf("color=" + targetColor) < 0) return 0;
+      var score = 150;
       if (nm.indexOf("variant=outline") >= 0) score += 30;
+      if (nm.indexOf("size=sm") >= 0) score += 40;
+      if (nm.indexOf("radius=xl") >= 0) score += 20;
       if (nm.indexOf("circle=off") >= 0) score += 10;
       return score;
     }
@@ -11039,9 +11379,9 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
   page.appendChild(tableComp);
 
   progress(
-    "Table: TableHeader (132px; INSTANCE_SWAP sort; Show sort). TableBody: COMPONENT_SET Variant=Badge|Progress|Text|Flag|Avatar|Icon [" +
+    "Table: TableHeader (132px; INSTANCE_SWAP sort; Show sort). TableBody: COMPONENT_SET Variant=Badge|Progress|Text|Flag|Avatar|Icon|Button|Detections [" +
       TABLE_BODY_BUILD +
-      "] — nested Badge / Progress / Text / Avatar instances; Flag and Icon variants use INSTANCE_SWAP. Also exported composed Table component."
+      "] — nested Badge / Progress / Text / Avatar / Button instances; Flag, Icon and Detections variants use INSTANCE_SWAP. Also exported composed Table component."
   );
   // Keep output order aligned with docs/navigation expectations.
   // Desired sequence: TableHeader -> TableBody -> Table.
@@ -13949,14 +14289,15 @@ function buildPopoverComponentSet(varMap, page, font) {
       body.layoutMode = "HORIZONTAL";
       body.primaryAxisAlignItems = "CENTER";
       body.counterAxisAlignItems = "CENTER";
-      body.primaryAxisSizingMode = "FIXED";
+      // Hug both dimensions: the popover grows to fit its content (no fixed /
+      // max width), so the padding variables read correctly on every side.
+      body.primaryAxisSizingMode = "AUTO";
       body.counterAxisSizingMode = "AUTO";
       body.itemSpacing = 0;
       body.paddingTop = 10;
       body.paddingBottom = 10;
       body.paddingLeft = 12;
       body.paddingRight = 12;
-      body.resize(280, 38);
       body.fills = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }];
       body.strokes = [{ type: "SOLID", color: { r: 0, g: 0, b: 0 } }];
       body.strokeAlign = "INSIDE";
@@ -13966,7 +14307,6 @@ function buildPopoverComponentSet(varMap, page, font) {
       var borderVar = varMap["popover/border"];
       var textVar = varMap["popover/text"];
       var arrowVar = varMap["popover/arrow"] || bgVar;
-      var widthVar = varMap["popover/width-default"];
       var radiusVar = varMap["popover/radius-default"];
       var padXVar = varMap["popover/padding-x"];
       var padYVar = varMap["popover/padding-y"];
@@ -13974,7 +14314,6 @@ function buildPopoverComponentSet(varMap, page, font) {
       var arrowSizeVar = varMap["popover/arrow-size"];
       if (bgVar) bindPaintVar(body, "fills", 0, bgVar);
       if (borderVar) bindPaintVar(body, "strokes", 0, borderVar);
-      if (widthVar) bindVar(body, "width", widthVar);
       if (radiusVar) {
         bindVar(body, "topLeftRadius", radiusVar);
         bindVar(body, "topRightRadius", radiusVar);
@@ -20539,8 +20878,11 @@ async function buildSelectComponentSet(varMap, page, font) {
               labelNode.characters = "Label";
               labelNode.fontSize = 14;
               labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-              if (varMap["select/label-color"]) {
-                bindPaintVar(labelNode, "fills", 0, varMap["select/label-color"]);
+              var selectLabelColorVar =
+                (state === "disabled" && varMap["select/" + variant + "-label-disabled"]) ||
+                varMap["select/label-color"];
+              if (selectLabelColorVar) {
+                bindPaintVar(labelNode, "fills", 0, selectLabelColorVar);
               }
               var selectLabelFontSizeVar =
                 varMap["select/label-font-size-" + size] ||
@@ -21124,8 +21466,11 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
                 labelNode.characters = "Label";
                 labelNode.fontSize = 14;
                 labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-                if (varMap["multiselect/label-color"]) {
-                  bindPaintVar(labelNode, "fills", 0, varMap["multiselect/label-color"]);
+                var multiselectLabelColorVar =
+                  (state === "disabled" && varMap["multiselect/" + variant + "-label-disabled"]) ||
+                  varMap["multiselect/label-color"];
+                if (multiselectLabelColorVar) {
+                  bindPaintVar(labelNode, "fills", 0, multiselectLabelColorVar);
                 }
                 var labelFontSizeVar =
                   varMap["multiselect/label-font-size-" + size] ||
@@ -22381,7 +22726,7 @@ function applyAccordionPanelRadii(node, varMap, variant, position, expanded) {
   bindVar(node, "bottomRightRadius", bottomOn ? varMap[radiusPath] : null);
 }
 
-function createAccordionChevron(varMap, colorPath) {
+function createAccordionChevron(varMap, colorPath, expanded) {
   var icon = figma.createFrame();
   icon.name = "Chevron";
   icon.layoutMode = "NONE";
@@ -22399,7 +22744,8 @@ function createAccordionChevron(varMap, colorPath) {
   chevron.strokeWeight = 1.8;
   chevron.strokeCap = "ROUND";
   chevron.strokeJoin = "ROUND";
-  chevron.vectorPaths = [{ windingRule: "NONE", data: "M 1 1 L 5 5 L 9 1" }];
+  // Point up when expanded (open), down when collapsed.
+  chevron.vectorPaths = [{ windingRule: "NONE", data: expanded ? "M 1 5 L 5 1 L 9 5" : "M 1 1 L 5 5 L 9 1" }];
   bindPaintVar(chevron, "strokes", 0, varMap[colorPath]);
   bindVar(chevron, "strokeWeight", varMap["accordion/icon-stroke-width"]);
   icon.appendChild(chevron);
@@ -22435,23 +22781,32 @@ async function findAccordionChevronIconComponent() {
   }
 
   var down = null;
+  var up = null;
   var fallback = null;
   for (var j = 0; j < iconCandidates.length; j++) {
     var name = String(iconCandidates[j].name || "").toLowerCase();
     if (!fallback) fallback = iconCandidates[j];
+    if (!up && (
+      name.indexOf("chevronup") >= 0 ||
+      name.indexOf("arrowup") >= 0 ||
+      (name.indexOf("chevron") >= 0 && name.indexOf("up") >= 0)
+    )) {
+      up = iconCandidates[j];
+    }
     if (!down && (
       name.indexOf("chevrondown") >= 0 ||
       name.indexOf("arrowdown") >= 0 ||
       name.indexOf("down") >= 0
     )) {
       down = iconCandidates[j];
-      break;
     }
+    if (up && down) break;
   }
 
-  var resolved = down || fallback || null;
-  if (resolved) progress("[Accordion] Chevron source: " + resolved.name);
-  return resolved;
+  var resolvedDown = down || fallback || null;
+  if (resolvedDown) progress("[Accordion] Chevron (down) source: " + resolvedDown.name);
+  if (up) progress("[Accordion] Chevron (up) source: " + up.name);
+  return { down: resolvedDown, up: up };
 }
 
 function setAccordionInstanceProps(instance, propPatch) {
@@ -22587,7 +22942,9 @@ async function buildAccordionItemComponentSet(varMap, page, font) {
   var colWidth = 520;
   var rowHeight = 120;
   var gap = 22;
-  var chevronIconComp = await findAccordionChevronIconComponent();
+  var chevronIcons = await findAccordionChevronIconComponent();
+  var chevronDownComp = chevronIcons ? chevronIcons.down : null;
+  var chevronUpComp = chevronIcons ? chevronIcons.up : null;
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
@@ -22670,11 +23027,16 @@ async function buildAccordionItemComponentSet(varMap, page, font) {
           headerRow.appendChild(label);
 
           var icon = null;
-          if (chevronIconComp) {
-            icon = chevronIconComp.createInstance();
+          // When expanded, show a chevron-up. Prefer a dedicated up-chevron
+          // component; if only a down-chevron exists, rotate it 180°.
+          var chevronSourceComp = expanded && chevronUpComp ? chevronUpComp : chevronDownComp;
+          var needsRotate = expanded && !chevronUpComp && chevronDownComp;
+          if (chevronSourceComp) {
+            icon = chevronSourceComp.createInstance();
             icon.name = "Chevron";
             try { icon.layoutPositioning = "AUTO"; } catch (_accordionChevronPositionErr) {}
             icon.resize(20, 20);
+            if (needsRotate) { try { icon.rotation = 180; } catch (_accordionChevronRotateErr) {} }
             bindVar(icon, "width", varMap["accordion/icon-size"]);
             bindVar(icon, "height", varMap["accordion/icon-size"]);
             var iconVectors = icon.findAll(function(n) { return n.type === "VECTOR"; });
@@ -22690,7 +23052,7 @@ async function buildAccordionItemComponentSet(varMap, page, font) {
               }
             }
           } else {
-            icon = createAccordionChevron(varMap, accordionColorPath(variant, "header-icon", state));
+            icon = createAccordionChevron(varMap, accordionColorPath(variant, "header-icon", state), expanded);
           }
           headerRow.appendChild(icon);
 
@@ -23014,7 +23376,13 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
 
               bindPaintVar(list, "fills", 0, varMap["tabs/" + variant + "-list-background"]);
               if (visualVariant !== "pills") {
-                bindPaintVar(list, "strokes", 0, varMap["tabs/" + variant + "-list-border"]);
+                // Disabled state can override the list border color via a
+                // dedicated token (currently only default has one); otherwise
+                // fall back to the normal list border.
+                var listBorderVar =
+                  (state === "disabled" && varMap["tabs/" + variant + "-list-border-disabled"]) ||
+                  varMap["tabs/" + variant + "-list-border"];
+                bindPaintVar(list, "strokes", 0, listBorderVar);
               }
               if (variant === "default") {
                 list.strokeTopWeight = 0;
@@ -23041,10 +23409,14 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   bindVar(list, "strokeRightWeight", varMap["tabs/list-border-width"]);
                 }
               }
-              bindVar(list, "paddingLeft", varMap["tabs/" + variant + "-list-padding"]);
-              bindVar(list, "paddingRight", varMap["tabs/" + variant + "-list-padding"]);
-              bindVar(list, "paddingTop", varMap["tabs/" + variant + "-list-padding"]);
-              bindVar(list, "paddingBottom", varMap["tabs/" + variant + "-list-padding"]);
+              // Outlined has no list-padding token — tabs sit flush against the
+              // list edge, so its padding stays at the literal 0 set above.
+              if (variant !== "outlined") {
+                bindVar(list, "paddingLeft", varMap["tabs/" + variant + "-list-padding"]);
+                bindVar(list, "paddingRight", varMap["tabs/" + variant + "-list-padding"]);
+                bindVar(list, "paddingTop", varMap["tabs/" + variant + "-list-padding"]);
+                bindVar(list, "paddingBottom", varMap["tabs/" + variant + "-list-padding"]);
+              }
               bindVar(list, "itemSpacing", varMap["tabs/" + variant + "-list-gap"]);
               if (variant === "default") {
                 list.topLeftRadius = 0;
@@ -23305,15 +23677,18 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                 try { arrowsRow.layoutSizingVertical = "HUG"; } catch (_tabsArrowsRowHugHeightErr) {}
 
                 if (effectiveShowLeftArrow) {
-                  arrowsRow.appendChild(
-                    createTabsOverflowControl({
-                      kind: "left-arrow",
-                      variant: variant,
-                      state: state,
-                      iconComponents: iconComponents,
-                      varMap: varMap,
-                    })
-                  );
+                  var leftArrowCtrl = createTabsOverflowControl({
+                    kind: "left-arrow",
+                    variant: variant,
+                    state: state,
+                    iconComponents: iconComponents,
+                    varMap: varMap,
+                  });
+                  arrowsRow.appendChild(leftArrowCtrl);
+                  // Fill the row height (driven by the tab list) instead of
+                  // hugging the control's own tall content, so it lines up
+                  // with the tabs. Must be set after it's parented.
+                  try { leftArrowCtrl.layoutSizingVertical = "FILL"; } catch (_leftArrowFillErr) {}
                 }
                 var centerNode = list;
                 if (variant === "outlined") {
@@ -23364,32 +23739,37 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
 
                 arrowsRow.appendChild(centerNode);
                 if (effectiveShowRightArrow) {
-                  arrowsRow.appendChild(
-                    createTabsOverflowControl({
-                      kind: "right-arrow",
-                      variant: variant,
-                      state: state,
-                      iconComponents: iconComponents,
-                      varMap: varMap,
-                    })
-                  );
+                  var rightArrowCtrl = createTabsOverflowControl({
+                    kind: "right-arrow",
+                    variant: variant,
+                    state: state,
+                    iconComponents: iconComponents,
+                    varMap: varMap,
+                  });
+                  arrowsRow.appendChild(rightArrowCtrl);
+                  try { rightArrowCtrl.layoutSizingVertical = "FILL"; } catch (_rightArrowFillErr) {}
                 }
                 if (effectiveShowMenu) {
-                  arrowsRow.appendChild(
-                    createTabsOverflowControl({
-                      kind: "menu",
-                      side: "left",
-                      variant: variant,
-                      state: state,
-                      iconComponents: iconComponents,
-                      varMap: varMap,
-                    })
-                  );
+                  var menuCtrl = createTabsOverflowControl({
+                    kind: "menu",
+                    side: "left",
+                    variant: variant,
+                    state: state,
+                    iconComponents: iconComponents,
+                    varMap: varMap,
+                  });
+                  arrowsRow.appendChild(menuCtrl);
+                  try { menuCtrl.layoutSizingVertical = "FILL"; } catch (_menuFillErr) {}
                 }
                 rootNode = arrowsRow;
               }
 
               comp.appendChild(rootNode);
+              // The List fills its container height instead of hugging its (tall)
+              // tab content. Its parent still hugs to the tabs' min-content, so
+              // the list lands at the tab height while reading as "Fill". Must be
+              // set after the list is nested in an auto-layout ancestor.
+              try { list.layoutSizingVertical = "FILL"; } catch (_tabsListFillErr) {}
               if (effectiveShowMenu && orientation === "horizontal") {
                 var menuDropdown = createTabsMenuDropdown({
                   page: page,
@@ -23419,6 +23799,13 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   try { menuWrap.layoutSizingVertical = "HUG"; } catch (_tabsMenuWrapHugErr) {}
                   menuWrap.appendChild(menuDropdown);
                   comp.appendChild(menuWrap);
+                  // Both of the component's children fill its width: the tabs
+                  // row (rootNode) defines the component's width via its content,
+                  // and the MenuAnchor fills to that same width so the dropdown
+                  // (aligned to the right) anchors under the menu button — matching
+                  // the design. Must be set after they're parented into comp.
+                  try { rootNode.layoutSizingHorizontal = "FILL"; } catch (_tabsRootFillErr) {}
+                  try { menuWrap.layoutSizingHorizontal = "FILL"; } catch (_tabsMenuWrapFillErr) {}
                 }
               }
 
@@ -24078,8 +24465,11 @@ function createTabsOverflowControl(options) {
   try { control.layoutSizingVertical = "HUG"; } catch (_tabsArrowControlHugHeightErr) {}
 
   var textPath = tabsOverflowColorPath(variant, "text", state);
-  // Dedicated overflow-control icon color (falls back to the tab text color).
-  var iconColorVar = varMap["tabs/" + (variant || "default") + "-overflow-control-icon"] || varMap[textPath];
+  // Dedicated overflow-control icon color, with a dedicated disabled variant.
+  // Falls back to the base icon color, then to the tab text color.
+  var iconBasePath = "tabs/" + (variant || "default") + "-overflow-control-icon";
+  var iconColorPath = state === "disabled" ? iconBasePath + "-disabled" : iconBasePath;
+  var iconColorVar = varMap[iconColorPath] || varMap[iconBasePath] || varMap[textPath];
   var controlFillPath = tabsOverflowColorPath(variant, "background", state);
   var controlBorderPath = tabsOverflowColorPath(variant, "border", state);
   bindPaintVar(control, "fills", 0, varMap[controlFillPath]);
@@ -24104,9 +24494,14 @@ function createTabsOverflowControl(options) {
     bindVar(control, "strokeLeftWeight", varMap["tabs/tab-border-width"]);
     bindVar(control, "strokeRightWeight", varMap["tabs/tab-border-width"]);
     if (kind === "left-arrow") {
-      // LeftArrowControl keeps full border in outlined overflow.
+      // LeftArrowControl drops its right border — the adjacent first tab's
+      // left border provides that edge (avoids a double border).
+      control.strokeRightWeight = 0;
     } else if (kind === "right-arrow") {
-      // RightArrowControl has no right border in outlined overflow.
+      // RightArrowControl drops both its left and right borders — the last
+      // tab's right border provides the left edge, and the menu's left border
+      // provides the right edge.
+      control.strokeLeftWeight = 0;
       control.strokeRightWeight = 0;
     } else if (kind === "menu") {
       // Menu keeps the full border from strokeWeight.
@@ -24181,11 +24576,25 @@ function createTabsFadeCap(options) {
   cap.strokeAlign = "INSIDE";
   cap.strokeTopWeight = 1;
   cap.strokeBottomWeight = 1;
-  cap.strokeLeftWeight = 0;
-  cap.strokeRightWeight = 0;
+  // The fade cap draws the outer edge border of the overflow region: the left
+  // cap draws its left border, the right cap draws its right border. (Only
+  // Theia renders these caps — visibility is bound below.)
+  cap.strokeLeftWeight = side === "left" ? 1 : 0;
+  cap.strokeRightWeight = side === "right" ? 1 : 0;
   bindPaintVar(cap, "strokes", 0, varMap[tabsOverflowColorPath(variant, "border", state)]);
   bindVar(cap, "strokeTopWeight", varMap["tabs/tab-border-width"]);
   bindVar(cap, "strokeBottomWeight", varMap["tabs/tab-border-width"]);
+  if (side === "left") {
+    bindVar(cap, "strokeLeftWeight", varMap["tabs/tab-border-width"]);
+  } else {
+    bindVar(cap, "strokeRightWeight", varMap["tabs/tab-border-width"]);
+  }
+  // Hide the fade on light brands (Hyperion): the fade is a baked dark gradient
+  // meant for dark brands (Theia). Visibility is driven per brand-mode by a
+  // BOOLEAN variable (true only when the outlined tab background is dark).
+  if (varMap["tabs/outlined-overflow-fade-visible"]) {
+    bindVar(cap, "visible", varMap["tabs/outlined-overflow-fade-visible"]);
+  }
   return cap;
 }
 
@@ -24199,7 +24608,9 @@ function tabsOverflowColorPath(variant, slot, state) {
   }
   if (slot === "border") {
     if (normalizedVariant === "default") {
-      if (normalizedState === "disabled") return "tabs/default-tab-border-disabled";
+      // Default controls share the list's bottom rule, so match the list's
+      // dedicated disabled border color in the disabled state.
+      if (normalizedState === "disabled") return "tabs/default-list-border-disabled";
       return "tabs/default-list-border";
     }
     if (normalizedState === "disabled") return "tabs/" + normalizedVariant + "-tab-border-disabled";
@@ -24438,11 +24849,17 @@ function validateTabsVariables(varMap) {
       required.push("tabs/" + variant + "-radius-" + radii[ri]);
     }
     required.push("tabs/" + variant + "-list-background");
-    required.push("tabs/" + variant + "-list-padding");
+    // Outlined has no list-padding token (tabs sit flush to the list edge).
+    if (variant !== "outlined") {
+      required.push("tabs/" + variant + "-list-padding");
+    }
     required.push("tabs/" + variant + "-list-gap");
     required.push("tabs/" + variant + "-tab-padding-x");
     required.push("tabs/" + variant + "-tab-padding-y");
     required.push("tabs/" + variant + "-list-border");
+    if (variant === "default") {
+      required.push("tabs/default-list-border-disabled");
+    }
     for (var si = 0; si < states.length; si++) {
       var state = states[si];
       var suffix = state === "default" ? "" : "-" + state;

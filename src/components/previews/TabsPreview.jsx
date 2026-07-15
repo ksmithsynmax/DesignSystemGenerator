@@ -77,6 +77,7 @@ export default function TabsPreview({
 
   const listBg = getColor(brands, brandId, `${prefix}-list-background`, tokens);
   const listBorder = getColor(brands, brandId, `${prefix}-list-border`, tokens);
+  const listBorderDisabled = getColor(brands, brandId, `${prefix}-list-border-disabled`, tokens);
   const tabBg = isDefaultVariant ? "transparent" : getColor(brands, brandId, `${prefix}-tab-background`, tokens);
   const tabBgHover = isDefaultVariant ? "transparent" : getColor(brands, brandId, `${prefix}-tab-background-hover`, tokens);
   const tabBgActive = getColor(brands, brandId, `${prefix}-tab-background-active`, tokens);
@@ -98,7 +99,11 @@ export default function TabsPreview({
   const tabsLineHeight = resolveDimension(brands, brandId, "tabs-line-height");
   const tabPaddingX = resolveDimension(brands, brandId, `${prefix}-tab-padding-x`);
   const tabPaddingY = resolveDimension(brands, brandId, `${prefix}-tab-padding-y`);
-  const listPadding = resolveDimension(brands, brandId, `${prefix}-list-padding`);
+  // The outlined variant no longer has a list-padding token (tabs sit flush
+  // against the list edge); default/pills still resolve their own value.
+  const listPadding = isOutlinedVariant
+    ? 0
+    : resolveDimension(brands, brandId, `${prefix}-list-padding`) ?? 0;
   const listGap = resolveDimension(brands, brandId, `${prefix}-list-gap`);
   const listBorderWidth = resolveDimension(brands, brandId, "tabs-list-border-width");
   const tabBorderWidth = resolveDimension(brands, brandId, "tabs-tab-border-width");
@@ -118,6 +123,10 @@ export default function TabsPreview({
   const currentState = state || "default";
   const forcedFocus = currentState === "focus";
   const forcedDisabled = currentState === "disabled";
+  // Disabled state can recolor the list border via a dedicated token (only
+  // default has one today); otherwise the normal list border is used.
+  const effectiveListBorder =
+    forcedDisabled && listBorderDisabled ? listBorderDisabled : listBorder;
   const activeDemoKey = currentTab;
 
   const getVisualState = (tabKey) => {
@@ -165,8 +174,8 @@ export default function TabsPreview({
   const listEdgeShadow = isPillsVariant
     ? "none"
     : orientation === "horizontal"
-      ? `inset 0 -${listBorderWidth}px 0 0 ${listBorder}`
-      : `inset -${listBorderWidth}px 0 0 0 ${listBorder}`;
+      ? `inset 0 -${listBorderWidth}px 0 0 ${effectiveListBorder}`
+      : `inset -${listBorderWidth}px 0 0 0 ${effectiveListBorder}`;
   // Whether an overflow control is attached to each end of the tab list. When a
   // control is attached we drop the list's padding on that side so the control
   // sits flush against the end tab (no gap), and the overflow menu is always
@@ -193,25 +202,47 @@ export default function TabsPreview({
   // LeftArrow / RightArrow variant props: only default & outlined, horizontal.
   const showArrowControls = orientation === "horizontal" && !isPillsVariant;
   const overflowIconColor =
+    (forcedDisabled
+      ? getColor(brands, brandId, `${prefix}-overflow-control-icon-disabled`, tokens)
+      : null) ||
     getColor(brands, brandId, `${prefix}-overflow-control-icon`, tokens) ||
     (isDefaultVariant ? tabText : tabTextActive);
+  // The overflow controls share the tab background/border, including the
+  // disabled state, so they read as disabled alongside the tabs.
+  const overflowControlBg = forcedDisabled ? tabBgDisabled : tabBg;
+  // Default controls share the list's bottom rule, so match the dedicated
+  // disabled list-border color; other variants use their tab border.
+  const overflowControlBorder = forcedDisabled
+    ? isDefaultVariant
+      ? effectiveListBorder
+      : tabBorderDisabled
+    : tabBorder;
   const makeArrowControlStyle = (side) =>
     isOutlinedVariant
       ? {
           display: "inline-flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: tabBg,
+          backgroundColor: overflowControlBg,
           // Use pure per-side longhand border props (no `border` shorthand).
           // Mixing the shorthand with a longhand override is fragile in React:
           // when the shorthand re-applies on a re-render it resets the "removed"
           // side back to a full border, doubling up against the adjacent tab.
           borderStyle: "solid",
-          borderColor: tabBorder,
+          borderColor: overflowControlBorder,
           borderTopWidth: `${tabBorderWidth}px`,
           borderBottomWidth: `${tabBorderWidth}px`,
-          // Merge the edge shared with the tab list so borders don't double up.
-          borderRightWidth: side === "left" ? "0px" : `${tabBorderWidth}px`,
+          // Shared-edge model (matches Figma): the left arrow only draws its
+          // outer (left) border; its right edge is the first tab's left border.
+          // The right arrow draws neither side border when a menu follows (the
+          // last tab owns its left edge, the menu owns their shared edge); if it
+          // is the rightmost control it draws its own right border.
+          borderRightWidth:
+            side === "left"
+              ? "0px"
+              : showOverflowMenuControl
+                ? "0px"
+                : `${tabBorderWidth}px`,
           borderLeftWidth: side === "right" ? "0px" : `${tabBorderWidth}px`,
           // Round only the outer corners; the side facing the tabs stays square.
           borderTopLeftRadius: side === "left" ? tabsRadius : 0,
@@ -269,15 +300,19 @@ export default function TabsPreview({
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        backgroundColor: tabBg,
+        backgroundColor: overflowControlBg,
         // Pure per-side longhand (see arrow control note): avoids the shorthand
         // re-applying and resurrecting the merged-away left border.
         borderStyle: "solid",
-        borderColor: tabBorder,
+        borderColor: overflowControlBorder,
         borderTopWidth: `${tabBorderWidth}px`,
         borderBottomWidth: `${tabBorderWidth}px`,
         borderRightWidth: `${tabBorderWidth}px`,
-        borderLeftWidth: "0px",
+        // Menu owns its left border when a right arrow precedes it (the arrow
+        // drops its right border). If the menu follows the list directly, the
+        // last tab already owns that edge, so the menu drops its left border.
+        borderLeftWidth:
+          showArrowControls && showRightArrow ? `${tabBorderWidth}px` : "0px",
         // Menu is the rightmost control: round its right corners, square left.
         borderTopLeftRadius: 0,
         borderBottomLeftRadius: 0,
@@ -341,19 +376,6 @@ export default function TabsPreview({
                 (tabVisual.visualState === "disabled" && isWouldBeActiveTab);
               const resolvedTabBorderWidth =
                 isDefaultUnderlineState ? tabBorderWidthActive : tabBorderWidth;
-              // A highlighted (active/hover) outlined tab draws its own left
-              // border. To avoid doubling it up with the previous tab's right
-              // border, the tab immediately before a highlighted one drops its
-              // right border (the highlighted tab owns that shared edge).
-              const nextItem = TAB_ITEMS[tabIndex + 1];
-              let nextTabHighlighted = false;
-              if (nextItem) {
-                const nextVisualState = getVisualState(nextItem.key);
-                nextTabHighlighted =
-                  nextVisualState === "active" ||
-                  nextVisualState === "hover" ||
-                  (nextVisualState === "disabled" && nextItem.key === activeDemoKey);
-              }
               const tabStyle = isDefaultVariant
                 ? {
                     display: "inline-flex",
@@ -385,14 +407,17 @@ export default function TabsPreview({
                     borderStyle: "solid",
                     borderColor: tabVisual.border,
                     borderTopWidth: `${resolvedTabBorderWidth}px`,
-                    borderRightWidth:
-                      isOutlinedVariant && orientation === "horizontal" && nextTabHighlighted
-                        ? "0px"
-                        : `${resolvedTabBorderWidth}px`,
+                    // Every tab draws its own right border (Figma model). The
+                    // left edge of each tab is provided by the previous tab's
+                    // right border, so only the first tab draws a left border.
+                    // This means an active tab's left edge is the previous
+                    // (default-colored) tab's right border, while its own top
+                    // and right borders use the active color/width.
+                    borderRightWidth: `${resolvedTabBorderWidth}px`,
                     borderBottomWidth: `${resolvedTabBorderWidth}px`,
                     borderLeftWidth:
                       isOutlinedVariant && orientation === "horizontal"
-                        ? tabIndex === 0 || isDefaultUnderlineState
+                        ? tabIndex === 0
                           ? `${resolvedTabBorderWidth}px`
                           : "0px"
                         : `${resolvedTabBorderWidth}px`,
@@ -516,7 +541,7 @@ export default function TabsPreview({
               marginTop: `${panelPadding}px`,
               padding: `${panelPadding}px`,
               color: tabText,
-              border: `${listBorderWidth}px solid ${listBorder}`,
+              border: `${listBorderWidth}px solid ${effectiveListBorder}`,
               borderRadius: `${tabsRadius}px`,
               width: "fit-content",
               minWidth: 260,

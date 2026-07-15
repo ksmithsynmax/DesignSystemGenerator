@@ -83,6 +83,10 @@ export default function SliderPreview({
             borderRadius: sliderRadius,
             boxShadow:
               effectiveState === "focus" ? `0 0 0 2px ${focusRing}` : undefined,
+            // Mantine hides the thumb (display: none) when the slider is
+            // disabled, which would hide the disabled thumb background/border
+            // tokens. Keep it visible so the preview matches Figma.
+            ...(effectiveState === "disabled" ? { display: "flex" } : {}),
           },
           mark: {
             background: markColor,

@@ -96,7 +96,15 @@ export default function SelectPreview({
         ]
       : [`${prefix}-placeholder`]
   );
-  const labelColor = resolveColor(brands, brandId, tokens["select-label-color"]?.semantic, "light", "select-label-color");
+  const labelColor = isDisabled
+    ? resolveColor(
+        brands,
+        brandId,
+        tokens[`${prefix}-label-disabled`]?.semantic ?? tokens["select-label-color"]?.semantic,
+        "light",
+        tokens[`${prefix}-label-disabled`] ? `${prefix}-label-disabled` : "select-label-color"
+      )
+    : resolveColor(brands, brandId, tokens["select-label-color"]?.semantic, "light", "select-label-color");
   const asteriskColor = resolveColor(brands, brandId, tokens["select-asterisk-color"]?.semantic, "light", "select-asterisk-color");
   const errorColor = resolveColor(brands, brandId, tokens["select-error-color"]?.semantic, "light", "select-error-color");
   const iconSemantic = isDisabled

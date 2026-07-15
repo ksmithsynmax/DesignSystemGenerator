@@ -355,6 +355,15 @@ export function resolveDimension(brands, brandId, tokenName, size) {
       ? (getDefaultSizeKey(brands, brandId, tokenName) || (hasExplicitDefaultSize ? "default" : fallbackSizeKey))
       : size;
 
+  // An override stored under the EXACT size key the user edited always wins —
+  // including the canonical "default" key. Without this, a token whose
+  // "default" maps to a named size (via componentDefaults, e.g. tabs radius
+  // "default" -> "sm") would redirect the lookup to that named size and
+  // silently ignore an edit made directly to "default".
+  if (size && brand.dimensionOverrides?.[tokenName]?.[size] !== undefined) {
+    return brand.dimensionOverrides[tokenName][size];
+  }
+
   // Check brand overrides first — an explicit icon-size override still wins,
   // so designers can opt out of the auto-scaling for a specific size.
   if (effectiveSize && brand.dimensionOverrides?.[tokenName]?.[effectiveSize] !== undefined) {
