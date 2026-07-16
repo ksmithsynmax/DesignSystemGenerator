@@ -582,6 +582,7 @@ export const COMPONENT_TOKENS = {
     "checkbox-filled-background-checked-focus":  { type: "COLOR", semantic: "interactive-primary",         figmaPath: "checkbox/filled-background-checked-focus" },
     "checkbox-filled-background-checked-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "checkbox/filled-background-checked-pressed" },
     "checkbox-filled-background-disabled": { type: "COLOR", semantic: "interactive-disabled",  figmaPath: "checkbox/filled-background-disabled" },
+    "checkbox-filled-background-checked-disabled": { type: "COLOR", semantic: "subtle-primary", figmaPath: "checkbox/filled-background-checked-disabled" },
     "checkbox-filled-border":              { type: "COLOR", semantic: "border-default",        figmaPath: "checkbox/filled-border" },
     "checkbox-filled-border-hover":        { type: "COLOR", semantic: "border-default",        figmaPath: "checkbox/filled-border-hover" },
     "checkbox-filled-border-focus":        { type: "COLOR", semantic: "border-default",        figmaPath: "checkbox/filled-border-focus" },
@@ -591,6 +592,7 @@ export const COMPONENT_TOKENS = {
     "checkbox-filled-border-checked-focus": { type: "COLOR", semantic: "interactive-primary",         figmaPath: "checkbox/filled-border-checked-focus" },
     "checkbox-filled-border-checked-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "checkbox/filled-border-checked-pressed" },
     "checkbox-filled-border-disabled":     { type: "COLOR", semantic: "border-disabled",       figmaPath: "checkbox/filled-border-disabled" },
+    "checkbox-filled-border-checked-disabled": { type: "COLOR", semantic: "subtle-primary",     figmaPath: "checkbox/filled-border-checked-disabled" },
     "checkbox-filled-icon-color":          { type: "COLOR", semantic: "text-on-interactive",   figmaPath: "checkbox/filled-icon-color" },
     "checkbox-filled-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",         figmaPath: "checkbox/filled-icon-color-disabled" },
 
@@ -604,6 +606,7 @@ export const COMPONENT_TOKENS = {
     "checkbox-outlined-background-checked-focus":  { type: "COLOR", semantic: "surface-default",      figmaPath: "checkbox/outlined-background-checked-focus" },
     "checkbox-outlined-background-checked-pressed": { type: "COLOR", semantic: "surface-default",      figmaPath: "checkbox/outlined-background-checked-pressed" },
     "checkbox-outlined-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "checkbox/outlined-background-disabled" },
+    "checkbox-outlined-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "checkbox/outlined-background-checked-disabled" },
     "checkbox-outlined-border":              { type: "COLOR", semantic: "border-default",       figmaPath: "checkbox/outlined-border" },
     "checkbox-outlined-border-hover":        { type: "COLOR", semantic: "border-default",       figmaPath: "checkbox/outlined-border-hover" },
     "checkbox-outlined-border-focus":        { type: "COLOR", semantic: "border-default",       figmaPath: "checkbox/outlined-border-focus" },
@@ -613,6 +616,7 @@ export const COMPONENT_TOKENS = {
     "checkbox-outlined-border-checked-focus": { type: "COLOR", semantic: "interactive-primary",        figmaPath: "checkbox/outlined-border-checked-focus" },
     "checkbox-outlined-border-checked-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "checkbox/outlined-border-checked-pressed" },
     "checkbox-outlined-border-disabled":     { type: "COLOR", semantic: "border-disabled",      figmaPath: "checkbox/outlined-border-disabled" },
+    "checkbox-outlined-border-checked-disabled": { type: "COLOR", semantic: "subtle-primary",   figmaPath: "checkbox/outlined-border-checked-disabled" },
     "checkbox-outlined-icon-color":          { type: "COLOR", semantic: "interactive-primary",  figmaPath: "checkbox/outlined-icon-color" },
     "checkbox-outlined-icon-color-hover":    { type: "COLOR", semantic: "interactive-primary-hover",  figmaPath: "checkbox/outlined-icon-color-hover" },
     "checkbox-outlined-icon-color-focus":    { type: "COLOR", semantic: "interactive-primary",  figmaPath: "checkbox/outlined-icon-color-focus" },
@@ -2215,6 +2219,17 @@ export const COMPONENT_TOKENS = {
       type: "COLOR",
       semantic: "subtle-primary",
       figmaPath: "multiselect/filled-option-selected-background",
+    },
+    /** Label text for the currently-selected row (readability vs selected BG). */
+    "multiselect-default-option-selected-text": {
+      type: "COLOR",
+      semantic: "text-default",
+      figmaPath: "multiselect/default-option-selected-text",
+    },
+    "multiselect-filled-option-selected-text": {
+      type: "COLOR",
+      semantic: "text-default",
+      figmaPath: "multiselect/filled-option-selected-text",
     },
     /**
      * Hovered row (pointer) and keyboard-highlighted row (`data-combobox-selected`).

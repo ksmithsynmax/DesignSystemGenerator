@@ -8500,10 +8500,11 @@ async function buildCalendarComponentSet(varMap, page, font, resolvedComponentFl
   // Untitled UI chevron icon components for the header nav (instance-swapped in).
   var navIcons = await findCalendarChevronIcons();
 
-  // Use the SAME finder + scope as the chevrons for the date-field edit icon, so
-  // if the chevrons resolve, edit-01 resolves too. The full candidate list (from
-  // the shared util) only feeds the INSTANCE_SWAP preferred-values dropdown.
-  var editIconComp = navIcons.edit;
+  // Prefer the chevron-scope match; otherwise fall back to a robust resolver
+  // that searches every page (edit-01 lives in a "general" folder) and can
+  // pull in the edit-01 library component by key. This is why the date-field
+  // edit icon becomes a real auto-swap instance instead of a static vector.
+  var editIconComp = navIcons.edit || (await findCalendarEditIcon());
   var calIconCandidates = await collectFigmaIconCandidates();
 
   function calSwapRefs(iconComp) {
@@ -9173,6 +9174,121 @@ async function findCalendarChevronIcons() {
     progress("[Calendar] Chevron icons not found; using text-glyph fallback.");
   }
   return result;
+}
+
+// edit-01 lives in the "TokenArchitecture V2" published library. Library
+// components are not local nodes, so findAll() (used by findCalendarChevronIcons)
+// can't see them — hence the calendar historically fell back to a vector. Keep
+// the key here so we can pull it in directly as the INSTANCE_SWAP default.
+var CALENDAR_EDIT_ICON_KEYS = ["0df300c91e0a7899c024aba0d028f1c1b39c849a"];
+
+// Resolve the calendar's date-field edit icon robustly, regardless of where it
+// lives (a page named "icons", a "general" folder, a raw instance, or only in a
+// published library). Returns a ComponentNode usable for createInstance() and
+// INSTANCE_SWAP, or null.
+async function findCalendarEditIcon() {
+  function normalize(name) {
+    return String(name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+  }
+  function combined(c) {
+    var own = String(c && c.name || "");
+    var parent = c && c.parent;
+    var setName = parent && parent.type === "COMPONENT_SET" ? String(parent.name || "") : "";
+    return normalize(setName + " " + own);
+  }
+  function scoreEdit(nm) {
+    var s = 0;
+    if (nm.indexOf("edit01") >= 0) s += 100;
+    else if (nm.indexOf("edit") >= 0) s += 40;
+    else if (nm.indexOf("pencil") >= 0) s += 30;
+    if (s <= 0) return 0;
+    if (nm.indexOf("useredit") >= 0 || nm.indexOf("usersedit") >= 0 || nm.indexOf("creditcard") >= 0) s -= 80;
+    s -= nm.length * 0.1; // prefer the tightest match (edit-01 over edit-01-line-xl…)
+    return s;
+  }
+
+  var comps = [];
+  var insts = [];
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var p = figma.root.children[pi];
+    if (p.type !== "PAGE") continue;
+    await p.loadAsync();
+    // Narrow the scan to edit/pencil-ish nodes so we don't collect the whole doc.
+    var found = p.findAll(function (n) {
+      var nm = String(n.name || "").toLowerCase();
+      var isEditish = nm.indexOf("edit") >= 0 || nm.indexOf("pencil") >= 0;
+      if (n.type === "COMPONENT_SET") return isEditish;
+      if (n.type === "INSTANCE") return isEditish;
+      if (n.type === "COMPONENT") {
+        if (isEditish) return true;
+        var par = n.parent;
+        if (par && par.type === "COMPONENT_SET") {
+          var pn = String(par.name || "").toLowerCase();
+          return pn.indexOf("edit") >= 0 || pn.indexOf("pencil") >= 0;
+        }
+      }
+      return false;
+    });
+    for (var i = 0; i < found.length; i++) {
+      var n = found[i];
+      if (n.type === "INSTANCE") insts.push(n);
+      else if (n.type === "COMPONENT") comps.push(n);
+      else if (n.type === "COMPONENT_SET") {
+        var ch = n.children || [];
+        for (var ci = 0; ci < ch.length; ci++) if (ch[ci].type === "COMPONENT") comps.push(ch[ci]);
+      }
+    }
+  }
+
+  // 1) Prefer a real local component / component-set match.
+  var best = null;
+  var bestScore = 0;
+  for (var a = 0; a < comps.length; a++) {
+    var sc = scoreEdit(combined(comps[a]));
+    if (sc > bestScore) { bestScore = sc; best = comps[a]; }
+  }
+  if (best) {
+    progress("[Calendar] Edit icon (local): " + best.name);
+    return best;
+  }
+
+  // 2) Resolve an existing edit-01 instance to its (possibly remote) main
+  //    component; load it by key so createInstance() works for library icons.
+  var bestInst = null;
+  var bestInstScore = 0;
+  for (var b = 0; b < insts.length; b++) {
+    var isc = scoreEdit(normalize(insts[b].name));
+    if (isc > bestInstScore) { bestInstScore = isc; bestInst = insts[b]; }
+  }
+  if (bestInst) {
+    try {
+      var main = typeof bestInst.getMainComponentAsync === "function"
+        ? await bestInst.getMainComponentAsync()
+        : bestInst.mainComponent;
+      if (main) {
+        // A remote (library) main component can't be instanced directly; pull
+        // it in by key first. Local mains fall straight through to createInstance().
+        if (main.remote && main.key) {
+          try {
+            var imported = await figma.importComponentByKeyAsync(main.key);
+            if (imported) { progress("[Calendar] Edit icon (imported from instance): " + imported.name); return imported; }
+          } catch (_impErr) {}
+        }
+        progress("[Calendar] Edit icon (instance main): " + main.name);
+        return main;
+      }
+    } catch (_e) {}
+  }
+
+  // 3) Last resort: pull in edit-01 directly from the known library key.
+  for (var k = 0; k < CALENDAR_EDIT_ICON_KEYS.length; k++) {
+    try {
+      var byKey = await figma.importComponentByKeyAsync(CALENDAR_EDIT_ICON_KEYS[k]);
+      if (byKey) { progress("[Calendar] Edit icon (imported by key): " + byKey.name); return byKey; }
+    } catch (_keyErr) {}
+  }
+
+  return null;
 }
 
 /**
@@ -11911,9 +12027,12 @@ function checkboxBgPath(varMap, variant, checkedState, state) {
   var isActive = (checkedState !== "unchecked");
   if (state === "disabled") {
     return pickExistingPath(varMap, [
+      // Disabled + checked prefers its own muted-filled token; falls back to the
+      // plain disabled background when it isn't defined.
+      isActive ? "checkbox/" + variant + "-background-checked-disabled" : null,
       "checkbox/" + variant + "-background-disabled",
       isActive ? "checkbox/background-checked-disabled" : "checkbox/background-disabled"
-    ]);
+    ].filter(Boolean));
   }
   if (state === "default") {
     return pickExistingPath(varMap, [
@@ -21893,6 +22012,8 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
                   optionText.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
                   if (isHoverOption && varMap["multiselect/" + variant + "-option-hover-text"]) {
                     bindPaintVar(optionText, "fills", 0, varMap["multiselect/" + variant + "-option-hover-text"]);
+                  } else if (isSelectedOption && varMap["multiselect/" + variant + "-option-selected-text"]) {
+                    bindPaintVar(optionText, "fills", 0, varMap["multiselect/" + variant + "-option-selected-text"]);
                   } else if (varMap["multiselect/text"]) {
                     bindPaintVar(optionText, "fills", 0, varMap["multiselect/text"]);
                   }

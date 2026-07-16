@@ -2177,7 +2177,18 @@ export default function App() {
         if (tokenState !== targetState) {
           if (!(targetState === "default" && tokenState === "default")) return false;
         }
-        if (parts.includes("disabled")) return targetState === "disabled";
+        if (parts.includes("disabled")) {
+          if (targetState !== "disabled") return false;
+          // Icon color only matters when the box is checked/indeterminate.
+          if (parts[2] === "icon") return isCheckedLike;
+          // Split disabled background/border by selection so the user only sees
+          // the tokens that actually apply: `-checked-disabled` on the checked
+          // view, plain `-disabled` on the unchecked view.
+          if (parts[2] === "background" || parts[2] === "border") {
+            return isCheckedToken ? isCheckedLike : !isCheckedLike;
+          }
+          return true;
+        }
         if (parts[2] === "icon") return isCheckedLike;
         if (isCheckedToken) return isCheckedLike;
         if (parts[2] === "background" || parts[2] === "border") return !isCheckedLike;

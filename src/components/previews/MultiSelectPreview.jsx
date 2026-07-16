@@ -92,6 +92,7 @@ export default function MultiSelectPreview({
   const dropdownBackground = resolveMultiSelectColorToken([`${prefix}-dropdown-background`]);
   const dropdownBorderColor = resolveMultiSelectColorToken([`${prefix}-dropdown-border`]);
   const optionSelectedBackground = resolveMultiSelectColorToken([`${prefix}-option-selected-background`]);
+  const optionSelectedText = resolveMultiSelectColorToken([`${prefix}-option-selected-text`, "multiselect-text"]);
   const optionHoverBackground = resolveMultiSelectColorToken([`${prefix}-option-hover-background`]);
   const optionHoverText = resolveMultiSelectColorToken([`${prefix}-option-hover-text`]);
   const optionCheckColor = resolveMultiSelectColorToken(["multiselect-option-check-icon"]);
@@ -231,7 +232,11 @@ export default function MultiSelectPreview({
           : isOptionHover
             ? optionHoverBackground
             : "transparent";
-        const rowColor = isOptionHover ? optionHoverText : textColor;
+        const rowColor = isOptionHover
+          ? optionHoverText
+          : isSelected
+            ? optionSelectedText
+            : textColor;
         return (
           <div
             key={opt}

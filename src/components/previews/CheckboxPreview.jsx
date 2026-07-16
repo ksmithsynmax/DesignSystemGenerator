@@ -45,6 +45,15 @@ export default function CheckboxPreview({
     `${prefix}-background-disabled`,
     "checkbox-background-disabled",
   ]);
+  // Disabled + checked can render as a muted *filled* box, distinct from the
+  // muted *empty* box of disabled + unchecked. Falls back to the plain disabled
+  // background if the checked-disabled token isn't defined.
+  const disabledCheckedBg = resolveFirst([
+    `${prefix}-background-checked-disabled`,
+    "checkbox-background-checked-disabled",
+    `${prefix}-background-disabled`,
+    "checkbox-background-disabled",
+  ]);
 
   const borderColor = resolveFirst([
     `${prefix}-border${stateSuffix}`,
@@ -57,6 +66,11 @@ export default function CheckboxPreview({
     "checkbox-border",
   ]);
   const disabledBorderColor = resolveFirst([
+    `${prefix}-border-disabled`,
+    "checkbox-border-disabled",
+  ]);
+  const disabledCheckedBorderColor = resolveFirst([
+    `${prefix}-border-checked-disabled`,
     `${prefix}-border-disabled`,
     "checkbox-border-disabled",
   ]);
@@ -77,8 +91,20 @@ export default function CheckboxPreview({
   const labelFontFamily = resolveDimension(brands, brandId, "checkbox-label-font-family");
   const labelFontWeight = resolveDimension(brands, brandId, "checkbox-label-font-weight");
   const isActive = checked || indeterminate;
-  const bg = isDisabled ? disabledBg : isActive ? checkedBg : uncheckedBg;
-  const bd = isDisabled ? disabledBorderColor : isActive ? checkedBorderColor : borderColor;
+  const bg = isDisabled
+    ? isActive
+      ? disabledCheckedBg
+      : disabledBg
+    : isActive
+      ? checkedBg
+      : uncheckedBg;
+  const bd = isDisabled
+    ? isActive
+      ? disabledCheckedBorderColor
+      : disabledBorderColor
+    : isActive
+      ? checkedBorderColor
+      : borderColor;
   const ic = isDisabled ? disabledIconColor : iconColor;
 
   return (
