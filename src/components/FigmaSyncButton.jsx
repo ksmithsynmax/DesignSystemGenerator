@@ -149,6 +149,7 @@ const BUILDABLE_COMPONENTS = [
   "avatar",
   "skeleton",
   "table",
+  "densetable",
   "calendar",
 ];
 

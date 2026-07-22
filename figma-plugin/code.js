@@ -1126,6 +1126,7 @@ function resolveManagedComponentKeyFromName(name) {
     "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image",
     "skeleton",
     "calendar",
+    "densetable",
     "table"
   ];
   // Longest keys first so e.g. "textinput" matches before the "text" prefix rule.
@@ -1550,6 +1551,19 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
       tableFlatten.push(tableBuildResult);
     }
   }
+  var denseTableResult = await buildSet("DenseTable", function () {
+    return buildDenseTableComponentSet(varMap, page, font);
+  });
+  var denseTableFlatten = [];
+  if (denseTableResult) {
+    if (Array.isArray(denseTableResult)) {
+      for (var dtfi = 0; dtfi < denseTableResult.length; dtfi++) {
+        if (denseTableResult[dtfi]) denseTableFlatten.push(denseTableResult[dtfi]);
+      }
+    } else {
+      denseTableFlatten.push(denseTableResult);
+    }
+  }
   var modalSet = await buildSet("Modal", function () {
     return buildModalComponentSet(varMap, page, font, {
       buttonSet: buttonSet,
@@ -1614,7 +1628,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     avatarSet,
     skeletonSet,
     calendarSet,
-  ].concat(tableFlatten);
+  ].concat(tableFlatten).concat(denseTableFlatten);
   var validSets = generatedSets.filter(function (set) { return Boolean(set); });
   try {
     var clearModeCollections = await figma.variables.getLocalVariableCollectionsAsync();
@@ -1835,6 +1849,8 @@ function collectManagedComponentSetsFromPage(page, requestedSet) {
     if (node.type === "COMPONENT") {
       var cn2 = normalizeComponentKey(node.name);
       if ((cn2 === "table" || cn2 === "tableheader" || cn2 === "tablebody") && (!requestedSet || requestedSet.table)) {
+        sets.push(node);
+      } else if (cn2.indexOf("densetable") === 0 && (!requestedSet || requestedSet.densetable)) {
         sets.push(node);
       }
       continue;
@@ -5892,6 +5908,11 @@ async function cleanupExistingComponents(page, requestedSet) {
           child.remove();
           continue;
         }
+        // DenseTable ships as a single composed COMPONENT (not a variant set).
+        if (singleKey === "densetable" && (!requestedSet || requestedSet.densetable)) {
+          child.remove();
+          continue;
+        }
       }
       // Legacy: old table shipped as a FRAME named "Table — library".
       if (child.type === "FRAME" && normalizeComponentKey(child.name) === "tablelibrary") {
@@ -6790,9 +6811,13 @@ async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selec
               bindPaintVar(buttonNode, "fills", 0, bgVar);
             }
 
-            // Stroke/border
+            // Stroke/border — bind for EVERY variant that has a border token
+            // (filled + ghost included), not just outlined. Their defaults are
+            // transparent, so nothing shows until the token is pointed at a
+            // color, but the border variable is now actually bound + editable in
+            // Figma (previously filled/ghost had no stroke to recolor at all).
             var borderVar = varMap[borderPath];
-            if (variant === "outlined" && borderVar) {
+            if (borderVar) {
               buttonNode.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
               buttonNode.strokeWeight = 1.5;
               bindPaintVar(buttonNode, "strokes", 0, borderVar);
@@ -10102,6 +10127,962 @@ async function tableTrySetTextOnInstance(inst, preferredNames, characters) {
   try {
     target.characters = characters;
   } catch (_eCh) {}
+}
+
+// ---------------------------------------------------------------------------
+// DenseTable — split into composable pieces mirroring Table (one cell = one
+// instance):
+//   • DenseTableHeader     — Variant = Default | Action (empty spacer)
+//   • DenseTableBody       — Variant = Text | Flag | Icon | Detection | Action
+//                            (the Action variant carries the list/× button with
+//                            an "Expanded" boolean that swaps list → ×)
+//   • DenseTableExpansion  — the expansion card + caret, dropped below a row
+// All cell-content icons are auto-swap (INSTANCE_SWAP). Returns an array of the
+// generated sets so the caller can flatten them into generatedSets.
+// ---------------------------------------------------------------------------
+async function buildDenseTableComponentSet(varMap, page, font) {
+  var COLS = 6;
+  var BODY_ROWS = 2;
+  // Figma fallbacks (Theia steel scale) used when a variable isn't present.
+  var bgFallback = { r: 15 / 255, g: 16 / 255, b: 26 / 255 };        // ~#0f101a
+  var headerCellFallback = { r: 36 / 255, g: 38 / 255, b: 60 / 255 }; // steel/8 #24263c
+  var dividerFallback = { r: 57 / 255, g: 60 / 255, b: 86 / 255 };    // steel/7 #393c56
+  var textFallback = { r: 1, g: 1, b: 1 };
+
+  // ── Auto-swap icon discovery ──
+  // Reuse the shared icon-component finder (scans the "Icons" page). Every icon
+  // becomes a real INSTANCE_SWAP instance (like TableHeader's sort icon) so
+  // designers can swap it in Figma. Falls back to a raw vector if none found.
+  var iconSources = await findTableSortIconSources();
+  var iconCandidates = iconSources.candidates || [];
+  var sortDefaultComp = iconSources.defaultIcon;
+
+  function normIconName(n) {
+    return String(n || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+  }
+  function pickIcon(matcher) {
+    var best = null, bestScore = 0;
+    for (var i = 0; i < iconCandidates.length; i++) {
+      var s = matcher(normIconName(iconCandidates[i].name));
+      if (s > bestScore) { bestScore = s; best = iconCandidates[i]; }
+    }
+    return best;
+  }
+  var listDefaultComp = pickIcon(function (n) {
+    if (n.indexOf("listunordered") >= 0) return 100;
+    if (n.indexOf("list") >= 0) return 95;
+    if (n.indexOf("menu") >= 0) return 80;
+    if (n.indexOf("dotsgrid") >= 0) return 65;
+    if (n.indexOf("dots") >= 0) return 55;
+    if (n.indexOf("rows") >= 0) return 45;
+    return 0;
+  });
+  var closeDefaultComp = pickIcon(function (n) {
+    if (n.indexOf("xclose") >= 0) return 100;
+    if (n === "x") return 95;
+    if (n.indexOf("closex") >= 0 || n.indexOf("xmark") >= 0) return 92;
+    if (n.indexOf("close") >= 0) return 88;
+    if (n.indexOf("xcircle") >= 0) return 70;
+    if (n.charAt(0) === "x") return 60;
+    return 0;
+  });
+
+  // Instantiate an icon component, size it, and rebind its vector colors to the
+  // supplied token. Returns the INSTANCE (or null on failure).
+  function makeIconInstance(defComp, size, colorVar) {
+    if (!defComp) return null;
+    var inst = null;
+    try { inst = defComp.createInstance(); } catch (_eInst) { return null; }
+    try { inst.resize(size, size); } catch (_eSz) {}
+    var vecs = [];
+    try { vecs = inst.findAll(function (n) { return n.type === "VECTOR"; }); } catch (_eFa) {}
+    for (var i = 0; i < vecs.length; i++) {
+      if (varMap["densetable/sort-icon-stroke-width"]) bindVar(vecs[i], "strokeWeight", varMap["densetable/sort-icon-stroke-width"]);
+      if (vecs[i].strokes && vecs[i].strokes.length > 0) {
+        vecs[i].strokes = [{ type: "SOLID", color: textFallback }];
+        if (colorVar) bindPaintVar(vecs[i], "strokes", 0, colorVar);
+      }
+      if (vecs[i].fills && vecs[i].fills.length > 0) {
+        vecs[i].fills = [{ type: "SOLID", color: textFallback }];
+        if (colorVar) bindPaintVar(vecs[i], "fills", 0, colorVar);
+      }
+    }
+    return inst;
+  }
+
+  function makeText(content, colorVar, opts) {
+    opts = opts || {};
+    var t = figma.createText();
+    t.name = opts.name || "text";
+    t.fontName = font;
+    t.characters = content;
+    t.fontSize = opts.fontSize || 12;
+    t.textAutoResize = "WIDTH_AND_HEIGHT";
+    t.fills = [{ type: "SOLID", color: textFallback }];
+    if (colorVar) bindPaintVar(t, "fills", 0, colorVar);
+    if (opts.fontSizeVar) bindVar(t, "fontSize", opts.fontSizeVar);
+    if (opts.fontFamilyVar) bindVar(t, "fontFamily", opts.fontFamilyVar);
+    if (opts.fontStyleVar) bindVar(t, "fontStyle", opts.fontStyleVar);
+    return t;
+  }
+
+  function makeIcon(name, pathData, size, strokeVar) {
+    var v = figma.createVector();
+    v.name = name;
+    v.resize(size, size);
+    v.strokes = [{ type: "SOLID", color: textFallback }];
+    v.strokeWeight = 1.25;
+    if (varMap["densetable/sort-icon-stroke-width"]) bindVar(v, "strokeWeight", varMap["densetable/sort-icon-stroke-width"]);
+    v.strokeCap = "ROUND";
+    v.strokeJoin = "ROUND";
+    if (strokeVar) bindPaintVar(v, "strokes", 0, strokeVar);
+    try {
+      v.vectorPaths = [{ windingRule: "NONZERO", data: pathData }];
+    } catch (_eVec) {
+      try { v.remove(); } catch (_eRm) {}
+      return null;
+    }
+    return v;
+  }
+
+  function makeSortIcon() {
+    // Untitled UI "switch-vertical-01" (two arrows ↑↓), scaled from a 24px
+    // viewBox to a 12px box.
+    return makeIcon(
+      "switch-vertical-01",
+      "M 8.5 2 L 8.5 10 M 8.5 10 L 6.5 8 M 8.5 10 L 10.5 8 M 3.5 10 L 3.5 2 M 3.5 2 L 1.5 4 M 3.5 2 L 5.5 4",
+      12,
+      varMap["densetable/sort-icon"]
+    );
+  }
+  function makeListIcon() {
+    return makeIcon("list", "M 3 2.5 L 9 2.5 M 3 5 L 9 5 M 3 7.5 L 9 7.5", 10, varMap["densetable/action-icon"]);
+  }
+  function makeCloseIcon() {
+    return makeIcon("x-close", "M 2.5 2.5 L 7.5 7.5 M 7.5 2.5 L 2.5 7.5", 10, varMap["densetable/action-icon"]);
+  }
+
+  function setStretch(node) {
+    try { node.layoutGrow = 1; } catch (_e1) {}
+    try { node.layoutAlign = "STRETCH"; } catch (_e2) {}
+  }
+
+  function bindPadXY(node, xVar, yVar, fx, fy) {
+    node.paddingLeft = fx; node.paddingRight = fx;
+    node.paddingTop = fy; node.paddingBottom = fy;
+    if (xVar) { bindVar(node, "paddingLeft", xVar); bindVar(node, "paddingRight", xVar); }
+    if (yVar) { bindVar(node, "paddingTop", yVar); bindVar(node, "paddingBottom", yVar); }
+  }
+
+  // isAction => the action column's header carries no title/sort icon (it just
+  // aligns above the action button as an empty spacer cell).
+  function makeHeaderCell(isAction) {
+    var cell = figma.createFrame();
+    cell.name = isAction ? "Header cell (action)" : "Header cell";
+    cell.layoutMode = "HORIZONTAL";
+    cell.primaryAxisSizingMode = "FIXED";
+    cell.counterAxisSizingMode = "AUTO";
+    cell.counterAxisAlignItems = "CENTER";
+    cell.itemSpacing = 4;
+    if (varMap["densetable/header-icon-gap"]) bindVar(cell, "itemSpacing", varMap["densetable/header-icon-gap"]);
+    bindPadXY(cell, varMap["densetable/header-padding-x"], varMap["densetable/header-padding-y"], 8, 4);
+    cell.fills = [{ type: "SOLID", color: headerCellFallback }];
+    if (varMap["densetable/header-cell-background"]) bindPaintVar(cell, "fills", 0, varMap["densetable/header-cell-background"]);
+    if (isAction) {
+      // Empty spacer: keep a stable height so it matches the other header cells.
+      cell.minHeight = 20;
+      return { cell: cell, icon: null };
+    }
+    cell.appendChild(makeText("Label", varMap["densetable/header-text"], {
+      name: "Label", fontSize: 10,
+      fontSizeVar: varMap["densetable/header-font-size"],
+      fontFamilyVar: varMap["densetable/header-font-family"],
+      fontStyleVar: varMap["densetable/header-font-weight"],
+    }));
+    var sort = makeIconInstance(sortDefaultComp, 12, varMap["densetable/sort-icon"]);
+    var swappable = Boolean(sort);
+    if (!sort) sort = makeSortIcon();
+    if (sort) {
+      sort.name = "Sort icon";
+      cell.appendChild(sort);
+    }
+    return { cell: cell, icon: swappable ? sort : null };
+  }
+
+  function makeActionButton(iconKind) {
+    var b = figma.createFrame();
+    b.name = "Action";
+    b.layoutMode = "HORIZONTAL";
+    b.primaryAxisSizingMode = "AUTO";
+    b.counterAxisSizingMode = "AUTO";
+    b.primaryAxisAlignItems = "CENTER";
+    b.counterAxisAlignItems = "CENTER";
+    bindPadXY(b, varMap["densetable/action-padding"], varMap["densetable/action-padding"], 4, 4);
+    b.cornerRadius = 2;
+    if (varMap["densetable/action-radius"]) {
+      bindVar(b, "topLeftRadius", varMap["densetable/action-radius"]);
+      bindVar(b, "topRightRadius", varMap["densetable/action-radius"]);
+      bindVar(b, "bottomLeftRadius", varMap["densetable/action-radius"]);
+      bindVar(b, "bottomRightRadius", varMap["densetable/action-radius"]);
+    }
+    b.fills = [{ type: "SOLID", color: headerCellFallback }];
+    if (varMap["densetable/action-background"]) bindPaintVar(b, "fills", 0, varMap["densetable/action-background"]);
+    var defComp = iconKind === "close" ? closeDefaultComp : listDefaultComp;
+    var icon = makeIconInstance(defComp, 10, varMap["densetable/action-icon"]);
+    var swappable = Boolean(icon);
+    if (!icon) icon = iconKind === "close" ? makeCloseIcon() : makeListIcon();
+    if (icon) {
+      icon.name = iconKind === "close" ? "Close icon" : "List icon";
+      b.appendChild(icon);
+    }
+    return { button: b, icon: swappable ? icon : null };
+  }
+
+  // isAction => last column shows the action button (right-aligned). Returns
+  // { cell, button, icon } so callers can attach visibility / swap properties.
+  function makeBodyCell(isAction, iconKind) {
+    var cell = figma.createFrame();
+    cell.name = isAction ? "Action cell" : "Cell";
+    cell.layoutMode = "HORIZONTAL";
+    cell.primaryAxisSizingMode = "FIXED";
+    cell.counterAxisSizingMode = "AUTO";
+    cell.counterAxisAlignItems = "CENTER";
+    cell.primaryAxisAlignItems = isAction ? "MAX" : "MIN";
+    cell.fills = [];
+    bindPadXY(cell, varMap["densetable/cell-padding-x"], varMap["densetable/cell-padding-y"], 8, 6);
+    if (isAction && varMap["densetable/action-padding"]) {
+      bindVar(cell, "paddingRight", varMap["densetable/action-padding"]);
+    }
+    var button = null;
+    var icon = null;
+    if (isAction) {
+      var made = makeActionButton(iconKind);
+      button = made.button;
+      icon = made.icon;
+      cell.appendChild(button);
+    } else {
+      cell.appendChild(makeText("Text", varMap["densetable/cell-text"], {
+        fontSize: 12,
+        fontSizeVar: varMap["densetable/cell-font-size"],
+        fontFamilyVar: varMap["densetable/cell-font-family"],
+        fontStyleVar: varMap["densetable/cell-font-weight"],
+      }));
+    }
+    return { cell: cell, button: button, icon: icon };
+  }
+
+  function makeHeaderRow() {
+    var row = figma.createFrame();
+    row.name = "Header";
+    row.layoutMode = "HORIZONTAL";
+    row.primaryAxisSizingMode = "FIXED";
+    row.counterAxisSizingMode = "AUTO";
+    row.itemSpacing = 0;
+    row.fills = [];
+    var icons = [];
+    for (var c = 0; c < COLS; c++) {
+      // Last column is the action column — its header is an empty spacer.
+      var made = makeHeaderCell(c === COLS - 1);
+      row.appendChild(made.cell);
+      setStretch(made.cell);
+      if (made.icon) icons.push(made.icon);
+    }
+    return { row: row, icons: icons };
+  }
+
+  // opts: { action: bool, iconKind: "list"|"close" } -> { row, button, icon }
+  function makeBodyRow(opts) {
+    opts = opts || {};
+    var row = figma.createFrame();
+    row.name = "Row";
+    row.layoutMode = "HORIZONTAL";
+    row.primaryAxisSizingMode = "FIXED";
+    row.counterAxisSizingMode = "AUTO";
+    row.itemSpacing = 0;
+    row.fills = [];
+    // Bottom divider (drawn "inside" so it doesn't change layout height). Skipped
+    // for the expanded row so it reads as connected to the card below it.
+    if (!opts.noDivider) {
+      row.strokes = [{ type: "SOLID", color: dividerFallback }];
+      row.strokeAlign = "INSIDE";
+      try {
+        row.strokeTopWeight = 0;
+        row.strokeLeftWeight = 0;
+        row.strokeRightWeight = 0;
+        row.strokeBottomWeight = 1;
+      } catch (_eStroke) {}
+      if (varMap["densetable/row-divider"]) bindPaintVar(row, "strokes", 0, varMap["densetable/row-divider"]);
+    }
+    var button = null;
+    var icon = null;
+    for (var c = 0; c < COLS; c++) {
+      var isAction = Boolean(opts.action) && c === COLS - 1;
+      var made = makeBodyCell(isAction, opts.iconKind);
+      row.appendChild(made.cell);
+      setStretch(made.cell);
+      if (made.button) button = made.button;
+      if (made.icon) icon = made.icon;
+    }
+    return { row: row, button: button, icon: icon };
+  }
+
+  function makeExpansionCard() {
+    var card = figma.createFrame();
+    card.name = "Expansion";
+    card.layoutMode = "VERTICAL";
+    card.primaryAxisSizingMode = "AUTO";
+    card.counterAxisSizingMode = "FIXED";
+    card.counterAxisAlignItems = "MIN";
+    bindPadXY(card, varMap["densetable/expansion-padding-x"], varMap["densetable/expansion-padding-y"], 12, 12);
+    card.cornerRadius = 6;
+    if (varMap["densetable/expansion-radius"]) {
+      bindVar(card, "topLeftRadius", varMap["densetable/expansion-radius"]);
+      bindVar(card, "topRightRadius", varMap["densetable/expansion-radius"]);
+      bindVar(card, "bottomLeftRadius", varMap["densetable/expansion-radius"]);
+      bindVar(card, "bottomRightRadius", varMap["densetable/expansion-radius"]);
+    }
+    card.fills = [{ type: "SOLID", color: bgFallback }];
+    if (varMap["densetable/expansion-background"]) bindPaintVar(card, "fills", 0, varMap["densetable/expansion-background"]);
+    // Let the caret pointer poke above the card's top edge.
+    card.clipsContent = false;
+    card.strokes = [{ type: "SOLID", color: dividerFallback }];
+    card.strokeWeight = 1;
+    card.strokeAlign = "INSIDE";
+    if (varMap["densetable/expansion-border"]) bindPaintVar(card, "strokes", 0, varMap["densetable/expansion-border"]);
+    card.appendChild(makeText("Card content goes here", varMap["densetable/expansion-text"], {
+      name: "Card content", fontSize: 12,
+      fontSizeVar: varMap["densetable/cell-font-size"],
+      fontFamilyVar: varMap["densetable/cell-font-family"],
+    }));
+    return card;
+  }
+
+  // ── Additional sources for the body variants ──
+  var iconLeadSources = await findTableBodyIconSources();
+  var iconLeadDefault = iconLeadSources.defaultIcon;
+  var iconLeadCandidates = iconLeadSources.candidates || [];
+  var flagSources = await findTableBodyFlagSources(page);
+  var flagDefaultComp = flagSources.defaultFlag;
+  var flagCandidates = flagSources.candidates || [];
+  var detectionSources = await findTableBodyDetectionsSources(page);
+  var detectionDefault = detectionSources.defaultDetection;
+  var detectionCandidates = detectionSources.candidates || [];
+
+  // ── Swap-property helpers (owner-scoped so they attach to individual variants) ──
+  function swapDefaultRefs(componentNode) {
+    var refs = [];
+    if (!componentNode) return refs;
+    if (componentNode.id) refs.push(componentNode.id);
+    if (componentNode.key && refs.indexOf(componentNode.key) < 0) refs.push(componentNode.key);
+    return refs;
+  }
+  function buildPreferred(cands, defComp) {
+    var preferred = [], seen = {};
+    if (defComp && defComp.key) { seen[defComp.key] = true; preferred.push({ type: "COMPONENT", key: defComp.key }); }
+    for (var i = 0; i < cands.length && preferred.length < 24; i++) {
+      var cnd = cands[i];
+      if (!cnd || cnd.type !== "COMPONENT") continue;
+      var k = cnd.key;
+      if (!k || seen[k]) continue;
+      seen[k] = true;
+      preferred.push({ type: "COMPONENT", key: k });
+    }
+    return preferred;
+  }
+  function addSwapPropertyOn(owner, label, defComp, cands, instances) {
+    if (!owner || !defComp || !instances || !instances.length) return;
+    var refs = swapDefaultRefs(defComp);
+    if (!refs.length) return;
+    var preferred = buildPreferred(cands || [], defComp);
+    var opts = preferred.length > 0 ? { preferredValues: preferred } : undefined;
+    var propName = null;
+    for (var r = 0; r < refs.length && !propName; r++) {
+      try { propName = owner.addComponentProperty(label, "INSTANCE_SWAP", refs[r], opts); }
+      catch (_eO) { try { propName = owner.addComponentProperty(label, "INSTANCE_SWAP", refs[r]); } catch (_eB) {} }
+    }
+    if (!propName) return;
+    for (var q = 0; q < instances.length; q++) {
+      try { instances[q].componentPropertyReferences = { mainComponent: propName }; } catch (_eR) {}
+    }
+  }
+
+  // Base cell COMPONENT shared by header + body variants (one cell = one instance,
+  // exactly like Table's TableBody). Body cells carry the bottom divider.
+  function makeCellComponent(variantName, opts) {
+    opts = opts || {};
+    var c = figma.createComponent();
+    c.name = "Variant=" + variantName;
+    c.layoutMode = "HORIZONTAL";
+    c.primaryAxisSizingMode = "AUTO";
+    c.counterAxisSizingMode = "AUTO";
+    c.primaryAxisAlignItems = opts.alignEnd ? "MAX" : "MIN";
+    c.counterAxisAlignItems = "CENTER";
+    c.itemSpacing = typeof opts.itemSpacing === "number" ? opts.itemSpacing : 6;
+    if (opts.gapVar && varMap[opts.gapVar]) bindVar(c, "itemSpacing", varMap[opts.gapVar]);
+    c.clipsContent = false;
+    var bgFill = opts.header ? headerCellFallback : bgFallback;
+    var bgVar = opts.header ? varMap["densetable/header-cell-background"] : varMap["densetable/background"];
+    c.fills = [{ type: "SOLID", color: bgFill }];
+    if (bgVar) bindPaintVar(c, "fills", 0, bgVar);
+    if (opts.header) {
+      bindPadXY(c, varMap["densetable/header-padding-x"], varMap["densetable/header-padding-y"], 8, 4);
+    } else {
+      bindPadXY(c, varMap["densetable/cell-padding-x"], varMap["densetable/cell-padding-y"], 8, 6);
+    }
+    if (!opts.header) {
+      c.strokes = [{ type: "SOLID", color: dividerFallback }];
+      c.strokeAlign = "INSIDE";
+      try {
+        c.strokeTopWeight = 0; c.strokeLeftWeight = 0; c.strokeRightWeight = 0; c.strokeBottomWeight = 1;
+      } catch (_eS) {}
+      if (varMap["densetable/row-divider"]) bindPaintVar(c, "strokes", 0, varMap["densetable/row-divider"]);
+    } else {
+      c.strokes = [];
+    }
+    try { c.minHeight = opts.header ? 20 : 28; } catch (_eMh) {}
+    return c;
+  }
+
+  // Lay out variants left-to-right so they don't overlap before combineAsVariants.
+  var placeX = 0;
+  function placeVariant(comp) {
+    page.appendChild(comp);
+    try { comp.x = placeX; comp.y = 0; } catch (_eP) {}
+    placeX += Math.max(48, Math.ceil(comp.width || 60)) + 24;
+  }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DenseTableHeader — a SINGLE header cell (mirrors the proven TableHeader).
+  // Deliberately NOT a variant set: combineAsVariants was corrupting the
+  // "Show sort" visible binding and leaving an empty INSTANCE_SWAP placeholder
+  // (the purple box). Booleans "Show label" + "Show sort" (both default on) let
+  // this one component serve both a titled column header and the blank
+  // action-column header (turn both off).
+  // ─────────────────────────────────────────────────────────────────────────
+  var headerComp = figma.createComponent();
+  headerComp.name = "DenseTableHeader";
+  headerComp.layoutMode = "HORIZONTAL";
+  headerComp.primaryAxisSizingMode = "AUTO";
+  headerComp.counterAxisSizingMode = "AUTO";
+  headerComp.primaryAxisAlignItems = "MIN";
+  headerComp.counterAxisAlignItems = "CENTER";
+  headerComp.itemSpacing = 4;
+  if (varMap["densetable/header-icon-gap"]) bindVar(headerComp, "itemSpacing", varMap["densetable/header-icon-gap"]);
+  headerComp.clipsContent = false;
+  headerComp.fills = [{ type: "SOLID", color: headerCellFallback }];
+  headerComp.strokes = [];
+  if (varMap["densetable/header-cell-background"]) bindPaintVar(headerComp, "fills", 0, varMap["densetable/header-cell-background"]);
+  bindPadXY(headerComp, varMap["densetable/header-padding-x"], varMap["densetable/header-padding-y"], 8, 4);
+  try { headerComp.minHeight = 20; } catch (_eHmh) {}
+
+  var headerLabel = makeText("Label", varMap["densetable/header-text"], {
+    name: "Label", fontSize: 10,
+    fontSizeVar: varMap["densetable/header-font-size"],
+    fontFamilyVar: varMap["densetable/header-font-family"],
+    fontStyleVar: varMap["densetable/header-font-weight"],
+  });
+  headerComp.appendChild(headerLabel);
+
+  // Fixed-size icon slot (like TableHeader). A FIXED wrapper means hiding it via
+  // the boolean never leaves an empty INSTANCE placeholder behind.
+  var sortWrap = figma.createFrame();
+  sortWrap.name = "Sort icon slot";
+  sortWrap.layoutMode = "HORIZONTAL";
+  sortWrap.primaryAxisSizingMode = "FIXED";
+  sortWrap.counterAxisSizingMode = "FIXED";
+  sortWrap.resize(12, 12);
+  sortWrap.primaryAxisAlignItems = "CENTER";
+  sortWrap.counterAxisAlignItems = "CENTER";
+  sortWrap.fills = [];
+  sortWrap.clipsContent = false;
+  var hSort = makeIconInstance(sortDefaultComp, 12, varMap["densetable/sort-icon"]);
+  var hSortSwappable = Boolean(hSort);
+  if (!hSort) hSort = makeSortIcon();
+  if (hSort) { hSort.name = "Sort icon"; sortWrap.appendChild(hSort); }
+  headerComp.appendChild(sortWrap);
+
+  page.appendChild(headerComp);
+
+  // Component properties on the single component — bindings survive (no combine).
+  try {
+    var showLabelProp = headerComp.addComponentProperty("Show label", "BOOLEAN", true);
+    headerLabel.componentPropertyReferences = { visible: showLabelProp };
+  } catch (_eShowLabel) { progress("DenseTableHeader Show label: " + String(_eShowLabel)); }
+  try {
+    var showSortProp = headerComp.addComponentProperty("Show sort", "BOOLEAN", true);
+    sortWrap.componentPropertyReferences = { visible: showSortProp };
+  } catch (_eShowSort) { progress("DenseTableHeader Show sort: " + String(_eShowSort)); }
+  if (hSortSwappable && hSort) addSwapPropertyOn(headerComp, "Sort icon", sortDefaultComp, iconCandidates, [hSort]);
+
+  var headerSet = headerComp;
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DenseTableBody — Variant = Text | Flag | Icon | Detection | Action
+  // ─────────────────────────────────────────────────────────────────────────
+  placeX = 0;
+  var bodyVariants = [];
+
+  // Text
+  var vText = makeCellComponent("Text", {});
+  vText.appendChild(makeText("Text", varMap["densetable/cell-text"], {
+    fontSize: 12,
+    fontSizeVar: varMap["densetable/cell-font-size"],
+    fontFamilyVar: varMap["densetable/cell-font-family"],
+    fontStyleVar: varMap["densetable/cell-font-weight"],
+  }));
+  placeVariant(vText);
+  bodyVariants.push(vText);
+
+  // Flag (country flag, no label)
+  var vFlag = makeCellComponent("Flag", {});
+  var flagW = 18, flagH = 13;
+  var flagInst = null;
+  if (flagDefaultComp) {
+    try {
+      flagInst = flagDefaultComp.createInstance();
+      flagInst.name = "Flag";
+      try { flagInst.resize(flagW, flagH); } catch (_eFr) {}
+      vFlag.appendChild(flagInst);
+    } catch (_eFi) { flagInst = null; }
+  }
+  if (!flagInst) {
+    var flagFrame = tableMakeGermanyFlagFrame();
+    try { flagFrame.resize(flagW, flagH); } catch (_eFf) {}
+    try {
+      if (varMap["densetable/flag-radius"]) {
+        bindVar(flagFrame, "topLeftRadius", varMap["densetable/flag-radius"]);
+        bindVar(flagFrame, "topRightRadius", varMap["densetable/flag-radius"]);
+        bindVar(flagFrame, "bottomLeftRadius", varMap["densetable/flag-radius"]);
+        bindVar(flagFrame, "bottomRightRadius", varMap["densetable/flag-radius"]);
+      } else { flagFrame.cornerRadius = 2; }
+    } catch (_eFrr) {}
+    vFlag.appendChild(flagFrame);
+  }
+  placeVariant(vFlag);
+  if (flagInst) addSwapPropertyOn(vFlag, "Flag", flagDefaultComp, flagCandidates, [flagInst]);
+  bodyVariants.push(vFlag);
+
+  // Icon (leading icon + text)
+  var vIcon = makeCellComponent("Icon", { itemSpacing: 6, gapVar: "densetable/icon-gap" });
+  var leadInst = makeIconInstance(iconLeadDefault, 12, varMap["densetable/icon-color"]);
+  var leadSwappable = Boolean(leadInst);
+  if (!leadInst) leadInst = makeIcon("alert-triangle", "M 6 1 L 11.5 11 L 0.5 11 Z M 6 5 L 6 7.5 M 6 9 L 6 9", 12, varMap["densetable/icon-color"]);
+  if (leadInst) { leadInst.name = "Icon"; vIcon.appendChild(leadInst); }
+  vIcon.appendChild(makeText("Text", varMap["densetable/icon-text"], {
+    fontSize: 12,
+    fontSizeVar: varMap["densetable/cell-font-size"],
+    fontFamilyVar: varMap["densetable/cell-font-family"],
+    fontStyleVar: varMap["densetable/cell-font-weight"],
+  }));
+  placeVariant(vIcon);
+  if (leadSwappable && leadInst) addSwapPropertyOn(vIcon, "Icon", iconLeadDefault, iconLeadCandidates, [leadInst]);
+  bodyVariants.push(vIcon);
+
+  // Detection (a single detection icon from the file's "Detection" set, no text).
+  // Keep the component's native dimensions (no resize) — detection glyphs aren't
+  // square, so forcing a size stretches them. Not recolored either (multi-color).
+  var vDet = makeCellComponent("Detection", {});
+  var detInst = null;
+  if (detectionDefault) {
+    try {
+      detInst = detectionDefault.createInstance();
+      detInst.name = "Detection";
+      try { await detInst.loadAsync(); } catch (_dLd) {}
+      vDet.appendChild(detInst);
+    } catch (_eDi) { detInst = null; }
+  }
+  if (!detInst) {
+    var detFallback = makeIcon("detection", "M 8 1 L 14 3.5 L 14 8 C 14 12 8 15 8 15 C 8 15 2 12 2 8 L 2 3.5 Z", 16, varMap["densetable/detection-icon"]);
+    if (detFallback) { detFallback.name = "Detection"; vDet.appendChild(detFallback); }
+  }
+  placeVariant(vDet);
+  if (detInst) addSwapPropertyOn(vDet, "Detection", detectionDefault, detectionCandidates, [detInst]);
+  bodyVariants.push(vDet);
+
+  // Action (list/× button; the "Expanded" boolean swaps list → ×)
+  var vAction = makeCellComponent("Action", { alignEnd: true });
+  try { if (varMap["densetable/action-padding"]) bindVar(vAction, "paddingRight", varMap["densetable/action-padding"]); } catch (_eAp) {}
+  var btn = figma.createFrame();
+  btn.name = "Action button";
+  btn.layoutMode = "HORIZONTAL";
+  btn.primaryAxisSizingMode = "AUTO";
+  btn.counterAxisSizingMode = "AUTO";
+  btn.primaryAxisAlignItems = "CENTER";
+  btn.counterAxisAlignItems = "CENTER";
+  btn.clipsContent = true;
+  bindPadXY(btn, varMap["densetable/action-padding"], varMap["densetable/action-padding"], 4, 4);
+  btn.cornerRadius = 2;
+  if (varMap["densetable/action-radius"]) {
+    bindVar(btn, "topLeftRadius", varMap["densetable/action-radius"]);
+    bindVar(btn, "topRightRadius", varMap["densetable/action-radius"]);
+    bindVar(btn, "bottomLeftRadius", varMap["densetable/action-radius"]);
+    bindVar(btn, "bottomRightRadius", varMap["densetable/action-radius"]);
+  }
+  btn.fills = [{ type: "SOLID", color: headerCellFallback }];
+  if (varMap["densetable/action-background"]) bindPaintVar(btn, "fills", 0, varMap["densetable/action-background"]);
+  var listInst = makeIconInstance(listDefaultComp, 10, varMap["densetable/action-icon"]);
+  var listSwappable = Boolean(listInst);
+  if (!listInst) listInst = makeListIcon();
+  if (listInst) { listInst.name = "List icon"; btn.appendChild(listInst); }
+  vAction.appendChild(btn);
+
+  // Opaque overlay carrying the × icon; when the Expanded boolean is on it
+  // becomes visible and covers the list icon beneath it (Figma can't invert a
+  // boolean binding, so we cover rather than hide-the-other).
+  var closeOverlay = figma.createFrame();
+  closeOverlay.name = "Close overlay";
+  closeOverlay.layoutMode = "HORIZONTAL";
+  closeOverlay.primaryAxisAlignItems = "CENTER";
+  closeOverlay.counterAxisAlignItems = "CENTER";
+  closeOverlay.fills = [{ type: "SOLID", color: headerCellFallback }];
+  if (varMap["densetable/action-background"]) bindPaintVar(closeOverlay, "fills", 0, varMap["densetable/action-background"]);
+  var closeInst = makeIconInstance(closeDefaultComp, 10, varMap["densetable/action-icon"]);
+  var closeSwappable = Boolean(closeInst);
+  if (!closeInst) closeInst = makeCloseIcon();
+  if (closeInst) { closeInst.name = "Close icon"; closeOverlay.appendChild(closeInst); }
+  btn.appendChild(closeOverlay);
+  try {
+    closeOverlay.layoutPositioning = "ABSOLUTE";
+    closeOverlay.constraints = { horizontal: "CENTER", vertical: "CENTER" };
+  } catch (_eCoAbs) {}
+  placeVariant(vAction);
+  // Center the overlay over the list icon now that layout is resolved.
+  try {
+    closeOverlay.x = Math.max(0, (btn.width - closeOverlay.width) / 2);
+    closeOverlay.y = Math.max(0, (btn.height - closeOverlay.height) / 2);
+  } catch (_eCoPos) {}
+  try {
+    var expProp = vAction.addComponentProperty("Expanded", "BOOLEAN", false);
+    closeOverlay.componentPropertyReferences = { visible: expProp };
+    closeOverlay.visible = false;
+  } catch (_eExp) { progress("DenseTableBody Expanded: " + String(_eExp)); }
+  if (listSwappable && listInst) addSwapPropertyOn(vAction, "List icon", listDefaultComp, iconCandidates, [listInst]);
+  if (closeSwappable && closeInst) addSwapPropertyOn(vAction, "Close icon", closeDefaultComp, iconCandidates, [closeInst]);
+  bodyVariants.push(vAction);
+
+  var bodySet = null;
+  try {
+    bodySet = figma.combineAsVariants(bodyVariants, page);
+    bodySet.name = "DenseTableBody";
+  } catch (_eBset) { progress("DenseTableBody combine: " + String(_eBset)); }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DenseTableExpansion — the expansion card + caret pointer (drop below a row)
+  // ─────────────────────────────────────────────────────────────────────────
+  var expansionComp = figma.createComponent();
+  expansionComp.name = "DenseTableExpansion";
+  expansionComp.layoutMode = "VERTICAL";
+  expansionComp.primaryAxisSizingMode = "AUTO";
+  expansionComp.counterAxisSizingMode = "FIXED";
+  expansionComp.counterAxisAlignItems = "MIN";
+  bindPadXY(expansionComp, varMap["densetable/expansion-padding-x"], varMap["densetable/expansion-padding-y"], 12, 12);
+  expansionComp.cornerRadius = 6;
+  if (varMap["densetable/expansion-radius"]) {
+    bindVar(expansionComp, "topLeftRadius", varMap["densetable/expansion-radius"]);
+    bindVar(expansionComp, "topRightRadius", varMap["densetable/expansion-radius"]);
+    bindVar(expansionComp, "bottomLeftRadius", varMap["densetable/expansion-radius"]);
+    bindVar(expansionComp, "bottomRightRadius", varMap["densetable/expansion-radius"]);
+  }
+  expansionComp.fills = [{ type: "SOLID", color: bgFallback }];
+  if (varMap["densetable/expansion-background"]) bindPaintVar(expansionComp, "fills", 0, varMap["densetable/expansion-background"]);
+  expansionComp.clipsContent = false;
+  expansionComp.strokes = [{ type: "SOLID", color: dividerFallback }];
+  expansionComp.strokeWeight = 1;
+  expansionComp.strokeAlign = "INSIDE";
+  if (varMap["densetable/expansion-border"]) bindPaintVar(expansionComp, "strokes", 0, varMap["densetable/expansion-border"]);
+  expansionComp.appendChild(makeText("Card content goes here", varMap["densetable/expansion-text"], {
+    name: "Card content", fontSize: 12,
+    fontSizeVar: varMap["densetable/cell-font-size"],
+    fontFamilyVar: varMap["densetable/cell-font-family"],
+  }));
+  page.appendChild(expansionComp);
+  // Set the fixed width, then restore AUTO on the primary (vertical) axis —
+  // resize() locks the primary axis to FIXED, which would leave the card at a
+  // stale (oversized) height instead of hugging its content.
+  try {
+    expansionComp.resize(360, Math.max(1, Math.ceil(expansionComp.height || 40)));
+    expansionComp.primaryAxisSizingMode = "AUTO";
+  } catch (_eErs) {}
+  try {
+    var caretW = 14, caretH = 7;
+    var caretRightCenter = 13;
+    var caretX = Math.max(2, (expansionComp.width || 360) - caretRightCenter - caretW / 2);
+    var caretY = -(caretH - 1);
+    var fillPath = "M 0 " + caretH + " L " + (caretW / 2) + " 0 L " + caretW + " " + caretH + " Z";
+    var linePath = "M 0 " + caretH + " L " + (caretW / 2) + " 0 L " + caretW + " " + caretH;
+    var caretFill = figma.createVector();
+    caretFill.name = "Caret fill";
+    caretFill.vectorPaths = [{ windingRule: "NONZERO", data: fillPath }];
+    caretFill.strokes = [];
+    caretFill.fills = [{ type: "SOLID", color: bgFallback }];
+    if (varMap["densetable/expansion-background"]) bindPaintVar(caretFill, "fills", 0, varMap["densetable/expansion-background"]);
+    expansionComp.appendChild(caretFill);
+    caretFill.layoutPositioning = "ABSOLUTE";
+    caretFill.constraints = { horizontal: "MAX", vertical: "MIN" };
+    caretFill.x = caretX;
+    caretFill.y = caretY;
+    var caretLine = figma.createVector();
+    caretLine.name = "Caret outline";
+    caretLine.vectorPaths = [{ windingRule: "NONZERO", data: linePath }];
+    caretLine.fills = [];
+    caretLine.strokes = [{ type: "SOLID", color: dividerFallback }];
+    caretLine.strokeWeight = 1;
+    caretLine.strokeAlign = "CENTER";
+    caretLine.strokeJoin = "MITER";
+    if (varMap["densetable/expansion-border"]) bindPaintVar(caretLine, "strokes", 0, varMap["densetable/expansion-border"]);
+    expansionComp.appendChild(caretLine);
+    caretLine.layoutPositioning = "ABSOLUTE";
+    caretLine.constraints = { horizontal: "MAX", vertical: "MIN" };
+    caretLine.x = caretX;
+    caretLine.y = caretY;
+  } catch (_eCaret) { progress("DenseTableExpansion caret: " + String(_eCaret)); }
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // DenseTable — the assembled table, composed from DenseTableHeader +
+  // DenseTableBody (+ DenseTableExpansion) instances. Built as a variant set:
+  //   • Variant=Default — DT_COLS text columns, no action (node 4204:99743)
+  //   • Variant=Action  — last column is the Action button; the last header
+  //                       cell is a blank spacer; one row is expanded (× icon)
+  //                       with the DenseTableExpansion card slotted beneath it
+  //                       and trailing rows below (node 4205:31949)
+  // Every cell fills an equal fraction of a fixed-width table so columns align.
+  // ─────────────────────────────────────────────────────────────────────────
+  var DT_COLS = 6;
+  var DT_ROWS = 5;
+  var DT_WIDTH = 354;
+  var DT_GAP = 10; // gap around the expansion card (matches the design)
+
+  // Stretch a child to fill the width of its (auto-layout) parent, falling back
+  // to layoutGrow when layoutSizingHorizontal isn't accepted.
+  function denseFillChild(node) {
+    try { node.layoutSizingHorizontal = "FILL"; }
+    catch (_eFillH) { try { node.layoutGrow = 1; } catch (_eGrow) {} }
+  }
+
+  // Toggle a BOOLEAN component property on an instance by its base label (the
+  // instance key carries a "#id" suffix that we have to match past).
+  function denseSetInstanceBool(inst, label, value) {
+    if (!inst) return;
+    try {
+      var props = inst.componentProperties || {};
+      var keys = Object.keys(props);
+      for (var i = 0; i < keys.length; i++) {
+        var base = keys[i].split("#")[0];
+        if (base === label && String(props[keys[i]].type).toUpperCase() === "BOOLEAN") {
+          var patch = {};
+          patch[keys[i]] = value;
+          inst.setProperties(patch);
+          return;
+        }
+      }
+    } catch (_eBool) {}
+  }
+
+  // (Re)assign an INSTANCE_SWAP property on an instance to a target component.
+  // combineAsVariants can drop a nested swap's default (leaving an empty box),
+  // so re-asserting it on the composed instance repopulates the icon.
+  function denseSetInstanceSwap(inst, label, targetComp) {
+    if (!inst || !targetComp) return;
+    try {
+      var props = inst.componentProperties || {};
+      var keys = Object.keys(props);
+      for (var i = 0; i < keys.length; i++) {
+        if (keys[i].split("#")[0] !== label) continue;
+        if (String(props[keys[i]].type).toUpperCase() !== "INSTANCE_SWAP") continue;
+        var attempts = [];
+        if (targetComp.key) attempts.push(targetComp.key);
+        if (targetComp.id) attempts.push(targetComp.id);
+        for (var a = 0; a < attempts.length; a++) {
+          try {
+            var patch = {};
+            patch[keys[i]] = attempts[a];
+            inst.setProperties(patch);
+            return;
+          } catch (_eSwapTry) {}
+        }
+        return;
+      }
+    } catch (_eSwap) {}
+  }
+
+  // A header row of DT_COLS DenseTableHeader instances. withActionSpacer hides
+  // the last cell's label + sort icon so it reads as a blank action-column head.
+  function makeDenseHeaderRow(withActionSpacer) {
+    var headerRow = figma.createFrame();
+    headerRow.name = "Header";
+    headerRow.layoutMode = "HORIZONTAL";
+    headerRow.primaryAxisSizingMode = "FIXED";
+    headerRow.counterAxisSizingMode = "AUTO";
+    headerRow.primaryAxisAlignItems = "MIN";
+    headerRow.counterAxisAlignItems = "CENTER";
+    headerRow.itemSpacing = 0;
+    headerRow.fills = [];
+    headerRow.strokes = [];
+    headerRow.clipsContent = true;
+    for (var c = 0; c < DT_COLS; c++) {
+      var hInst = null;
+      try { hInst = headerComp.createInstance(); } catch (_eHi) { hInst = null; }
+      if (!hInst) continue;
+      hInst.name = "DenseTableHeader";
+      if (withActionSpacer && c === DT_COLS - 1) {
+        denseSetInstanceBool(hInst, "Show label", false);
+        denseSetInstanceBool(hInst, "Show sort", false);
+      }
+      headerRow.appendChild(hInst);
+      denseFillChild(hInst);
+    }
+    return headerRow;
+  }
+
+  // A body row. withAction => last column is the Action button cell. expanded =>
+  // that button shows × (Expanded=true) and the row's dividers are hidden so it
+  // connects to the card below it.
+  function makeDenseBodyRow(name, withAction, expanded) {
+    var row = figma.createFrame();
+    row.name = name;
+    row.layoutMode = "HORIZONTAL";
+    row.primaryAxisSizingMode = "FIXED";
+    row.counterAxisSizingMode = "AUTO";
+    row.primaryAxisAlignItems = "MIN";
+    row.counterAxisAlignItems = "CENTER";
+    row.itemSpacing = 0;
+    row.fills = [];
+    row.strokes = [];
+    row.clipsContent = true;
+    for (var cc = 0; cc < DT_COLS; cc++) {
+      var isActionCell = withAction && cc === DT_COLS - 1;
+      var srcComp = isActionCell ? vAction : vText;
+      var bInst = null;
+      try { bInst = srcComp.createInstance(); } catch (_eBi) { bInst = null; }
+      if (!bInst) continue;
+      bInst.name = "DenseTableBody";
+      if (isActionCell && expanded) {
+        // Show × on the expanded row by swapping the ALWAYS-VISIBLE list-icon
+        // slot to the close glyph — the same reliable mechanism that renders
+        // the list icon on every other row. (The component's Expanded overlay
+        // renders an empty box in the composed instance, so we don't use it
+        // here.)
+        denseSetInstanceSwap(bInst, "List icon", closeDefaultComp);
+      }
+      // Hide the bottom divider on the expanded row (it connects to the card).
+      if (expanded) { try { bInst.strokes = []; } catch (_eStk) {} }
+      row.appendChild(bInst);
+      denseFillChild(bInst);
+      // layoutAlign STRETCH => cell fills the row's height (counter axis), so
+      // every cell's bottom divider aligns across columns. (Parent counterAxis
+      // alignment can't be STRETCH; the child controls this.)
+      try { bInst.layoutAlign = "STRETCH"; } catch (_eStretch) {}
+    }
+    return row;
+  }
+
+  // A borderless vertical wrapper that stacks rows with no gap.
+  function makeDenseRowGroup(name) {
+    var g = figma.createFrame();
+    g.name = name;
+    g.layoutMode = "VERTICAL";
+    g.primaryAxisSizingMode = "AUTO";
+    g.counterAxisSizingMode = "FIXED";
+    g.primaryAxisAlignItems = "MIN";
+    g.counterAxisAlignItems = "MIN";
+    g.itemSpacing = 0;
+    g.fills = [];
+    g.strokes = [];
+    g.clipsContent = false;
+    return g;
+  }
+
+  function finalizeDenseVariant(comp) {
+    page.appendChild(comp);
+    // Fix the width (columns redistribute), then restore AUTO height so the
+    // table hugs its rows rather than keeping resize()'s locked height.
+    try {
+      comp.resize(DT_WIDTH, Math.max(1, Math.ceil(comp.height || 1)));
+      comp.primaryAxisSizingMode = "AUTO";
+    } catch (_eDtSize) {}
+  }
+
+  // Variant=Default — plain table: header + DT_ROWS text rows.
+  var denseDefault = figma.createComponent();
+  denseDefault.name = "Variant=Default";
+  denseDefault.layoutMode = "VERTICAL";
+  denseDefault.primaryAxisSizingMode = "AUTO";
+  denseDefault.counterAxisSizingMode = "FIXED";
+  denseDefault.primaryAxisAlignItems = "MIN";
+  denseDefault.counterAxisAlignItems = "MIN";
+  denseDefault.itemSpacing = 0;
+  denseDefault.fills = [];
+  denseDefault.strokes = [];
+  denseDefault.clipsContent = false;
+  var defHeader = makeDenseHeaderRow(false);
+  denseDefault.appendChild(defHeader); denseFillChild(defHeader);
+  for (var dr = 0; dr < DT_ROWS; dr++) {
+    var defRow = makeDenseBodyRow("Row " + String(dr + 1), false, false);
+    denseDefault.appendChild(defRow); denseFillChild(defRow);
+  }
+  finalizeDenseVariant(denseDefault);
+
+  // Variant=Action — full design: header + 2 rows (row 2 expanded) + card +
+  // 3 trailing rows, all with the action button in the last column.
+  var denseAction = figma.createComponent();
+  denseAction.name = "Variant=Action";
+  denseAction.layoutMode = "VERTICAL";
+  denseAction.primaryAxisSizingMode = "AUTO";
+  denseAction.counterAxisSizingMode = "FIXED";
+  denseAction.primaryAxisAlignItems = "MIN";
+  denseAction.counterAxisAlignItems = "MIN";
+  denseAction.itemSpacing = DT_GAP;
+  denseAction.fills = [];
+  denseAction.strokes = [];
+  denseAction.clipsContent = false;
+
+  // Upper block: header + Row 1 (collapsed) + Row 2 (expanded, connects to card)
+  var upperBlock = makeDenseRowGroup("Table");
+  var actHeader = makeDenseHeaderRow(true);
+  upperBlock.appendChild(actHeader); denseFillChild(actHeader);
+  var actRow1 = makeDenseBodyRow("Row 1", true, false);
+  upperBlock.appendChild(actRow1); denseFillChild(actRow1);
+  var actRow2 = makeDenseBodyRow("Row 2", true, true);
+  upperBlock.appendChild(actRow2); denseFillChild(actRow2);
+  denseAction.appendChild(upperBlock); denseFillChild(upperBlock);
+
+  // Expansion card slotted beneath the expanded row.
+  var cardInst = null;
+  try { cardInst = expansionComp.createInstance(); } catch (_eCardI) { cardInst = null; }
+  if (cardInst) {
+    cardInst.name = "DenseTableExpansion";
+    denseAction.appendChild(cardInst);
+    denseFillChild(cardInst);
+  }
+
+  // Lower block: trailing rows.
+  var lowerBlock = makeDenseRowGroup("Rows");
+  for (var lr = 3; lr <= 5; lr++) {
+    var actRowN = makeDenseBodyRow("Row " + String(lr), true, false);
+    lowerBlock.appendChild(actRowN); denseFillChild(actRowN);
+  }
+  denseAction.appendChild(lowerBlock); denseFillChild(lowerBlock);
+  finalizeDenseVariant(denseAction);
+
+  // Space the two variants apart BEFORE combining so the set doesn't stack them
+  // on top of each other.
+  try {
+    denseDefault.x = 0; denseDefault.y = 0;
+    denseAction.x = 0; denseAction.y = Math.ceil((denseDefault.height || 200)) + 48;
+  } catch (_eDtLayout) {}
+
+  var denseTableSet = null;
+  try {
+    denseTableSet = figma.combineAsVariants([denseDefault, denseAction], page);
+    denseTableSet.name = "DenseTable";
+    denseTableSet.itemSpacing = 48;
+  } catch (_eDtCombine) { progress("DenseTable combine: " + String(_eDtCombine)); }
+  try {
+    var dtNode = denseTableSet || denseDefault;
+    dtNode.x = 0; dtNode.y = 220;
+  } catch (_eDtPos) {}
+
+  return [headerSet, bodySet, expansionComp, denseTableSet || denseDefault];
 }
 
 async function buildTableComponentSet(varMap, page, font, nestedSets) {

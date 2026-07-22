@@ -181,6 +181,7 @@ import {
   SkeletonPropertiesPanel,
 } from "./components/panels/SkeletonPreviewPanel";
 import { TablePreviewContent, TablePropertiesPanel } from "./components/panels/TablePreviewPanel";
+import { DenseTablePreviewContent, DenseTablePropertiesPanel } from "./components/panels/DenseTablePreviewPanel";
 import { CalendarPreviewContent, CalendarPropertiesPanel } from "./components/panels/CalendarPreviewPanel";
 import { FoundationsPreviewContent } from "./components/panels/FoundationsPreviewPanel";
 import { DocsThemePreviewContent } from "./components/panels/DocsThemePreviewPanel";
@@ -206,6 +207,7 @@ const VARIANTS_BY_COMPONENT = {
   multiselect: ["default", "filled"],
   modal: ["default", "filled"],
   table: ["default"],
+  densetable: ["default"],
   progress: ["default"],
   avatar: ["filled"],
 };
@@ -874,6 +876,9 @@ export default function App() {
     "You are now obligated to give a star to Mantine project on GitHub"
   );
   const [activeTableShowRowHover, setActiveTableShowRowHover] = useState(true);
+  const [activeDenseTableShowAction, setActiveDenseTableShowAction] = useState(true);
+  const [activeDenseTableShowRowHover, setActiveDenseTableShowRowHover] = useState(true);
+  const [activeDenseTableShowRowActive, setActiveDenseTableShowRowActive] = useState(true);
   const [activeCalendarShowOutside, setActiveCalendarShowOutside] = useState(true);
   const [activeCalendarShowHeader, setActiveCalendarShowHeader] = useState(true);
   const [activeAlertRadius, setActiveAlertRadius] = useState("default");
@@ -1291,6 +1296,11 @@ export default function App() {
     } else if (newComp === "table") {
       setActiveVariant("default");
       setActiveTableShowRowHover(true);
+    } else if (newComp === "densetable") {
+      setActiveVariant("default");
+      setActiveDenseTableShowAction(true);
+      setActiveDenseTableShowRowHover(true);
+      setActiveDenseTableShowRowActive(true);
     } else if (newComp === "calendar") {
       setActiveVariant("default");
       setActiveCalendarShowOutside(true);
@@ -4022,6 +4032,17 @@ export default function App() {
                   showRowHover={activeTableShowRowHover}
                 />
               )}
+              {activeComponent === "densetable" && (
+                <DenseTablePreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  showAction={activeDenseTableShowAction}
+                  showRowHover={activeDenseTableShowRowHover}
+                  showRowActive={activeDenseTableShowRowActive}
+                />
+              )}
               {activeComponent === "calendar" && (
                 <CalendarPreviewContent
                   brands={brands}
@@ -4940,6 +4961,16 @@ export default function App() {
                   setShowRowHover={setActiveTableShowRowHover}
                 />
               )}
+              {activeComponent === "densetable" && (
+                <DenseTablePropertiesPanel
+                  showAction={activeDenseTableShowAction}
+                  setShowAction={setActiveDenseTableShowAction}
+                  showRowHover={activeDenseTableShowRowHover}
+                  setShowRowHover={setActiveDenseTableShowRowHover}
+                  showRowActive={activeDenseTableShowRowActive}
+                  setShowRowActive={setActiveDenseTableShowRowActive}
+                />
+              )}
               {activeComponent === "calendar" && (
                 <CalendarPropertiesPanel
                   showOutsideDays={activeCalendarShowOutside}
@@ -4948,7 +4979,7 @@ export default function App() {
                   setShowHeader={setActiveCalendarShowHeader}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "calendar"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

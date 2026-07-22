@@ -9,8 +9,16 @@ export function useFigmaSync() {
   const [lastSyncMessage, setLastSyncMessage] = useState(null);
   const wsRef = useRef(null);
   const reconnectRef = useRef(null);
+  // Tracks whether the hook is still mounted. Without this, an intentional
+  // close during effect cleanup (which happens on every HMR update to App.jsx)
+  // fires `onclose`, which schedules a fresh reconnect AFTER cleanup already
+  // cleared the timer — leaving an orphaned socket + reconnect loop behind.
+  // Those accumulate over a long dev session and eventually OOM the renderer.
+  const mountedRef = useRef(false);
 
   const connect = useCallback(() => {
+    if (!mountedRef.current) return;
+    // Never open a second socket when one is already opening/open.
     if (wsRef.current && wsRef.current.readyState <= 1) return;
 
     setStatus("connecting");
@@ -57,10 +65,14 @@ export function useFigmaSync() {
     };
 
     ws.onclose = () => {
+      if (wsRef.current === ws) wsRef.current = null;
       setStatus("disconnected");
       setPluginConnected(false);
-      wsRef.current = null;
-      reconnectRef.current = setTimeout(connect, 3000);
+      // Only auto-reconnect while still mounted — never after cleanup.
+      if (mountedRef.current) {
+        clearTimeout(reconnectRef.current);
+        reconnectRef.current = setTimeout(connect, 3000);
+      }
     };
 
     ws.onerror = () => {
@@ -69,10 +81,23 @@ export function useFigmaSync() {
   }, []);
 
   useEffect(() => {
+    mountedRef.current = true;
     connect();
     return () => {
+      mountedRef.current = false;
       clearTimeout(reconnectRef.current);
-      if (wsRef.current) wsRef.current.close();
+      const ws = wsRef.current;
+      wsRef.current = null;
+      if (ws) {
+        // Detach handlers so this intentional close can't schedule a reconnect
+        // or push state updates after unmount.
+        ws.onopen = ws.onmessage = ws.onerror = ws.onclose = null;
+        try {
+          ws.close();
+        } catch {
+          /* already closing */
+        }
+      }
     };
   }, [connect]);
 

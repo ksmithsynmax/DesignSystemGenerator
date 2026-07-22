@@ -2606,6 +2606,73 @@ export const COMPONENT_TOKENS = {
     "table-header-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "table/header-line-height" },
   },
 
+  // Dense data table — a compact, high-density table distinct from `table`.
+  // Header cells carry their own filled surface + sort icon; body rows are
+  // divider-separated. The last column can host an action button that toggles
+  // an inline expansion card ("Card content goes here"). Flat dimension model
+  // (no size scale), matching `table`.
+  densetable: {
+    // ── COLOR TOKENS ──
+    "densetable-background": { type: "COLOR", semantic: "surface-default", figmaPath: "densetable/background" },
+    /** Filled surface behind each header cell (Figma steel/8 → `surface-secondary`). */
+    "densetable-header-cell-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "densetable/header-cell-background" },
+    "densetable-header-text": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/header-text" },
+    "densetable-sort-icon": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/sort-icon" },
+    "densetable-cell-text": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/cell-text" },
+    /** Thin rule under each body row (Figma steel/7 → `border-default`). */
+    "densetable-row-divider": { type: "COLOR", semantic: "border-default", figmaPath: "densetable/row-divider" },
+    "densetable-row-hover": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "densetable/row-hover" },
+    /** Active/selected row background (stronger than hover). */
+    "densetable-row-active": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "densetable/row-active" },
+    /** Last-column action button (Figma steel/8 → `surface-secondary`). */
+    "densetable-action-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "densetable/action-background" },
+    "densetable-action-icon": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/action-icon" },
+    /** Inline expansion card revealed when a row is opened. */
+    "densetable-expansion-background": { type: "COLOR", semantic: "surface-default", figmaPath: "densetable/expansion-background" },
+    "densetable-expansion-border": { type: "COLOR", semantic: "border-default", figmaPath: "densetable/expansion-border" },
+    "densetable-expansion-text": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/expansion-text" },
+    /** Cell content variants (Text | Flag | Icon | Detection). */
+    "densetable-flag-border": { type: "COLOR", semantic: "border-default", figmaPath: "densetable/flag-border" },
+    /** Icon variant: a leading icon + text. */
+    "densetable-icon-color": { type: "COLOR", semantic: "feedback-error", figmaPath: "densetable/icon-color" },
+    "densetable-icon-text": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/icon-text" },
+    /** Detection variant: a cluster of icons (no text). */
+    "densetable-detection-icon": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/detection-icon" },
+
+    // ── DIMENSION TOKENS ──
+    "densetable-header-padding-x": { type: "FLOAT", unit: "px", value: 8, figmaPath: "densetable/header-padding-x" },
+    "densetable-header-padding-y": { type: "FLOAT", unit: "px", value: 4, figmaPath: "densetable/header-padding-y" },
+    "densetable-header-font-size": { type: "FLOAT", unit: "px", value: 10, figmaPath: "densetable/header-font-size" },
+    "densetable-header-font-family": { type: "STRING", value: "Inter", figmaPath: "densetable/header-font-family" },
+    "densetable-header-font-weight": { type: "STRING", value: "Regular", figmaPath: "densetable/header-font-weight" },
+    /** Gap between header label and its sort icon. */
+    "densetable-header-icon-gap": { type: "FLOAT", unit: "px", value: 4, figmaPath: "densetable/header-icon-gap" },
+    "densetable-header-icon-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "densetable/header-icon-size" },
+    "densetable-sort-icon-stroke-width": { type: "FLOAT", unit: "px", value: 1.25, figmaPath: "densetable/sort-icon-stroke-width" },
+    "densetable-cell-padding-x": { type: "FLOAT", unit: "px", value: 8, figmaPath: "densetable/cell-padding-x" },
+    "densetable-cell-padding-y": { type: "FLOAT", unit: "px", value: 6, figmaPath: "densetable/cell-padding-y" },
+    "densetable-cell-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "densetable/cell-font-size" },
+    "densetable-cell-font-family": { type: "STRING", value: "Inter", figmaPath: "densetable/cell-font-family" },
+    "densetable-cell-font-weight": { type: "STRING", value: "Regular", figmaPath: "densetable/cell-font-weight" },
+    "densetable-action-icon-size": { type: "FLOAT", unit: "px", value: 10, figmaPath: "densetable/action-icon-size" },
+    "densetable-action-padding": { type: "FLOAT", unit: "px", value: 4, figmaPath: "densetable/action-padding" },
+    "densetable-action-radius": { type: "FLOAT", unit: "px", value: 2, figmaPath: "densetable/action-radius" },
+    "densetable-expansion-padding-x": { type: "FLOAT", unit: "px", value: 12, figmaPath: "densetable/expansion-padding-x" },
+    "densetable-expansion-padding-y": { type: "FLOAT", unit: "px", value: 12, figmaPath: "densetable/expansion-padding-y" },
+    "densetable-expansion-radius": { type: "FLOAT", unit: "px", value: 6, figmaPath: "densetable/expansion-radius" },
+    "densetable-expansion-gap": { type: "FLOAT", unit: "px", value: 12, figmaPath: "densetable/expansion-gap" },
+    /** Flag cell (country flag, no label). */
+    "densetable-flag-width": { type: "FLOAT", unit: "px", value: 18, figmaPath: "densetable/flag-width" },
+    "densetable-flag-height": { type: "FLOAT", unit: "px", value: 13, figmaPath: "densetable/flag-height" },
+    "densetable-flag-radius": { type: "FLOAT", unit: "px", value: 2, figmaPath: "densetable/flag-radius" },
+    /** Icon cell (leading icon + short text). */
+    "densetable-icon-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "densetable/icon-size" },
+    "densetable-icon-gap": { type: "FLOAT", unit: "px", value: 6, figmaPath: "densetable/icon-gap" },
+    /** Detection cell (cluster of small icons). */
+    "densetable-detection-icon-size": { type: "FLOAT", unit: "px", value: 14, figmaPath: "densetable/detection-icon-size" },
+    "densetable-detection-gap": { type: "FLOAT", unit: "px", value: 4, figmaPath: "densetable/detection-gap" },
+  },
+
   // Calendar (month grid). Mirrors Mantine's Calendar: a header (month label +
   // prev/next nav), a weekday row, and a 6×7 grid of day cells. Day states
   // (selected, in-range, today, weekend, outside-month) each get their own
@@ -2734,6 +2801,7 @@ export const COMPONENT_DISPLAY_NAMES = {
   rangeslider: "RangeSlider",
   multiselect: "MultiSelect",
   segmentedcontrol: "SegmentedControl",
+  densetable: "DenseTable",
   accordionitem: "Accordion Item",
   chart: "Bar Chart",
   "chart-line": "Line Chart",
@@ -2800,6 +2868,7 @@ export const COMPONENT_SIZE_KEYS = {
   badge: ["default", "xs", "sm", "md", "lg", "xl"],
   alert: ["xs", "sm", "md", "lg", "xl"],
   table: [],
+  densetable: [],
   calendar: [],
   modal: ["default", "xs", "sm", "md", "lg", "xl"],
   image: ["default", "xs", "sm", "md", "lg", "xl"],
