@@ -5,8 +5,17 @@ import PreviewMatrix from "../shared/PreviewMatrix";
 
 export const CHIP_VARIANTS = ["filled", "outline", "light"];
 export const CHIP_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
+// Interaction state (columns in the spec: Enabled/Hovered/Focused/Pressed) —
+// "default" renders as Enabled.
 export const CHIP_STATES = ["default", "hover", "focus", "pressed", "disabled"];
-export const CHIP_SELECTIONS = ["unchecked", "checked"];
+// Selective state (rows in the spec) collapses selection (checked) and
+// availability (inactive) into one friendly control.
+export const CHIP_SELECTIVE_STATES = ["active", "selected", "inactive", "selective-inactive"];
+
+const selectiveFromFlags = (checked, inactive) =>
+  inactive ? (checked ? "selective-inactive" : "inactive") : checked ? "selected" : "active";
+const selectiveToChecked = (v) => v === "selected" || v === "selective-inactive";
+const selectiveToInactive = (v) => v === "inactive" || v === "selective-inactive";
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -54,12 +63,19 @@ export function ChipPreviewContent({
   sizeKeys,
   activeColorToken,
   selectedChecked,
+  selectedInactive,
   selectedState,
+  subLabel,
+  withRemove,
+  showCheckmark,
 }) {
   const matrixRows = CHIP_VARIANTS.flatMap((v) => [
-    { label: `${v} / unchecked`, variant: v, checked: false },
-    { label: `${v} / checked`, variant: v, checked: true },
+    { label: `${v} / active`, variant: v, checked: false, inactive: false },
+    { label: `${v} / selected`, variant: v, checked: true, inactive: false },
+    { label: `${v} / inactive`, variant: v, checked: false, inactive: true },
+    { label: `${v} / selective inactive`, variant: v, checked: true, inactive: true },
   ]);
+  const subLabelText = subLabel ? "Sub-label" : undefined;
 
   return (
     <div>
@@ -71,7 +87,11 @@ export function ChipPreviewContent({
           size={activeChipSize}
           radius={activeChipRadius}
           checked={selectedChecked}
+          inactive={selectedInactive}
           state={selectedState === "default" ? undefined : selectedState}
+          subLabel={subLabelText}
+          withRemove={withRemove}
+          showCheckmark={showCheckmark}
           readOnly
         />
       </PreviewStage>
@@ -89,7 +109,11 @@ export function ChipPreviewContent({
             size={s}
             radius={activeChipRadius}
             checked={row.checked}
+            inactive={row.inactive}
             state={selectedState === "default" ? undefined : selectedState}
+            subLabel={subLabelText}
+            withRemove={withRemove}
+            showCheckmark={showCheckmark}
             readOnly
           />
         )}
@@ -109,10 +133,18 @@ export function ChipPropertiesPanel({
   sizeKeys,
   selectedChecked,
   setSelectedChecked,
+  selectedInactive,
+  setSelectedInactive,
   selectedState,
   setSelectedState,
-  forcedChecked,
+  forcedSelective,
   forcedState,
+  subLabel,
+  setSubLabel,
+  withRemove,
+  setWithRemove,
+  showCheckmark,
+  setShowCheckmark,
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
@@ -120,11 +152,14 @@ export function ChipPropertiesPanel({
       <PropertyRow label="Size" value={activeChipSize} onChange={setActiveChipSize} options={sizeKeys} />
       <PropertyRow label="Radius" value={activeChipRadius} onChange={setActiveChipRadius} options={CHIP_RADIUS_KEYS} />
       <PropertyRow
-        label="Selection"
-        value={selectedChecked ? "checked" : "unchecked"}
-        onChange={(v) => setSelectedChecked(v === "checked")}
-        options={CHIP_SELECTIONS}
-        disabled={forcedChecked != null}
+        label="Selective State"
+        value={selectiveFromFlags(selectedChecked, selectedInactive)}
+        onChange={(v) => {
+          setSelectedChecked(selectiveToChecked(v));
+          setSelectedInactive(selectiveToInactive(v));
+        }}
+        options={CHIP_SELECTIVE_STATES}
+        disabled={Boolean(forcedSelective)}
       />
       <PropertyRow
         label="State"
@@ -132,6 +167,24 @@ export function ChipPropertiesPanel({
         onChange={setSelectedState}
         options={CHIP_STATES}
         disabled={Boolean(forcedState)}
+      />
+      <PropertyRow
+        label="Checkmark"
+        value={showCheckmark ? "on" : "off"}
+        onChange={(v) => setShowCheckmark(v === "on")}
+        options={["off", "on"]}
+      />
+      <PropertyRow
+        label="Sub-label"
+        value={subLabel ? "on" : "off"}
+        onChange={(v) => setSubLabel(v === "on")}
+        options={["off", "on"]}
+      />
+      <PropertyRow
+        label="Remove (×)"
+        value={withRemove ? "on" : "off"}
+        onChange={(v) => setWithRemove(v === "on")}
+        options={["off", "on"]}
       />
     </div>
   );
@@ -150,10 +203,18 @@ export default function ChipPreviewPanel(props) {
         sizeKeys={props.sizeKeys}
         selectedChecked={props.selectedChecked}
         setSelectedChecked={props.setSelectedChecked}
+        selectedInactive={props.selectedInactive}
+        setSelectedInactive={props.setSelectedInactive}
         selectedState={props.selectedState}
         setSelectedState={props.setSelectedState}
-        forcedChecked={props.forcedChecked}
+        forcedSelective={props.forcedSelective}
         forcedState={props.forcedState}
+        subLabel={props.subLabel}
+        setSubLabel={props.setSubLabel}
+        withRemove={props.withRemove}
+        setWithRemove={props.setWithRemove}
+        showCheckmark={props.showCheckmark}
+        setShowCheckmark={props.setShowCheckmark}
       />
       <div style={{ marginTop: 24 }}>
         <ChipPreviewContent
@@ -165,7 +226,11 @@ export default function ChipPreviewPanel(props) {
           sizeKeys={props.sizeKeys}
           activeColorToken={props.activeColorToken}
           selectedChecked={props.selectedChecked}
+          selectedInactive={props.selectedInactive}
           selectedState={props.selectedState}
+          subLabel={props.subLabel}
+          withRemove={props.withRemove}
+          showCheckmark={props.showCheckmark}
         />
       </div>
     </div>

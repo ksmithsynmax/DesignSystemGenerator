@@ -753,7 +753,11 @@ export default function App() {
   const [activeChipSize, setActiveChipSize] = useState(chipDefault);
   const [activeChipRadius, setActiveChipRadius] = useState(chipDefault);
   const [activeChipChecked, setActiveChipChecked] = useState(false);
+  const [activeChipInactive, setActiveChipInactive] = useState(false);
   const [activeChipState, setActiveChipState] = useState("default");
+  const [activeChipSubLabel, setActiveChipSubLabel] = useState(false);
+  const [activeChipWithRemove, setActiveChipWithRemove] = useState(false);
+  const [activeChipShowCheckmark, setActiveChipShowCheckmark] = useState(false);
   const [activeTooltipPosition, setActiveTooltipPosition] = useState("top");
   const [activeTooltipWithArrow, setActiveTooltipWithArrow] = useState(true);
   const [activePopoverPosition, setActivePopoverPosition] = useState("top");
@@ -1103,6 +1107,7 @@ export default function App() {
       setActiveChipSize(chipDefault);
       setActiveChipRadius(chipDefault);
       setActiveChipChecked(false);
+      setActiveChipInactive(false);
       setActiveChipState("default");
       setActiveVariant("filled");
     } else if (newComp === "notification") {
@@ -1742,7 +1747,7 @@ export default function App() {
   }, [brands, activeBrand]);
 
   // Parse forced state/checked/variant from the active token card
-  const INTERACTIVE_STATES = ["active", "hover", "focus", "pressed", "disabled", "error", "visited"];
+  const INTERACTIVE_STATES = ["active", "hover", "focus", "pressed", "inactive", "disabled", "error", "visited"];
   const mapTabsTokenVariant = (variantName) => variantName;
   const fromTabsTokenVariant = (variantName) => variantName;
   let forcedState = null;
@@ -1793,6 +1798,24 @@ export default function App() {
     }
   }
 
+  // Chip splits its "selective state" (Active/Selected/Inactive/Selective Inactive)
+  // from its interaction state (Enabled/Hovered/Focused/Pressed/Disabled). Selected
+  // maps to `checked`, unavailable maps to `inactive`; the two are independent axes.
+  const CHIP_INTERACTION_STATES = ["hover", "focus", "pressed", "disabled"];
+  let forcedChipChecked = null;
+  let forcedChipInactive = null;
+  let forcedChipInteraction = null;
+  if (activeComponent === "chip" && activeColorToken) {
+    const cparts = activeColorToken.split("-");
+    if (cparts.includes("selected")) forcedChipChecked = true;
+    if (cparts.includes("inactive")) forcedChipInactive = true;
+    const clast = cparts[cparts.length - 1];
+    if (CHIP_INTERACTION_STATES.includes(clast)) forcedChipInteraction = clast;
+  }
+  const chipSelectedChecked = forcedChipChecked != null ? forcedChipChecked : activeChipChecked;
+  const chipSelectedInactive = forcedChipInactive != null ? forcedChipInactive : activeChipInactive;
+  const chipSelectedInteraction = forcedChipInteraction || activeChipState;
+
   const activeTabsTokenVariant = mapTabsTokenVariant(activeVariant);
 
   const effectiveComponentState =
@@ -1819,7 +1842,7 @@ export default function App() {
           : activeComponent === "radio"
             ? forcedState || activeRadioState
           : activeComponent === "chip"
-            ? forcedState || activeChipState
+            ? chipSelectedInteraction
           : activeComponent === "card"
             ? forcedState || activeCardState
           : activeComponent === "textinput"
@@ -1955,70 +1978,84 @@ export default function App() {
     if (activeComponent === "chip") {
       if (token === "chip-focus-ring") return true;
 
-      const targetState = effectiveComponentState || "default";
-      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
-        ? parts[parts.length - 1]
-        : "default";
-      if (tokenState !== targetState) {
-        const canUseDefaultFallback =
-          tokenState === "default" &&
-          targetState !== "default" &&
-          !Boolean(colorTokens[`${token}-${targetState}`]);
-        if (!canUseDefaultFallback) return false;
+      const targetChecked = chipSelectedChecked;
+      const targetInactive = chipSelectedInactive;
+      const targetState = chipSelectedInteraction || "default";
+
+      // The selective-inactive warning color is only relevant to inactive selections.
+      if (token.startsWith("chip-selective-inactive")) return targetInactive;
+
+      const CHIP_VARIANTS_L = ["filled", "light", "outline"];
+      // Decompose the token into its independent axes.
+      const segs = token.slice("chip-".length).split("-");
+      let dVariant = null;
+      let dChecked = false;
+      let dInactive = false;
+      let dInteraction = "default";
+      const coreSegs = [];
+      for (const s of segs) {
+        if (CHIP_VARIANTS_L.includes(s) && dVariant === null) dVariant = s;
+        else if (s === "selected") dChecked = true;
+        else if (s === "inactive") dInactive = true;
+        else if (CHIP_INTERACTION_STATES.includes(s)) dInteraction = s;
+        else coreSegs.push(s);
+      }
+      const prop = coreSegs.join("-");
+      const isCoreColor = ["background", "border", "text"].includes(prop);
+
+      // Reconstruct a canonical token key for any axis combination.
+      const keyFor = (variant, checked, inactive, interaction) => {
+        let k = "chip";
+        if (variant) k += `-${variant}`;
+        k += `-${prop}`;
+        if (checked) k += "-selected";
+        if (inactive) k += "-inactive";
+        if (interaction && interaction !== "default") k += `-${interaction}`;
+        return k;
+      };
+
+      // ── Interaction-state gating (fall back to the default-state token when no
+      //    state-specific token exists for this axis combination) ──
+      if (dInteraction !== targetState) {
+        const preciseExists = Boolean(colorTokens[keyFor(dVariant, dChecked, dInactive, targetState)]);
+        const canFallback = dInteraction === "default" && targetState !== "default" && !preciseExists;
+        if (!canFallback) return false;
       }
 
-      const targetChecked = forcedChecked != null ? forcedChecked : activeChipChecked;
-      const isCheckedToken = parts.includes("checked");
-      const isVariantToken = ["filled", "outline", "light"].includes(variantSegment);
-      const hasCheckedCounterpart = (baseToken, tokenStateSuffix) => {
-        const suffixStyleMatch = `${baseToken}-checked${tokenStateSuffix}`;
-        if (Boolean(colorTokens[suffixStyleMatch])) return true;
-        if (baseToken.startsWith("chip-")) {
-          const baseWithoutPrefix = baseToken.slice("chip-".length);
-          const variantStyleMatch = `chip-${activeVariant}-${baseWithoutPrefix}-checked${tokenStateSuffix}`;
-          if (Boolean(colorTokens[variantStyleMatch])) return true;
-          const prefixStyleMatch = `chip-checked-${baseWithoutPrefix}${tokenStateSuffix}`;
-          if (Boolean(colorTokens[prefixStyleMatch])) return true;
-        }
-        return false;
-      };
-      const hasVariantUncheckedCounterpart = (baseToken, tokenStateSuffix) => {
-        if (!baseToken.startsWith("chip-")) return false;
-        const baseWithoutPrefix = baseToken.slice("chip-".length);
-        const variantStyleMatch = `chip-${activeVariant}-${baseWithoutPrefix}${tokenStateSuffix}`;
-        return Boolean(colorTokens[variantStyleMatch]);
-      };
-
-      if (isVariantToken) {
-        if (variantSegment !== activeVariant) return false;
-        if (!targetChecked && isCheckedToken) return false;
-        if (targetChecked && !isCheckedToken) {
-          const tokenStateSuffix = tokenState === "default" ? "" : `-${tokenState}`;
-          const baseToken = tokenState === "default" ? token : token.replace(new RegExp(`${tokenStateSuffix}$`), "");
-          // Keep base token only when no checked-specific token exists.
-          return !hasCheckedCounterpart(baseToken, tokenStateSuffix);
+      // Non-core color tokens (icon/sublabel/remove): only gate on the checked axis.
+      if (!isCoreColor) {
+        if (dChecked && !targetChecked) return false;
+        if (!dChecked && targetChecked && Boolean(colorTokens[keyFor(dVariant, true, dInactive, dInteraction)])) {
+          return false;
         }
         return true;
       }
-      if (!targetChecked && isCheckedToken) return false;
-      if (!targetChecked && !isCheckedToken) {
-        const tokenStateSuffix = tokenState === "default" ? "" : `-${tokenState}`;
-        const baseToken = tokenState === "default" ? token : token.replace(new RegExp(`${tokenStateSuffix}$`), "");
-        if (
-          baseToken.startsWith("chip-border") ||
-          baseToken.startsWith("chip-background") ||
-          baseToken.startsWith("chip-text")
-        ) {
-          // Hide shared unchecked token when variant-specific unchecked token exists.
-          return !hasVariantUncheckedCounterpart(baseToken, tokenStateSuffix);
-        }
+
+      // ── Variant gating: hide other variants; hide shared token when a
+      //    variant-specific equivalent exists. ──
+      if (dVariant && dVariant !== activeVariant) return false;
+      if (!dVariant && Boolean(colorTokens[keyFor(activeVariant, dChecked, dInactive, dInteraction)])) {
+        return false;
       }
-      if (targetChecked && !isCheckedToken) {
-        const tokenStateSuffix = tokenState === "default" ? "" : `-${tokenState}`;
-        const baseToken = tokenState === "default" ? token : token.replace(new RegExp(`${tokenStateSuffix}$`), "");
-        // Keep base token only when no checked-specific token exists.
-        return !hasCheckedCounterpart(baseToken, tokenStateSuffix);
+
+      // ── Checked axis ──
+      if (dChecked && !targetChecked) return false;
+      if (!dChecked && targetChecked) {
+        const hasChecked =
+          Boolean(colorTokens[keyFor(dVariant, true, dInactive, dInteraction)]) ||
+          Boolean(colorTokens[keyFor(dVariant, true, dInactive, "default")]);
+        if (hasChecked) return false;
       }
+
+      // ── Inactive axis ──
+      if (dInactive && !targetInactive) return false;
+      if (!dInactive && targetInactive) {
+        const hasInactive =
+          Boolean(colorTokens[keyFor(dVariant, dChecked, true, dInteraction)]) ||
+          Boolean(colorTokens[keyFor(dVariant, dChecked, true, "default")]);
+        if (hasInactive) return false;
+      }
+
       return true;
     }
 
@@ -2273,6 +2310,9 @@ export default function App() {
       if (token === "chip-radius" && activeChipRadius === "default") {
         return !Boolean(dimensionTokens[`chip-${activeVariant}-radius`]);
       }
+      // Padding is per-variant — only show the active variant's padding tokens.
+      const variantPaddingMatch = token.match(/^chip-(filled|outline|light)-(selected-)?padding-(x|y)$/);
+      if (variantPaddingMatch) return variantPaddingMatch[1] === activeVariant;
       return true;
     }
     if (activeComponent === "select" || activeComponent === "multiselect") {
@@ -3473,8 +3513,12 @@ export default function App() {
                   activeChipRadius={activeChipRadius}
                   sizeKeys={sizeKeys}
                   activeColorToken={activeColorToken}
-                  selectedChecked={forcedChecked != null ? forcedChecked : activeChipChecked}
-                  selectedState={forcedState || activeChipState}
+                  selectedChecked={chipSelectedChecked}
+                  selectedInactive={chipSelectedInactive}
+                  selectedState={chipSelectedInteraction}
+                  subLabel={activeChipSubLabel}
+                  withRemove={activeChipWithRemove}
+                  showCheckmark={activeChipShowCheckmark}
                 />
               )}
 
@@ -4296,12 +4340,20 @@ export default function App() {
                   activeChipRadius={activeChipRadius}
                   setActiveChipRadius={setActiveChipRadius}
                   sizeKeys={sizeKeys}
-                  selectedChecked={forcedChecked != null ? forcedChecked : activeChipChecked}
+                  selectedChecked={chipSelectedChecked}
                   setSelectedChecked={setActiveChipChecked}
-                  selectedState={forcedState || activeChipState}
+                  selectedInactive={chipSelectedInactive}
+                  setSelectedInactive={setActiveChipInactive}
+                  selectedState={chipSelectedInteraction}
                   setSelectedState={setActiveChipState}
-                  forcedChecked={forcedChecked}
-                  forcedState={forcedState}
+                  forcedSelective={forcedChipChecked != null || forcedChipInactive != null}
+                  forcedState={forcedChipInteraction}
+                  subLabel={activeChipSubLabel}
+                  setSubLabel={setActiveChipSubLabel}
+                  withRemove={activeChipWithRemove}
+                  setWithRemove={setActiveChipWithRemove}
+                  showCheckmark={activeChipShowCheckmark}
+                  setShowCheckmark={setActiveChipShowCheckmark}
                 />
               )}
               {activeComponent === "tooltip" && (

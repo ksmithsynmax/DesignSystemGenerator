@@ -338,9 +338,8 @@ export const STORYBOOK_BRANDS = {
       "radio-label-font-size-default": "sm",
       "radio-label-line-height-default": "sm",
       "radio-label-gap-default": "sm",
-      "chip-height-default": "sm",
       "chip-padding-default": "sm",
-      "chip-checked-padding-default": "sm",
+      "chip-selected-padding-default": "sm",
       "chip-icon-size-default": "sm",
       "chip-font-size-default": "sm",
       "chip-radius-default": "sm",
@@ -380,10 +379,18 @@ export const STORYBOOK_BRANDS = {
       "loader-size-default": "md",
       "loader-stroke-width-default": "md",
       "loader-oval-corner-radius-default": "md",
-      "chip-padding-x-default": "sm",
-      "chip-padding-y-default": "sm",
-      "chip-checked-padding-x-default": "sm",
-      "chip-checked-padding-y-default": "sm",
+      "chip-filled-padding-x-default": "sm",
+      "chip-outline-padding-x-default": "sm",
+      "chip-light-padding-x-default": "sm",
+      "chip-filled-padding-y-default": "sm",
+      "chip-outline-padding-y-default": "sm",
+      "chip-light-padding-y-default": "sm",
+      "chip-filled-selected-padding-x-default": "sm",
+      "chip-outline-selected-padding-x-default": "sm",
+      "chip-light-selected-padding-x-default": "sm",
+      "chip-filled-selected-padding-y-default": "sm",
+      "chip-outline-selected-padding-y-default": "sm",
+      "chip-light-selected-padding-y-default": "sm",
       "progress-height-default": "md",
       "progress-radius-default": "md",
       "avatar-size-default": "md",
@@ -2229,7 +2236,7 @@ export const STORYBOOK_BRANDS = {
         "index": 8,
         "opacity": 100
       },
-      "chip-filled-background-checked-hover": {
+      "chip-filled-background-selected-hover": {
         "color": "blue",
         "index": 6,
         "opacity": 100
@@ -2258,7 +2265,7 @@ export const STORYBOOK_BRANDS = {
         "index": 6,
         "opacity": 100
       },
-      "chip-filled-background-checked-pressed": {
+      "chip-filled-background-selected-pressed": {
         "color": "blue",
         "index": 4,
         "opacity": 100
@@ -2273,7 +2280,7 @@ export const STORYBOOK_BRANDS = {
         "index": 3,
         "opacity": 100
       },
-      "chip-filled-background-checked-disabled": {
+      "chip-filled-background-selected-disabled": {
         "color": "slate-gray",
         "index": 5,
         "opacity": 25
@@ -2286,11 +2293,6 @@ export const STORYBOOK_BRANDS = {
       "chip-text-disabled": {
         "color": "slate-gray",
         "index": 7,
-        "opacity": 100
-      },
-      "chip-icon-color-disabled": {
-        "color": "slate-gray",
-        "index": 5,
         "opacity": 100
       },
       "select-default-background": {
@@ -2621,7 +2623,7 @@ export const STORYBOOK_BRANDS = {
         "color": "blue",
         "index": 4
       },
-      "chip-outline-background-checked-hover": {
+      "chip-outline-background-selected-hover": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
@@ -2736,95 +2738,95 @@ export const STORYBOOK_BRANDS = {
         "index": 4,
         "opacity": 100
       },
-      "chip-outline-background-checked": {
+      "chip-outline-background-selected": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
       },
-      "chip-outline-text-checked": {
+      "chip-outline-text-selected": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
       },
-      "chip-outline-background-checked-focus": {
+      "chip-outline-background-selected-focus": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
       },
-      "chip-outline-background-checked-pressed": {
+      "chip-outline-background-selected-pressed": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
       },
-      "chip-outline-text-checked-pressed": {
+      "chip-outline-text-selected-pressed": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
       },
-      "chip-outline-border-checked": {
+      "chip-outline-border-selected": {
         "color": "blue",
         "index": 5
       },
-      "chip-outline-background-checked-disabled": {
+      "chip-outline-background-selected-disabled": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
       },
-      "chip-outline-border-checked-disabled": {
+      "chip-outline-border-selected-disabled": {
         "color": "slate-gray",
         "index": 5,
         "opacity": 100
       },
-      "chip-outline-text-checked-disabled": {
+      "chip-outline-text-selected-disabled": {
         "color": "slate-gray",
         "index": 5,
         "opacity": 100
       },
-      "chip-checked-border": {
+      "chip-selected-border": {
         "color": "steel",
         "index": 7,
         "opacity": 100
       },
-      "chip-filled-border-checked-disabled": {
+      "chip-filled-border-selected-disabled": {
         "color": "slate-gray",
         "index": 5,
         "opacity": 100
       },
-      "chip-filled-text-checked-disabled": {
+      "chip-filled-text-selected-disabled": {
         "color": "slate-gray",
         "index": 5,
         "opacity": 100
       },
-      "chip-outline-border-checked-pressed": {
+      "chip-outline-border-selected-pressed": {
         "color": "blue",
         "index": 4
       },
-      "chip-light-background-checked": {
+      "chip-light-background-selected": {
         "color": "steel",
         "index": 7,
         "opacity": 100
       },
-      "chip-light-border-checked": {
+      "chip-light-border-selected": {
         "color": "steel",
         "index": 7,
         "opacity": 100
       },
-      "chip-light-text-checked": {
+      "chip-light-text-selected": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
       },
-      "chip-light-background-checked-hover": {
+      "chip-light-background-selected-hover": {
         "color": "steel",
         "index": 8,
         "opacity": 100
       },
-      "chip-light-border-checked-hover": {
+      "chip-light-border-selected-hover": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
       },
-      "chip-light-background-checked-focus": {
+      "chip-light-background-selected-focus": {
         "color": "steel",
         "index": 7,
         "opacity": 100
@@ -2884,12 +2886,12 @@ export const STORYBOOK_BRANDS = {
         "index": 5,
         "opacity": 100
       },
-      "chip-light-background-checked-pressed": {
+      "chip-light-background-selected-pressed": {
         "color": "steel",
         "index": 6,
         "opacity": 100
       },
-      "chip-light-text-checked-pressed": {
+      "chip-light-text-selected-pressed": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
@@ -5216,7 +5218,7 @@ export const STORYBOOK_BRANDS = {
         "index": 8,
         "opacity": 100
       },
-      "chip-filled-background-checked-hover": {
+      "chip-filled-background-selected-hover": {
         "color": "blue",
         "index": 6,
         "opacity": 100
@@ -5245,7 +5247,7 @@ export const STORYBOOK_BRANDS = {
         "index": 6,
         "opacity": 100
       },
-      "chip-filled-background-checked-pressed": {
+      "chip-filled-background-selected-pressed": {
         "color": "blue",
         "index": 4,
         "opacity": 100
@@ -5260,7 +5262,7 @@ export const STORYBOOK_BRANDS = {
         "index": 3,
         "opacity": 100
       },
-      "chip-filled-background-checked-disabled": {
+      "chip-filled-background-selected-disabled": {
         "color": "slate-gray",
         "index": 5,
         "opacity": 25
@@ -5273,11 +5275,6 @@ export const STORYBOOK_BRANDS = {
       "chip-text-disabled": {
         "color": "slate-gray",
         "index": 7,
-        "opacity": 100
-      },
-      "chip-icon-color-disabled": {
-        "color": "slate-gray",
-        "index": 5,
         "opacity": 100
       },
       "select-default-background": {
@@ -5508,7 +5505,7 @@ export const STORYBOOK_BRANDS = {
         "color": "blue",
         "index": 4
       },
-      "chip-outline-background-checked-hover": {
+      "chip-outline-background-selected-hover": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
@@ -5623,95 +5620,95 @@ export const STORYBOOK_BRANDS = {
         "index": 4,
         "opacity": 100
       },
-      "chip-outline-background-checked": {
+      "chip-outline-background-selected": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
       },
-      "chip-outline-text-checked": {
+      "chip-outline-text-selected": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
       },
-      "chip-outline-background-checked-focus": {
+      "chip-outline-background-selected-focus": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
       },
-      "chip-outline-background-checked-pressed": {
+      "chip-outline-background-selected-pressed": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
       },
-      "chip-outline-text-checked-pressed": {
+      "chip-outline-text-selected-pressed": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
       },
-      "chip-outline-border-checked": {
+      "chip-outline-border-selected": {
         "color": "blue",
         "index": 5
       },
-      "chip-outline-background-checked-disabled": {
+      "chip-outline-background-selected-disabled": {
         "color": "transparent",
         "index": 0,
         "opacity": 0
       },
-      "chip-outline-border-checked-disabled": {
+      "chip-outline-border-selected-disabled": {
         "color": "slate-gray",
         "index": 5,
         "opacity": 100
       },
-      "chip-outline-text-checked-disabled": {
+      "chip-outline-text-selected-disabled": {
         "color": "slate-gray",
         "index": 5,
         "opacity": 100
       },
-      "chip-checked-border": {
+      "chip-selected-border": {
         "color": "steel",
         "index": 7,
         "opacity": 100
       },
-      "chip-filled-border-checked-disabled": {
+      "chip-filled-border-selected-disabled": {
         "color": "slate-gray",
         "index": 5,
         "opacity": 100
       },
-      "chip-filled-text-checked-disabled": {
+      "chip-filled-text-selected-disabled": {
         "color": "slate-gray",
         "index": 5,
         "opacity": 100
       },
-      "chip-outline-border-checked-pressed": {
+      "chip-outline-border-selected-pressed": {
         "color": "blue",
         "index": 4
       },
-      "chip-light-background-checked": {
+      "chip-light-background-selected": {
         "color": "steel",
         "index": 7,
         "opacity": 100
       },
-      "chip-light-border-checked": {
+      "chip-light-border-selected": {
         "color": "steel",
         "index": 7,
         "opacity": 100
       },
-      "chip-light-text-checked": {
+      "chip-light-text-selected": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
       },
-      "chip-light-background-checked-hover": {
+      "chip-light-background-selected-hover": {
         "color": "steel",
         "index": 8,
         "opacity": 100
       },
-      "chip-light-border-checked-hover": {
+      "chip-light-border-selected-hover": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
       },
-      "chip-light-background-checked-focus": {
+      "chip-light-background-selected-focus": {
         "color": "steel",
         "index": 7,
         "opacity": 100
@@ -5771,12 +5768,12 @@ export const STORYBOOK_BRANDS = {
         "index": 5,
         "opacity": 100
       },
-      "chip-light-background-checked-pressed": {
+      "chip-light-background-selected-pressed": {
         "color": "steel",
         "index": 6,
         "opacity": 100
       },
-      "chip-light-text-checked-pressed": {
+      "chip-light-text-selected-pressed": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
@@ -7042,9 +7039,8 @@ export const STORYBOOK_BRANDS = {
       "radio-label-font-size-default": "md",
       "radio-label-line-height-default": "md",
       "radio-label-gap-default": "md",
-      "chip-height-default": "md",
       "chip-padding-default": "md",
-      "chip-checked-padding-default": "md",
+      "chip-selected-padding-default": "md",
       "chip-icon-size-default": "md",
       "chip-font-size-default": "md",
       "chip-radius-default": "md",
@@ -7084,10 +7080,18 @@ export const STORYBOOK_BRANDS = {
       "loader-size-default": "md",
       "loader-stroke-width-default": "md",
       "loader-oval-corner-radius-default": "md",
-      "chip-padding-x-default": "md",
-      "chip-padding-y-default": "md",
-      "chip-checked-padding-x-default": "md",
-      "chip-checked-padding-y-default": "md",
+      "chip-filled-padding-x-default": "md",
+      "chip-outline-padding-x-default": "md",
+      "chip-light-padding-x-default": "md",
+      "chip-filled-padding-y-default": "md",
+      "chip-outline-padding-y-default": "md",
+      "chip-light-padding-y-default": "md",
+      "chip-filled-selected-padding-x-default": "md",
+      "chip-outline-selected-padding-x-default": "md",
+      "chip-light-selected-padding-x-default": "md",
+      "chip-filled-selected-padding-y-default": "md",
+      "chip-outline-selected-padding-y-default": "md",
+      "chip-light-selected-padding-y-default": "md",
       "progress-height-default": "md",
       "progress-radius-default": "md",
       "avatar-size-default": "md",
@@ -7174,10 +7178,22 @@ export const STORYBOOK_BRANDS = {
         "default": 6,
         "md": 6
       },
-      "chip-padding-y": {
+      "chip-filled-padding-y": {
         "default": 18
       },
-      "chip-padding-x": {
+      "chip-outline-padding-y": {
+        "default": 18
+      },
+      "chip-light-padding-y": {
+        "default": 18
+      },
+      "chip-filled-padding-x": {
+        "default": 34
+      },
+      "chip-outline-padding-x": {
+        "default": 34
+      },
+      "chip-light-padding-x": {
         "default": 34
       },
       "chip-font-size": {
@@ -7186,10 +7202,22 @@ export const STORYBOOK_BRANDS = {
       "chip-line-height": {
         "default": 17
       },
-      "chip-checked-padding-x": {
+      "chip-filled-selected-padding-x": {
         "default": 34
       },
-      "chip-checked-padding-y": {
+      "chip-outline-selected-padding-x": {
+        "default": 34
+      },
+      "chip-light-selected-padding-x": {
+        "default": 34
+      },
+      "chip-filled-selected-padding-y": {
+        "default": 18
+      },
+      "chip-outline-selected-padding-y": {
+        "default": 18
+      },
+      "chip-light-selected-padding-y": {
         "default": 18
       },
       "chip-spacing": {
@@ -7758,7 +7786,7 @@ export const STORYBOOK_BRANDS = {
         "index": 2,
         "opacity": 100
       },
-      "chip-outline-background-checked": {
+      "chip-outline-background-selected": {
         "color": "green",
         "index": 1,
         "opacity": 100
@@ -7773,12 +7801,12 @@ export const STORYBOOK_BRANDS = {
         "index": 2,
         "opacity": 100
       },
-      "chip-outline-background-checked-hover": {
+      "chip-outline-background-selected-hover": {
         "color": "green",
         "index": 1,
         "opacity": 100
       },
-      "chip-outline-text-checked": {
+      "chip-outline-text-selected": {
         "color": "green",
         "index": 6
       },
@@ -7825,21 +7853,21 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0
       },
-      "chip-outline-background-checked-disabled": {
+      "chip-outline-background-selected-disabled": {
         "color": "slate-purple",
         "index": 2,
         "opacity": 100
       },
-      "chip-outline-text-checked-disabled": {
+      "chip-outline-text-selected-disabled": {
         "color": "neutral",
         "index": 0
       },
-      "chip-checked-border": {
+      "chip-selected-border": {
         "color": "green",
         "index": 6,
         "opacity": 100
       },
-      "chip-outline-border-checked": {
+      "chip-outline-border-selected": {
         "color": "green",
         "index": 6
       },
@@ -7902,58 +7930,54 @@ export const STORYBOOK_BRANDS = {
         "index": 2,
         "opacity": 100
       },
-      "chip-icon-color-disabled": {
-        "color": "neutral",
-        "index": 0
-      },
-      "chip-filled-background-checked-disabled": {
+      "chip-filled-background-selected-disabled": {
         "color": "slate-purple",
         "index": 2,
         "opacity": 100
       },
-      "chip-filled-text-checked-disabled": {
+      "chip-filled-text-selected-disabled": {
         "color": "neutral",
         "index": 0
       },
-      "chip-filled-border-checked-disabled": {
+      "chip-filled-border-selected-disabled": {
         "color": "slate-purple",
         "index": 2,
         "opacity": 100
       },
-      "chip-outline-border-checked-disabled": {
+      "chip-outline-border-selected-disabled": {
         "color": "slate-purple",
         "index": 3,
         "opacity": 100
       },
-      "chip-light-background-checked-disabled": {
+      "chip-light-background-selected-disabled": {
         "color": "slate-purple",
         "index": 2,
         "opacity": 100
       },
-      "chip-light-border-checked-disabled": {
+      "chip-light-border-selected-disabled": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
       },
-      "chip-light-text-checked-disabled": {
+      "chip-light-text-selected-disabled": {
         "color": "neutral",
         "index": 0
       },
-      "chip-filled-background-checked-pressed": {
+      "chip-filled-background-selected-pressed": {
         "color": "green",
         "index": 5
       },
-      "chip-outline-background-checked-pressed": {
+      "chip-outline-background-selected-pressed": {
         "color": "green",
         "index": 1,
         "opacity": 100
       },
-      "chip-outline-background-checked-focus": {
+      "chip-outline-background-selected-focus": {
         "color": "green",
         "index": 1,
         "opacity": 100
       },
-      "chip-outline-text-checked-pressed": {
+      "chip-outline-text-selected-pressed": {
         "color": "green",
         "index": 5
       },
@@ -8998,7 +9022,7 @@ export const STORYBOOK_BRANDS = {
         "index": 2,
         "opacity": 100
       },
-      "chip-outline-background-checked": {
+      "chip-outline-background-selected": {
         "color": "green",
         "index": 1,
         "opacity": 100
@@ -9013,12 +9037,12 @@ export const STORYBOOK_BRANDS = {
         "index": 2,
         "opacity": 100
       },
-      "chip-outline-background-checked-hover": {
+      "chip-outline-background-selected-hover": {
         "color": "green",
         "index": 1,
         "opacity": 100
       },
-      "chip-outline-text-checked": {
+      "chip-outline-text-selected": {
         "color": "green",
         "index": 6
       },
@@ -9065,21 +9089,21 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0
       },
-      "chip-outline-background-checked-disabled": {
+      "chip-outline-background-selected-disabled": {
         "color": "slate-purple",
         "index": 2,
         "opacity": 100
       },
-      "chip-outline-text-checked-disabled": {
+      "chip-outline-text-selected-disabled": {
         "color": "neutral",
         "index": 0
       },
-      "chip-checked-border": {
+      "chip-selected-border": {
         "color": "green",
         "index": 6,
         "opacity": 100
       },
-      "chip-outline-border-checked": {
+      "chip-outline-border-selected": {
         "color": "green",
         "index": 6
       },
@@ -9142,58 +9166,54 @@ export const STORYBOOK_BRANDS = {
         "index": 2,
         "opacity": 100
       },
-      "chip-icon-color-disabled": {
-        "color": "neutral",
-        "index": 0
-      },
-      "chip-filled-background-checked-disabled": {
+      "chip-filled-background-selected-disabled": {
         "color": "slate-purple",
         "index": 2,
         "opacity": 100
       },
-      "chip-filled-text-checked-disabled": {
+      "chip-filled-text-selected-disabled": {
         "color": "neutral",
         "index": 0
       },
-      "chip-filled-border-checked-disabled": {
+      "chip-filled-border-selected-disabled": {
         "color": "slate-purple",
         "index": 2,
         "opacity": 100
       },
-      "chip-outline-border-checked-disabled": {
+      "chip-outline-border-selected-disabled": {
         "color": "slate-purple",
         "index": 3,
         "opacity": 100
       },
-      "chip-light-background-checked-disabled": {
+      "chip-light-background-selected-disabled": {
         "color": "slate-purple",
         "index": 2,
         "opacity": 100
       },
-      "chip-light-border-checked-disabled": {
+      "chip-light-border-selected-disabled": {
         "color": "neutral",
         "index": 0,
         "opacity": 100
       },
-      "chip-light-text-checked-disabled": {
+      "chip-light-text-selected-disabled": {
         "color": "neutral",
         "index": 0
       },
-      "chip-filled-background-checked-pressed": {
+      "chip-filled-background-selected-pressed": {
         "color": "green",
         "index": 5
       },
-      "chip-outline-background-checked-pressed": {
+      "chip-outline-background-selected-pressed": {
         "color": "green",
         "index": 1,
         "opacity": 100
       },
-      "chip-outline-background-checked-focus": {
+      "chip-outline-background-selected-focus": {
         "color": "green",
         "index": 1,
         "opacity": 100
       },
-      "chip-outline-text-checked-pressed": {
+      "chip-outline-text-selected-pressed": {
         "color": "green",
         "index": 5
       },
@@ -10113,9 +10133,8 @@ export const STORYBOOK_BRANDS = {
       "radio-label-font-size-default": "sm",
       "radio-label-line-height-default": "sm",
       "radio-label-gap-default": "sm",
-      "chip-height-default": "sm",
       "chip-padding-default": "sm",
-      "chip-checked-padding-default": "sm",
+      "chip-selected-padding-default": "sm",
       "chip-icon-size-default": "sm",
       "chip-font-size-default": "sm",
       "chip-radius-default": "sm",
@@ -10551,9 +10570,8 @@ export const STORYBOOK_BRANDS = {
       "radio-label-font-size-default": "sm",
       "radio-label-line-height-default": "sm",
       "radio-label-gap-default": "sm",
-      "chip-height-default": "sm",
       "chip-padding-default": "sm",
-      "chip-checked-padding-default": "sm",
+      "chip-selected-padding-default": "sm",
       "chip-icon-size-default": "sm",
       "chip-font-size-default": "sm",
       "chip-radius-default": "sm",

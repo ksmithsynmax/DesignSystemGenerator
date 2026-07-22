@@ -12358,7 +12358,15 @@ async function buildChipComponentSet(varMap, page, font) {
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var variants = ["filled", "outline", "light"];
-  var checkedStates = ["unchecked", "checked"];
+  // "Selective State" collapses selection (checked) + availability (inactive) into a
+  // single friendly variant axis matching the design spec. Interaction state
+  // (Default/Hover/Focus/Pressed/Disabled) is an orthogonal axis.
+  var selectiveStates = [
+    { name: "Active", checked: false, inactive: false },
+    { name: "Selected", checked: true, inactive: false },
+    { name: "Inactive", checked: false, inactive: true },
+    { name: "Selective Inactive", checked: true, inactive: true },
+  ];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
   var components = [];
 
@@ -12382,6 +12390,26 @@ async function buildChipComponentSet(varMap, page, font) {
         checkIconComp = allNodes[ni];
       }
     }
+  }
+
+  // Untitled UI close/x icon used for the removable ("applied") chip, shared with
+  // Pill/Badge. Toggled via a BOOLEAN property so we don't double the variant count.
+  function createChipSwapRefs(iconComp) {
+    var refs = [];
+    if (!iconComp) return refs;
+    try {
+      var mainComp = iconComp.mainComponent || iconComp;
+      if (mainComp && mainComp.key) refs.push(mainComp.key);
+    } catch (_err) {}
+    if (iconComp.key) refs.push(iconComp.key);
+    if (iconComp.id) refs.push(iconComp.id);
+    return refs;
+  }
+  var removeIconComp = await findPillRemoveIconComponent();
+  if (removeIconComp) {
+    progress("[Chip] Remove icon source: " + removeIconComp.name);
+  } else {
+    progress("[Chip] Warning: no close icon component found; using text fallback.");
   }
 
   // Known chip heights per size for grid spacing
@@ -12410,10 +12438,10 @@ async function buildChipComponentSet(varMap, page, font) {
     var variant = variants[vi];
     var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
 
-    for (var chi = 0; chi < checkedStates.length; chi++) {
-      var checkedState = checkedStates[chi];
-      var capChecked = checkedState.charAt(0).toUpperCase() + checkedState.slice(1);
-      var isChecked = (checkedState === "checked");
+    for (var sci = 0; sci < selectiveStates.length; sci++) {
+      var selective = selectiveStates[sci];
+      var isChecked = selective.checked;
+      var isInactive = selective.inactive;
 
       for (var ri = 0; ri < radii.length; ri++) {
         var radius = radii[ri];
@@ -12431,7 +12459,7 @@ async function buildChipComponentSet(varMap, page, font) {
 
             var comp = figma.createComponent();
             comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", Radius=" + capRadius +
-                        ", Checked=" + capChecked + ", State=" + capState;
+                        ", Selective State=" + selective.name + ", State=" + capState;
 
           // Root: horizontal auto-layout (pill shape)
           comp.layoutMode = "HORIZONTAL";
@@ -12451,18 +12479,23 @@ async function buildChipComponentSet(varMap, page, font) {
           comp.paddingBottom = paddingY;
           comp.itemSpacing = 6;
 
+          // Height hugs content + vertical padding (counterAxisSizingMode = AUTO);
+          // there is no fixed/min height token so padding fully drives it.
           // Bind dimensions
-          bindVar(comp, "minHeight", varMap["chip/height-" + size]);
           if (isChecked) {
-            bindVar(comp, "paddingLeft", varMap["chip/checked-padding-x-" + size] || varMap["chip/checked-padding-" + size]);
-            bindVar(comp, "paddingRight", varMap["chip/checked-padding-x-" + size] || varMap["chip/checked-padding-" + size]);
-            bindVar(comp, "paddingTop", varMap["chip/checked-padding-y-" + size] || varMap["chip/checked-padding-" + size]);
-            bindVar(comp, "paddingBottom", varMap["chip/checked-padding-y-" + size] || varMap["chip/checked-padding-" + size]);
+            var selPadX = varMap["chip/" + variant + "-selected-padding-x-" + size];
+            var selPadY = varMap["chip/" + variant + "-selected-padding-y-" + size];
+            bindVar(comp, "paddingLeft", selPadX);
+            bindVar(comp, "paddingRight", selPadX);
+            bindVar(comp, "paddingTop", selPadY);
+            bindVar(comp, "paddingBottom", selPadY);
           } else {
-            bindVar(comp, "paddingLeft", varMap["chip/padding-x-" + size] || varMap["chip/padding-" + size]);
-            bindVar(comp, "paddingRight", varMap["chip/padding-x-" + size] || varMap["chip/padding-" + size]);
-            bindVar(comp, "paddingTop", varMap["chip/padding-y-" + size] || varMap["chip/padding-" + size]);
-            bindVar(comp, "paddingBottom", varMap["chip/padding-y-" + size] || varMap["chip/padding-" + size]);
+            var padX = varMap["chip/" + variant + "-padding-x-" + size];
+            var padY = varMap["chip/" + variant + "-padding-y-" + size];
+            bindVar(comp, "paddingLeft", padX);
+            bindVar(comp, "paddingRight", padX);
+            bindVar(comp, "paddingTop", padY);
+            bindVar(comp, "paddingBottom", padY);
           }
             var radiusPath = chipRadiusPath(varMap, variant, radius);
             bindVar(comp, "topLeftRadius", varMap[radiusPath]);
@@ -12472,7 +12505,7 @@ async function buildChipComponentSet(varMap, page, font) {
             bindVar(comp, "itemSpacing", varMap["chip/spacing-" + size]);
 
           // Background fill
-            var bgPath = chipBgPath(varMap, variant, isChecked, state);
+            var bgPath = chipBgPath(varMap, variant, isChecked, isInactive, state);
             if (isChecked && variant === "filled") {
               comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
             } else if (isChecked && variant === "light") {
@@ -12483,30 +12516,37 @@ async function buildChipComponentSet(varMap, page, font) {
             bindPaintVar(comp, "fills", 0, varMap[bgPath]);
 
           // Border
-            var borderPath = chipBorderPath(varMap, variant, isChecked, state);
-            if (variant === "outline" || !isChecked) {
+            var borderPath = chipBorderPath(varMap, variant, isChecked, isInactive, state);
+            // Only a filled + selected chip hides its border (solid fill carries
+            // the shape). Outline and light always show their border, as do
+            // unchecked chips and any inactive chip (dashed).
+            var isSelectiveInactive = isChecked && isInactive;
+            var hideBorder = variant === "filled" && isChecked && !isInactive;
+            if (hideBorder) {
+              comp.strokes = [];
+            } else {
               comp.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
               comp.strokeWeight = 1.5;
               comp.strokeAlign = "INSIDE";
               bindPaintVar(comp, "strokes", 0, varMap[borderPath]);
               bindVar(comp, "strokeWeight", varMap["chip/border-width"]);
-            } else if (variant === "filled" && isChecked) {
-              comp.strokes = [];
-            } else {
-              // light checked — no border
-              comp.strokes = [];
+              comp.dashPattern = isInactive ? [4, 3] : [];
             }
 
-          // --- Check icon (only when checked) ---
-            if (isChecked && checkIconComp) {
-            var checkInst = checkIconComp.createInstance();
+          // --- Check icon (independent toggle, hidden by default) ---
+          // The checkmark is NOT tied to the selected/checked color. It is an
+          // optional element toggled via the "Checkmark" boolean property.
+            var checkInst = null;
+            if (checkIconComp) {
+            checkInst = checkIconComp.createInstance();
             checkInst.name = "Icon";
             checkInst.resize(iconSize, iconSize);
             bindVar(checkInst, "width", varMap["chip/icon-size-" + size]);
             bindVar(checkInst, "height", varMap["chip/icon-size-" + size]);
 
-            // Override icon color
-            var iconColorPath = chipIconColorPath(variant, state);
+            // The checkmark always follows the label text color so it stays
+            // legible across every variant/state.
+            var iconColorPath = chipTextColorPath(varMap, variant, isChecked, isInactive, state);
             var vectors = checkInst.findAll(function(n) { return n.type === "VECTOR"; });
             for (var vci = 0; vci < vectors.length; vci++) {
               bindVar(vectors[vci], "strokeWeight", varMap["chip/icon-stroke-width-" + size]);
@@ -12520,24 +12560,163 @@ async function buildChipComponentSet(varMap, page, font) {
               }
             }
 
+              checkInst.visible = false;
               comp.appendChild(checkInst);
             }
 
-          // --- Label text ---
+          // --- Text stack (label + optional sub-label) ---
+            var textStack = figma.createFrame();
+            textStack.name = "Text";
+            textStack.layoutMode = "VERTICAL";
+            textStack.primaryAxisSizingMode = "AUTO";
+            textStack.counterAxisSizingMode = "AUTO";
+            textStack.primaryAxisAlignItems = "CENTER";
+            textStack.counterAxisAlignItems = "CENTER";
+            textStack.fills = [];
+            textStack.itemSpacing = 2;
+            bindVar(textStack, "itemSpacing", varMap["chip/sublabel-spacing"]);
+
+            var textColorPath = chipTextColorPath(varMap, variant, isChecked, isInactive, state);
+
             var textNode = figma.createText();
             textNode.name = "Label";
             textNode.fontName = font;
             textNode.characters = "Chip";
             textNode.fontSize = 14;
-
-            var textColorPath = chipTextColorPath(varMap, variant, isChecked, state);
             textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
             bindPaintVar(textNode, "fills", 0, varMap[textColorPath]);
             bindVar(textNode, "fontSize", varMap["chip/font-size-" + size]);
             bindVar(textNode, "fontFamily", varMap["chip/font-family"]);
-            bindVar(textNode, "fontStyle", varMap["chip/font-weight"]);
+            bindVar(textNode, "fontStyle", (isChecked && varMap["chip/font-weight-selected"]) ? varMap["chip/font-weight-selected"] : varMap["chip/font-weight"]);
             bindVar(textNode, "lineHeight", varMap["chip/line-height-" + size]);
-            comp.appendChild(textNode);
+            textStack.appendChild(textNode);
+
+          // --- Optional sub-label (hidden by default; toggled by "Sub-label" prop) ---
+            var subLabelNode = figma.createText();
+            subLabelNode.name = "Sub-label";
+            subLabelNode.fontName = font;
+            subLabelNode.characters = "Sub-label";
+            subLabelNode.fontSize = 12;
+            subLabelNode.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+            bindPaintVar(subLabelNode, "fills", 0, varMap[isChecked ? "chip/sublabel-color-selected" : "chip/sublabel-color"]);
+            bindVar(subLabelNode, "fontSize", varMap["chip/sublabel-font-size-" + size]);
+            bindVar(subLabelNode, "fontFamily", varMap["chip/font-family"]);
+            bindVar(subLabelNode, "lineHeight", varMap["chip/sublabel-line-height-" + size]);
+            subLabelNode.visible = false;
+            textStack.appendChild(subLabelNode);
+
+            comp.appendChild(textStack);
+
+          // --- Optional remove/applied "×" icon (hidden by default; "Show Remove" prop) ---
+            var removeNode = null;
+            var removeColorPath = isChecked ? "chip/remove-color-selected" : "chip/remove-color";
+            if (removeIconComp) {
+              removeNode = removeIconComp.createInstance();
+              removeNode.name = "Remove";
+              try { removeNode.resizeWithoutConstraints(iconSize, iconSize); } catch (_e) {}
+              bindVar(removeNode, "width", varMap["chip/remove-size-" + size]);
+              bindVar(removeNode, "height", varMap["chip/remove-size-" + size]);
+              try { removeNode.layoutGrow = 0; } catch (_e) {}
+              var removeVectors = removeNode.findAll(function (n) {
+                return n.type === "VECTOR" || n.type === "LINE" || n.type === "ELLIPSE" ||
+                       n.type === "RECTANGLE" || n.type === "POLYGON" || n.type === "STAR";
+              });
+              for (var rmvi = 0; rmvi < removeVectors.length; rmvi++) {
+                bindVar(removeVectors[rmvi], "strokeWeight", varMap["chip/remove-icon-stroke-width-" + size]);
+                if (removeVectors[rmvi].strokes && removeVectors[rmvi].strokes.length > 0) {
+                  bindPaintVar(removeVectors[rmvi], "strokes", 0, varMap[removeColorPath]);
+                }
+                if (removeVectors[rmvi].fills && removeVectors[rmvi].fills.length > 0) {
+                  bindPaintVar(removeVectors[rmvi], "fills", 0, varMap[removeColorPath]);
+                }
+              }
+            } else {
+              removeNode = figma.createText();
+              removeNode.name = "Remove";
+              removeNode.fontName = font;
+              removeNode.characters = "\u00d7";
+              removeNode.fontSize = 14;
+              removeNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              bindPaintVar(removeNode, "fills", 0, varMap[removeColorPath]);
+              bindVar(removeNode, "fontSize", varMap["chip/remove-size-" + size]);
+            }
+            removeNode.visible = false;
+            comp.appendChild(removeNode);
+
+          // --- Component properties: Checkmark toggle, Sub-label toggle, Remove toggle, Remove swap ---
+            if (typeof comp.addComponentProperty === "function") {
+              if (checkInst) {
+                try {
+                  var checkProp = comp.addComponentProperty("Checkmark", "BOOLEAN", false);
+                  checkInst.componentPropertyReferences = { visible: checkProp };
+                } catch (_eCheck) {}
+              }
+              try {
+                var subProp = comp.addComponentProperty("Sub-label", "BOOLEAN", false);
+                subLabelNode.componentPropertyReferences = { visible: subProp };
+              } catch (_eSub) {}
+
+              var removeRefs = {};
+              try {
+                var showRemoveProp = comp.addComponentProperty("Show Remove", "BOOLEAN", false);
+                removeRefs.visible = showRemoveProp;
+              } catch (_eShow) {}
+              if (removeIconComp) {
+                var chipSwapRefs = createChipSwapRefs(removeIconComp);
+                for (var csri = 0; csri < chipSwapRefs.length; csri++) {
+                  try {
+                    var chipSwapProp = comp.addComponentProperty("Remove Icon", "INSTANCE_SWAP", chipSwapRefs[csri]);
+                    removeRefs.mainComponent = chipSwapProp;
+                    break;
+                  } catch (_eSwap) {}
+                }
+              }
+              try {
+                if (removeRefs.visible || removeRefs.mainComponent) {
+                  removeNode.componentPropertyReferences = removeRefs;
+                }
+              } catch (_eRef) {}
+            }
+
+          // --- Selective-inactive warning marker ("!") ---
+          // The light variant omits the marker.
+            if (isSelectiveInactive && variant !== "light") {
+              var warnSize = Math.max(10, Math.round(iconSize * 0.95));
+              var warn = figma.createFrame();
+              warn.name = "Warning";
+              warn.layoutMode = "HORIZONTAL";
+              warn.primaryAxisSizingMode = "FIXED";
+              warn.counterAxisSizingMode = "FIXED";
+              warn.primaryAxisAlignItems = "CENTER";
+              warn.counterAxisAlignItems = "CENTER";
+              warn.resize(warnSize, warnSize);
+              warn.cornerRadius = warnSize / 2;
+              warn.fills = [{ type: "SOLID", color: { r: 0.9, g: 0.2, b: 0.2 } }];
+              bindPaintVar(warn, "fills", 0, varMap["chip/selective-inactive-warning-color"]);
+              warn.strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              warn.strokeWeight = 1.5;
+              warn.strokeAlign = "OUTSIDE";
+              bindPaintVar(warn, "strokes", 0, varMap["chip/selective-inactive-warning-border"]);
+
+              var warnText = figma.createText();
+              warnText.fontName = font;
+              warnText.characters = "!";
+              warnText.fontSize = Math.max(7, Math.round(warnSize * 0.7));
+              warnText.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              bindPaintVar(warnText, "fills", 0, varMap["chip/selective-inactive-warning-icon"]);
+              warn.appendChild(warnText);
+
+              comp.appendChild(warn);
+              warn.layoutPositioning = "ABSOLUTE";
+              // Pin to the bottom-right corner so it straddles the border like the
+              // reference design. MAX/MAX keeps the corner offset constant when the
+              // instance's label/size changes.
+              warn.constraints = { horizontal: "MAX", vertical: "MAX" };
+              // Sit ~2px inside the visible border (border width + 2).
+              var warnInset = 4;
+              warn.x = comp.width - warnSize - warnInset;
+              warn.y = comp.height - warnSize - warnInset;
+            }
 
           // Focus ring
             if (state === "focus") {
@@ -12558,7 +12737,7 @@ async function buildChipComponentSet(varMap, page, font) {
             }
 
           // Grid placement
-            var colIndex = vi * checkedStates.length + chi;
+            var colIndex = vi * selectiveStates.length + sci;
             var rowIndex = ((ri * sizes.length + si) * states.length) + sti;
             comp.x = colIndex * colWidth;
             comp.y = rowYOffsets[rowIndex];
@@ -12577,45 +12756,46 @@ async function buildChipComponentSet(varMap, page, font) {
 }
 
 // Helper: build figmaPath for chip background
-function chipBgPath(varMap, variant, isChecked, state) {
-  if (!isChecked) {
-    var resolvedState = state || "default";
-    var variantBase = "chip/" + variant + "-background";
-    var variantState = resolvedState === "default" ? variantBase : variantBase + "-" + resolvedState;
-    if (varMap && varMap[variantState]) return variantState;
-    if (varMap && varMap[variantBase]) return variantBase;
-    var sharedBase = "chip/background";
-    if (resolvedState === "default") return sharedBase;
-    return sharedBase + "-" + resolvedState;
+// Generic figmaPath resolver for chip color props (background/border/text).
+// Combines variant + checked + inactive + interaction, dropping the least
+// important qualifier first (interaction → inactive → checked → variant) until a
+// bound variable exists, mirroring the preview's resolution order.
+function chipColorPath(varMap, prop, variant, isChecked, isInactive, state) {
+  var resolvedState = (state && state !== "default") ? state : null;
+  function make(useV, useC, useIa, useIt) {
+    var base = useV ? ("chip/" + variant + "-" + prop) : ("chip/" + prop);
+    var s = "";
+    if (useC && isChecked) s += "-selected";
+    if (useIa && isInactive) s += "-inactive";
+    if (useIt && resolvedState) s += "-" + resolvedState;
+    return base + s;
   }
-  // checked — variant-specific
-  var prefix = "chip/" + variant + "-background-checked";
-  if (state === "default") return prefix;
-  return prefix + "-" + state;
+  var cands = [];
+  var useVs = [true, false];
+  for (var i = 0; i < useVs.length; i++) {
+    var useV = useVs[i];
+    cands.push(make(useV, true, true, true));
+    cands.push(make(useV, true, true, false));
+    cands.push(make(useV, true, false, true));
+    cands.push(make(useV, true, false, false));
+    cands.push(make(useV, false, true, true));
+    cands.push(make(useV, false, true, false));
+    cands.push(make(useV, false, false, true));
+    cands.push(make(useV, false, false, false));
+  }
+  for (var c = 0; c < cands.length; c++) {
+    if (varMap && varMap[cands[c]]) return cands[c];
+  }
+  return cands[cands.length - 1];
+}
+
+function chipBgPath(varMap, variant, isChecked, isInactive, state) {
+  return chipColorPath(varMap, "background", variant, isChecked, isInactive, state);
 }
 
 // Helper: build figmaPath for chip border
-function chipBorderPath(varMap, variant, isChecked, state) {
-  var resolvedState = state || "default";
-  if (!isChecked) {
-    var variantBasePath = "chip/" + variant + "-border";
-    var variantStatePath = resolvedState === "default" ? variantBasePath : variantBasePath + "-" + resolvedState;
-    if (varMap && varMap[variantStatePath]) return variantStatePath;
-    if (varMap && varMap[variantBasePath]) return variantBasePath;
-    if (resolvedState === "default") return "chip/border";
-    return "chip/border-" + resolvedState;
-  }
-  if (isChecked) {
-    var variantCheckedBasePath = "chip/" + variant + "-border-checked";
-    var variantCheckedStatePath = resolvedState === "default" ? variantCheckedBasePath : variantCheckedBasePath + "-" + resolvedState;
-    if (varMap && varMap[variantCheckedStatePath]) return variantCheckedStatePath;
-    if (varMap && varMap[variantCheckedBasePath]) return variantCheckedBasePath;
-    var checkedStatePath = resolvedState === "default" ? "chip/checked-border" : "chip/checked-border-" + resolvedState;
-    if (varMap && varMap[checkedStatePath]) return checkedStatePath;
-    if (varMap && varMap["chip/checked-border"]) return "chip/checked-border";
-  }
-  if (resolvedState === "default") return "chip/border";
-  return "chip/border-" + resolvedState;
+function chipBorderPath(varMap, variant, isChecked, isInactive, state) {
+  return chipColorPath(varMap, "border", variant, isChecked, isInactive, state);
 }
 
 function chipRadiusPath(varMap, variant, radius) {
@@ -12628,33 +12808,8 @@ function chipRadiusPath(varMap, variant, radius) {
 }
 
 // Helper: build figmaPath for chip text color
-function chipTextColorPath(varMap, variant, isChecked, state) {
-  var resolvedState = state || "default";
-  var uncheckedStatePath = resolvedState === "default" ? "chip/text" : "chip/text-" + resolvedState;
-  if (!isChecked) {
-    var variantBasePath = "chip/" + variant + "-text";
-    var variantStatePath = resolvedState === "default" ? variantBasePath : variantBasePath + "-" + resolvedState;
-    if (varMap && varMap[variantStatePath]) return variantStatePath;
-    if (varMap && varMap[variantBasePath]) return variantBasePath;
-    if (varMap && varMap[uncheckedStatePath]) return uncheckedStatePath;
-    return "chip/text";
-  }
-  // Checked — variant-specific text (stateful when available)
-  var checkedBasePath = "chip/" + variant + "-text-checked";
-  var checkedStatePath = resolvedState === "default" ? checkedBasePath : checkedBasePath + "-" + resolvedState;
-  if (varMap && varMap[checkedStatePath]) return checkedStatePath;
-  if (varMap && varMap[checkedBasePath]) return checkedBasePath;
-  if (varMap && varMap[uncheckedStatePath]) return uncheckedStatePath;
-  return "chip/text";
-}
-
-// Helper: build figmaPath for chip icon color
-// Filled uses white (text-on-interactive), outline/light use brand primary (same as their text)
-function chipIconColorPath(variant, state) {
-  if (state === "disabled") return "chip/icon-color-disabled";
-  if (variant === "outline") return "chip/outline-text-checked";
-  if (variant === "light") return "chip/light-text-checked";
-  return "chip/icon-color";
+function chipTextColorPath(varMap, variant, isChecked, isInactive, state) {
+  return chipColorPath(varMap, "text", variant, isChecked, isInactive, state);
 }
 
 // ---------------------------------------------------------------------------
