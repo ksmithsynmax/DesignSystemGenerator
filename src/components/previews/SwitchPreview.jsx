@@ -75,6 +75,8 @@ export default function SwitchPreview({
     isDisabled ? "switch-label-text-disabled" : "switch-label-text"
   );
 
+  const trackBorderWidthRaw = resolveDimension(brands, brandId, "switch-track-border-width");
+  const trackBorderWidth = Number.isFinite(Number(trackBorderWidthRaw)) ? Number(trackBorderWidthRaw) : 1.5;
   const width = resolveDimension(brands, brandId, "switch-width", size);
   const height = resolveDimension(brands, brandId, "switch-height", size);
   const thumbSize = resolveDimension(brands, brandId, "switch-thumb-size", size);
@@ -108,7 +110,10 @@ export default function SwitchPreview({
       styles={{
         track: {
           backgroundColor: checked ? undefined : uncheckedBg,
-          borderColor: trackBorder,
+          // Apply both width + color so the border actually renders (Mantine's
+          // default track border isn't reliably visible). Mirrors Figma, which
+          // binds strokeWeight (switch/track-border-width) + the stroke color.
+          border: `${trackBorderWidth}px solid ${trackBorder}`,
         },
         thumb: {
           backgroundColor: thumbBg,

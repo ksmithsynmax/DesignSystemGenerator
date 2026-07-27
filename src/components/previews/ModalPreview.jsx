@@ -21,6 +21,7 @@ export default function ModalPreview({
   radius = "md",
   layout = "basic",
   withOverlay = true,
+  withIcon = false,
   withCloseButton = true,
   centered = true,
   showSectionDividers = true,
@@ -32,6 +33,9 @@ export default function ModalPreview({
   // Variant prefix selects the color token set. "filled" is the original
   // single-color modal; "default" is the new variant with a distinct header bar.
   const v = variant === "filled" ? "filled" : "default";
+  // The optional header icon is only offered on the filled variant, so ignore the
+  // Icon toggle for the default variant.
+  const showIcon = withIcon && v === "filled";
   const colorTok = (suffix) => `modal-${v}-${suffix}`;
   const resolveModalColor = (suffix) =>
     resolveColor(brands, brandId, tokens[colorTok(suffix)]?.semantic, "light", colorTok(suffix));
@@ -44,8 +48,11 @@ export default function ModalPreview({
   const footerBorderColor = resolveModalColor("footer-border");
   const titleColor = resolveModalColor("title");
   const bodyColor = resolveModalColor("body");
-  const overlayColorBase = resolveModalColor("overlay");
+  // Overlay commented out — modal overlay is never used, so it's not rendered.
+  // const overlayColorBase = resolveModalColor("overlay");
   const closeColor = resolveModalColor("close");
+  const iconColor = resolveModalColor("icon");
+  const iconBackground = resolveModalColor("icon-background");
 
   // Width + radius are shared across variants (driven by the Size/Radius
   // dropdowns); spacing, typography, and border-width are per-variant.
@@ -54,8 +61,10 @@ export default function ModalPreview({
   const cornerRadius = resolveDimension(brands, brandId, "modal-radius", radius);
   const legacyPaddingX = resolveDimension(brands, brandId, dimTok("padding-x"));
   const legacyPaddingY = resolveDimension(brands, brandId, dimTok("padding-y"));
-  const headerPaddingX = resolveDimension(brands, brandId, dimTok("header-padding-x")) ?? legacyPaddingX;
-  const headerPaddingY = resolveDimension(brands, brandId, dimTok("header-padding-y")) ?? legacyPaddingY;
+  const headerPaddingTop = resolveDimension(brands, brandId, dimTok("header-padding-top")) ?? legacyPaddingY;
+  const headerPaddingRight = resolveDimension(brands, brandId, dimTok("header-padding-right")) ?? legacyPaddingX;
+  const headerPaddingBottom = resolveDimension(brands, brandId, dimTok("header-padding-bottom")) ?? legacyPaddingY;
+  const headerPaddingLeft = resolveDimension(brands, brandId, dimTok("header-padding-left")) ?? legacyPaddingX;
   const bodyPaddingTop = resolveDimension(brands, brandId, dimTok("body-padding-top")) ?? 0;
   const bodyPaddingRight = resolveDimension(brands, brandId, dimTok("body-padding-right")) ?? legacyPaddingX;
   const bodyPaddingBottom = resolveDimension(brands, brandId, dimTok("body-padding-bottom")) ?? legacyPaddingY;
@@ -73,9 +82,9 @@ export default function ModalPreview({
   const bodyFontWeight = resolveDimension(brands, brandId, dimTok("body-font-weight"));
   const bodyLineHeight = resolveDimension(brands, brandId, dimTok("body-line-height"));
   const borderWidth = resolveDimension(brands, brandId, dimTok("border-width"));
-  const overlayOpacity = resolveDimension(brands, brandId, "modal-overlay-opacity");
-
-  const overlayColor = toRgba(overlayColorBase, overlayOpacity);
+  // Overlay commented out — modal overlay is never used.
+  // const overlayOpacity = resolveDimension(brands, brandId, "modal-overlay-opacity");
+  // const overlayColor = toRgba(overlayColorBase, overlayOpacity);
 
   // Section dividers can either span the full modal width (edge to edge) or be
   // inset within the content's horizontal padding. Rendered as a standalone line
@@ -95,8 +104,82 @@ export default function ModalPreview({
   const primaryColor = resolveColor(brands, brandId, "interactive-primary");
   const onPrimary = resolveColor(brands, brandId, "text-on-interactive");
 
+  // Optional leading header icon: a circular badge with an info glyph. Rendered
+  // above the title (top-left for left-aligned layouts, centered for centered
+  // layouts) when the Icon toggle is on. Glyph + badge sizes are tokenized so
+  // they can be tuned per brand.
+  const iconGlyphSize = resolveDimension(brands, brandId, "modal-icon-size") ?? 32;
+  const iconBadgeSize = resolveDimension(brands, brandId, "modal-icon-background-size") ?? 50;
+  const closeIconSize = resolveDimension(brands, brandId, "modal-close-icon-size") ?? 16;
+  const closeStrokeWidth = resolveDimension(brands, brandId, "modal-close-icon-stroke-width") ?? 2;
+  const iconBadge = showIcon ? (
+    <div
+      style={{
+        width: iconBadgeSize,
+        height: iconBadgeSize,
+        borderRadius: "50%",
+        background: iconBackground,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        alignSelf: "flex-start",
+        flexShrink: 0,
+      }}
+    >
+      <svg
+        width={iconGlyphSize}
+        height={iconGlyphSize}
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke={iconColor}
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <circle cx="12" cy="12" r="10" />
+        <line x1="12" y1="11" x2="12" y2="16" />
+        <line x1="12" y1="8" x2="12" y2="8" />
+      </svg>
+    </div>
+  ) : null;
+
+  // Reusable close ("×") control, sized by token. Drawn as an SVG "X" (two
+  // crossing strokes) rather than the "×" text glyph so it's geometrically
+  // centered in its box — the text glyph sits slightly above center and made the
+  // close look misaligned with the title. This also mirrors how Figma renders it
+  // via the close icon instance.
+  const closeEl = withCloseButton ? (
+    <div
+      style={{
+        width: closeIconSize,
+        height: closeIconSize,
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        flexShrink: 0,
+      }}
+    >
+      <svg
+        width={closeIconSize}
+        height={closeIconSize}
+        viewBox="0 0 16 16"
+        fill="none"
+        stroke={closeColor}
+        strokeWidth={closeStrokeWidth}
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        aria-hidden="true"
+      >
+        <line x1="4" y1="4" x2="12" y2="12" />
+        <line x1="12" y1="4" x2="4" y2="12" />
+      </svg>
+    </div>
+  ) : null;
+
   return (
     <div style={{ width: "100%", minHeight: 280, position: "relative", overflow: "hidden", borderRadius: 8 }}>
+      {/* Overlay backdrop commented out — modal overlay is never used.
       <div
         style={{
           position: "absolute",
@@ -104,7 +187,7 @@ export default function ModalPreview({
           background: withOverlay ? overlayColor : "transparent",
           pointerEvents: "none",
         }}
-      />
+      /> */}
       <div
         style={{
           width: "100%",
@@ -137,10 +220,12 @@ export default function ModalPreview({
                 style={{
                   position: "relative",
                   display: "flex",
+                  flexDirection: "column",
                   alignItems: "center",
                   justifyContent: "center",
+                  gap: showIcon ? 12 : 0,
                   textAlign: "center",
-                  padding: `${headerPaddingY}px ${headerPaddingX}px`,
+                  padding: `${headerPaddingTop}px ${headerPaddingRight}px ${headerPaddingBottom}px ${headerPaddingLeft}px`,
                   fontSize: `${titleFontSize}px`,
                   fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
                   fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
@@ -149,22 +234,23 @@ export default function ModalPreview({
                   background: headerBackground,
                 }}
               >
+                {iconBadge}
                 {title}
                 {withCloseButton ? (
                   <div
                     style={{
                       position: "absolute",
-                      right: `${headerPaddingX}px`,
+                      right: `${headerPaddingRight}px`,
                       top: "50%",
                       transform: "translateY(-50%)",
-                      width: 16,
-                      height: 16,
+                      width: closeIconSize,
+                      height: closeIconSize,
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "center",
                       color: closeColor,
-                      fontSize: 16,
-                      lineHeight: "16px",
+                      fontSize: closeIconSize,
+                      lineHeight: `${closeIconSize}px`,
                       userSelect: "none",
                     }}
                   >
@@ -172,7 +258,7 @@ export default function ModalPreview({
                   </div>
                 ) : null}
               </div>
-              {sectionDivider(headerBorderColor, headerPaddingX, headerPaddingX)}
+              {sectionDivider(headerBorderColor, headerPaddingLeft, headerPaddingRight)}
               <div
                 style={{
                   color: bodyColor,
@@ -230,53 +316,64 @@ export default function ModalPreview({
                 style={{
                   position: "relative",
                   display: "flex",
-                  alignItems: "center",
-                  justifyContent: layout === "centered-action" ? "center" : "space-between",
-                  padding: `${headerPaddingY}px ${headerPaddingX}px`,
+                  flexDirection: "column",
+                  gap: showIcon ? 16 : 4,
+                  padding: `${headerPaddingTop}px ${headerPaddingRight}px ${headerPaddingBottom}px ${headerPaddingLeft}px`,
                   borderRadius: `${cornerRadius}px ${cornerRadius}px 0 0`,
                   background: headerBackground,
                 }}
               >
-                <div
-                  style={{
-                    flex: layout === "centered-action" ? "0 1 auto" : 1,
-                    minWidth: 0,
-                    textAlign: layout === "centered-action" ? "center" : "left",
-                    color: titleColor,
-                    fontSize: `${titleFontSize}px`,
-                    fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
-                    fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
-                    lineHeight: titleLineHeight ? `${titleLineHeight}px` : undefined,
-                  }}
-                >
-                  {title}
-                </div>
-                {withCloseButton ? (
+                {/* When the icon is on, the close lives in a top controls row so it
+                    lines up with the (taller) icon badge. When the icon is off,
+                    there's no controls row — the close sits inline with the title,
+                    vertically centered (see the title row below). */}
+                {showIcon ? (
                   <div
                     style={{
-                      ...(layout === "centered-action"
-                        ? {
-                            position: "absolute",
-                            right: `${headerPaddingX}px`,
-                            top: "50%",
-                            transform: "translateY(-50%)",
-                          }
-                        : { marginLeft: 12 }),
-                      width: 16,
-                      height: 16,
                       display: "flex",
                       alignItems: "center",
-                      justifyContent: "center",
-                      color: closeColor,
-                      fontSize: 16,
-                      lineHeight: "16px",
-                      userSelect: "none",
-                      flexShrink: 0,
+                      justifyContent: "space-between",
                     }}
                   >
-                    ×
+                    {iconBadge}
+                    {closeEl}
                   </div>
                 ) : null}
+                <div
+                  style={{
+                    position: "relative",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: layout === "centered-action" ? "center" : "flex-start",
+                  }}
+                >
+                  <div
+                    style={{
+                      flex: layout === "centered-action" ? "0 1 auto" : 1,
+                      minWidth: 0,
+                      textAlign: layout === "centered-action" ? "center" : "left",
+                      color: titleColor,
+                      fontSize: `${titleFontSize}px`,
+                      fontFamily: titleFontFamily ? `"${titleFontFamily}", sans-serif` : undefined,
+                      fontWeight: titleFontWeight === "Semi Bold" ? 600 : titleFontWeight === "Bold" ? 700 : 400,
+                      lineHeight: titleLineHeight ? `${titleLineHeight}px` : undefined,
+                    }}
+                  >
+                    {title}
+                  </div>
+                  {!showIcon && withCloseButton ? (
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: "50%",
+                        transform: "translateY(-50%)",
+                      }}
+                    >
+                      {closeEl}
+                    </div>
+                  ) : null}
+                </div>
               </div>
               <div
                 style={{
@@ -290,6 +387,7 @@ export default function ModalPreview({
               >
                 {body}
               </div>
+              {layout === "actions-right" && sectionDivider(footerBorderColor, footerPaddingLeft, footerPaddingRight)}
               {layout === "actions-right" && (
                 <div style={{ padding: `${footerPaddingTop}px ${footerPaddingRight}px ${footerPaddingBottom}px ${footerPaddingLeft}px` }}>
                   <div style={{ display: "flex", justifyContent: "flex-end", gap: 10 }}>
@@ -315,6 +413,41 @@ export default function ModalPreview({
                         fontSize: 14,
                         fontWeight: 600,
                         padding: "8px 16px",
+                      }}
+                    >
+                      Yes
+                    </button>
+                  </div>
+                </div>
+              )}
+              {layout === "actions-full" && sectionDivider(footerBorderColor, footerPaddingLeft, footerPaddingRight)}
+              {layout === "actions-full" && (
+                <div style={{ padding: `${footerPaddingTop}px ${footerPaddingRight}px ${footerPaddingBottom}px ${footerPaddingLeft}px` }}>
+                  <div style={{ display: "flex", gap: 10 }}>
+                    <button
+                      style={{
+                        flex: 1,
+                        background: "transparent",
+                        color: titleColor,
+                        border: `${borderWidth}px solid ${borderColor}`,
+                        borderRadius: 6,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        padding: "10px 14px",
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      style={{
+                        flex: 1,
+                        background: primaryColor,
+                        color: onPrimary,
+                        border: "none",
+                        borderRadius: 6,
+                        fontSize: 14,
+                        fontWeight: 600,
+                        padding: "10px 16px",
                       }}
                     >
                       Yes

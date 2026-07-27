@@ -778,51 +778,25 @@ export const COMPONENT_TOKENS = {
     "chip-outline-background-disabled": { type: "COLOR", semantic: "interactive-disabled",       figmaPath: "chip/outline-background-disabled" },
 
     // ── CHIP BACKGROUND — CHECKED — FILLED (per state) ──
-    "chip-filled-background-selected":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "chip/filled-background-selected" },
-    "chip-filled-background-selected-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "chip/filled-background-selected-hover" },
-    "chip-filled-background-selected-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "chip/filled-background-selected-focus" },
-    "chip-filled-background-selected-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "chip/filled-background-selected-pressed" },
-    "chip-filled-background-selected-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/filled-background-selected-disabled" },
+    "chip-filled-background-checked":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "chip/filled-background-checked" },
+    "chip-filled-background-checked-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "chip/filled-background-checked-hover" },
+    "chip-filled-background-checked-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "chip/filled-background-checked-focus" },
+    "chip-filled-background-checked-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "chip/filled-background-checked-pressed" },
+    "chip-filled-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/filled-background-checked-disabled" },
 
     // ── CHIP BACKGROUND — CHECKED — LIGHT (per state) ──
-    "chip-light-background-selected":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "chip/light-background-selected" },
-    "chip-light-background-selected-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/light-background-selected-hover" },
-    "chip-light-background-selected-focus":    { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "chip/light-background-selected-focus" },
-    "chip-light-background-selected-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/light-background-selected-pressed" },
-    "chip-light-background-selected-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/light-background-selected-disabled" },
+    "chip-light-background-checked":          { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "chip/light-background-checked" },
+    "chip-light-background-checked-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/light-background-checked-hover" },
+    "chip-light-background-checked-focus":    { type: "COLOR", semantic: "interactive-secondary",       figmaPath: "chip/light-background-checked-focus" },
+    "chip-light-background-checked-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/light-background-checked-pressed" },
+    "chip-light-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/light-background-checked-disabled" },
 
     // ── CHIP BACKGROUND — CHECKED — OUTLINE (per state) ──
-    "chip-outline-background-selected":          { type: "COLOR", semantic: "surface-default",            figmaPath: "chip/outline-background-selected" },
-    "chip-outline-background-selected-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/outline-background-selected-hover" },
-    "chip-outline-background-selected-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "chip/outline-background-selected-focus" },
-    "chip-outline-background-selected-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/outline-background-selected-pressed" },
-    "chip-outline-background-selected-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/outline-background-selected-disabled" },
-
-    // ── CHIP BACKGROUND — INACTIVE (unavailable) / SELECTIVE INACTIVE (selected + unavailable) ──
-    "chip-filled-background-inactive":          { type: "COLOR", semantic: "surface-default",   figmaPath: "chip/filled-background-inactive" },
-    "chip-filled-background-inactive-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/filled-background-inactive-hover" },
-    "chip-filled-background-inactive-focus":    { type: "COLOR", semantic: "surface-default",   figmaPath: "chip/filled-background-inactive-focus" },
-    "chip-filled-background-inactive-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/filled-background-inactive-pressed" },
-    "chip-filled-background-selected-inactive":  { type: "COLOR", semantic: "subtle-primary",    figmaPath: "chip/filled-background-selected-inactive" },
-    "chip-filled-background-selected-inactive-hover":   { type: "COLOR", semantic: "subtle-primary", figmaPath: "chip/filled-background-selected-inactive-hover" },
-    "chip-filled-background-selected-inactive-focus":   { type: "COLOR", semantic: "subtle-primary", figmaPath: "chip/filled-background-selected-inactive-focus" },
-    "chip-filled-background-selected-inactive-pressed": { type: "COLOR", semantic: "subtle-primary", figmaPath: "chip/filled-background-selected-inactive-pressed" },
-    "chip-light-background-inactive":           { type: "COLOR", semantic: "surface-default",   figmaPath: "chip/light-background-inactive" },
-    "chip-light-background-inactive-hover":     { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/light-background-inactive-hover" },
-    "chip-light-background-inactive-focus":     { type: "COLOR", semantic: "surface-default",   figmaPath: "chip/light-background-inactive-focus" },
-    "chip-light-background-inactive-pressed":   { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/light-background-inactive-pressed" },
-    "chip-light-background-selected-inactive":   { type: "COLOR", semantic: "subtle-primary",    figmaPath: "chip/light-background-selected-inactive" },
-    "chip-light-background-selected-inactive-hover":   { type: "COLOR", semantic: "subtle-primary", figmaPath: "chip/light-background-selected-inactive-hover" },
-    "chip-light-background-selected-inactive-focus":   { type: "COLOR", semantic: "subtle-primary", figmaPath: "chip/light-background-selected-inactive-focus" },
-    "chip-light-background-selected-inactive-pressed": { type: "COLOR", semantic: "subtle-primary", figmaPath: "chip/light-background-selected-inactive-pressed" },
-    "chip-outline-background-inactive":         { type: "COLOR", semantic: "surface-default",   figmaPath: "chip/outline-background-inactive" },
-    "chip-outline-background-inactive-hover":   { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/outline-background-inactive-hover" },
-    "chip-outline-background-inactive-focus":   { type: "COLOR", semantic: "surface-default",   figmaPath: "chip/outline-background-inactive-focus" },
-    "chip-outline-background-inactive-pressed": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/outline-background-inactive-pressed" },
-    "chip-outline-background-selected-inactive": { type: "COLOR", semantic: "subtle-primary",    figmaPath: "chip/outline-background-selected-inactive" },
-    "chip-outline-background-selected-inactive-hover":   { type: "COLOR", semantic: "subtle-primary", figmaPath: "chip/outline-background-selected-inactive-hover" },
-    "chip-outline-background-selected-inactive-focus":   { type: "COLOR", semantic: "subtle-primary", figmaPath: "chip/outline-background-selected-inactive-focus" },
-    "chip-outline-background-selected-inactive-pressed": { type: "COLOR", semantic: "subtle-primary", figmaPath: "chip/outline-background-selected-inactive-pressed" },
+    "chip-outline-background-checked":          { type: "COLOR", semantic: "surface-default",            figmaPath: "chip/outline-background-checked" },
+    "chip-outline-background-checked-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/outline-background-checked-hover" },
+    "chip-outline-background-checked-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "chip/outline-background-checked-focus" },
+    "chip-outline-background-checked-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "chip/outline-background-checked-pressed" },
+    "chip-outline-background-checked-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "chip/outline-background-checked-disabled" },
 
     // ── CHIP BORDER ──
     "chip-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "chip/border" },
@@ -845,43 +819,17 @@ export const COMPONENT_TOKENS = {
     "chip-outline-border-focus":   { type: "COLOR", semantic: "border-default",  figmaPath: "chip/outline-border-focus" },
     "chip-outline-border-pressed": { type: "COLOR", semantic: "border-default",  figmaPath: "chip/outline-border-pressed" },
     "chip-outline-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "chip/outline-border-disabled" },
-    "chip-filled-border-selected":  { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/filled-border-selected" },
-    "chip-filled-border-selected-hover":  { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "chip/filled-border-selected-hover" },
-    "chip-filled-border-selected-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "chip/filled-border-selected-disabled" },
-    "chip-light-border-selected":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/light-border-selected" },
-    "chip-light-border-selected-hover":   { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "chip/light-border-selected-hover" },
-    "chip-light-border-selected-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "chip/light-border-selected-disabled" },
-    "chip-outline-border-selected": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/outline-border-selected" },
-    "chip-outline-border-selected-hover": { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "chip/outline-border-selected-hover" },
-    "chip-outline-border-selected-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "chip/outline-border-selected-pressed" },
-    "chip-outline-border-selected-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "chip/outline-border-selected-disabled" },
-    "chip-selected-border":  { type: "COLOR", semantic: "border-default",  figmaPath: "chip/selected-border" },
-    // Border — inactive / selective-inactive. Selective-inactive renders dashed
-    // (see chip-selective-inactive-border-style) to flag a stale/unavailable selection.
-    "chip-filled-border-inactive":          { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/filled-border-inactive" },
-    "chip-filled-border-inactive-hover":    { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/filled-border-inactive-hover" },
-    "chip-filled-border-inactive-focus":    { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/filled-border-inactive-focus" },
-    "chip-filled-border-inactive-pressed":  { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/filled-border-inactive-pressed" },
-    "chip-filled-border-selected-inactive":  { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/filled-border-selected-inactive" },
-    "chip-filled-border-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/filled-border-selected-inactive-hover" },
-    "chip-filled-border-selected-inactive-focus":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/filled-border-selected-inactive-focus" },
-    "chip-filled-border-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/filled-border-selected-inactive-pressed" },
-    "chip-light-border-inactive":           { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/light-border-inactive" },
-    "chip-light-border-inactive-hover":     { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/light-border-inactive-hover" },
-    "chip-light-border-inactive-focus":     { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/light-border-inactive-focus" },
-    "chip-light-border-inactive-pressed":   { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/light-border-inactive-pressed" },
-    "chip-light-border-selected-inactive":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/light-border-selected-inactive" },
-    "chip-light-border-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/light-border-selected-inactive-hover" },
-    "chip-light-border-selected-inactive-focus":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/light-border-selected-inactive-focus" },
-    "chip-light-border-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/light-border-selected-inactive-pressed" },
-    "chip-outline-border-inactive":         { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/outline-border-inactive" },
-    "chip-outline-border-inactive-hover":   { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/outline-border-inactive-hover" },
-    "chip-outline-border-inactive-focus":   { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/outline-border-inactive-focus" },
-    "chip-outline-border-inactive-pressed": { type: "COLOR", semantic: "border-disabled",     figmaPath: "chip/outline-border-inactive-pressed" },
-    "chip-outline-border-selected-inactive": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/outline-border-selected-inactive" },
-    "chip-outline-border-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/outline-border-selected-inactive-hover" },
-    "chip-outline-border-selected-inactive-focus":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/outline-border-selected-inactive-focus" },
-    "chip-outline-border-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/outline-border-selected-inactive-pressed" },
+    "chip-filled-border-checked":  { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/filled-border-checked" },
+    "chip-filled-border-checked-hover":  { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "chip/filled-border-checked-hover" },
+    "chip-filled-border-checked-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "chip/filled-border-checked-disabled" },
+    "chip-light-border-checked":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/light-border-checked" },
+    "chip-light-border-checked-hover":   { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "chip/light-border-checked-hover" },
+    "chip-light-border-checked-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "chip/light-border-checked-disabled" },
+    "chip-outline-border-checked": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/outline-border-checked" },
+    "chip-outline-border-checked-hover": { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "chip/outline-border-checked-hover" },
+    "chip-outline-border-checked-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "chip/outline-border-checked-pressed" },
+    "chip-outline-border-checked-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "chip/outline-border-checked-disabled" },
+    "chip-checked-border":  { type: "COLOR", semantic: "border-default",  figmaPath: "chip/checked-border" },
 
     // ── CHIP TEXT ──
     "chip-text":                         { type: "COLOR", semantic: "text-default",               figmaPath: "chip/text" },
@@ -902,79 +850,35 @@ export const COMPONENT_TOKENS = {
     "chip-outline-text-disabled":        { type: "COLOR", semantic: "text-disabled",              figmaPath: "chip/outline-text-disabled" },
     "chip-text-pressed":                 { type: "COLOR", semantic: "text-default",               figmaPath: "chip/text-pressed" },
     "chip-text-disabled":                { type: "COLOR", semantic: "text-disabled",              figmaPath: "chip/text-disabled" },
-    "chip-filled-text-selected":          { type: "COLOR", semantic: "text-on-interactive",        figmaPath: "chip/filled-text-selected" },
-    "chip-filled-text-selected-pressed":  { type: "COLOR", semantic: "text-on-interactive",        figmaPath: "chip/filled-text-selected-pressed" },
-    "chip-filled-text-selected-disabled": { type: "COLOR", semantic: "text-disabled",              figmaPath: "chip/filled-text-selected-disabled" },
-    "chip-light-text-selected":           { type: "COLOR", semantic: "interactive-primary",        figmaPath: "chip/light-text-selected" },
-    "chip-light-text-selected-pressed":   { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "chip/light-text-selected-pressed" },
-    "chip-light-text-selected-disabled":  { type: "COLOR", semantic: "text-disabled",              figmaPath: "chip/light-text-selected-disabled" },
-    "chip-outline-text-selected":         { type: "COLOR", semantic: "interactive-primary",        figmaPath: "chip/outline-text-selected" },
-    "chip-outline-text-selected-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "chip/outline-text-selected-pressed" },
-    "chip-outline-text-selected-disabled": { type: "COLOR", semantic: "text-disabled",             figmaPath: "chip/outline-text-selected-disabled" },
-    // Text — inactive / selective-inactive.
-    "chip-filled-text-inactive":          { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/filled-text-inactive" },
-    "chip-filled-text-inactive-hover":    { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/filled-text-inactive-hover" },
-    "chip-filled-text-inactive-focus":    { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/filled-text-inactive-focus" },
-    "chip-filled-text-inactive-pressed":  { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/filled-text-inactive-pressed" },
-    "chip-filled-text-selected-inactive":  { type: "COLOR", semantic: "interactive-primary",  figmaPath: "chip/filled-text-selected-inactive" },
-    "chip-filled-text-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/filled-text-selected-inactive-hover" },
-    "chip-filled-text-selected-inactive-focus":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/filled-text-selected-inactive-focus" },
-    "chip-filled-text-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/filled-text-selected-inactive-pressed" },
-    "chip-light-text-inactive":           { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/light-text-inactive" },
-    "chip-light-text-inactive-hover":     { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/light-text-inactive-hover" },
-    "chip-light-text-inactive-focus":     { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/light-text-inactive-focus" },
-    "chip-light-text-inactive-pressed":   { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/light-text-inactive-pressed" },
-    "chip-light-text-selected-inactive":   { type: "COLOR", semantic: "interactive-primary",  figmaPath: "chip/light-text-selected-inactive" },
-    "chip-light-text-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/light-text-selected-inactive-hover" },
-    "chip-light-text-selected-inactive-focus":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/light-text-selected-inactive-focus" },
-    "chip-light-text-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/light-text-selected-inactive-pressed" },
-    "chip-outline-text-inactive":         { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/outline-text-inactive" },
-    "chip-outline-text-inactive-hover":   { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/outline-text-inactive-hover" },
-    "chip-outline-text-inactive-focus":   { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/outline-text-inactive-focus" },
-    "chip-outline-text-inactive-pressed": { type: "COLOR", semantic: "text-disabled",        figmaPath: "chip/outline-text-inactive-pressed" },
-    "chip-outline-text-selected-inactive": { type: "COLOR", semantic: "interactive-primary",  figmaPath: "chip/outline-text-selected-inactive" },
-    "chip-outline-text-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/outline-text-selected-inactive-hover" },
-    "chip-outline-text-selected-inactive-focus":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/outline-text-selected-inactive-focus" },
-    "chip-outline-text-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "chip/outline-text-selected-inactive-pressed" },
+    "chip-filled-text-checked":          { type: "COLOR", semantic: "text-on-interactive",        figmaPath: "chip/filled-text-checked" },
+    "chip-filled-text-checked-pressed":  { type: "COLOR", semantic: "text-on-interactive",        figmaPath: "chip/filled-text-checked-pressed" },
+    "chip-filled-text-checked-disabled": { type: "COLOR", semantic: "text-disabled",              figmaPath: "chip/filled-text-checked-disabled" },
+    "chip-light-text-checked":           { type: "COLOR", semantic: "interactive-primary",        figmaPath: "chip/light-text-checked" },
+    "chip-light-text-checked-pressed":   { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "chip/light-text-checked-pressed" },
+    "chip-light-text-checked-disabled":  { type: "COLOR", semantic: "text-disabled",              figmaPath: "chip/light-text-checked-disabled" },
+    "chip-outline-text-checked":         { type: "COLOR", semantic: "interactive-primary",        figmaPath: "chip/outline-text-checked" },
+    "chip-outline-text-checked-pressed": { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "chip/outline-text-checked-pressed" },
+    "chip-outline-text-checked-disabled": { type: "COLOR", semantic: "text-disabled",             figmaPath: "chip/outline-text-checked-disabled" },
 
-    // ── SUB-LABEL / REMOVE COLORS ──
-    "chip-sublabel-color":          { type: "COLOR", semantic: "text-subtle",  figmaPath: "chip/sublabel-color" },
-    "chip-sublabel-color-selected":  { type: "COLOR", semantic: "text-subtle",  figmaPath: "chip/sublabel-color-selected" },
-    "chip-remove-color":            { type: "COLOR", semantic: "text-default", figmaPath: "chip/remove-color" },
-    "chip-remove-color-selected":    { type: "COLOR", semantic: "text-on-interactive", figmaPath: "chip/remove-color-selected" },
+    // ── CHIP ICON COLOR ──
+    "chip-icon-color":          { type: "COLOR", semantic: "text-on-interactive", figmaPath: "chip/icon-color" },
+    "chip-icon-color-disabled": { type: "COLOR", semantic: "text-disabled",       figmaPath: "chip/icon-color-disabled" },
 
     // ── SHARED COLOR TOKEN ──
     "chip-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "chip/focus-ring" },
-    // Selective-inactive ("selected but no longer available") treatment: a dashed
-    // border plus a small warning marker in the corner.
-    "chip-selective-inactive-warning-color": { type: "COLOR", semantic: "feedback-error", figmaPath: "chip/selective-inactive-warning-color" },
-    // The badge's ring border and the "!" glyph color.
-    "chip-selective-inactive-warning-border": { type: "COLOR", semantic: "surface-default", figmaPath: "chip/selective-inactive-warning-border" },
-    "chip-selective-inactive-warning-icon": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "chip/selective-inactive-warning-icon" },
 
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
-    // Padding is per-variant so each variant (filled/outline/light) can be tuned
-    // independently. The unselected + selected pairs mirror one another.
-    "chip-filled-padding-x":           { type: "FLOAT", unit: "px", sizes: { default: 24, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "chip/filled-padding-x" },
-    "chip-filled-padding-y":           { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 1, sm: 3, md: 4, lg: 6, xl: 7 },       figmaPath: "chip/filled-padding-y" },
-    "chip-filled-selected-padding-x":  { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8, sm: 10, md: 12, lg: 14, xl: 16 },  figmaPath: "chip/filled-selected-padding-x" },
-    "chip-filled-selected-padding-y":  { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 1, sm: 3, md: 4, lg: 6, xl: 7 },       figmaPath: "chip/filled-selected-padding-y" },
-    "chip-outline-padding-x":          { type: "FLOAT", unit: "px", sizes: { default: 24, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "chip/outline-padding-x" },
-    "chip-outline-padding-y":          { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 1, sm: 3, md: 4, lg: 6, xl: 7 },       figmaPath: "chip/outline-padding-y" },
-    "chip-outline-selected-padding-x": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8, sm: 10, md: 12, lg: 14, xl: 16 },  figmaPath: "chip/outline-selected-padding-x" },
-    "chip-outline-selected-padding-y": { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 1, sm: 3, md: 4, lg: 6, xl: 7 },       figmaPath: "chip/outline-selected-padding-y" },
-    "chip-light-padding-x":            { type: "FLOAT", unit: "px", sizes: { default: 24, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "chip/light-padding-x" },
-    "chip-light-padding-y":            { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 1, sm: 3, md: 4, lg: 6, xl: 7 },       figmaPath: "chip/light-padding-y" },
-    "chip-light-selected-padding-x":   { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8, sm: 10, md: 12, lg: 14, xl: 16 },  figmaPath: "chip/light-selected-padding-x" },
-    "chip-light-selected-padding-y":   { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 1, sm: 3, md: 4, lg: 6, xl: 7 },       figmaPath: "chip/light-selected-padding-y" },
+    // Chip height is intentionally not tokenized — it is driven entirely by
+    // vertical padding + line height so padding stays the single source of truth.
+    // A single padding set drives both checked and unchecked — the checkmark
+    // reserves its own space via chip-spacing, so no separate checked padding.
+    "chip-padding-x":         { type: "FLOAT", unit: "px", sizes: { default: 24, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 },              figmaPath: "chip/padding-x" },
+    "chip-padding-y":         { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 1, sm: 3, md: 4, lg: 6, xl: 7 },                    figmaPath: "chip/padding-y" },
     "chip-icon-size":       { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 9, sm: 12, md: 14, lg: 16, xl: 18 },               figmaPath: "chip/icon-size" },
     "chip-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 1.75, xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 },        figmaPath: "chip/icon-stroke-width" },
     "chip-font-size":       { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 10, sm: 12, md: 14, lg: 16, xl: 18 },              figmaPath: "chip/font-size" },
     "chip-font-family":     { type: "STRING", value: "Inter", figmaPath: "chip/font-family" },
     "chip-font-weight":     { type: "STRING", value: "Regular", figmaPath: "chip/font-weight" },
-    // Some brands render the label bolder once the chip is selected.
-    "chip-font-weight-selected": { type: "STRING", value: "Regular", figmaPath: "chip/font-weight-selected" },
-    "chip-selective-inactive-border-style": { type: "STRING", value: "dashed", figmaPath: "chip/selective-inactive-border-style" },
     "chip-line-height":     { type: "FLOAT", unit: "px", sizes: { default: 20, xs: 14, sm: 16, md: 20, lg: 24, xl: 28 }, figmaPath: "chip/line-height" },
     "chip-filled-radius":   { type: "FLOAT", unit: "px", value: 8, figmaPath: "chip/filled-radius" },
     "chip-outline-radius":  { type: "FLOAT", unit: "px", value: 8, figmaPath: "chip/outline-radius" },
@@ -982,17 +886,248 @@ export const COMPONENT_TOKENS = {
     "chip-radius":          { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },                 figmaPath: "chip/radius" },
     "chip-spacing":         { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 2, sm: 4, md: 4, lg: 6, xl: 8 },                 figmaPath: "chip/spacing" },
 
-    // ── SUB-LABEL (optional second line) ──
-    "chip-sublabel-font-size":   { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8, sm: 10, md: 12, lg: 14, xl: 16 }, figmaPath: "chip/sublabel-font-size" },
-    "chip-sublabel-line-height": { type: "FLOAT", unit: "px", sizes: { default: 16, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "chip/sublabel-line-height" },
-    "chip-sublabel-spacing":     { type: "FLOAT", unit: "px", value: 2, figmaPath: "chip/sublabel-spacing" },
-
-    // ── REMOVE / APPLIED "×" ICON (optional) ──
-    "chip-remove-size":              { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 9, sm: 12, md: 14, lg: 16, xl: 18 }, figmaPath: "chip/remove-size" },
-    "chip-remove-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 1.75, xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 }, figmaPath: "chip/remove-icon-stroke-width" },
-
     // ── FLOAT TOKENS (single value, shared across all sizes) ──
     "chip-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "chip/border-width" },
+  },
+
+  selectablefilterchip: {
+    // ── CHIP BACKGROUND — UNCHECKED (per state) ──
+    "selectablefilterchip-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "selectablefilterchip/background" },
+    "selectablefilterchip-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "selectablefilterchip/background-hover" },
+    "selectablefilterchip-background-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "selectablefilterchip/background-focus" },
+    "selectablefilterchip-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "selectablefilterchip/background-pressed" },
+    "selectablefilterchip-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "selectablefilterchip/background-disabled" },
+
+    // ── CHIP BACKGROUND — CHECKED — FILLED (per state) ──
+    "selectablefilterchip-background-selected":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "selectablefilterchip/background-selected" },
+    "selectablefilterchip-background-selected-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "selectablefilterchip/background-selected-hover" },
+    "selectablefilterchip-background-selected-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "selectablefilterchip/background-selected-focus" },
+    "selectablefilterchip-background-selected-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "selectablefilterchip/background-selected-pressed" },
+    "selectablefilterchip-background-selected-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "selectablefilterchip/background-selected-disabled" },
+
+    // ── CHIP BACKGROUND — CHECKED — LIGHT (per state) ──
+
+    // ── CHIP BACKGROUND — CHECKED — OUTLINE (per state) ──
+
+    // ── CHIP BACKGROUND — INACTIVE (unavailable) / SELECTIVE INACTIVE (selected + unavailable) ──
+    "selectablefilterchip-background-inactive":          { type: "COLOR", semantic: "surface-default",   figmaPath: "selectablefilterchip/background-inactive" },
+    "selectablefilterchip-background-inactive-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "selectablefilterchip/background-inactive-hover" },
+    "selectablefilterchip-background-inactive-focus":    { type: "COLOR", semantic: "surface-default",   figmaPath: "selectablefilterchip/background-inactive-focus" },
+    "selectablefilterchip-background-inactive-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "selectablefilterchip/background-inactive-pressed" },
+    "selectablefilterchip-background-selected-inactive":  { type: "COLOR", semantic: "subtle-primary",    figmaPath: "selectablefilterchip/background-selected-inactive" },
+    "selectablefilterchip-background-selected-inactive-hover":   { type: "COLOR", semantic: "subtle-primary", figmaPath: "selectablefilterchip/background-selected-inactive-hover" },
+    "selectablefilterchip-background-selected-inactive-focus":   { type: "COLOR", semantic: "subtle-primary", figmaPath: "selectablefilterchip/background-selected-inactive-focus" },
+    "selectablefilterchip-background-selected-inactive-pressed": { type: "COLOR", semantic: "subtle-primary", figmaPath: "selectablefilterchip/background-selected-inactive-pressed" },
+
+    // ── CHIP BORDER ──
+    "selectablefilterchip-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "selectablefilterchip/border" },
+    "selectablefilterchip-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "selectablefilterchip/border-hover" },
+    "selectablefilterchip-border-focus":    { type: "COLOR", semantic: "border-default",  figmaPath: "selectablefilterchip/border-focus" },
+    "selectablefilterchip-border-pressed":  { type: "COLOR", semantic: "border-default",  figmaPath: "selectablefilterchip/border-pressed" },
+    "selectablefilterchip-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "selectablefilterchip/border-disabled" },
+    "selectablefilterchip-border-selected":  { type: "COLOR", semantic: "interactive-primary", figmaPath: "selectablefilterchip/border-selected" },
+    "selectablefilterchip-border-selected-hover":  { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "selectablefilterchip/border-selected-hover" },
+    "selectablefilterchip-border-selected-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "selectablefilterchip/border-selected-disabled" },
+    // Border — inactive / selective-inactive. Selective-inactive renders dashed
+    // (see chip-selective-inactive-border-style) to flag a stale/unavailable selection.
+    "selectablefilterchip-border-inactive":          { type: "COLOR", semantic: "border-disabled",     figmaPath: "selectablefilterchip/border-inactive" },
+    "selectablefilterchip-border-inactive-hover":    { type: "COLOR", semantic: "border-disabled",     figmaPath: "selectablefilterchip/border-inactive-hover" },
+    "selectablefilterchip-border-inactive-focus":    { type: "COLOR", semantic: "border-disabled",     figmaPath: "selectablefilterchip/border-inactive-focus" },
+    "selectablefilterchip-border-inactive-pressed":  { type: "COLOR", semantic: "border-disabled",     figmaPath: "selectablefilterchip/border-inactive-pressed" },
+    "selectablefilterchip-border-selected-inactive":  { type: "COLOR", semantic: "interactive-primary", figmaPath: "selectablefilterchip/border-selected-inactive" },
+    "selectablefilterchip-border-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "selectablefilterchip/border-selected-inactive-hover" },
+    "selectablefilterchip-border-selected-inactive-focus":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "selectablefilterchip/border-selected-inactive-focus" },
+    "selectablefilterchip-border-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "selectablefilterchip/border-selected-inactive-pressed" },
+
+    // ── CHIP TEXT ──
+    "selectablefilterchip-text":                  { type: "COLOR", semantic: "text-default",               figmaPath: "selectablefilterchip/text" },
+    "selectablefilterchip-text-hover":            { type: "COLOR", semantic: "text-default",               figmaPath: "selectablefilterchip/text-hover" },
+    "selectablefilterchip-text-focus":            { type: "COLOR", semantic: "text-default",               figmaPath: "selectablefilterchip/text-focus" },
+    "selectablefilterchip-text-pressed":          { type: "COLOR", semantic: "text-default",               figmaPath: "selectablefilterchip/text-pressed" },
+    "selectablefilterchip-text-disabled":         { type: "COLOR", semantic: "text-disabled",              figmaPath: "selectablefilterchip/text-disabled" },
+    "selectablefilterchip-text-selected":          { type: "COLOR", semantic: "text-on-interactive",        figmaPath: "selectablefilterchip/text-selected" },
+    "selectablefilterchip-text-selected-hover":    { type: "COLOR", semantic: "text-on-interactive",        figmaPath: "selectablefilterchip/text-selected-hover" },
+    "selectablefilterchip-text-selected-pressed":  { type: "COLOR", semantic: "text-on-interactive",        figmaPath: "selectablefilterchip/text-selected-pressed" },
+    "selectablefilterchip-text-selected-disabled": { type: "COLOR", semantic: "text-disabled",              figmaPath: "selectablefilterchip/text-selected-disabled" },
+    // Text — inactive / selective-inactive.
+    "selectablefilterchip-text-inactive":          { type: "COLOR", semantic: "text-disabled",        figmaPath: "selectablefilterchip/text-inactive" },
+    "selectablefilterchip-text-inactive-hover":    { type: "COLOR", semantic: "text-disabled",        figmaPath: "selectablefilterchip/text-inactive-hover" },
+    "selectablefilterchip-text-inactive-focus":    { type: "COLOR", semantic: "text-disabled",        figmaPath: "selectablefilterchip/text-inactive-focus" },
+    "selectablefilterchip-text-inactive-pressed":  { type: "COLOR", semantic: "text-disabled",        figmaPath: "selectablefilterchip/text-inactive-pressed" },
+    "selectablefilterchip-text-selected-inactive":  { type: "COLOR", semantic: "interactive-primary",  figmaPath: "selectablefilterchip/text-selected-inactive" },
+    "selectablefilterchip-text-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "selectablefilterchip/text-selected-inactive-hover" },
+    "selectablefilterchip-text-selected-inactive-focus":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "selectablefilterchip/text-selected-inactive-focus" },
+    "selectablefilterchip-text-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "selectablefilterchip/text-selected-inactive-pressed" },
+
+    // ── SUB-LABEL / REMOVE COLORS ──
+    "selectablefilterchip-sublabel-color":          { type: "COLOR", semantic: "text-subtle",  figmaPath: "selectablefilterchip/sublabel-color" },
+    "selectablefilterchip-sublabel-color-selected":  { type: "COLOR", semantic: "text-subtle",  figmaPath: "selectablefilterchip/sublabel-color-selected" },
+    "selectablefilterchip-remove-color":            { type: "COLOR", semantic: "text-default", figmaPath: "selectablefilterchip/remove-color" },
+    "selectablefilterchip-remove-color-selected":    { type: "COLOR", semantic: "text-on-interactive", figmaPath: "selectablefilterchip/remove-color-selected" },
+
+    // ── SHARED COLOR TOKEN ──
+    "selectablefilterchip-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "selectablefilterchip/focus-ring" },
+    // Selective-inactive ("selected but no longer available") treatment: a dashed
+    // border plus a small warning marker in the corner.
+    "selectablefilterchip-selective-inactive-warning-color": { type: "COLOR", semantic: "feedback-error", figmaPath: "selectablefilterchip/selective-inactive-warning-color" },
+    // The badge's ring border and the "!" glyph color.
+    "selectablefilterchip-selective-inactive-warning-border": { type: "COLOR", semantic: "surface-default", figmaPath: "selectablefilterchip/selective-inactive-warning-border" },
+    "selectablefilterchip-selective-inactive-warning-icon": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "selectablefilterchip/selective-inactive-warning-icon" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    // Padding is per-variant so each variant (filled/outline/light) can be tuned
+    // independently. The unselected + selected pairs mirror one another.
+    "selectablefilterchip-padding-x":           { type: "FLOAT", unit: "px", sizes: { default: 24, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "selectablefilterchip/padding-x" },
+    "selectablefilterchip-padding-y":           { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 1, sm: 3, md: 4, lg: 6, xl: 7 },       figmaPath: "selectablefilterchip/padding-y" },
+    "selectablefilterchip-icon-size":       { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 9, sm: 12, md: 14, lg: 16, xl: 18 },               figmaPath: "selectablefilterchip/icon-size" },
+    "selectablefilterchip-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 1.75, xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 },        figmaPath: "selectablefilterchip/icon-stroke-width" },
+    "selectablefilterchip-font-size":       { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 10, sm: 12, md: 14, lg: 16, xl: 18 },              figmaPath: "selectablefilterchip/font-size" },
+    "selectablefilterchip-font-family":     { type: "STRING", value: "Inter", figmaPath: "selectablefilterchip/font-family" },
+    // A distinct label weight per Selective State (Active / Selected / Inactive /
+    // Selective Inactive), so brands can bold the label independently in each.
+    "selectablefilterchip-font-weight":     { type: "STRING", value: "Regular", figmaPath: "selectablefilterchip/font-weight" },
+    "selectablefilterchip-font-weight-selected": { type: "STRING", value: "Regular", figmaPath: "selectablefilterchip/font-weight-selected" },
+    "selectablefilterchip-font-weight-inactive": { type: "STRING", value: "Regular", figmaPath: "selectablefilterchip/font-weight-inactive" },
+    "selectablefilterchip-font-weight-selected-inactive": { type: "STRING", value: "Regular", figmaPath: "selectablefilterchip/font-weight-selected-inactive" },
+    "selectablefilterchip-selective-inactive-border-style": { type: "STRING", value: "dashed", figmaPath: "selectablefilterchip/selective-inactive-border-style" },
+    "selectablefilterchip-line-height":     { type: "FLOAT", unit: "px", sizes: { default: 20, xs: 14, sm: 16, md: 20, lg: 24, xl: 28 }, figmaPath: "selectablefilterchip/line-height" },
+    "selectablefilterchip-radius":          { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },                 figmaPath: "selectablefilterchip/radius" },
+    "selectablefilterchip-spacing":         { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 2, sm: 4, md: 4, lg: 6, xl: 8 },                 figmaPath: "selectablefilterchip/spacing" },
+
+    // ── SUB-LABEL (optional second line) ──
+    "selectablefilterchip-sublabel-font-size":   { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8, sm: 10, md: 12, lg: 14, xl: 16 }, figmaPath: "selectablefilterchip/sublabel-font-size" },
+    "selectablefilterchip-sublabel-line-height": { type: "FLOAT", unit: "px", sizes: { default: 16, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "selectablefilterchip/sublabel-line-height" },
+    "selectablefilterchip-sublabel-spacing":     { type: "FLOAT", unit: "px", value: 2, figmaPath: "selectablefilterchip/sublabel-spacing" },
+
+    // ── REMOVE / APPLIED "×" ICON (optional) ──
+    "selectablefilterchip-remove-size":              { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 9, sm: 12, md: 14, lg: 16, xl: 18 }, figmaPath: "selectablefilterchip/remove-size" },
+    "selectablefilterchip-remove-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 1.75, xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 }, figmaPath: "selectablefilterchip/remove-icon-stroke-width" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "selectablefilterchip-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "selectablefilterchip/border-width" },
+  },
+
+  appliedfilterchip: {
+    // ── CHIP BACKGROUND — UNCHECKED (per state) ──
+    "appliedfilterchip-background":          { type: "COLOR", semantic: "surface-default",            figmaPath: "appliedfilterchip/background" },
+    "appliedfilterchip-background-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "appliedfilterchip/background-hover" },
+    "appliedfilterchip-background-focus":    { type: "COLOR", semantic: "surface-default",            figmaPath: "appliedfilterchip/background-focus" },
+    "appliedfilterchip-background-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "appliedfilterchip/background-pressed" },
+    "appliedfilterchip-background-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "appliedfilterchip/background-disabled" },
+
+    // ── CHIP BACKGROUND — CHECKED — FILLED (per state) ──
+    "appliedfilterchip-background-selected":          { type: "COLOR", semantic: "interactive-primary",         figmaPath: "appliedfilterchip/background-selected" },
+    "appliedfilterchip-background-selected-hover":    { type: "COLOR", semantic: "interactive-primary-hover",   figmaPath: "appliedfilterchip/background-selected-hover" },
+    "appliedfilterchip-background-selected-focus":    { type: "COLOR", semantic: "interactive-primary",         figmaPath: "appliedfilterchip/background-selected-focus" },
+    "appliedfilterchip-background-selected-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "appliedfilterchip/background-selected-pressed" },
+    "appliedfilterchip-background-selected-disabled": { type: "COLOR", semantic: "interactive-disabled",        figmaPath: "appliedfilterchip/background-selected-disabled" },
+
+    // ── CHIP BACKGROUND — CHECKED — LIGHT (per state) ──
+
+    // ── CHIP BACKGROUND — CHECKED — OUTLINE (per state) ──
+
+    // ── CHIP BACKGROUND — INACTIVE (unavailable) / SELECTIVE INACTIVE (selected + unavailable) ──
+    "appliedfilterchip-background-inactive":          { type: "COLOR", semantic: "surface-default",   figmaPath: "appliedfilterchip/background-inactive" },
+    "appliedfilterchip-background-inactive-hover":    { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "appliedfilterchip/background-inactive-hover" },
+    "appliedfilterchip-background-inactive-focus":    { type: "COLOR", semantic: "surface-default",   figmaPath: "appliedfilterchip/background-inactive-focus" },
+    "appliedfilterchip-background-inactive-pressed":  { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "appliedfilterchip/background-inactive-pressed" },
+    "appliedfilterchip-background-selected-inactive":  { type: "COLOR", semantic: "subtle-primary",    figmaPath: "appliedfilterchip/background-selected-inactive" },
+    "appliedfilterchip-background-selected-inactive-hover":   { type: "COLOR", semantic: "subtle-primary", figmaPath: "appliedfilterchip/background-selected-inactive-hover" },
+    "appliedfilterchip-background-selected-inactive-focus":   { type: "COLOR", semantic: "subtle-primary", figmaPath: "appliedfilterchip/background-selected-inactive-focus" },
+    "appliedfilterchip-background-selected-inactive-pressed": { type: "COLOR", semantic: "subtle-primary", figmaPath: "appliedfilterchip/background-selected-inactive-pressed" },
+
+    // ── CHIP BORDER ──
+    "appliedfilterchip-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "appliedfilterchip/border" },
+    "appliedfilterchip-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "appliedfilterchip/border-hover" },
+    "appliedfilterchip-border-focus":    { type: "COLOR", semantic: "border-default",  figmaPath: "appliedfilterchip/border-focus" },
+    "appliedfilterchip-border-pressed":  { type: "COLOR", semantic: "border-default",  figmaPath: "appliedfilterchip/border-pressed" },
+    "appliedfilterchip-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "appliedfilterchip/border-disabled" },
+    "appliedfilterchip-border-selected":  { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/border-selected" },
+    "appliedfilterchip-border-selected-hover":  { type: "COLOR", semantic: "interactive-primary-hover", figmaPath: "appliedfilterchip/border-selected-hover" },
+    "appliedfilterchip-border-selected-pressed":  { type: "COLOR", semantic: "interactive-primary-pressed", figmaPath: "appliedfilterchip/border-selected-pressed" },
+    "appliedfilterchip-border-selected-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "appliedfilterchip/border-selected-disabled" },
+    // Border — inactive / selective-inactive. Selective-inactive renders dashed
+    // (see chip-selective-inactive-border-style) to flag a stale/unavailable selection.
+    "appliedfilterchip-border-inactive":          { type: "COLOR", semantic: "border-disabled",     figmaPath: "appliedfilterchip/border-inactive" },
+    "appliedfilterchip-border-inactive-hover":    { type: "COLOR", semantic: "border-disabled",     figmaPath: "appliedfilterchip/border-inactive-hover" },
+    "appliedfilterchip-border-inactive-focus":    { type: "COLOR", semantic: "border-disabled",     figmaPath: "appliedfilterchip/border-inactive-focus" },
+    "appliedfilterchip-border-inactive-pressed":  { type: "COLOR", semantic: "border-disabled",     figmaPath: "appliedfilterchip/border-inactive-pressed" },
+    "appliedfilterchip-border-selected-inactive":  { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/border-selected-inactive" },
+    "appliedfilterchip-border-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/border-selected-inactive-hover" },
+    "appliedfilterchip-border-selected-inactive-focus":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/border-selected-inactive-focus" },
+    "appliedfilterchip-border-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/border-selected-inactive-pressed" },
+
+    // ── CHIP TEXT ──
+    "appliedfilterchip-text":                  { type: "COLOR", semantic: "text-default",               figmaPath: "appliedfilterchip/text" },
+    "appliedfilterchip-text-hover":            { type: "COLOR", semantic: "text-default",               figmaPath: "appliedfilterchip/text-hover" },
+    "appliedfilterchip-text-focus":            { type: "COLOR", semantic: "text-default",               figmaPath: "appliedfilterchip/text-focus" },
+    "appliedfilterchip-text-pressed":          { type: "COLOR", semantic: "text-default",               figmaPath: "appliedfilterchip/text-pressed" },
+    "appliedfilterchip-text-disabled":         { type: "COLOR", semantic: "text-disabled",              figmaPath: "appliedfilterchip/text-disabled" },
+    "appliedfilterchip-text-selected":          { type: "COLOR", semantic: "text-on-interactive",        figmaPath: "appliedfilterchip/text-selected" },
+    "appliedfilterchip-text-selected-pressed":  { type: "COLOR", semantic: "text-on-interactive",        figmaPath: "appliedfilterchip/text-selected-pressed" },
+    "appliedfilterchip-text-selected-disabled": { type: "COLOR", semantic: "text-disabled",              figmaPath: "appliedfilterchip/text-selected-disabled" },
+    // Text — inactive / selective-inactive.
+    "appliedfilterchip-text-inactive":          { type: "COLOR", semantic: "text-disabled",        figmaPath: "appliedfilterchip/text-inactive" },
+    "appliedfilterchip-text-inactive-hover":    { type: "COLOR", semantic: "text-disabled",        figmaPath: "appliedfilterchip/text-inactive-hover" },
+    "appliedfilterchip-text-inactive-focus":    { type: "COLOR", semantic: "text-disabled",        figmaPath: "appliedfilterchip/text-inactive-focus" },
+    "appliedfilterchip-text-inactive-pressed":  { type: "COLOR", semantic: "text-disabled",        figmaPath: "appliedfilterchip/text-inactive-pressed" },
+    "appliedfilterchip-text-selected-inactive":  { type: "COLOR", semantic: "interactive-primary",  figmaPath: "appliedfilterchip/text-selected-inactive" },
+    "appliedfilterchip-text-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/text-selected-inactive-hover" },
+    "appliedfilterchip-text-selected-inactive-focus":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/text-selected-inactive-focus" },
+    "appliedfilterchip-text-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/text-selected-inactive-pressed" },
+
+    // ── SUB-LABEL / REMOVE COLORS ──
+    "appliedfilterchip-sublabel-color":          { type: "COLOR", semantic: "text-subtle",  figmaPath: "appliedfilterchip/sublabel-color" },
+    "appliedfilterchip-sublabel-color-selected":  { type: "COLOR", semantic: "text-subtle",  figmaPath: "appliedfilterchip/sublabel-color-selected" },
+    "appliedfilterchip-remove-color":            { type: "COLOR", semantic: "text-default", figmaPath: "appliedfilterchip/remove-color" },
+    "appliedfilterchip-remove-color-selected":    { type: "COLOR", semantic: "text-on-interactive", figmaPath: "appliedfilterchip/remove-color-selected" },
+    "appliedfilterchip-remove-color-selected-hover":   { type: "COLOR", semantic: "text-on-interactive", figmaPath: "appliedfilterchip/remove-color-selected-hover" },
+    "appliedfilterchip-remove-color-selected-pressed": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "appliedfilterchip/remove-color-selected-pressed" },
+    // Selective Inactive gets its own remove color (not shared with Selected).
+    "appliedfilterchip-remove-color-selected-inactive":         { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/remove-color-selected-inactive" },
+    "appliedfilterchip-remove-color-selected-inactive-hover":   { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/remove-color-selected-inactive-hover" },
+    "appliedfilterchip-remove-color-selected-inactive-pressed": { type: "COLOR", semantic: "interactive-primary", figmaPath: "appliedfilterchip/remove-color-selected-inactive-pressed" },
+
+    // ── SHARED COLOR TOKEN ──
+    "appliedfilterchip-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "appliedfilterchip/focus-ring" },
+    // Selective-inactive ("selected but no longer available") treatment: a dashed
+    // border plus a small warning marker in the corner.
+    "appliedfilterchip-selective-inactive-warning-color": { type: "COLOR", semantic: "feedback-error", figmaPath: "appliedfilterchip/selective-inactive-warning-color" },
+    // The badge's ring border and the "!" glyph color.
+    "appliedfilterchip-selective-inactive-warning-border": { type: "COLOR", semantic: "surface-default", figmaPath: "appliedfilterchip/selective-inactive-warning-border" },
+    "appliedfilterchip-selective-inactive-warning-icon": { type: "COLOR", semantic: "text-on-interactive", figmaPath: "appliedfilterchip/selective-inactive-warning-icon" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    // Padding is per-variant so each variant (filled/outline/light) can be tuned
+    // independently. The unselected + selected pairs mirror one another.
+    "appliedfilterchip-padding-x":           { type: "FLOAT", unit: "px", sizes: { default: 24, xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "appliedfilterchip/padding-x" },
+    "appliedfilterchip-padding-y":           { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 1, sm: 3, md: 4, lg: 6, xl: 7 },       figmaPath: "appliedfilterchip/padding-y" },
+    "appliedfilterchip-icon-size":       { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 9, sm: 12, md: 14, lg: 16, xl: 18 },               figmaPath: "appliedfilterchip/icon-size" },
+    "appliedfilterchip-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 1.75, xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 },        figmaPath: "appliedfilterchip/icon-stroke-width" },
+    "appliedfilterchip-font-size":       { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 10, sm: 12, md: 14, lg: 16, xl: 18 },              figmaPath: "appliedfilterchip/font-size" },
+    "appliedfilterchip-font-family":     { type: "STRING", value: "Inter", figmaPath: "appliedfilterchip/font-family" },
+    // A distinct label weight per Selective State (Active / Selected / Inactive /
+    // Selective Inactive), so brands can bold the label independently in each.
+    "appliedfilterchip-font-weight":     { type: "STRING", value: "Regular", figmaPath: "appliedfilterchip/font-weight" },
+    "appliedfilterchip-font-weight-selected": { type: "STRING", value: "Regular", figmaPath: "appliedfilterchip/font-weight-selected" },
+    "appliedfilterchip-font-weight-inactive": { type: "STRING", value: "Regular", figmaPath: "appliedfilterchip/font-weight-inactive" },
+    "appliedfilterchip-font-weight-selected-inactive": { type: "STRING", value: "Regular", figmaPath: "appliedfilterchip/font-weight-selected-inactive" },
+    "appliedfilterchip-selective-inactive-border-style": { type: "STRING", value: "dashed", figmaPath: "appliedfilterchip/selective-inactive-border-style" },
+    "appliedfilterchip-line-height":     { type: "FLOAT", unit: "px", sizes: { default: 20, xs: 14, sm: 16, md: 20, lg: 24, xl: 28 }, figmaPath: "appliedfilterchip/line-height" },
+    "appliedfilterchip-radius":          { type: "FLOAT", unit: "px", sizes: { default: 8, xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },                 figmaPath: "appliedfilterchip/radius" },
+    "appliedfilterchip-spacing":         { type: "FLOAT", unit: "px", sizes: { default: 4, xs: 2, sm: 4, md: 4, lg: 6, xl: 8 },                 figmaPath: "appliedfilterchip/spacing" },
+
+    // ── SUB-LABEL (optional second line) ──
+    "appliedfilterchip-sublabel-font-size":   { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8, sm: 10, md: 12, lg: 14, xl: 16 }, figmaPath: "appliedfilterchip/sublabel-font-size" },
+    "appliedfilterchip-sublabel-line-height": { type: "FLOAT", unit: "px", sizes: { default: 16, xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "appliedfilterchip/sublabel-line-height" },
+    "appliedfilterchip-sublabel-spacing":     { type: "FLOAT", unit: "px", value: 2, figmaPath: "appliedfilterchip/sublabel-spacing" },
+
+    // ── REMOVE / APPLIED "×" ICON (optional) ──
+    "appliedfilterchip-remove-size":              { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 9, sm: 12, md: 14, lg: 16, xl: 18 }, figmaPath: "appliedfilterchip/remove-size" },
+    "appliedfilterchip-remove-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 1.75, xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 }, figmaPath: "appliedfilterchip/remove-icon-stroke-width" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "appliedfilterchip-border-width": { type: "FLOAT", unit: "px", value: 1.5, figmaPath: "appliedfilterchip/border-width" },
   },
 
   slider: {
@@ -1958,8 +2093,12 @@ export const COMPONENT_TOKENS = {
     "modal-default-footer-border": { type: "COLOR", semantic: "border-default", figmaPath: "modal/default-footer-border" },
     "modal-default-title": { type: "COLOR", semantic: "text-default", figmaPath: "modal/default-title" },
     "modal-default-body": { type: "COLOR", semantic: "text-default", figmaPath: "modal/default-body" },
-    "modal-default-overlay": { type: "COLOR", semantic: "surface-inverse", figmaPath: "modal/default-overlay" },
+    // Overlay commented out — modal overlay is never used (see ModalPreview / builder).
+    // "modal-default-overlay": { type: "COLOR", semantic: "surface-inverse", figmaPath: "modal/default-overlay" },
     "modal-default-close": { type: "COLOR", semantic: "text-default", figmaPath: "modal/default-close" },
+    // Optional leading header icon (toggled on/off). Glyph color + circular badge background.
+    "modal-default-icon": { type: "COLOR", semantic: "text-default", figmaPath: "modal/default-icon" },
+    "modal-default-icon-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "modal/default-icon-background" },
 
     // ── COLOR TOKENS — FILLED VARIANT (single flat surface color; matches the
     // original modal exactly so existing usage is unchanged) ──
@@ -1971,8 +2110,12 @@ export const COMPONENT_TOKENS = {
     "modal-filled-footer-border": { type: "COLOR", semantic: "border-default", figmaPath: "modal/filled-footer-border" },
     "modal-filled-title": { type: "COLOR", semantic: "text-default", figmaPath: "modal/filled-title" },
     "modal-filled-body": { type: "COLOR", semantic: "text-default", figmaPath: "modal/filled-body" },
-    "modal-filled-overlay": { type: "COLOR", semantic: "surface-inverse", figmaPath: "modal/filled-overlay" },
+    // Overlay commented out — modal overlay is never used (see ModalPreview / builder).
+    // "modal-filled-overlay": { type: "COLOR", semantic: "surface-inverse", figmaPath: "modal/filled-overlay" },
     "modal-filled-close": { type: "COLOR", semantic: "text-default", figmaPath: "modal/filled-close" },
+    // Optional leading header icon (toggled on/off). Glyph color + circular badge background.
+    "modal-filled-icon": { type: "COLOR", semantic: "text-default", figmaPath: "modal/filled-icon" },
+    "modal-filled-icon-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "modal/filled-icon-background" },
 
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
     "modal-width": { type: "FLOAT", unit: "px", sizes: { default: 420, xs: 280, sm: 340, md: 420, lg: 520, xl: 640 }, figmaPath: "modal/width" },
@@ -1982,8 +2125,10 @@ export const COMPONENT_TOKENS = {
     // These are per-variant so the two modal styles can size/space independently.
     "modal-default-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/default-padding-x" },
     "modal-default-padding-y": { type: "FLOAT", unit: "px", value: 14, figmaPath: "modal/default-padding-y" },
-    "modal-default-header-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/default-header-padding-x" },
-    "modal-default-header-padding-y": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/default-header-padding-y" },
+    "modal-default-header-padding-top": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/default-header-padding-top" },
+    "modal-default-header-padding-right": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/default-header-padding-right" },
+    "modal-default-header-padding-bottom": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/default-header-padding-bottom" },
+    "modal-default-header-padding-left": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/default-header-padding-left" },
     "modal-default-body-padding-top": { type: "FLOAT", unit: "px", value: 0, figmaPath: "modal/default-body-padding-top" },
     "modal-default-body-padding-right": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/default-body-padding-right" },
     "modal-default-body-padding-bottom": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/default-body-padding-bottom" },
@@ -2005,8 +2150,10 @@ export const COMPONENT_TOKENS = {
     // ── SPACING + TYPOGRAPHY + BORDER-WIDTH — FILLED VARIANT ──
     "modal-filled-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/filled-padding-x" },
     "modal-filled-padding-y": { type: "FLOAT", unit: "px", value: 14, figmaPath: "modal/filled-padding-y" },
-    "modal-filled-header-padding-x": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/filled-header-padding-x" },
-    "modal-filled-header-padding-y": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/filled-header-padding-y" },
+    "modal-filled-header-padding-top": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/filled-header-padding-top" },
+    "modal-filled-header-padding-right": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/filled-header-padding-right" },
+    "modal-filled-header-padding-bottom": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/filled-header-padding-bottom" },
+    "modal-filled-header-padding-left": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/filled-header-padding-left" },
     "modal-filled-body-padding-top": { type: "FLOAT", unit: "px", value: 0, figmaPath: "modal/filled-body-padding-top" },
     "modal-filled-body-padding-right": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/filled-body-padding-right" },
     "modal-filled-body-padding-bottom": { type: "FLOAT", unit: "px", value: 12, figmaPath: "modal/filled-body-padding-bottom" },
@@ -2026,8 +2173,13 @@ export const COMPONENT_TOKENS = {
     "modal-filled-border-width": { type: "FLOAT", unit: "px", value: 1, figmaPath: "modal/filled-border-width" },
 
     // ── SHARED FLOAT TOKENS (apply to both variants) ──
-    "modal-overlay-opacity": { type: "FLOAT", unit: "", value: 45, figmaPath: "modal/overlay-opacity" },
+    // Overlay opacity commented out — modal overlay is never used.
+    // "modal-overlay-opacity": { type: "FLOAT", unit: "", value: 45, figmaPath: "modal/overlay-opacity" },
     "modal-close-icon-stroke-width": { type: "FLOAT", unit: "px", value: 2, figmaPath: "modal/close-icon-stroke-width" },
+    "modal-close-icon-size": { type: "FLOAT", unit: "px", value: 16, figmaPath: "modal/close-icon-size" },
+    // Optional header icon sizing: the glyph and the circular badge behind it.
+    "modal-icon-size": { type: "FLOAT", unit: "px", value: 32, figmaPath: "modal/icon-size" },
+    "modal-icon-background-size": { type: "FLOAT", unit: "px", value: 50, figmaPath: "modal/icon-background-size" },
   },
 
   textinput: {
@@ -2576,7 +2728,17 @@ export const COMPONENT_TOKENS = {
     "table-header-text": { type: "COLOR", semantic: "text-default", figmaPath: "table/header-text" },
     "table-cell-text": { type: "COLOR", semantic: "text-default", figmaPath: "table/cell-text" },
     "table-cell-secondary": { type: "COLOR", semantic: "text-subtle", figmaPath: "table/cell-secondary" },
+    /** Status/icon color for the Icon cell (e.g. the "Investigating" warning glyph).
+     *  Distinct from cell text so the icon can be tinted independently. On hovered/
+     *  active rows the icon follows the row state via row-hover-text / row-active-text. */
+    "table-cell-icon": { type: "COLOR", semantic: "text-default", figmaPath: "table/cell-icon" },
     "table-row-hover": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "table/row-hover" },
+    /** Cell text color when a row is hovered. */
+    "table-row-hover-text": { type: "COLOR", semantic: "text-default", figmaPath: "table/row-hover-text" },
+    /** Active/selected row background (stronger than hover). */
+    "table-row-active": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "table/row-active" },
+    /** Cell text color when a row is active/selected. */
+    "table-row-active-text": { type: "COLOR", semantic: "text-default", figmaPath: "table/row-active-text" },
     "table-progress-track": { type: "COLOR", semantic: "surface-secondary", figmaPath: "table/progress-track" },
     "table-progress-fill": { type: "COLOR", semantic: "interactive-primary", figmaPath: "table/progress-fill" },
     "table-sort-icon": { type: "COLOR", semantic: "text-subtle", figmaPath: "table/sort-icon" },
@@ -2622,8 +2784,12 @@ export const COMPONENT_TOKENS = {
     /** Thin rule under each body row (Figma steel/7 → `border-default`). */
     "densetable-row-divider": { type: "COLOR", semantic: "border-default", figmaPath: "densetable/row-divider" },
     "densetable-row-hover": { type: "COLOR", semantic: "interactive-secondary-hover", figmaPath: "densetable/row-hover" },
+    /** Cell text color when a row is hovered. */
+    "densetable-row-hover-text": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/row-hover-text" },
     /** Active/selected row background (stronger than hover). */
     "densetable-row-active": { type: "COLOR", semantic: "interactive-secondary", figmaPath: "densetable/row-active" },
+    /** Cell text color when a row is active/selected. */
+    "densetable-row-active-text": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/row-active-text" },
     /** Last-column action button (Figma steel/8 → `surface-secondary`). */
     "densetable-action-background": { type: "COLOR", semantic: "surface-secondary", figmaPath: "densetable/action-background" },
     "densetable-action-icon": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/action-icon" },
@@ -2632,7 +2798,6 @@ export const COMPONENT_TOKENS = {
     "densetable-expansion-border": { type: "COLOR", semantic: "border-default", figmaPath: "densetable/expansion-border" },
     "densetable-expansion-text": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/expansion-text" },
     /** Cell content variants (Text | Flag | Icon | Detection). */
-    "densetable-flag-border": { type: "COLOR", semantic: "border-default", figmaPath: "densetable/flag-border" },
     /** Icon variant: a leading icon + text. */
     "densetable-icon-color": { type: "COLOR", semantic: "feedback-error", figmaPath: "densetable/icon-color" },
     "densetable-icon-text": { type: "COLOR", semantic: "text-default", figmaPath: "densetable/icon-text" },
@@ -2797,6 +2962,8 @@ export const COMPONENT_NAMES = [
 // version of its key. Single source of truth for the app, docs export, and sync UI.
 export const COMPONENT_DISPLAY_NAMES = {
   actionicon: "ActionIcon",
+  selectablefilterchip: "Selectable Filter Chip",
+  appliedfilterchip: "Applied Filter Chip",
   textinput: "TextInput",
   rangeslider: "RangeSlider",
   multiselect: "MultiSelect",
@@ -2840,6 +3007,8 @@ export const COMPONENT_SIZE_KEYS = {
   checkbox: ["xs", "sm", "md", "lg", "xl"],
   radio: ["xs", "sm", "md", "lg", "xl"],
   chip: ["default", "xs", "sm", "md", "lg", "xl"],
+  selectablefilterchip: ["default", "xs", "sm", "md", "lg", "xl"],
+  appliedfilterchip: ["default", "xs", "sm", "md", "lg", "xl"],
   slider: ["default", "xs", "sm", "md", "lg", "xl"],
   rangeslider: ["default", "xs", "sm", "md", "lg", "xl"],
   card: ["default", "xs", "sm", "md", "lg", "xl"],

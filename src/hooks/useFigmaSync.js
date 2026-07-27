@@ -7,6 +7,15 @@ export function useFigmaSync() {
   const [pluginConnected, setPluginConnected] = useState(false);
   const [error, setError] = useState(null);
   const [lastSyncMessage, setLastSyncMessage] = useState(null);
+  // Determinate build progress + a heartbeat timestamp. `updatedAt` lets the UI
+  // tell a genuine stall (no message for a long time) from a slow-but-alive
+  // build. `current`/`total` come from the plugin's per-component step messages.
+  const [syncProgress, setSyncProgress] = useState({
+    current: 0,
+    total: 0,
+    updatedAt: 0,
+    startedAt: 0,
+  });
   const wsRef = useRef(null);
   const reconnectRef = useRef(null);
   // Tracks whether the hook is still mounted. Without this, an intentional
@@ -50,6 +59,12 @@ export function useFigmaSync() {
           if (msg.success) {
             setStatus("success");
             setLastSyncMessage(msg.message || "Sync complete");
+            // Snap the bar to 100% on success.
+            setSyncProgress((p) => ({
+              ...p,
+              current: p.total > 0 ? p.total : p.current,
+              updatedAt: Date.now(),
+            }));
           } else {
             setStatus("error");
             setError(msg.error || "Unknown error");
@@ -57,6 +72,16 @@ export function useFigmaSync() {
           break;
         case "sync-progress":
           setLastSyncMessage(msg.message);
+          setSyncProgress((p) => {
+            const hasCounts =
+              typeof msg.current === "number" && typeof msg.total === "number";
+            return {
+              current: hasCounts ? msg.current : p.current,
+              total: hasCounts ? msg.total : p.total,
+              updatedAt: Date.now(),
+              startedAt: p.startedAt || Date.now(),
+            };
+          });
           break;
         case "error":
           setError(msg.message);
@@ -113,8 +138,9 @@ export function useFigmaSync() {
     setStatus("syncing");
     setError(null);
     setLastSyncMessage(null);
+    setSyncProgress({ current: 0, total: 0, updatedAt: Date.now(), startedAt: Date.now() });
     wsRef.current.send(JSON.stringify({ type: "sync-tokens", payload }));
   }, [pluginConnected]);
 
-  return { status, pluginConnected, sync, error, lastSyncMessage };
+  return { status, pluginConnected, sync, error, lastSyncMessage, syncProgress };
 }

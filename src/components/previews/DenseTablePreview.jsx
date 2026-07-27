@@ -51,7 +51,7 @@ function CloseIcon({ color, size = 10, strokeWidth = 1.25 }) {
 // Flag cell — a small country flag (no label), compact for a dense table.
 // This is only a neutral stand-in; in Figma the Flag variant auto-swaps to the
 // real flag component from the file's "Flags" set.
-function FlagCell({ w, h, radius, border }) {
+function FlagCell({ w, h, radius }) {
   return (
     <div
       style={{
@@ -59,7 +59,6 @@ function FlagCell({ w, h, radius, border }) {
         height: h,
         borderRadius: radius,
         overflow: "hidden",
-        border: `1px solid ${border}`,
         boxSizing: "border-box",
         flexShrink: 0,
         display: "flex",
@@ -166,13 +165,14 @@ export default function DenseTablePreview({
       cellText: pick("densetable-cell-text"),
       rowDivider: pick("densetable-row-divider"),
       rowHover: pick("densetable-row-hover"),
+      rowHoverText: pick("densetable-row-hover-text"),
       rowActive: pick("densetable-row-active"),
+      rowActiveText: pick("densetable-row-active-text"),
       actionBg: pick("densetable-action-background"),
       actionIcon: pick("densetable-action-icon"),
       expansionBg: pick("densetable-expansion-background"),
       expansionBorder: pick("densetable-expansion-border"),
       expansionText: pick("densetable-expansion-text"),
-      flagBorder: pick("densetable-flag-border"),
       iconColor: pick("densetable-icon-color"),
       iconText: pick("densetable-icon-text"),
       detectionIcon: pick("densetable-detection-icon"),
@@ -280,12 +280,18 @@ export default function DenseTablePreview({
             // active highlight has no stray border cutting across its top edge.
             const nextRowActive = showRowActive && r + 1 === activeRow;
             // Hover takes precedence over the persistent active highlight.
-            const rowBg =
-              showRowHover && hoveredRow === r
-                ? colors.rowHover
-                : isActiveRow
-                ? colors.rowActive
-                : "transparent";
+            const isHoveredRow = showRowHover && hoveredRow === r;
+            const rowBg = isHoveredRow
+              ? colors.rowHover
+              : isActiveRow
+              ? colors.rowActive
+              : "transparent";
+            // Cell text follows the same precedence: hover > active > default.
+            const cellTextColor = isHoveredRow
+              ? colors.rowHoverText
+              : isActiveRow
+              ? colors.rowActiveText
+              : colors.cellText;
             return (
               <div key={`row-${r}`}>
                 <div
@@ -348,7 +354,7 @@ export default function DenseTablePreview({
                             )}
                           </button>
                         ) : cellType === "flag" ? (
-                          <FlagCell w={flagW} h={flagH} radius={flagRadius} border={colors.flagBorder} />
+                          <FlagCell w={flagW} h={flagH} radius={flagRadius} />
                         ) : cellType === "icon" ? (
                           <IconCell
                             iconColor={colors.iconColor}
@@ -365,7 +371,7 @@ export default function DenseTablePreview({
                             style={{
                               fontSize: cellFont,
                               fontWeight: cellWeight,
-                              color: colors.cellText,
+                              color: cellTextColor,
                               whiteSpace: "nowrap",
                               overflow: "hidden",
                               textOverflow: "ellipsis",

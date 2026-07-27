@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { buildExportPayload } from "../utils/buildExportPayload";
 import { TOKEN_LOCK_VERSION } from "../utils/buildTokenLock";
 import { diffTokenPayloads, formatTokenChangelog, isEmptyDiff } from "../utils/diffTokenPayloads";
@@ -106,6 +106,8 @@ const BUILDABLE_COMPONENTS = [
   "checkbox",
   "radio",
   "chip",
+  "selectablefilterchip",
+  "appliedfilterchip",
   "notification",
   "alert",
   "modal",
@@ -167,6 +169,8 @@ const BUILDABLE_SECTIONS = [
 
 const COMPONENT_LABELS = {
   actionicon: "ActionIcon",
+  selectablefilterchip: "Selectable Filter Chip",
+  appliedfilterchip: "Applied Filter Chip",
   chart: "Bar Chart",
   "chart-line": "Line Chart",
   "chart-time-series": "Time Series Chart",
@@ -194,8 +198,37 @@ const COMPONENT_LABELS = {
   list: "List",
 };
 
+// A build that hasn't emitted any progress for this long is treated as
+// "possibly stuck" and the panel surfaces a warning. Big selections are slow
+// but still chatty (a message per component), so a ~25s gap is a real stall.
+const STALL_WARN_MS = 25000;
+
+function formatDuration(ms) {
+  const total = Math.max(0, Math.round(ms / 1000));
+  const mins = Math.floor(total / 60);
+  const secs = total % 60;
+  return mins > 0 ? `${mins}m ${secs}s` : `${secs}s`;
+}
+
 export default function FigmaSyncButton({ brands, syncBuildOptions }) {
-  const { status, pluginConnected, sync, error, lastSyncMessage } = useFigmaSync();
+  const { status, pluginConnected, sync, error, lastSyncMessage, syncProgress } = useFigmaSync();
+
+  // Tick once a second while syncing so elapsed time and the stall detector
+  // stay live without spamming re-renders the rest of the time.
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    if (status !== "syncing") return undefined;
+    setNow(Date.now());
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, [status]);
+
+  const isSyncing = status === "syncing";
+  const { current, total, updatedAt, startedAt } = syncProgress;
+  const elapsedMs = startedAt ? now - startedAt : 0;
+  const sinceUpdateMs = updatedAt ? now - updatedAt : 0;
+  const isStalled = isSyncing && updatedAt > 0 && sinceUpdateMs > STALL_WARN_MS;
+  const pct = total > 0 ? Math.min(100, Math.round((current / total) * 100)) : null;
   // Default to scoped builds with an empty selection so a sync can never
   // accidentally regenerate every component — the user must opt in to "All
   // components" or explicitly pick which components to build.
@@ -690,9 +723,101 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
         </button>
       </div>
 
+      {isSyncing && (
+        <div
+          style={{
+            display: "flex",
+            flexDirection: "column",
+            gap: 6,
+            border: `1px solid ${isStalled ? "#5c4a1a" : "#2c2f36"}`,
+            borderRadius: 6,
+            padding: 10,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+            <span style={{ fontSize: 11, fontWeight: 600, color: "#CED4DA" }}>
+              {pct != null ? `Building ${current} / ${total} components` : "Syncing…"}
+            </span>
+            <span style={{ fontSize: 11, color: "#868E96", fontVariantNumeric: "tabular-nums" }}>
+              {pct != null ? `${pct}% · ` : ""}
+              {formatDuration(elapsedMs)}
+            </span>
+          </div>
+
+          <div
+            style={{
+              position: "relative",
+              height: 6,
+              borderRadius: 3,
+              background: "#2c2f36",
+              overflow: "hidden",
+            }}
+          >
+            {pct != null ? (
+              <div
+                style={{
+                  height: "100%",
+                  width: `${pct}%`,
+                  background: isStalled ? "#FAB005" : "#228BE6",
+                  borderRadius: 3,
+                  transition: "width 0.3s ease",
+                }}
+              />
+            ) : (
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  height: "100%",
+                  width: "35%",
+                  background: isStalled ? "#FAB005" : "#228BE6",
+                  borderRadius: 3,
+                  animation: "dsg-indeterminate 1.2s ease-in-out infinite",
+                }}
+              />
+            )}
+          </div>
+
+          {lastSyncMessage && (
+            <span
+              style={{
+                fontSize: 10,
+                color: "#868E96",
+                whiteSpace: "nowrap",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+              }}
+              title={lastSyncMessage}
+            >
+              {lastSyncMessage}
+            </span>
+          )}
+
+          {isStalled ? (
+            <span style={{ fontSize: 10, color: "#FAB005", lineHeight: 1.4 }}>
+              No update for {formatDuration(sinceUpdateMs)}. It may be stuck — check the
+              plugin window's log in Figma. If it's frozen, close the plugin and re-run
+              the sync (large selections can still take a few minutes).
+            </span>
+          ) : (
+            <span style={{ fontSize: 10, color: "#495057" }}>
+              Last update {formatDuration(sinceUpdateMs)} ago
+            </span>
+          )}
+
+          <style>{`
+            @keyframes dsg-indeterminate {
+              0% { left: -35%; }
+              100% { left: 100%; }
+            }
+          `}</style>
+        </div>
+      )}
+
       {selectionError && <span style={{ fontSize: 11, color: "#FA5252" }}>{selectionError}</span>}
       {error && <span style={{ fontSize: 11, color: "#FA5252" }}>{error}</span>}
-      {lastSyncMessage && !error && (
+      {lastSyncMessage && !error && !isSyncing && (
         <span style={{ fontSize: 11, color: "#51CF66" }}>{lastSyncMessage}</span>
       )}
       {lockMessage && (

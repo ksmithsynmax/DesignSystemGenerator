@@ -1102,7 +1102,7 @@ function resolveManagedComponentKeyFromName(name) {
   if (chartAliases[normalized]) return chartAliases[normalized];
   var managedKeys = [
     "button", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "checkbox", "radio",
-    "chip", "notification", "alert", "modal", "tooltip", "popover", "menu", "divider", "list", "loader",
+    "chip", "selectablefilterchip", "appliedfilterchip", "notification", "alert", "modal", "tooltip", "popover", "menu", "divider", "list", "loader",
     "progress",
     "chartstackedarea",
     "chartstackedbar",
@@ -1292,6 +1292,16 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     progress("Building all components.");
   }
 
+  // Determinate progress for the component-build phase. `progressTotal` is the
+  // number of component sets we're actually going to build (0 => "all" mode, in
+  // which case the UI shows an indeterminate/elapsed indicator instead of a %).
+  // buildSet() bumps `progressBuilt` and emits current/total so the React panel
+  // can draw a real progress bar and tell a genuine stall from a slow-but-alive
+  // build (a big selection legitimately takes minutes — every variant is
+  // recreated from scratch, so e.g. Radio alone is ~240 nodes).
+  var progressBuilt = 0;
+  var progressTotal = requestedSet ? Object.keys(requestedSet).length : 0;
+
   // Remove previously generated sets for selected components only.
   await cleanupExistingComponents(page, requestedSet);
 
@@ -1355,7 +1365,8 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
       progress("Skipping " + name + " component set...");
       return null;
     }
-    progress("Creating " + name + " component set...");
+    progressBuilt++;
+    progressStep("Creating " + name + " component set...", progressBuilt, progressTotal);
     var preExistingChildren = page.children.slice();
     try {
       return await builder();
@@ -1399,6 +1410,12 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   });
   var chipSet = await buildSet("Chip", function () {
     return buildChipComponentSet(varMap, page, font);
+  });
+  var selectableFilterChipSet = await buildSet("SelectableFilterChip", function () {
+    return buildSelectableFilterChipComponentSet(varMap, page, font);
+  });
+  var appliedFilterChipSet = await buildSet("AppliedFilterChip", function () {
+    return buildAppliedFilterChipComponentSet(varMap, page, font);
   });
   var loaderSet = await buildSet("Loader", function () {
     return buildLoaderComponentSet(varMap, page, font, resolvedComponentFloat);
@@ -1583,6 +1600,8 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     checkboxSet,
     radioSet,
     chipSet,
+    selectableFilterChipSet,
+    appliedFilterChipSet,
     loaderSet,
     progressSet,
     chartSet,
@@ -2885,8 +2904,22 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     var hasTextWeights = textWeights.length > 0;
     var hasTextColors = textColors.length > 0;
     var hasVariants = variants.length > 0;
-    var hasSizes = sizes.length > 0;
+    // The filter chips only ship a single "Default" size, so their docs shouldn't
+    // render a Sizes section (it would show just one example).
+    var hasSizes = sizes.length > 0 &&
+      lowerSetName !== "selectablefilterchip" &&
+      lowerSetName !== "appliedfilterchip";
     var hasStates = states.length > 0;
+    // The composed Table and DenseTable both ship a State axis (Default/Hover/Active)
+    // so designers can flip row state from a single dropdown. Their docs, however,
+    // present those states via the dedicated custom "States" cards (and keep the
+    // plain default "Example" preview), so drop the axis from the GENERIC
+    // states/preview pipeline here — the custom section still resolves State via
+    // `stateKey` below.
+    if (lowerSetName === "table" || lowerSetName === "densetable") {
+      states = [];
+      hasStates = false;
+    }
     var hasIcons = getPropValues(variantProps, "LeftIcon").length > 0 || getPropValues(variantProps, "RightIcon").length > 0;
 
     var useTemplateForSet =
@@ -4373,7 +4406,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
     }
 
     var statesSlot = null;
-    if (hasStates) {
+    // Table carries a State axis (Default/Hover/Active) but documents those row
+    // states via the dedicated custom "States" cards below — skip the generic one
+    // so the section isn't duplicated.
+    if (hasStates && lowerSetName !== "table") {
       doc.appendChild(createSectionHeader("States", "Interactive states used in documentation examples.", DOC_COLORS.subtitle));
       statesSlot = createPanel("slot:" + slug + ":states", 10);
       statesSlot.resize(1192, statesSlot.height);
@@ -4461,6 +4497,20 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       }
     }
 
+    // Modal: a dedicated example of the optional header icon. The icon is only
+    // available on the filled variant, so this example uses Filled + the
+    // full-width actions layout.
+    var modalIconSlot = null;
+    if (lowerSetName === "modal" && getPropKey(variantProps, "Icon")) {
+      var modalDocIconValues = getPropValues(variantProps, "Icon");
+      if (modalDocIconValues.indexOf("On") >= 0) {
+        doc.appendChild(createSectionHeader("Icon", "Optional header icon, shown on the filled variant.", DOC_COLORS.subtitle));
+        modalIconSlot = createPanel("slot:" + slug + ":modal-icon", 10);
+        modalIconSlot.resize(1192, modalIconSlot.height);
+        doc.appendChild(modalIconSlot);
+      }
+    }
+
     // Calendar documents the optional date-field header as a dedicated example,
     // separate from the View variants (which render header-off).
     var calendarHeaderSlot = null;
@@ -4471,6 +4521,20 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         calendarHeaderSlot = createPanel("slot:" + slug + ":calendar-header", 10);
         calendarHeaderSlot.resize(1192, calendarHeaderSlot.height);
         doc.appendChild(calendarHeaderSlot);
+      }
+    }
+
+    // Checkbox / Radio document their optional text label as a dedicated example.
+    // The Variants/States examples render label-off, so this shows the control
+    // with its label turned on.
+    var controlLabelSlot = null;
+    if ((lowerSetName === "checkbox" || lowerSetName === "radio") && getPropKey(variantProps, "Label")) {
+      var controlLabelValues = getPropValues(variantProps, "Label");
+      if (controlLabelValues.indexOf("Show") >= 0) {
+        doc.appendChild(createSectionHeader("Label", "Optional text label shown next to the control.", DOC_COLORS.subtitle));
+        controlLabelSlot = createPanel("slot:" + slug + ":label", 10);
+        controlLabelSlot.resize(1192, controlLabelSlot.height);
+        doc.appendChild(controlLabelSlot);
       }
     }
 
@@ -4520,6 +4584,23 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       doc.appendChild(overflowOutlinedBlock);
     }
 
+    // DenseTable documents its row Hover / Active (selected) states as a dedicated
+    // section — the states live as per-cell BOOLEAN toggles on DenseTableBody, so
+    // they aren't picked up by the generic (State-axis) States section.
+    var denseStatesHoverSlot = null;
+    var denseStatesActiveSlot = null;
+    if (lowerSetName === "densetable" || lowerSetName === "table") {
+      doc.appendChild(createSectionHeader("States", "Row hover and active (selected) states.", DOC_COLORS.subtitle));
+      // Hover and Active each get their own card so the two states read as
+      // distinct examples (rather than stacked inside a single panel).
+      denseStatesHoverSlot = createPanel("slot:" + slug + ":states-hover", 10);
+      denseStatesHoverSlot.resize(1192, denseStatesHoverSlot.height);
+      doc.appendChild(denseStatesHoverSlot);
+      denseStatesActiveSlot = createPanel("slot:" + slug + ":states-active", 10);
+      denseStatesActiveSlot.resize(1192, denseStatesActiveSlot.height);
+      doc.appendChild(denseStatesActiveSlot);
+    }
+
     if (set.type === "COMPONENT_SET" || set.type === "COMPONENT") {
       var baseComponent = resolveBaseComponent(set);
       if (!baseComponent) {
@@ -4552,6 +4633,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       var orientationKey = getPropKey(variantProps, "Orientation");
       var insetKey = getPropKey(variantProps, "Inset");
       var colorKey = getPropKey(variantProps, "Color");
+      // Filter chips (Selectable / Applied) carry an extra "Selective State" axis
+      // (Active | Selected | Inactive | Selective Inactive) beyond interaction State.
+      var isSelectiveChip = (lowerSetName === "selectablefilterchip" || lowerSetName === "appliedfilterchip");
+      var selectiveKey = getPropKey(variantProps, "Selective State");
+      var orderedSelective = selectiveKey
+        ? pickOrdered(getPropValues(variantProps, selectiveKey), ["Active", "Selected", "Inactive", "Selective Inactive"])
+        : [];
 
       var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
       var variantLimit = lowerSetName === "tablebody"
@@ -4980,7 +5068,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       if (sizeSlot && orderedSizes.length > 0) {
         clearChildren(sizeSlot);
-        if (lowerSetName === "switch" || lowerSetName === "pill" || lowerSetName === "badge") {
+        if (
+          lowerSetName === "switch" ||
+          lowerSetName === "pill" ||
+          lowerSetName === "badge" ||
+          lowerSetName === "checkbox" ||
+          lowerSetName === "radio"
+        ) {
           sizeSlot.fills = [];
           sizeSlot.strokes = [];
           sizeSlot.strokeWeight = 0;
@@ -5058,9 +5152,30 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             { itemsPerRow: 4 }
           );
         } else if ((lowerSetName === "checkbox" || lowerSetName === "radio") && checkedKey && checkedOnValue != null) {
-          addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
-            return makeInstance({ Size: sizeName, Checked: checkedOnValue });
-          }, false);
+          // Document sizes with the label off and on in separate cards so both
+          // can be compared (same pattern as Switch's Checked Off/On).
+          var ctrlLabelVals = getPropValues(variantProps, "Label");
+          var ctrlLabelHide = ctrlLabelVals.indexOf("Hide") >= 0 ? "Hide" : (ctrlLabelVals[0] || null);
+          var ctrlLabelShow = ctrlLabelVals.indexOf("Show") >= 0 ? "Show" : null;
+          function makeCtrlSizeInstance(sizeName, labelValue) {
+            var patch = { Size: sizeName, Checked: checkedOnValue };
+            if (labelValue != null) patch.Label = labelValue;
+            return makeInstance(patch);
+          }
+          var ctrlSizeOffPanel = createPanel(slug + "-size-label-off-panel", 10);
+          ctrlSizeOffPanel.resize(1192, ctrlSizeOffPanel.height);
+          sizeSlot.appendChild(ctrlSizeOffPanel);
+          addInstancesRow(ctrlSizeOffPanel, "Label Off", orderedSizes, function (sizeName) {
+            return makeCtrlSizeInstance(sizeName, ctrlLabelHide);
+          }, true, { font: mediumFont, size: 14 });
+          if (ctrlLabelShow != null) {
+            var ctrlSizeOnPanel = createPanel(slug + "-size-label-on-panel", 10);
+            ctrlSizeOnPanel.resize(1192, ctrlSizeOnPanel.height);
+            sizeSlot.appendChild(ctrlSizeOnPanel);
+            addInstancesRow(ctrlSizeOnPanel, "Label On", orderedSizes, function (sizeName) {
+              return makeCtrlSizeInstance(sizeName, ctrlLabelShow);
+            }, true, { font: mediumFont, size: 14 });
+          }
         } else if (lowerSetName === "switch" && checkedKey && checkedOn != null) {
           var switchSizeOffPanel = createPanel("switch-size-checked-off-panel", 10);
           switchSizeOffPanel.resize(1192, switchSizeOffPanel.height);
@@ -5223,6 +5338,84 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         }
       }
 
+      if ((lowerSetName === "densetable" || lowerSetName === "table") && denseStatesHoverSlot && denseStatesActiveSlot) {
+        clearChildren(denseStatesHoverSlot);
+        clearChildren(denseStatesActiveSlot);
+
+        // Body cell instance name differs between the two tables.
+        var stateCellName = lowerSetName === "table" ? "TableBody" : "DenseTableBody";
+
+        // Render on the plain (Default) table so the highlighted row reads clearly.
+        var denseStatesVariant = defaultVariant;
+        for (var dsi = 0; dsi < orderedVariants.length; dsi++) {
+          if (String(orderedVariants[dsi]).toLowerCase() === "default") {
+            denseStatesVariant = orderedVariants[dsi];
+            break;
+          }
+        }
+
+        // Flip a BOOLEAN prop on a nested instance by its base label (the property
+        // key carries a "#id" suffix we have to match past).
+        function denseDocsSetBool(inst, label, value) {
+          if (!inst) return;
+          try {
+            var props = inst.componentProperties || {};
+            var keys = Object.keys(props);
+            for (var i = 0; i < keys.length; i++) {
+              if (keys[i].split("#")[0] !== label) continue;
+              if (String(props[keys[i]].type).toUpperCase() !== "BOOLEAN") continue;
+              var patch = {};
+              patch[keys[i]] = value;
+              inst.setProperties(patch);
+              return;
+            }
+          } catch (_eDocBool) {}
+        }
+
+        // Build a Default DenseTable and turn a single body row's cells on for the
+        // given state (label "Hover" => Hover prop, "Active" => Selected prop).
+        function makeDenseStateExample(stateLabel) {
+          var patch = {};
+          if (variantKey && denseStatesVariant != null) patch[variantPropName] = denseStatesVariant;
+          // Both the composed Table and DenseTable ship State variants
+          // (Default/Hover/Active), so just flip the axis instead of drilling into
+          // cells. (The per-cell drilling below stays as a fallback if the State
+          // axis somehow isn't present.)
+          if ((lowerSetName === "table" || lowerSetName === "densetable") && stateKey) {
+            patch.State = String(stateLabel).toLowerCase() === "hover" ? "Hover" : "Active";
+            return makeInstance(patch);
+          }
+          var inst = makeInstance(patch);
+          if (!inst) return null;
+          var boolProp = String(stateLabel).toLowerCase() === "hover" ? "Hover" : "Selected";
+          var rowFrame = null;
+          try { rowFrame = inst.findOne(function (n) { return n.name === "Row 2"; }); } catch (_eRow) {}
+          var cells = [];
+          if (rowFrame && typeof rowFrame.findAll === "function") {
+            try { cells = rowFrame.findAll(function (n) { return n.type === "INSTANCE" && n.name === stateCellName; }); } catch (_eCells) {}
+          }
+          for (var ci = 0; ci < cells.length; ci++) denseDocsSetBool(cells[ci], boolProp, true);
+          return inst;
+        }
+
+        addInstancesRow(
+          denseStatesHoverSlot,
+          "States",
+          ["Hover"],
+          function (label) { return makeDenseStateExample(label); },
+          false,
+          { itemsPerRow: 1, rowItemSpacing: 24 }
+        );
+        addInstancesRow(
+          denseStatesActiveSlot,
+          "States",
+          ["Active"],
+          function (label) { return makeDenseStateExample(label); },
+          false,
+          { itemsPerRow: 1, rowItemSpacing: 24 }
+        );
+      }
+
       if (
         bothSlot &&
         leftIconKey &&
@@ -5259,7 +5452,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       if (statesSlot && states.length > 0) {
         clearChildren(statesSlot);
-        if (lowerSetName === "switch" || lowerSetName === "checkbox" || lowerSetName === "radio") {
+        if (lowerSetName === "switch" || lowerSetName === "checkbox" || lowerSetName === "radio" || isSelectiveChip) {
           statesSlot.fills = [];
           statesSlot.strokes = [];
           statesSlot.strokeWeight = 0;
@@ -5372,6 +5565,39 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
               statesSlot.appendChild(variantStatesBlock);
             })(radioVariants[rvi]);
+          }
+        } else if (isSelectiveChip && selectiveKey && orderedSelective.length > 0) {
+          // Filter chips: one block per variant (Filled / Light / Outline) and,
+          // within each, one row per Selective State (Active, Selected, Inactive,
+          // Selective Inactive) iterating the interaction states across the row.
+          var fcVariants = (variantKey && orderedVariants.length > 0)
+            ? orderedVariants.slice(0, 3)
+            : [null];
+          for (var fcvi = 0; fcvi < fcVariants.length; fcvi++) {
+            (function (fcVariantName) {
+              var variantPatch = {};
+              if (fcVariantName) variantPatch.Variant = fcVariantName;
+              var variantStatesBlock = createStack("filterchip-states-block-" + normalizeName(fcVariantName || "default"), 8);
+              if (fcVariantName) {
+                var variantStatesHeader = createStack("filterchip-states-header-" + normalizeName(fcVariantName), 6);
+                appendText(variantStatesHeader, titleFont, String(fcVariantName), 18, DOC_COLORS.panelHeading, "Filter Chip States Variant Heading", "title");
+                variantStatesBlock.appendChild(variantStatesHeader);
+              }
+              for (var fcsi = 0; fcsi < orderedSelective.length; fcsi++) {
+                (function (selName) {
+                  var selPanel = createPanel("filterchip-states-" + normalizeName((fcVariantName || "default") + "-" + selName) + "-panel", 10);
+                  selPanel.resize(1192, selPanel.height);
+                  variantStatesBlock.appendChild(selPanel);
+                  addInstancesRow(selPanel, String(selName), orderedStates, function (stateName) {
+                    var patch = { State: stateName, "Selective State": selName };
+                    var vpKeys = Object.keys(variantPatch);
+                    for (var pui = 0; pui < vpKeys.length; pui++) patch[vpKeys[pui]] = variantPatch[vpKeys[pui]];
+                    return makeInstance(patch);
+                  }, true, { font: mediumFont, size: 14 });
+                })(orderedSelective[fcsi]);
+              }
+              statesSlot.appendChild(variantStatesBlock);
+            })(fcVariants[fcvi]);
           }
         } else if (lowerSetName === "divider") {
           renderDividerDocsRows(statesSlot, orderedStates, function (stateName) {
@@ -5488,6 +5714,64 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             modalLayoutSlot.appendChild(layoutBlock);
           })(modalDocLayoutFill[mli]);
         }
+      }
+
+      if (modalIconSlot) {
+        clearChildren(modalIconSlot);
+        modalIconSlot.paddingLeft = 12;
+        modalIconSlot.paddingRight = 12;
+        modalIconSlot.paddingTop = 12;
+        modalIconSlot.paddingBottom = 12;
+        // Resolve the actual Variant/Layout/Icon values from the set (case-safe).
+        function modalIconPickVal(propName, wanted) {
+          var vals = getPropValues(variantProps, propName);
+          for (var i = 0; i < vals.length; i++) {
+            if (String(vals[i]).toLowerCase() === String(wanted).toLowerCase()) return vals[i];
+          }
+          return null;
+        }
+        var modalIconVariantVal = modalIconPickVal("Variant", "Filled");
+        var modalIconLayoutVal = modalIconPickVal("Layout", "Action-full");
+        var modalIconOnVal = modalIconPickVal("Icon", "On");
+        addInstancesRow(
+          modalIconSlot,
+          "Icon",
+          ["With icon"],
+          function () {
+            var iconProps = {};
+            if (modalIconVariantVal != null) iconProps.Variant = modalIconVariantVal;
+            if (modalIconLayoutVal != null) iconProps.Layout = modalIconLayoutVal;
+            if (modalIconOnVal != null) iconProps.Icon = modalIconOnVal;
+            return makeInstance(iconProps);
+          },
+          false,
+          { itemsPerRow: 1 }
+        );
+      }
+
+      if (controlLabelSlot) {
+        clearChildren(controlLabelSlot);
+        controlLabelSlot.paddingLeft = 12;
+        controlLabelSlot.paddingRight = 12;
+        controlLabelSlot.paddingTop = 12;
+        controlLabelSlot.paddingBottom = 12;
+        var controlLabelShowVal = null;
+        var controlLabelVals = getPropValues(variantProps, "Label");
+        for (var clv = 0; clv < controlLabelVals.length; clv++) {
+          if (String(controlLabelVals[clv]).toLowerCase() === "show") { controlLabelShowVal = controlLabelVals[clv]; break; }
+        }
+        addInstancesRow(
+          controlLabelSlot,
+          "Label",
+          ["With label"],
+          function () {
+            var labelProps = {};
+            if (controlLabelShowVal != null) labelProps.Label = controlLabelShowVal;
+            return makeInstance(labelProps);
+          },
+          false,
+          { itemsPerRow: 1 }
+        );
       }
 
       if (calendarHeaderSlot) {
@@ -5875,10 +6159,18 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 }
 
 async function cleanupExistingComponents(page, requestedSet) {
+  // This phase deletes every previously-generated set for the requested
+  // components BEFORE the first "Creating … component set" message. Removing a
+  // big backlog of sets (Radio ≈ 240 variants, Table/DenseTable/Charts, docs)
+  // can take a while, so emit heartbeats — otherwise the panel looks frozen for
+  // minutes and there's no way to tell "slow" from "hung".
+  progress("Cleaning up previous component sets…");
   var pageNodes = figma.root.children;
+  var removedCount = 0;
   for (var pi = 0; pi < pageNodes.length; pi++) {
     var p = pageNodes[pi];
     if (p.type !== "PAGE") continue;
+    progress("Cleanup: scanning page '" + p.name + "'…");
     try {
       await p.loadAsync();
     } catch (loadErr) {
@@ -5892,7 +6184,10 @@ async function cleanupExistingComponents(page, requestedSet) {
       if (child.type === "COMPONENT_SET") {
         var componentKey = resolveManagedComponentKeyFromName(child.name);
         if (componentKey && (!requestedSet || requestedSet[componentKey])) {
+          var removedSetName = child.name;
           child.remove();
+          removedCount++;
+          progress("Cleanup: removed '" + removedSetName + "' (" + removedCount + " so far)");
           continue;
         }
       }
@@ -5937,6 +6232,7 @@ async function cleanupExistingComponents(page, requestedSet) {
       }
     }
   }
+  progress("Cleanup complete — removed " + removedCount + " set(s). Loading fonts…");
 }
 
 function nodeRenderedWidth(node) {
@@ -10129,6 +10425,41 @@ async function tableTrySetTextOnInstance(inst, preferredNames, characters) {
   } catch (_eCh) {}
 }
 
+// The Hover/Selected row-state overlays are recolored CLONES of a cell's text,
+// captured at build time with placeholder copy. Once a composed-table cell has
+// its real text set, those clones would still read the placeholder and show
+// through as garbled/mismatched text when a state is toggled. Re-sync each
+// clone (named "Hover <orig>" / "Selected <orig>") to its source text so it
+// overlaps the original exactly and only the color differs.
+async function tableSyncStateTextClones(inst) {
+  if (!inst || typeof inst.findAll !== "function") return;
+  var texts = [];
+  try {
+    texts = inst.findAll(function (n) { return n.type === "TEXT"; });
+  } catch (_eFa) {
+    return;
+  }
+  var originalsByName = {};
+  for (var i = 0; i < texts.length; i++) {
+    var nm = String(texts[i].name || "");
+    if (nm.indexOf("Hover ") === 0 || nm.indexOf("Selected ") === 0 || nm.indexOf("Default ") === 0) continue;
+    if (!(nm in originalsByName)) originalsByName[nm] = texts[i];
+  }
+  for (var j = 0; j < texts.length; j++) {
+    var cloneName = String(texts[j].name || "");
+    var baseName = null;
+    if (cloneName.indexOf("Hover ") === 0) baseName = cloneName.slice(6);
+    else if (cloneName.indexOf("Selected ") === 0) baseName = cloneName.slice(9);
+    else if (cloneName.indexOf("Default ") === 0) baseName = cloneName.slice(8);
+    if (baseName == null) continue;
+    var orig = originalsByName[baseName];
+    if (!orig || typeof orig.characters !== "string") continue;
+    if (texts[j].characters === orig.characters) continue;
+    try { await figma.loadFontAsync(texts[j].fontName); } catch (_eFont2) {}
+    try { texts[j].characters = orig.characters; } catch (_eCh2) {}
+  }
+}
+
 // ---------------------------------------------------------------------------
 // DenseTable — split into composable pieces mirroring Table (one cell = one
 // instance):
@@ -10551,6 +10882,95 @@ async function buildDenseTableComponentSet(varMap, page, font) {
     placeX += Math.max(48, Math.ceil(comp.width || 60)) + 24;
   }
 
+  // Attach "Hover" and "Selected" BOOLEAN toggles to a body cell variant. Each
+  // state shows a full-bleed background overlay (inserted BEHIND the content) and
+  // recolored copies of the cell's text (layered ABOVE the content). The Selected
+  // layers sit above the Hover layers so Selected visually wins when both are on
+  // (the two are effectively mutually exclusive). Must be called AFTER the cell is
+  // placed so its resolved width/height are known. Body cells only (not headers).
+  function addDenseRowStates(comp) {
+    var hoverBgFallback = { r: 0.12, g: 0.13, b: 0.20 };
+    var activeBgFallback = { r: 0.16, g: 0.18, b: 0.28 };
+    var w = Math.max(1, Math.ceil(comp.width || 1));
+    var h = Math.max(1, Math.ceil(comp.height || 1));
+
+    // Capture text nodes + their positions BEFORE we add any overlays so the
+    // clones land exactly on top of the originals.
+    var textInfo = [];
+    try {
+      var texts = comp.findAll(function (n) { return n.type === "TEXT"; });
+      for (var ti = 0; ti < texts.length; ti++) {
+        textInfo.push({ node: texts[ti], x: texts[ti].x, y: texts[ti].y });
+      }
+    } catch (_eFindTxt) {}
+
+    function makeBgOverlay(nm, colorVar, fallback, index) {
+      var ov = figma.createFrame();
+      ov.name = nm;
+      // Leave the bottom 1px uncovered so the cell's bottom-rule divider (an
+      // INSIDE stroke) still shows on a hovered/active row. The STRETCH
+      // constraint keeps that 1px bottom margin as the cell resizes, so the
+      // highlight never swallows the row divider.
+      try { ov.resize(w, Math.max(1, h - 1)); } catch (_eRs) {}
+      ov.fills = [{ type: "SOLID", color: fallback }];
+      if (colorVar) bindPaintVar(ov, "fills", 0, colorVar);
+      ov.strokes = [];
+      ov.clipsContent = false;
+      try { comp.insertChild(index, ov); } catch (_eIns) { try { comp.appendChild(ov); } catch (_eApp) {} }
+      try {
+        ov.layoutPositioning = "ABSOLUTE";
+        ov.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+        ov.x = 0; ov.y = 0;
+      } catch (_eAbs) {}
+      ov.visible = false;
+      return ov;
+    }
+
+    // Background overlays go behind the content: Hover at index 0, Selected at
+    // index 1 (above Hover, still below the content that follows).
+    var hoverBg = makeBgOverlay("Hover background", varMap["densetable/row-hover"], hoverBgFallback, 0);
+    var selectedBg = makeBgOverlay("Selected background", varMap["densetable/row-active"], activeBgFallback, 1);
+
+    function makeTextOverlay(src, nm, colorVar) {
+      var clone = null;
+      try { clone = src.clone(); } catch (_eClone) { return null; }
+      clone.name = nm;
+      clone.fills = [{ type: "SOLID", color: textFallback }];
+      if (colorVar) bindPaintVar(clone, "fills", 0, colorVar);
+      try { comp.appendChild(clone); } catch (_eApp2) {}
+      return clone;
+    }
+
+    var hoverTexts = [];
+    var selectedTexts = [];
+    for (var t = 0; t < textInfo.length; t++) {
+      // Hover copy first, then Selected copy (appended later => higher z-order).
+      var hovT = makeTextOverlay(textInfo[t].node, "Hover " + textInfo[t].node.name, varMap["densetable/row-hover-text"]);
+      var selT = makeTextOverlay(textInfo[t].node, "Selected " + textInfo[t].node.name, varMap["densetable/row-active-text"]);
+      [ [hovT, hoverTexts], [selT, selectedTexts] ].forEach(function (pair) {
+        var node = pair[0];
+        if (!node) return;
+        try {
+          node.layoutPositioning = "ABSOLUTE";
+          node.constraints = { horizontal: "MIN", vertical: "CENTER" };
+          node.x = textInfo[t].x;
+          node.y = textInfo[t].y;
+        } catch (_ePos) {}
+        node.visible = false;
+        pair[1].push(node);
+      });
+    }
+
+    try {
+      var hoverProp = comp.addComponentProperty("Hover", "BOOLEAN", false);
+      var selectedProp = comp.addComponentProperty("Selected", "BOOLEAN", false);
+      hoverBg.componentPropertyReferences = { visible: hoverProp };
+      selectedBg.componentPropertyReferences = { visible: selectedProp };
+      for (var hi = 0; hi < hoverTexts.length; hi++) hoverTexts[hi].componentPropertyReferences = { visible: hoverProp };
+      for (var si = 0; si < selectedTexts.length; si++) selectedTexts[si].componentPropertyReferences = { visible: selectedProp };
+    } catch (_eProps) { progress("DenseTableBody row states: " + String(_eProps)); }
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // DenseTableHeader — a SINGLE header cell (mirrors the proven TableHeader).
   // Deliberately NOT a variant set: combineAsVariants was corrupting the
@@ -10631,6 +11051,7 @@ async function buildDenseTableComponentSet(varMap, page, font) {
     fontStyleVar: varMap["densetable/cell-font-weight"],
   }));
   placeVariant(vText);
+  addDenseRowStates(vText);
   bodyVariants.push(vText);
 
   // Flag (country flag, no label)
@@ -10660,6 +11081,7 @@ async function buildDenseTableComponentSet(varMap, page, font) {
   }
   placeVariant(vFlag);
   if (flagInst) addSwapPropertyOn(vFlag, "Flag", flagDefaultComp, flagCandidates, [flagInst]);
+  addDenseRowStates(vFlag);
   bodyVariants.push(vFlag);
 
   // Icon (leading icon + text)
@@ -10676,6 +11098,7 @@ async function buildDenseTableComponentSet(varMap, page, font) {
   }));
   placeVariant(vIcon);
   if (leadSwappable && leadInst) addSwapPropertyOn(vIcon, "Icon", iconLeadDefault, iconLeadCandidates, [leadInst]);
+  addDenseRowStates(vIcon);
   bodyVariants.push(vIcon);
 
   // Detection (a single detection icon from the file's "Detection" set, no text).
@@ -10697,6 +11120,7 @@ async function buildDenseTableComponentSet(varMap, page, font) {
   }
   placeVariant(vDet);
   if (detInst) addSwapPropertyOn(vDet, "Detection", detectionDefault, detectionCandidates, [detInst]);
+  addDenseRowStates(vDet);
   bodyVariants.push(vDet);
 
   // Action (list/× button; the "Expanded" boolean swaps list → ×)
@@ -10758,6 +11182,7 @@ async function buildDenseTableComponentSet(varMap, page, font) {
   } catch (_eExp) { progress("DenseTableBody Expanded: " + String(_eExp)); }
   if (listSwappable && listInst) addSwapPropertyOn(vAction, "List icon", listDefaultComp, iconCandidates, [listInst]);
   if (closeSwappable && closeInst) addSwapPropertyOn(vAction, "Close icon", closeDefaultComp, iconCandidates, [closeInst]);
+  addDenseRowStates(vAction);
   bodyVariants.push(vAction);
 
   var bodySet = null;
@@ -11064,16 +11489,72 @@ async function buildDenseTableComponentSet(varMap, page, font) {
   denseAction.appendChild(lowerBlock); denseFillChild(lowerBlock);
   finalizeDenseVariant(denseAction);
 
-  // Space the two variants apart BEFORE combining so the set doesn't stack them
-  // on top of each other.
+  // Turn on the per-cell Hover/Selected boolean for a representative row (Row 3)
+  // on a cloned table, so each State variant "bakes in" a highlighted row —
+  // mirrors the composed Table so a designer can flip row State straight from the
+  // instance dropdown instead of drilling into individual cells. Row 3 (not Row 1)
+  // so the highlight isn't jammed against the header, and it's a normal collapsed
+  // row in BOTH variants (Row 2 is the expanded row in the Action variant).
+  function denseHighlightRow(rootComp, rowName, boolLabel) {
+    var rowFrame = null;
+    try { rowFrame = rootComp.findOne(function (n) { return n.name === rowName; }); } catch (_eRow) {}
+    if (!rowFrame || typeof rowFrame.findAll !== "function") return;
+    var cells = [];
+    try { cells = rowFrame.findAll(function (n) { return n.type === "INSTANCE" && n.name === "DenseTableBody"; }); } catch (_eCells) {}
+    for (var i = 0; i < cells.length; i++) {
+      var inst = cells[i];
+      try {
+        var cprops = inst.componentProperties || {};
+        var ckeys = Object.keys(cprops);
+        for (var ck = 0; ck < ckeys.length; ck++) {
+          if (ckeys[ck].split("#")[0] !== boolLabel) continue;
+          if (String(cprops[ckeys[ck]].type).toUpperCase() !== "BOOLEAN") continue;
+          var patch = {};
+          patch[ckeys[ck]] = true;
+          inst.setProperties(patch);
+          break;
+        }
+      } catch (_eSetBool) {}
+    }
+  }
+
+  // Add a State axis (Default/Hover/Active) on top of the existing Variant axis so
+  // the composed DenseTable exposes row hover/active — matching the Table. Each
+  // base variant is cloned into Hover + Active with Row 1 pre-highlighted.
+  denseDefault.name = "Variant=Default, State=Default";
+  denseAction.name = "Variant=Action, State=Default";
+
+  var denseBaseVariants = [
+    { comp: denseDefault, label: "Default" },
+    { comp: denseAction, label: "Action" },
+  ];
+  var denseAllComps = [];
+  for (var dvi = 0; dvi < denseBaseVariants.length; dvi++) {
+    var denseBase = denseBaseVariants[dvi];
+    denseAllComps.push(denseBase.comp);
+    var denseHover = denseBase.comp.clone();
+    denseHover.name = "Variant=" + denseBase.label + ", State=Hover";
+    denseHighlightRow(denseHover, "Row 3", "Hover");
+    denseAllComps.push(denseHover);
+    var denseActiveClone = denseBase.comp.clone();
+    denseActiveClone.name = "Variant=" + denseBase.label + ", State=Active";
+    denseHighlightRow(denseActiveClone, "Row 3", "Selected");
+    denseAllComps.push(denseActiveClone);
+  }
+
+  // Space the variants apart BEFORE combining so the set doesn't stack them.
   try {
-    denseDefault.x = 0; denseDefault.y = 0;
-    denseAction.x = 0; denseAction.y = Math.ceil((denseDefault.height || 200)) + 48;
+    var denseYCursor = 0;
+    for (var dyi = 0; dyi < denseAllComps.length; dyi++) {
+      denseAllComps[dyi].x = 0;
+      denseAllComps[dyi].y = denseYCursor;
+      denseYCursor += Math.ceil((denseAllComps[dyi].height || 200)) + 48;
+    }
   } catch (_eDtLayout) {}
 
   var denseTableSet = null;
   try {
-    denseTableSet = figma.combineAsVariants([denseDefault, denseAction], page);
+    denseTableSet = figma.combineAsVariants(denseAllComps, page);
     denseTableSet.name = "DenseTable";
     denseTableSet.itemSpacing = 48;
   } catch (_eDtCombine) { progress("DenseTable combine: " + String(_eDtCombine)); }
@@ -11140,15 +11621,23 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
       try {
         t.letterSpacing = { value: 0, unit: "PERCENT" };
       } catch (_eLs) {}
-    } else {
-      if (opts && opts.fontWeight === 600) {
+    } else if (opts && opts.skipCellFont) {
+      if (opts.fontWeight === 600) {
         try {
           t.fontName = { family: font.family, style: "Semi Bold" };
         } catch (_eFw2) {}
       }
-      if (varMap["table/cell-font-size"] && (!opts || !opts.skipCellFont)) {
-        bindVar(t, "fontSize", varMap["table/cell-font-size"]);
-      }
+    } else {
+      // Cell text: drive EVERY typographic property straight from the table's own
+      // cell-* tokens so nothing in the table depends on the Text design-system
+      // component. leadingTrim CAP_HEIGHT strips the line-box leading so the visible
+      // glyphs vertically center against flags/icons in the same row, regardless of
+      // each brand's cell line-height (this is what fixes the flag/text centering).
+      if (varMap["table/cell-font-family"]) bindVar(t, "fontFamily", varMap["table/cell-font-family"]);
+      if (varMap["table/cell-font-weight"]) bindVar(t, "fontStyle", varMap["table/cell-font-weight"]);
+      if (varMap["table/cell-font-size"]) bindVar(t, "fontSize", varMap["table/cell-font-size"]);
+      if (varMap["table/cell-line-height"]) bindVar(t, "lineHeight", varMap["table/cell-line-height"]);
+      try { t.leadingTrim = "CAP_HEIGHT"; } catch (_eTrimCell) {}
     }
     return t;
   }
@@ -11443,6 +11932,10 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
       node.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
       if (varMap["table/border"]) bindPaintVar(node, "strokes", 0, varMap["table/border"]);
       node.strokeWeight = 1;
+      // INSIDE so the 1px divider lives fully within the cell's bottom edge — the
+      // exact 1px the row-highlight overlay leaves uncovered — so it stays visible
+      // on hovered/active rows and doesn't bleed into the row below.
+      try { node.strokeAlign = "INSIDE"; } catch (_eBrAlign) {}
       node.strokeTopWeight = 0;
       node.strokeRightWeight = 0;
       node.strokeLeftWeight = 0;
@@ -11574,6 +12067,215 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
     bc.y = variantIndex * (rowHeight + rowGap);
   }
 
+  // Attach "Hover" and "Selected" BOOLEAN toggles to a TableBody cell variant,
+  // mirroring DenseTableBody. Each state shows a full-bleed background overlay
+  // (behind the content: Hover at index 0, Selected above it) plus recolored
+  // clones of the cell's text (above the content). Selected sits above Hover so
+  // it wins when both are on (the two are effectively mutually exclusive). Call
+  // AFTER the cell is placed so its width/height are resolved. Text clones are
+  // positioned via absolute bounding boxes so nested (instance/slot) text still
+  // lands on top of the original.
+  function addTableRowStates(comp) {
+    if (!comp) return;
+    var rowTextFallback = { r: 0.1, g: 0.1, b: 0.12 };
+    var hoverBgFallback = { r: 0.93, g: 0.94, b: 0.96 };
+    var activeBgFallback = { r: 0.88, g: 0.90, b: 0.94 };
+    // Size the overlay to the cell's EXACT bounds (no ceil) — rounding up left a
+    // sub-pixel blue line poking past the cell/table border, which read as a
+    // second "double" border on the highlighted row.
+    var w = Math.max(1, comp.width || 1);
+    var h = Math.max(1, comp.height || 1);
+    var compBox = null;
+    try { compBox = comp.absoluteBoundingBox; } catch (_eBox) {}
+
+    // Text that lives inside a self-colored sub-component (Badge, Progress)
+    // carries its own semantic color and must NOT be recolored by the row state
+    // — otherwise a hovered/active row bleeds the row-text color onto the badge
+    // label or the progress "%", which the preview never does.
+    function tableTextIsSelfColored(node) {
+      var p = node.parent;
+      while (p && p !== comp) {
+        if (p.type === "INSTANCE") {
+          var nm = String(p.name || "").toLowerCase();
+          // Only the Badge keeps its own semantic fill (Error/Warning/Success) on a
+          // hovered/active row — it's a self-contained pill. The Progress "%" label,
+          // however, DOES follow the row text color in the preview (ProgressCell gets
+          // labelColor={rowText}), so it must recolor here too — otherwise a dark "%"
+          // is unreadable on a dark active row (e.g. Hyperion's navy active state).
+          if (nm === "badge") return true;
+        }
+        p = p.parent;
+      }
+      return false;
+    }
+
+    // Capture each text node's HOST frame + its position relative to that host.
+    // Positions are captured relative to the CELL (comp) and summed from node.x/
+    // node.y (the LAYOUT box, never absoluteBoundingBox's tight glyph box, so
+    // line-height leading matches). We keep all state clones at the CELL level
+    // because component-property `visible` refs and variable color bindings only
+    // reliably apply to direct component descendants — nesting the clones inside
+    // the slot frame silently dropped the recolor (the active text fell back to
+    // the dark original). See the clone block below for how doubling is avoided.
+    var textInfo = [];
+    try {
+      var texts = comp.findAll(function (n) { return n.type === "TEXT"; });
+      for (var ti = 0; ti < texts.length; ti++) {
+        if (tableTextIsSelfColored(texts[ti])) continue;
+        var relX = 0;
+        var relY = 0;
+        var walk = texts[ti];
+        while (walk && walk !== comp) {
+          relX += walk.x || 0;
+          relY += walk.y || 0;
+          walk = walk.parent;
+        }
+        textInfo.push({ node: texts[ti], x: relX, y: relY });
+      }
+    } catch (_eFindTxt) {}
+
+    function makeBgOverlay(nm, colorVar, fallback, index) {
+      var ov = figma.createFrame();
+      ov.name = nm;
+      // Leave the bottom 1px uncovered so the cell's bottom-rule divider (drawn
+      // as an INSIDE stroke) still shows on a hovered/active row. The STRETCH
+      // constraint preserves that 1px bottom margin as the cell resizes, so the
+      // highlight never swallows the row divider (matching the app preview,
+      // where borders paint on top of the row background).
+      try { ov.resize(w, Math.max(1, h - 1)); } catch (_eRs) {}
+      ov.fills = [{ type: "SOLID", color: fallback }];
+      if (colorVar) bindPaintVar(ov, "fills", 0, colorVar);
+      ov.strokes = [];
+      ov.clipsContent = false;
+      try { comp.insertChild(index, ov); } catch (_eIns) { try { comp.appendChild(ov); } catch (_eApp) {} }
+      try {
+        ov.layoutPositioning = "ABSOLUTE";
+        ov.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+        ov.x = 0; ov.y = 0;
+      } catch (_eAbs) {}
+      ov.visible = false;
+      return ov;
+    }
+
+    var hoverBg = makeBgOverlay("Hover background", varMap["table/row-hover"], hoverBgFallback, 0);
+    var selectedBg = makeBgOverlay("Selected background", varMap["table/row-active"], activeBgFallback, 1);
+
+    // Clone the original text into three CELL-level overlays (default / hover /
+    // selected). All three use IDENTICAL absolute placement, so they overlap each
+    // OTHER pixel-perfectly — toggling a state just swaps which colored clone sits
+    // on top, with zero doubling. The original text is made transparent (fills =
+    // []) so it still drives the cell's intrinsic width via auto-layout but never
+    // paints — otherwise it would show through under the clones on a light row
+    // (the doubling you saw), and only "looked" fine on dark rows because the dark
+    // bg hid it. Keeping the clones at the cell level (not nested in the slot) is
+    // what preserves the variable color binding + `visible` property references.
+    function makeStateTextClone(src, nm, colorVar, keepColor) {
+      var clone = null;
+      try { clone = src.clone(); } catch (_eClone) { return null; }
+      clone.name = nm;
+      if (!keepColor) {
+        clone.fills = [{ type: "SOLID", color: rowTextFallback }];
+        if (colorVar) bindPaintVar(clone, "fills", 0, colorVar);
+      }
+      try { comp.appendChild(clone); } catch (_eApp2) {}
+      return clone;
+    }
+
+    var defaultTexts = [];
+    var hoverTexts = [];
+    var selectedTexts = [];
+    for (var t = 0; t < textInfo.length; t++) {
+      var origNode = textInfo[t].node;
+      // Default clone keeps the original's color + variable binding — clone BEFORE
+      // clearing the original's fill so it inherits the correct default color.
+      var defT = makeStateTextClone(origNode, "Default " + origNode.name, null, true);
+      try { origNode.fills = []; } catch (_eClearOrig) {}
+      var hovT = makeStateTextClone(origNode, "Hover " + origNode.name, varMap["table/row-hover-text"], false);
+      var selT = makeStateTextClone(origNode, "Selected " + origNode.name, varMap["table/row-active-text"], false);
+      [ [defT, defaultTexts, true], [hovT, hoverTexts, false], [selT, selectedTexts, false] ].forEach(function (pair) {
+        var node = pair[0];
+        if (!node) return;
+        try {
+          node.layoutPositioning = "ABSOLUTE";
+          node.constraints = { horizontal: "MIN", vertical: "CENTER" };
+          node.x = textInfo[t].x;
+          node.y = textInfo[t].y;
+        } catch (_ePos) {}
+        // Default clone always visible; hover/selected hidden until toggled.
+        node.visible = pair[2] === true;
+        pair[1].push(node);
+      });
+    }
+
+    // The status Icon cell's glyph is a vector/icon-instance, not text, so the
+    // text-clone pass above doesn't touch it. Clone the icon into a hover +
+    // selected copy recolored to the row-state text tokens, overlaid exactly on
+    // the original and toggled by the same Hover/Selected booleans. The original
+    // stays as the default-state icon (table/cell-icon). Scoped to the Icon cell
+    // so flags/avatars (also vectors) are never recolored.
+    var hoverIcons = [];
+    var selectedIcons = [];
+    if (String(comp.name || "").toLowerCase().indexOf("icon") >= 0) {
+      var iconNode = null;
+      try {
+        iconNode = comp.findOne(function (n) {
+          return (n.type === "INSTANCE" && n.name === "Icon") || n.type === "VECTOR";
+        });
+      } catch (_eFindIcon) {}
+      if (iconNode) {
+        var iconRelX = 0, iconRelY = 0, iconWalk = iconNode;
+        while (iconWalk && iconWalk !== comp) {
+          iconRelX += iconWalk.x || 0;
+          iconRelY += iconWalk.y || 0;
+          iconWalk = iconWalk.parent;
+        }
+        var recolorIconClone = function (node, colorVar) {
+          if (!colorVar) return;
+          var vecs = [];
+          try {
+            if (node.type === "VECTOR") vecs = [node];
+            else vecs = node.findAll(function (n) { return n.type === "VECTOR"; });
+          } catch (_eVec) {}
+          for (var vi = 0; vi < vecs.length; vi++) {
+            var v = vecs[vi];
+            try { if (v.strokes && v.strokes.length) bindPaintVar(v, "strokes", 0, colorVar); } catch (_eSk) {}
+            try { if (v.fills && v.fills.length) bindPaintVar(v, "fills", 0, colorVar); } catch (_eFl) {}
+          }
+        };
+        var makeStateIconClone = function (nm, colorVar) {
+          var clone = null;
+          try { clone = iconNode.clone(); } catch (_eIc) { return null; }
+          clone.name = nm;
+          recolorIconClone(clone, colorVar);
+          try { comp.appendChild(clone); } catch (_eApp3) {}
+          try {
+            clone.layoutPositioning = "ABSOLUTE";
+            clone.constraints = { horizontal: "MIN", vertical: "CENTER" };
+            clone.x = iconRelX;
+            clone.y = iconRelY;
+          } catch (_ePos2) {}
+          clone.visible = false;
+          return clone;
+        };
+        var hovIcon = makeStateIconClone("Hover icon", varMap["table/row-hover-text"]);
+        var selIcon = makeStateIconClone("Selected icon", varMap["table/row-active-text"]);
+        if (hovIcon) hoverIcons.push(hovIcon);
+        if (selIcon) selectedIcons.push(selIcon);
+      }
+    }
+
+    try {
+      var hoverProp = comp.addComponentProperty("Hover", "BOOLEAN", false);
+      var selectedProp = comp.addComponentProperty("Selected", "BOOLEAN", false);
+      hoverBg.componentPropertyReferences = { visible: hoverProp };
+      selectedBg.componentPropertyReferences = { visible: selectedProp };
+      for (var hi = 0; hi < hoverTexts.length; hi++) hoverTexts[hi].componentPropertyReferences = { visible: hoverProp };
+      for (var si = 0; si < selectedTexts.length; si++) selectedTexts[si].componentPropertyReferences = { visible: selectedProp };
+      for (var hii = 0; hii < hoverIcons.length; hii++) hoverIcons[hii].componentPropertyReferences = { visible: hoverProp };
+      for (var sii = 0; sii < selectedIcons.length; sii++) selectedIcons[sii].componentPropertyReferences = { visible: selectedProp };
+    } catch (_eProps) { progress("TableBody row states: " + String(_eProps)); }
+  }
+
   var badgeTemplate =
     tableFindComponentByNameParts(badgeSet, ["Variant=Outline", "Color=Error", "Size=SM", "Radius=XL", "Circle=Off"]) ||
     tableFindComponentByNameParts(badgeSet, ["Variant=Outline", "Color=Error", "Size=SM", "Circle=Off"]) ||
@@ -11605,8 +12307,10 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
   else progress("[TableBody] Badge template: " + badgeTemplate.name);
   if (!progressTemplate) progress("[TableBody] Progress template unresolved — using plain text.");
   else progress("[TableBody] Progress template: " + progressTemplate.name);
-  if (!textTemplate) progress("[TableBody] Text template unresolved — using plain text.");
-  else progress("[TableBody] Text template: " + textTemplate.name);
+  // Every table cell renders its copy with plain text nodes bound to the table's own
+  // cell-* typography tokens (see makeText) — the table must NOT nest the Text
+  // design-system component. Force the plain-text path for all cells.
+  textTemplate = null;
   if (!avatarTemplate) progress("[TableBody] Avatar template unresolved — using text fallback.");
   else progress("[TableBody] Avatar template: " + avatarTemplate.name);
   if (!buttonTemplate) progress("[TableBody] Button template unresolved — using text fallback.");
@@ -11901,7 +12605,7 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
       try {
         iconInst.resize(20, 20);
       } catch (_iSz) {}
-      var iconStrokeVar = varMap["table/cell-text"];
+      var iconStrokeVar = varMap["table/cell-icon"] || varMap["table/cell-text"];
       var iconVectors = iconInst.findAll(function (n) {
         return n.type === "VECTOR";
       });
@@ -11922,7 +12626,8 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
   if (!iconInst) {
     var warnVec = tableMakeWarningTriangleVector();
     if (warnVec) {
-      if (varMap["table/cell-text"]) bindPaintVar(warnVec, "strokes", 0, varMap["table/cell-text"]);
+      var warnColorVar = varMap["table/cell-icon"] || varMap["table/cell-text"];
+      if (warnColorVar) bindPaintVar(warnVec, "strokes", 0, warnColorVar);
       vIcon.appendChild(warnVec);
     }
   }
@@ -11936,7 +12641,21 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
     slotIcon.appendChild(textInstIcon);
     await tableTrySetTextOnInstance(textInstIcon, ["text"], "Text goes here");
   } else {
-    slotIcon.appendChild(makeText("Text goes here", varMap["table/cell-text"], { fontSize: 12 }));
+    // The composed table's Status column is narrow (128px → ~70px of text room
+    // after the 16px padding + 20px icon + 6px gap), so long labels like
+    // "Investigating" must ellipsize → "Investiga…". Truncation MUST be baked into
+    // this COMPONENT text node (not the composed instance): Figma silently ignores
+    // geometry/truncation overrides on nodes nested inside an instance — only the
+    // characters get overridden there. The Default/Hover/Selected state clones
+    // added later (addTableRowStates) are cloned from this node, so they inherit
+    // the fixed width + truncation too. Placeholder kept short ("Text") so the
+    // standalone Icon variant doesn't itself show an ellipsis.
+    var iconCellText = makeText("Text", varMap["table/cell-text"], { fontSize: 12 });
+    try { iconCellText.textAutoResize = "HEIGHT"; } catch (_eIAR) {}
+    try { iconCellText.maxLines = 1; } catch (_eIML) {}
+    try { iconCellText.textTruncation = "ENDING"; } catch (_eITr) {}
+    try { iconCellText.resize(70, Math.max(1, Math.ceil(iconCellText.height || 16))); } catch (_eIRz) {}
+    slotIcon.appendChild(iconCellText);
   }
   page.appendChild(vIcon);
   finalizeVariantSizing(vIcon, 52);
@@ -12168,6 +12887,16 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
 
   bodyComponents.push(vDetection);
 
+  // NOTE: table cell copy is built with plain text nodes bound to the table's cell-*
+  // tokens (see makeText), so there's no nested Text-component instance to re-bind
+  // here anymore — typography + centering (leadingTrim) are handled at creation time.
+
+  // Row Hover / Selected (active) states — attach to every body cell variant so
+  // the toggles are available across the set (mirrors DenseTableBody).
+  for (var trsi = 0; trsi < bodyComponents.length; trsi++) {
+    addTableRowStates(bodyComponents[trsi]);
+  }
+
   var bodySet = null;
   try {
     bodySet = figma.combineAsVariants(bodyComponents, page);
@@ -12372,6 +13101,9 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
       if (typeof textOverride === "string" && textOverride.length > 0) {
         try { await tableTrySetTextOnInstance(inst, ["text", "Label", "Value"], textOverride); } catch (_eBodyText) {}
       }
+      // Sync the Hover/Selected recolor clones to the cell's now-final text so
+      // toggling a state doesn't reveal stale placeholder copy underneath.
+      try { await tableSyncStateTextClones(inst); } catch (_eSyncClones) {}
       try { inst.resize(width, Math.max(1, Math.ceil(inst.height || 52))); } catch (_eBodySize) {}
     } catch (_eBodyInst) {
       inst = null;
@@ -12380,19 +13112,26 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
   }
 
   var tableComp = figma.createComponent();
-  tableComp.name = "Table";
+  // Named as the Default state variant — Hover/Active variants are cloned from it
+  // below and combined into a "Table" variant set so State is a usable dropdown.
+  tableComp.name = "State=Default";
   tableComp.layoutMode = "VERTICAL";
   tableComp.primaryAxisSizingMode = "AUTO";
   tableComp.counterAxisSizingMode = "AUTO";
   tableComp.primaryAxisAlignItems = "MIN";
   tableComp.counterAxisAlignItems = "MIN";
   tableComp.itemSpacing = 0;
-  tableComp.clipsContent = false;
+  // Clip children to the rounded corners so the header/first-row background
+  // (a square fill) doesn't poke past the rounded border overlay at the corners.
+  tableComp.clipsContent = true;
   tableComp.fills = [];
-  tableComp.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
-  tableComp.strokeWeight = 1;
-  tableComp.strokeAlign = "INSIDE";
-  if (varMap["table/border"]) bindPaintVar(tableComp, "strokes", 0, varMap["table/border"]);
+  // NOTE: the outer border is NOT drawn as this frame's own stroke. A frame's
+  // stroke paints UNDER its children, so the row-highlight overlays (children
+  // of the cells) bleed over the outer border on a hovered/active row and read
+  // as a second "double" border. Instead we draw the border as a top-most
+  // overlay child (see below) so it always renders cleanly above the highlights
+  // — matching the app preview, where borders keep a single consistent color.
+  tableComp.strokes = [];
   try { tableComp.cornerRadius = 4; } catch (_eTableCorner) {}
 
   var tableHeaderDefs = [
@@ -12459,13 +13198,22 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
     var c5 = await makeTableBodyCell("Badge", 98, row[4]);
     var c6 = await makeTableBodyCell("Progress", 190, row[5]);
     var c7 = await makeTableBodyCell("Icon", 128, row[6]);
-    if (c1) rowFrame.appendChild(c1);
-    if (c2) rowFrame.appendChild(c2);
-    if (c3) rowFrame.appendChild(c3);
-    if (c4) rowFrame.appendChild(c4);
-    if (c5) rowFrame.appendChild(c5);
-    if (c6) rowFrame.appendChild(c6);
-    if (c7) rowFrame.appendChild(c7);
+    // Stretch every cell to the row's height so shorter cells (Text/Icon) match
+    // the tallest (Badge). Otherwise a hugging cell's highlight overlay stops
+    // short of the row's divider, leaving a sliver that reads as a double border.
+    var isLastRow = ri === tableRows.length - 1;
+    var rowCells = [c1, c2, c3, c4, c5, c6, c7];
+    for (var rc = 0; rc < rowCells.length; rc++) {
+      if (!rowCells[rc]) continue;
+      rowFrame.appendChild(rowCells[rc]);
+      try { rowCells[rc].layoutSizingVertical = "FILL"; } catch (_eCellFill) {}
+      // The last row's own bottom rule duplicates the table's outer bottom
+      // border (and can't follow the rounded corner), so strip it — the border
+      // overlay already draws that edge.
+      if (isLastRow) {
+        try { rowCells[rc].strokes = []; } catch (_eLastRowStroke) {}
+      }
+    }
     bodyRowsWrap.appendChild(rowFrame);
   }
 
@@ -12473,16 +13221,90 @@ async function buildTableComponentSet(varMap, page, font, nestedSets) {
   try {
     tableComp.resize(1060, Math.max(1, Math.ceil(tableComp.height || 1)));
   } catch (_tableResize) {}
+
+  // Top-most border overlay: stretches with the table and always renders above
+  // the row-highlight overlays, so the outer border stays a single, consistent
+  // color on hovered/active rows (no doubled edge).
+  try {
+    var tableBorder = figma.createFrame();
+    tableBorder.name = "Border";
+    tableBorder.resize(Math.max(1, tableComp.width || 1), Math.max(1, tableComp.height || 1));
+    tableBorder.fills = [];
+    tableBorder.strokes = [{ type: "SOLID", color: { r: 0.22, g: 0.24, b: 0.34 } }];
+    tableBorder.strokeWeight = 1;
+    tableBorder.strokeAlign = "INSIDE";
+    if (varMap["table/border"]) bindPaintVar(tableBorder, "strokes", 0, varMap["table/border"]);
+    try { tableBorder.cornerRadius = 4; } catch (_eBorderCorner) {}
+    tableBorder.clipsContent = false;
+    tableComp.appendChild(tableBorder);
+    tableBorder.layoutPositioning = "ABSOLUTE";
+    tableBorder.constraints = { horizontal: "STRETCH", vertical: "STRETCH" };
+    tableBorder.x = 0;
+    tableBorder.y = 0;
+  } catch (_eTableBorderOverlay) {}
+
   page.appendChild(tableComp);
+
+  // Turn on the per-cell Hover/Selected state for the representative row (Row 2)
+  // on a cloned table, so each State variant "bakes in" a highlighted row.
+  function tableHighlightRowTwo(rootComp, boolLabel) {
+    var rowFrame = null;
+    try { rowFrame = rootComp.findOne(function (n) { return n.name === "Row 2"; }); } catch (_eRow2) {}
+    if (!rowFrame || typeof rowFrame.findAll !== "function") return;
+    var cells = [];
+    try { cells = rowFrame.findAll(function (n) { return n.type === "INSTANCE" && n.name === "TableBody"; }); } catch (_eCells2) {}
+    for (var i = 0; i < cells.length; i++) {
+      var inst = cells[i];
+      try {
+        var cprops = inst.componentProperties || {};
+        var ckeys = Object.keys(cprops);
+        for (var ck = 0; ck < ckeys.length; ck++) {
+          if (ckeys[ck].split("#")[0] !== boolLabel) continue;
+          if (String(cprops[ckeys[ck]].type).toUpperCase() !== "BOOLEAN") continue;
+          var patch = {};
+          patch[ckeys[ck]] = true;
+          inst.setProperties(patch);
+          break;
+        }
+      } catch (_eSetBool) {}
+    }
+  }
+
+  // Compose the Default/Hover/Active tables into a single "Table" variant set so a
+  // designer can flip the row State straight from the instance (no drilling into
+  // individual cells). Hover/Active highlight Row 2 as the representative row.
+  var tableHoverComp = tableComp.clone();
+  tableHoverComp.name = "State=Hover";
+  tableHighlightRowTwo(tableHoverComp, "Hover");
+  var tableActiveComp = tableComp.clone();
+  tableActiveComp.name = "State=Active";
+  tableHighlightRowTwo(tableActiveComp, "Selected");
+
+  var tableSet = figma.combineAsVariants(
+    [tableComp, tableHoverComp, tableActiveComp],
+    page
+  );
+  tableSet.name = "Table";
+  try {
+    tableSet.layoutMode = "HORIZONTAL";
+    tableSet.primaryAxisSizingMode = "AUTO";
+    tableSet.counterAxisSizingMode = "AUTO";
+    tableSet.itemSpacing = 48;
+    tableSet.paddingLeft = 48;
+    tableSet.paddingRight = 48;
+    tableSet.paddingTop = 48;
+    tableSet.paddingBottom = 48;
+    tableSet.fills = [];
+  } catch (_eTableSetLayout) {}
 
   progress(
     "Table: TableHeader (132px; INSTANCE_SWAP sort; Show sort). TableBody: COMPONENT_SET Variant=Badge|Progress|Text|Flag|Avatar|Icon|Button|Detections [" +
       TABLE_BODY_BUILD +
-      "] — nested Badge / Progress / Text / Avatar / Button instances; Flag, Icon and Detections variants use INSTANCE_SWAP. Also exported composed Table component."
+      "] — nested Badge / Progress / Text / Avatar / Button instances; Flag, Icon and Detections variants use INSTANCE_SWAP. Also exported composed Table as a State variant set (Default / Hover / Active)."
   );
   // Keep output order aligned with docs/navigation expectations.
   // Desired sequence: TableHeader -> TableBody -> Table.
-  return [comp, bodySet, tableComp];
+  return [comp, bodySet, tableSet];
 }
 
 function buildTitleComponentSet(varMap, page, font, sampleText) {
@@ -13187,15 +14009,23 @@ function buildRadioComponentSet(varMap, page, font) {
 
             // Radio border
             var borderPath = radioBorderPath(varMap, variant, checkedState, state);
-            if (!isChecked || variant === "outline") {
-              // Unchecked: always show border. Outline checked: also show border
+            // A checked filled radio normally hides its ring (the accent fill IS
+            // the whole circle). In the disabled state, though, the preview keeps
+            // the ring visible (driven by radio/filled-border-checked-disabled →
+            // …-disabled fallback), so mirror that here — otherwise the disabled
+            // checked filled radio shows no border in Figma.
+            var showBorder =
+              !isChecked ||
+              variant === "outline" ||
+              (variant === "filled" && isChecked && state === "disabled");
+            if (showBorder) {
               circle.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
               circle.strokeWeight = 1.5;
               circle.strokeAlign = "INSIDE";
               bindPaintVar(circle, "strokes", 0, varMap[borderPath]);
               bindVar(circle, "strokeWeight", varMap["radio/border-width"]);
             } else {
-              // Filled checked: no border
+              // Filled checked (non-disabled): no border
               circle.strokes = [];
             }
 
@@ -13339,6 +14169,319 @@ async function buildChipComponentSet(varMap, page, font) {
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
   var variants = ["filled", "outline", "light"];
+  var checkedStates = ["unchecked", "checked"];
+  var states = ["default", "hover", "focus", "pressed", "disabled"];
+  var components = [];
+
+  // Find check icon from icons page
+  var checkIconComp = null;
+  var iconsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    if (figma.root.children[pi].name.toLowerCase() === "icons") {
+      iconsPage = figma.root.children[pi];
+      break;
+    }
+  }
+  if (iconsPage) {
+    await iconsPage.loadAsync();
+    var allNodes = iconsPage.findAll(function(n) {
+      return n.type === "COMPONENT";
+    });
+    for (var ni = 0; ni < allNodes.length; ni++) {
+      var nName = allNodes[ni].name.toLowerCase();
+      if (!checkIconComp && nName.indexOf("check") >= 0 && nName.indexOf("circle") < 0 && nName.indexOf("square") < 0) {
+        checkIconComp = allNodes[ni];
+      }
+    }
+  }
+
+  // Known chip heights per size for grid spacing
+  var sizeHeights = { default: 32, xs: 23, sm: 28, md: 32, lg: 36, xl: 40 };
+  var sizeIconSizes = { default: 14, xs: 9, sm: 12, md: 14, lg: 16, xl: 18 };
+  var gap = 16;
+  var colGap = 16;
+
+  // Pre-calculate y offsets: rows = (radius × size × state)
+  var rowYOffsets = [];
+  var runningY = 0;
+  for (var rri = 0; rri < radii.length; rri++) {
+    for (var rsi = 0; rsi < sizes.length; rsi++) {
+      for (var rsti = 0; rsti < states.length; rsti++) {
+        rowYOffsets.push(runningY);
+        var rowH = sizeHeights[sizes[rsi]] != null ? sizeHeights[sizes[rsi]] : sizeHeights.default;
+        if (rowH < 24) rowH = 24;
+        runningY += rowH + gap;
+      }
+    }
+  }
+
+  var colWidth = 180 + colGap;
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+
+    for (var chi = 0; chi < checkedStates.length; chi++) {
+      var checkedState = checkedStates[chi];
+      var capChecked = checkedState.charAt(0).toUpperCase() + checkedState.slice(1);
+      var isChecked = (checkedState === "checked");
+
+      for (var ri = 0; ri < radii.length; ri++) {
+        var radius = radii[ri];
+        var capRadius = radius === "default" ? "Default" : radius.toUpperCase();
+
+        for (var si = 0; si < sizes.length; si++) {
+          var size = sizes[si];
+          var capSize = size === "default" ? "Default" : size.toUpperCase();
+          var chipHeight = sizeHeights[size] != null ? sizeHeights[size] : sizeHeights.default;
+          var iconSize = sizeIconSizes[size] != null ? sizeIconSizes[size] : sizeIconSizes.default;
+
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+            var comp = figma.createComponent();
+            comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", Radius=" + capRadius +
+                        ", Checked=" + capChecked + ", State=" + capState;
+
+          // Root: horizontal auto-layout (pill shape)
+          comp.layoutMode = "HORIZONTAL";
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
+          comp.primaryAxisAlignItems = "CENTER";
+          comp.counterAxisAlignItems = "CENTER";
+          comp.resize(80, chipHeight);
+          // resize() on an auto-layout frame flips both axes to FIXED, which
+          // would lock the chip at 80px wide and stop the padding tokens from
+          // driving its size. Re-assert AUTO so width/height hug the content +
+          // padding (a pill should hug, not sit at a fixed 80px).
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
+          comp.cornerRadius = 16;
+
+          // Padding
+          var paddingX = isChecked ? 10 : 16;
+          var paddingY = 4;
+          comp.paddingLeft = paddingX;
+          comp.paddingRight = paddingX;
+          comp.paddingTop = paddingY;
+          comp.paddingBottom = paddingY;
+          comp.itemSpacing = 6;
+
+          // Bind dimensions
+          // Height is not tokenized — vertical padding + line height drive it.
+          // A single padding set drives both checked and unchecked (the checkmark
+          // reserves its own space via itemSpacing).
+          bindVar(comp, "paddingLeft", varMap["chip/padding-x-" + size] || varMap["chip/padding-" + size]);
+          bindVar(comp, "paddingRight", varMap["chip/padding-x-" + size] || varMap["chip/padding-" + size]);
+          bindVar(comp, "paddingTop", varMap["chip/padding-y-" + size] || varMap["chip/padding-" + size]);
+          bindVar(comp, "paddingBottom", varMap["chip/padding-y-" + size] || varMap["chip/padding-" + size]);
+            var radiusPath = chipRadiusPath(varMap, variant, radius);
+            bindVar(comp, "topLeftRadius", varMap[radiusPath]);
+            bindVar(comp, "topRightRadius", varMap[radiusPath]);
+            bindVar(comp, "bottomLeftRadius", varMap[radiusPath]);
+            bindVar(comp, "bottomRightRadius", varMap[radiusPath]);
+            bindVar(comp, "itemSpacing", varMap["chip/spacing-" + size]);
+
+          // Background fill
+            var bgPath = chipBgPath(varMap, variant, isChecked, state);
+            if (isChecked && variant === "filled") {
+              comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+            } else if (isChecked && variant === "light") {
+              comp.fills = [{ type: "SOLID", color: { r: 0.92, g: 0.92, b: 0.95 } }];
+            } else {
+              comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            }
+            bindPaintVar(comp, "fills", 0, varMap[bgPath]);
+
+          // Border
+            var borderPath = chipBorderPath(varMap, variant, isChecked, state);
+            if (variant === "outline" || !isChecked) {
+              comp.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+              comp.strokeWeight = 1.5;
+              comp.strokeAlign = "INSIDE";
+              bindPaintVar(comp, "strokes", 0, varMap[borderPath]);
+              bindVar(comp, "strokeWeight", varMap["chip/border-width"]);
+            } else if (variant === "filled" && isChecked) {
+              comp.strokes = [];
+            } else {
+              // light checked — no border
+              comp.strokes = [];
+            }
+
+          // --- Check icon (only when checked) ---
+            if (isChecked && checkIconComp) {
+            var checkInst = checkIconComp.createInstance();
+            checkInst.name = "Icon";
+            checkInst.resize(iconSize, iconSize);
+            bindVar(checkInst, "width", varMap["chip/icon-size-" + size]);
+            bindVar(checkInst, "height", varMap["chip/icon-size-" + size]);
+
+            // Override icon color
+            var iconColorPath = chipIconColorPath(variant, state);
+            var vectors = checkInst.findAll(function(n) { return n.type === "VECTOR"; });
+            for (var vci = 0; vci < vectors.length; vci++) {
+              bindVar(vectors[vci], "strokeWeight", varMap["chip/icon-stroke-width-" + size]);
+              if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
+                vectors[vci].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(vectors[vci], "strokes", 0, varMap[iconColorPath]);
+              }
+              if (vectors[vci].fills && vectors[vci].fills.length > 0) {
+                vectors[vci].fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(vectors[vci], "fills", 0, varMap[iconColorPath]);
+              }
+            }
+
+              comp.appendChild(checkInst);
+            }
+
+          // --- Label text ---
+            var textNode = figma.createText();
+            textNode.name = "Label";
+            textNode.fontName = font;
+            textNode.characters = "Chip";
+            textNode.fontSize = 14;
+
+            var textColorPath = chipTextColorPath(varMap, variant, isChecked, state);
+            textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+            bindPaintVar(textNode, "fills", 0, varMap[textColorPath]);
+            bindVar(textNode, "fontSize", varMap["chip/font-size-" + size]);
+            bindVar(textNode, "fontFamily", varMap["chip/font-family"]);
+            bindVar(textNode, "fontStyle", varMap["chip/font-weight"]);
+            bindVar(textNode, "lineHeight", varMap["chip/line-height-" + size]);
+            comp.appendChild(textNode);
+
+          // Focus ring
+            if (state === "focus") {
+              comp.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
+
+          // Disabled opacity
+            if (state === "disabled") {
+              comp.opacity = 0.6;
+            }
+
+          // Grid placement
+            var colIndex = vi * checkedStates.length + chi;
+            var rowIndex = ((ri * sizes.length + si) * states.length) + sti;
+            comp.x = colIndex * colWidth;
+            comp.y = rowYOffsets[rowIndex];
+            page.appendChild(comp);
+            components.push(comp);
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " chip variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "Chip";
+  return componentSet;
+}
+
+// Helper: build figmaPath for chip background
+function chipBgPath(varMap, variant, isChecked, state) {
+  if (!isChecked) {
+    var resolvedState = state || "default";
+    var variantBase = "chip/" + variant + "-background";
+    var variantState = resolvedState === "default" ? variantBase : variantBase + "-" + resolvedState;
+    if (varMap && varMap[variantState]) return variantState;
+    if (varMap && varMap[variantBase]) return variantBase;
+    var sharedBase = "chip/background";
+    if (resolvedState === "default") return sharedBase;
+    return sharedBase + "-" + resolvedState;
+  }
+  // checked — variant-specific
+  var prefix = "chip/" + variant + "-background-checked";
+  if (state === "default") return prefix;
+  return prefix + "-" + state;
+}
+
+// Helper: build figmaPath for chip border
+function chipBorderPath(varMap, variant, isChecked, state) {
+  var resolvedState = state || "default";
+  if (!isChecked) {
+    var variantBasePath = "chip/" + variant + "-border";
+    var variantStatePath = resolvedState === "default" ? variantBasePath : variantBasePath + "-" + resolvedState;
+    if (varMap && varMap[variantStatePath]) return variantStatePath;
+    if (varMap && varMap[variantBasePath]) return variantBasePath;
+    if (resolvedState === "default") return "chip/border";
+    return "chip/border-" + resolvedState;
+  }
+  if (isChecked) {
+    var variantCheckedBasePath = "chip/" + variant + "-border-checked";
+    var variantCheckedStatePath = resolvedState === "default" ? variantCheckedBasePath : variantCheckedBasePath + "-" + resolvedState;
+    if (varMap && varMap[variantCheckedStatePath]) return variantCheckedStatePath;
+    if (varMap && varMap[variantCheckedBasePath]) return variantCheckedBasePath;
+    var checkedStatePath = resolvedState === "default" ? "chip/checked-border" : "chip/checked-border-" + resolvedState;
+    if (varMap && varMap[checkedStatePath]) return checkedStatePath;
+    if (varMap && varMap["chip/checked-border"]) return "chip/checked-border";
+  }
+  if (resolvedState === "default") return "chip/border";
+  return "chip/border-" + resolvedState;
+}
+
+function chipRadiusPath(varMap, variant, radius) {
+  var resolvedRadius = radius || "default";
+  if (resolvedRadius === "default") {
+    var variantPath = "chip/" + variant + "-radius";
+    if (varMap && varMap[variantPath]) return variantPath;
+  }
+  return "chip/radius-" + resolvedRadius;
+}
+
+// Helper: build figmaPath for chip text color
+function chipTextColorPath(varMap, variant, isChecked, state) {
+  var resolvedState = state || "default";
+  var uncheckedStatePath = resolvedState === "default" ? "chip/text" : "chip/text-" + resolvedState;
+  if (!isChecked) {
+    var variantBasePath = "chip/" + variant + "-text";
+    var variantStatePath = resolvedState === "default" ? variantBasePath : variantBasePath + "-" + resolvedState;
+    if (varMap && varMap[variantStatePath]) return variantStatePath;
+    if (varMap && varMap[variantBasePath]) return variantBasePath;
+    if (varMap && varMap[uncheckedStatePath]) return uncheckedStatePath;
+    return "chip/text";
+  }
+  // Checked — variant-specific text (stateful when available)
+  var checkedBasePath = "chip/" + variant + "-text-checked";
+  var checkedStatePath = resolvedState === "default" ? checkedBasePath : checkedBasePath + "-" + resolvedState;
+  if (varMap && varMap[checkedStatePath]) return checkedStatePath;
+  if (varMap && varMap[checkedBasePath]) return checkedBasePath;
+  if (varMap && varMap[uncheckedStatePath]) return uncheckedStatePath;
+  return "chip/text";
+}
+
+// Helper: build figmaPath for chip icon color
+// Filled uses white (text-on-interactive), outline/light use brand primary (same as their text)
+function chipIconColorPath(variant, state) {
+  if (state === "disabled") return "chip/icon-color-disabled";
+  if (variant === "outline") return "chip/outline-text-checked";
+  if (variant === "light") return "chip/light-text-checked";
+  return "chip/icon-color";
+}
+
+
+
+// ---------------------------------------------------------------------------
+// Selectable / Applied Filter Chip Component Sets (selective-state model)
+// ---------------------------------------------------------------------------
+
+async function buildSelectableFilterChipComponentSet(varMap, page, font) {
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  // Filter chips have no Variant axis (single style). We keep a one-entry loop
+  // with an undefined variant so the shared color-path helpers resolve their
+  // non-variant token fallbacks.
+  var variants = [undefined];
   // "Selective State" collapses selection (checked) + availability (inactive) into a
   // single friendly variant axis matching the design spec. Interaction state
   // (Default/Hover/Focus/Pressed/Disabled) is an orthogonal axis.
@@ -13348,7 +14491,9 @@ async function buildChipComponentSet(varMap, page, font) {
     { name: "Inactive", checked: false, inactive: true },
     { name: "Selective Inactive", checked: true, inactive: true },
   ];
-  var states = ["default", "hover", "focus", "pressed", "disabled"];
+  // "disabled" is commented out for now — the Inactive / Selective Inactive
+  // selective states already cover the non-interactive case. Re-add to restore it.
+  var states = ["default", "hover", "focus", "pressed" /*, "disabled" */];
   var components = [];
 
   // Find check icon from icons page
@@ -13375,7 +14520,7 @@ async function buildChipComponentSet(varMap, page, font) {
 
   // Untitled UI close/x icon used for the removable ("applied") chip, shared with
   // Pill/Badge. Toggled via a BOOLEAN property so we don't double the variant count.
-  function createChipSwapRefs(iconComp) {
+  function createSelectableFilterChipSwapRefs(iconComp) {
     var refs = [];
     if (!iconComp) return refs;
     try {
@@ -13417,7 +14562,6 @@ async function buildChipComponentSet(varMap, page, font) {
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
-    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
 
     for (var sci = 0; sci < selectiveStates.length; sci++) {
       var selective = selectiveStates[sci];
@@ -13439,7 +14583,7 @@ async function buildChipComponentSet(varMap, page, font) {
             var capState = state.charAt(0).toUpperCase() + state.slice(1);
 
             var comp = figma.createComponent();
-            comp.name = "Variant=" + capVariant + ", Size=" + capSize + ", Radius=" + capRadius +
+            comp.name = "Size=" + capSize + ", Radius=" + capRadius +
                         ", Selective State=" + selective.name + ", State=" + capState;
 
           // Root: horizontal auto-layout (pill shape)
@@ -13449,10 +14593,16 @@ async function buildChipComponentSet(varMap, page, font) {
           comp.primaryAxisAlignItems = "CENTER";
           comp.counterAxisAlignItems = "CENTER";
           comp.resize(80, chipHeight);
+          // resize() on an auto-layout frame flips both axes to FIXED, which
+          // would lock the chip at 80px wide and stop the padding tokens from
+          // driving its size. Re-assert AUTO so width/height hug the content +
+          // padding (a pill should hug, not sit at a fixed 80px).
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
           comp.cornerRadius = 16;
 
-          // Padding
-          var paddingX = isChecked ? 10 : 16;
+          // Padding (shared across every selective state)
+          var paddingX = 16;
           var paddingY = 4;
           comp.paddingLeft = paddingX;
           comp.paddingRight = paddingX;
@@ -13463,30 +14613,23 @@ async function buildChipComponentSet(varMap, page, font) {
           // Height hugs content + vertical padding (counterAxisSizingMode = AUTO);
           // there is no fixed/min height token so padding fully drives it.
           // Bind dimensions
-          if (isChecked) {
-            var selPadX = varMap["chip/" + variant + "-selected-padding-x-" + size];
-            var selPadY = varMap["chip/" + variant + "-selected-padding-y-" + size];
-            bindVar(comp, "paddingLeft", selPadX);
-            bindVar(comp, "paddingRight", selPadX);
-            bindVar(comp, "paddingTop", selPadY);
-            bindVar(comp, "paddingBottom", selPadY);
-          } else {
-            var padX = varMap["chip/" + variant + "-padding-x-" + size];
-            var padY = varMap["chip/" + variant + "-padding-y-" + size];
+          {
+            var padX = varMap["selectablefilterchip/padding-x-" + size];
+            var padY = varMap["selectablefilterchip/padding-y-" + size];
             bindVar(comp, "paddingLeft", padX);
             bindVar(comp, "paddingRight", padX);
             bindVar(comp, "paddingTop", padY);
             bindVar(comp, "paddingBottom", padY);
           }
-            var radiusPath = chipRadiusPath(varMap, variant, radius);
+            var radiusPath = sfcRadiusPath(varMap, variant, radius);
             bindVar(comp, "topLeftRadius", varMap[radiusPath]);
             bindVar(comp, "topRightRadius", varMap[radiusPath]);
             bindVar(comp, "bottomLeftRadius", varMap[radiusPath]);
             bindVar(comp, "bottomRightRadius", varMap[radiusPath]);
-            bindVar(comp, "itemSpacing", varMap["chip/spacing-" + size]);
+            bindVar(comp, "itemSpacing", varMap["selectablefilterchip/spacing-" + size]);
 
           // Background fill
-            var bgPath = chipBgPath(varMap, variant, isChecked, isInactive, state);
+            var bgPath = sfcBgPath(varMap, variant, isChecked, isInactive, state);
             if (isChecked && variant === "filled") {
               comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
             } else if (isChecked && variant === "light") {
@@ -13497,7 +14640,7 @@ async function buildChipComponentSet(varMap, page, font) {
             bindPaintVar(comp, "fills", 0, varMap[bgPath]);
 
           // Border
-            var borderPath = chipBorderPath(varMap, variant, isChecked, isInactive, state);
+            var borderPath = sfcBorderPath(varMap, variant, isChecked, isInactive, state);
             // Only a filled + selected chip hides its border (solid fill carries
             // the shape). Outline and light always show their border, as do
             // unchecked chips and any inactive chip (dashed).
@@ -13510,7 +14653,7 @@ async function buildChipComponentSet(varMap, page, font) {
               comp.strokeWeight = 1.5;
               comp.strokeAlign = "INSIDE";
               bindPaintVar(comp, "strokes", 0, varMap[borderPath]);
-              bindVar(comp, "strokeWeight", varMap["chip/border-width"]);
+              bindVar(comp, "strokeWeight", varMap["selectablefilterchip/border-width"]);
               comp.dashPattern = isInactive ? [4, 3] : [];
             }
 
@@ -13522,15 +14665,15 @@ async function buildChipComponentSet(varMap, page, font) {
             checkInst = checkIconComp.createInstance();
             checkInst.name = "Icon";
             checkInst.resize(iconSize, iconSize);
-            bindVar(checkInst, "width", varMap["chip/icon-size-" + size]);
-            bindVar(checkInst, "height", varMap["chip/icon-size-" + size]);
+            bindVar(checkInst, "width", varMap["selectablefilterchip/icon-size-" + size]);
+            bindVar(checkInst, "height", varMap["selectablefilterchip/icon-size-" + size]);
 
             // The checkmark always follows the label text color so it stays
             // legible across every variant/state.
-            var iconColorPath = chipTextColorPath(varMap, variant, isChecked, isInactive, state);
+            var iconColorPath = sfcTextColorPath(varMap, variant, isChecked, isInactive, state);
             var vectors = checkInst.findAll(function(n) { return n.type === "VECTOR"; });
             for (var vci = 0; vci < vectors.length; vci++) {
-              bindVar(vectors[vci], "strokeWeight", varMap["chip/icon-stroke-width-" + size]);
+              bindVar(vectors[vci], "strokeWeight", varMap["selectablefilterchip/icon-stroke-width-" + size]);
               if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
                 vectors[vci].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                 bindPaintVar(vectors[vci], "strokes", 0, varMap[iconColorPath]);
@@ -13555,21 +14698,25 @@ async function buildChipComponentSet(varMap, page, font) {
             textStack.counterAxisAlignItems = "CENTER";
             textStack.fills = [];
             textStack.itemSpacing = 2;
-            bindVar(textStack, "itemSpacing", varMap["chip/sublabel-spacing"]);
+            bindVar(textStack, "itemSpacing", varMap["selectablefilterchip/sublabel-spacing"]);
 
-            var textColorPath = chipTextColorPath(varMap, variant, isChecked, isInactive, state);
+            var textColorPath = sfcTextColorPath(varMap, variant, isChecked, isInactive, state);
 
             var textNode = figma.createText();
             textNode.name = "Label";
             textNode.fontName = font;
-            textNode.characters = "Chip";
+            textNode.characters = "Label";
             textNode.fontSize = 14;
             textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
             bindPaintVar(textNode, "fills", 0, varMap[textColorPath]);
-            bindVar(textNode, "fontSize", varMap["chip/font-size-" + size]);
-            bindVar(textNode, "fontFamily", varMap["chip/font-family"]);
-            bindVar(textNode, "fontStyle", (isChecked && varMap["chip/font-weight-selected"]) ? varMap["chip/font-weight-selected"] : varMap["chip/font-weight"]);
-            bindVar(textNode, "lineHeight", varMap["chip/line-height-" + size]);
+            bindVar(textNode, "fontSize", varMap["selectablefilterchip/font-size-" + size]);
+            bindVar(textNode, "fontFamily", varMap["selectablefilterchip/font-family"]);
+             var sfcWeightVar = (isChecked && isInactive) ? varMap["selectablefilterchip/font-weight-selected-inactive"]
+               : isChecked ? varMap["selectablefilterchip/font-weight-selected"]
+               : isInactive ? varMap["selectablefilterchip/font-weight-inactive"]
+               : varMap["selectablefilterchip/font-weight"];
+             bindVar(textNode, "fontStyle", sfcWeightVar || varMap["selectablefilterchip/font-weight"]);
+            bindVar(textNode, "lineHeight", varMap["selectablefilterchip/line-height-" + size]);
             textStack.appendChild(textNode);
 
           // --- Optional sub-label (hidden by default; toggled by "Sub-label" prop) ---
@@ -13579,10 +14726,10 @@ async function buildChipComponentSet(varMap, page, font) {
             subLabelNode.characters = "Sub-label";
             subLabelNode.fontSize = 12;
             subLabelNode.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
-            bindPaintVar(subLabelNode, "fills", 0, varMap[isChecked ? "chip/sublabel-color-selected" : "chip/sublabel-color"]);
-            bindVar(subLabelNode, "fontSize", varMap["chip/sublabel-font-size-" + size]);
-            bindVar(subLabelNode, "fontFamily", varMap["chip/font-family"]);
-            bindVar(subLabelNode, "lineHeight", varMap["chip/sublabel-line-height-" + size]);
+            bindPaintVar(subLabelNode, "fills", 0, varMap[isChecked ? "selectablefilterchip/sublabel-color-selected" : "selectablefilterchip/sublabel-color"]);
+            bindVar(subLabelNode, "fontSize", varMap["selectablefilterchip/sublabel-font-size-" + size]);
+            bindVar(subLabelNode, "fontFamily", varMap["selectablefilterchip/font-family"]);
+            bindVar(subLabelNode, "lineHeight", varMap["selectablefilterchip/sublabel-line-height-" + size]);
             subLabelNode.visible = false;
             textStack.appendChild(subLabelNode);
 
@@ -13590,20 +14737,20 @@ async function buildChipComponentSet(varMap, page, font) {
 
           // --- Optional remove/applied "×" icon (hidden by default; "Show Remove" prop) ---
             var removeNode = null;
-            var removeColorPath = isChecked ? "chip/remove-color-selected" : "chip/remove-color";
+            var removeColorPath = isChecked ? "selectablefilterchip/remove-color-selected" : "selectablefilterchip/remove-color";
             if (removeIconComp) {
               removeNode = removeIconComp.createInstance();
               removeNode.name = "Remove";
               try { removeNode.resizeWithoutConstraints(iconSize, iconSize); } catch (_e) {}
-              bindVar(removeNode, "width", varMap["chip/remove-size-" + size]);
-              bindVar(removeNode, "height", varMap["chip/remove-size-" + size]);
+              bindVar(removeNode, "width", varMap["selectablefilterchip/remove-size-" + size]);
+              bindVar(removeNode, "height", varMap["selectablefilterchip/remove-size-" + size]);
               try { removeNode.layoutGrow = 0; } catch (_e) {}
               var removeVectors = removeNode.findAll(function (n) {
                 return n.type === "VECTOR" || n.type === "LINE" || n.type === "ELLIPSE" ||
                        n.type === "RECTANGLE" || n.type === "POLYGON" || n.type === "STAR";
               });
               for (var rmvi = 0; rmvi < removeVectors.length; rmvi++) {
-                bindVar(removeVectors[rmvi], "strokeWeight", varMap["chip/remove-icon-stroke-width-" + size]);
+                bindVar(removeVectors[rmvi], "strokeWeight", varMap["selectablefilterchip/remove-icon-stroke-width-" + size]);
                 if (removeVectors[rmvi].strokes && removeVectors[rmvi].strokes.length > 0) {
                   bindPaintVar(removeVectors[rmvi], "strokes", 0, varMap[removeColorPath]);
                 }
@@ -13619,7 +14766,7 @@ async function buildChipComponentSet(varMap, page, font) {
               removeNode.fontSize = 14;
               removeNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
               bindPaintVar(removeNode, "fills", 0, varMap[removeColorPath]);
-              bindVar(removeNode, "fontSize", varMap["chip/remove-size-" + size]);
+              bindVar(removeNode, "fontSize", varMap["selectablefilterchip/remove-size-" + size]);
             }
             removeNode.visible = false;
             comp.appendChild(removeNode);
@@ -13643,7 +14790,7 @@ async function buildChipComponentSet(varMap, page, font) {
                 removeRefs.visible = showRemoveProp;
               } catch (_eShow) {}
               if (removeIconComp) {
-                var chipSwapRefs = createChipSwapRefs(removeIconComp);
+                var chipSwapRefs = createSelectableFilterChipSwapRefs(removeIconComp);
                 for (var csri = 0; csri < chipSwapRefs.length; csri++) {
                   try {
                     var chipSwapProp = comp.addComponentProperty("Remove Icon", "INSTANCE_SWAP", chipSwapRefs[csri]);
@@ -13673,18 +14820,18 @@ async function buildChipComponentSet(varMap, page, font) {
               warn.resize(warnSize, warnSize);
               warn.cornerRadius = warnSize / 2;
               warn.fills = [{ type: "SOLID", color: { r: 0.9, g: 0.2, b: 0.2 } }];
-              bindPaintVar(warn, "fills", 0, varMap["chip/selective-inactive-warning-color"]);
+              bindPaintVar(warn, "fills", 0, varMap["selectablefilterchip/selective-inactive-warning-color"]);
               warn.strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
               warn.strokeWeight = 1.5;
               warn.strokeAlign = "OUTSIDE";
-              bindPaintVar(warn, "strokes", 0, varMap["chip/selective-inactive-warning-border"]);
+              bindPaintVar(warn, "strokes", 0, varMap["selectablefilterchip/selective-inactive-warning-border"]);
 
               var warnText = figma.createText();
               warnText.fontName = font;
               warnText.characters = "!";
               warnText.fontSize = Math.max(7, Math.round(warnSize * 0.7));
               warnText.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-              bindPaintVar(warnText, "fills", 0, varMap["chip/selective-inactive-warning-icon"]);
+              bindPaintVar(warnText, "fills", 0, varMap["selectablefilterchip/selective-inactive-warning-icon"]);
               warn.appendChild(warnText);
 
               comp.appendChild(warn);
@@ -13732,7 +14879,7 @@ async function buildChipComponentSet(varMap, page, font) {
 
   progress("Created " + components.length + " chip variants");
   var componentSet = figma.combineAsVariants(components, page);
-  componentSet.name = "Chip";
+  componentSet.name = "SelectableFilterChip";
   return componentSet;
 }
 
@@ -13741,10 +14888,10 @@ async function buildChipComponentSet(varMap, page, font) {
 // Combines variant + checked + inactive + interaction, dropping the least
 // important qualifier first (interaction → inactive → checked → variant) until a
 // bound variable exists, mirroring the preview's resolution order.
-function chipColorPath(varMap, prop, variant, isChecked, isInactive, state) {
+function sfcColorPath(varMap, prop, variant, isChecked, isInactive, state) {
   var resolvedState = (state && state !== "default") ? state : null;
   function make(useV, useC, useIa, useIt) {
-    var base = useV ? ("chip/" + variant + "-" + prop) : ("chip/" + prop);
+    var base = useV ? ("selectablefilterchip/" + variant + "-" + prop) : ("selectablefilterchip/" + prop);
     var s = "";
     if (useC && isChecked) s += "-selected";
     if (useIa && isInactive) s += "-inactive";
@@ -13770,27 +14917,513 @@ function chipColorPath(varMap, prop, variant, isChecked, isInactive, state) {
   return cands[cands.length - 1];
 }
 
-function chipBgPath(varMap, variant, isChecked, isInactive, state) {
-  return chipColorPath(varMap, "background", variant, isChecked, isInactive, state);
+function sfcBgPath(varMap, variant, isChecked, isInactive, state) {
+  return sfcColorPath(varMap, "background", variant, isChecked, isInactive, state);
 }
 
 // Helper: build figmaPath for chip border
-function chipBorderPath(varMap, variant, isChecked, isInactive, state) {
-  return chipColorPath(varMap, "border", variant, isChecked, isInactive, state);
+function sfcBorderPath(varMap, variant, isChecked, isInactive, state) {
+  return sfcColorPath(varMap, "border", variant, isChecked, isInactive, state);
 }
 
-function chipRadiusPath(varMap, variant, radius) {
+function sfcRadiusPath(varMap, variant, radius) {
   var resolvedRadius = radius || "default";
   if (resolvedRadius === "default") {
-    var variantPath = "chip/" + variant + "-radius";
+    var variantPath = "selectablefilterchip/" + variant + "-radius";
     if (varMap && varMap[variantPath]) return variantPath;
   }
-  return "chip/radius-" + resolvedRadius;
+  return "selectablefilterchip/radius-" + resolvedRadius;
 }
 
 // Helper: build figmaPath for chip text color
-function chipTextColorPath(varMap, variant, isChecked, isInactive, state) {
-  return chipColorPath(varMap, "text", variant, isChecked, isInactive, state);
+function sfcTextColorPath(varMap, variant, isChecked, isInactive, state) {
+  return sfcColorPath(varMap, "text", variant, isChecked, isInactive, state);
+}
+
+async function buildAppliedFilterChipComponentSet(varMap, page, font) {
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  // Filter chips have no Variant axis (single style). We keep a one-entry loop
+  // with an undefined variant so the shared color-path helpers resolve their
+  // non-variant token fallbacks.
+  var variants = [undefined];
+  // "Selective State" collapses selection (checked) + availability (inactive) into a
+  // single friendly variant axis matching the design spec. Interaction state
+  // (Default/Hover/Focus/Pressed/Disabled) is an orthogonal axis.
+  // Applied Filter Chips are always an applied (selected) filter, so only the
+  // two selected Selective States exist.
+  var selectiveStates = [
+    { name: "Selected", checked: true, inactive: false },
+    { name: "Selective Inactive", checked: true, inactive: true },
+  ];
+  // "disabled" is commented out for now — the Inactive / Selective Inactive
+  // selective states already cover the non-interactive case. Re-add to restore it.
+  var states = ["default", "hover", "focus", "pressed" /*, "disabled" */];
+  var components = [];
+
+  // Find check icon from icons page
+  var checkIconComp = null;
+  var iconsPage = null;
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    if (figma.root.children[pi].name.toLowerCase() === "icons") {
+      iconsPage = figma.root.children[pi];
+      break;
+    }
+  }
+  if (iconsPage) {
+    await iconsPage.loadAsync();
+    var allNodes = iconsPage.findAll(function(n) {
+      return n.type === "COMPONENT";
+    });
+    for (var ni = 0; ni < allNodes.length; ni++) {
+      var nName = allNodes[ni].name.toLowerCase();
+      if (!checkIconComp && nName.indexOf("check") >= 0 && nName.indexOf("circle") < 0 && nName.indexOf("square") < 0) {
+        checkIconComp = allNodes[ni];
+      }
+    }
+  }
+
+  // Untitled UI close/x icon used for the removable ("applied") chip, shared with
+  // Pill/Badge. Toggled via a BOOLEAN property so we don't double the variant count.
+  function createAppliedFilterChipSwapRefs(iconComp) {
+    var refs = [];
+    if (!iconComp) return refs;
+    try {
+      var mainComp = iconComp.mainComponent || iconComp;
+      if (mainComp && mainComp.key) refs.push(mainComp.key);
+    } catch (_err) {}
+    if (iconComp.key) refs.push(iconComp.key);
+    if (iconComp.id) refs.push(iconComp.id);
+    return refs;
+  }
+  var removeIconComp = await findPillRemoveIconComponent();
+  if (removeIconComp) {
+    progress("[Chip] Remove icon source: " + removeIconComp.name);
+  } else {
+    progress("[Chip] Warning: no close icon component found; using text fallback.");
+  }
+
+  // Known chip heights per size for grid spacing
+  var sizeHeights = { default: 32, xs: 23, sm: 28, md: 32, lg: 36, xl: 40 };
+  var sizeIconSizes = { default: 14, xs: 9, sm: 12, md: 14, lg: 16, xl: 18 };
+  var gap = 16;
+  var colGap = 16;
+
+  // Pre-calculate y offsets: rows = (radius × size × state)
+  var rowYOffsets = [];
+  var runningY = 0;
+  for (var rri = 0; rri < radii.length; rri++) {
+    for (var rsi = 0; rsi < sizes.length; rsi++) {
+      for (var rsti = 0; rsti < states.length; rsti++) {
+        rowYOffsets.push(runningY);
+        var rowH = sizeHeights[sizes[rsi]] != null ? sizeHeights[sizes[rsi]] : sizeHeights.default;
+        if (rowH < 24) rowH = 24;
+        runningY += rowH + gap;
+      }
+    }
+  }
+
+  var colWidth = 180 + colGap;
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+
+    for (var sci = 0; sci < selectiveStates.length; sci++) {
+      var selective = selectiveStates[sci];
+      var isChecked = selective.checked;
+      var isInactive = selective.inactive;
+
+      for (var ri = 0; ri < radii.length; ri++) {
+        var radius = radii[ri];
+        var capRadius = radius === "default" ? "Default" : radius.toUpperCase();
+
+        for (var si = 0; si < sizes.length; si++) {
+          var size = sizes[si];
+          var capSize = size === "default" ? "Default" : size.toUpperCase();
+          var chipHeight = sizeHeights[size] != null ? sizeHeights[size] : sizeHeights.default;
+          var iconSize = sizeIconSizes[size] != null ? sizeIconSizes[size] : sizeIconSizes.default;
+
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+            var comp = figma.createComponent();
+            comp.name = "Size=" + capSize + ", Radius=" + capRadius +
+                        ", Selective State=" + selective.name + ", State=" + capState;
+
+          // Root: horizontal auto-layout (pill shape)
+          comp.layoutMode = "HORIZONTAL";
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
+          comp.primaryAxisAlignItems = "CENTER";
+          comp.counterAxisAlignItems = "CENTER";
+          comp.resize(80, chipHeight);
+          // resize() on an auto-layout frame flips both axes to FIXED, which
+          // would lock the chip at 80px wide and stop the padding tokens from
+          // driving its size. Re-assert AUTO so width/height hug the content +
+          // padding (a pill should hug, not sit at a fixed 80px).
+          comp.primaryAxisSizingMode = "AUTO";
+          comp.counterAxisSizingMode = "AUTO";
+          comp.cornerRadius = 16;
+
+          // Padding (shared across every selective state)
+          var paddingX = 16;
+          var paddingY = 4;
+          comp.paddingLeft = paddingX;
+          comp.paddingRight = paddingX;
+          comp.paddingTop = paddingY;
+          comp.paddingBottom = paddingY;
+          comp.itemSpacing = 6;
+
+          // Height hugs content + vertical padding (counterAxisSizingMode = AUTO);
+          // there is no fixed/min height token so padding fully drives it.
+          // Bind dimensions
+          {
+            var padX = varMap["appliedfilterchip/padding-x-" + size];
+            var padY = varMap["appliedfilterchip/padding-y-" + size];
+            bindVar(comp, "paddingLeft", padX);
+            bindVar(comp, "paddingRight", padX);
+            bindVar(comp, "paddingTop", padY);
+            bindVar(comp, "paddingBottom", padY);
+          }
+            var radiusPath = afcRadiusPath(varMap, variant, radius);
+            bindVar(comp, "topLeftRadius", varMap[radiusPath]);
+            bindVar(comp, "topRightRadius", varMap[radiusPath]);
+            bindVar(comp, "bottomLeftRadius", varMap[radiusPath]);
+            bindVar(comp, "bottomRightRadius", varMap[radiusPath]);
+            bindVar(comp, "itemSpacing", varMap["appliedfilterchip/spacing-" + size]);
+
+          // Background fill
+            var bgPath = afcBgPath(varMap, variant, isChecked, isInactive, state);
+            if (isChecked && variant === "filled") {
+              comp.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+            } else if (isChecked && variant === "light") {
+              comp.fills = [{ type: "SOLID", color: { r: 0.92, g: 0.92, b: 0.95 } }];
+            } else {
+              comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            }
+            bindPaintVar(comp, "fills", 0, varMap[bgPath]);
+
+          // Border
+            var borderPath = afcBorderPath(varMap, variant, isChecked, isInactive, state);
+            // Only a filled + selected chip hides its border (solid fill carries
+            // the shape). Outline and light always show their border, as do
+            // unchecked chips and any inactive chip (dashed).
+            var isSelectiveInactive = isChecked && isInactive;
+            var hideBorder = variant === "filled" && isChecked && !isInactive;
+            if (hideBorder) {
+              comp.strokes = [];
+            } else {
+              comp.strokes = [{ type: "SOLID", color: { r: 0.78, g: 0.78, b: 0.78 } }];
+              comp.strokeWeight = 1.5;
+              comp.strokeAlign = "INSIDE";
+              bindPaintVar(comp, "strokes", 0, varMap[borderPath]);
+              bindVar(comp, "strokeWeight", varMap["appliedfilterchip/border-width"]);
+              comp.dashPattern = isInactive ? [4, 3] : [];
+            }
+
+          // --- Check icon (independent toggle, hidden by default) ---
+          // The checkmark is NOT tied to the selected/checked color. It is an
+          // optional element toggled via the "Checkmark" boolean property.
+            var checkInst = null;
+            if (checkIconComp) {
+            checkInst = checkIconComp.createInstance();
+            checkInst.name = "Icon";
+            checkInst.resize(iconSize, iconSize);
+            bindVar(checkInst, "width", varMap["appliedfilterchip/icon-size-" + size]);
+            bindVar(checkInst, "height", varMap["appliedfilterchip/icon-size-" + size]);
+
+            // The checkmark always follows the label text color so it stays
+            // legible across every variant/state.
+            var iconColorPath = afcTextColorPath(varMap, variant, isChecked, isInactive, state);
+            var vectors = checkInst.findAll(function(n) { return n.type === "VECTOR"; });
+            for (var vci = 0; vci < vectors.length; vci++) {
+              bindVar(vectors[vci], "strokeWeight", varMap["appliedfilterchip/icon-stroke-width-" + size]);
+              if (vectors[vci].strokes && vectors[vci].strokes.length > 0) {
+                vectors[vci].strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(vectors[vci], "strokes", 0, varMap[iconColorPath]);
+              }
+              if (vectors[vci].fills && vectors[vci].fills.length > 0) {
+                vectors[vci].fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                bindPaintVar(vectors[vci], "fills", 0, varMap[iconColorPath]);
+              }
+            }
+
+              checkInst.visible = false;
+              comp.appendChild(checkInst);
+            }
+
+          // --- Text stack (label + optional sub-label) ---
+            var textStack = figma.createFrame();
+            textStack.name = "Text";
+            textStack.layoutMode = "VERTICAL";
+            textStack.primaryAxisSizingMode = "AUTO";
+            textStack.counterAxisSizingMode = "AUTO";
+            textStack.primaryAxisAlignItems = "CENTER";
+            textStack.counterAxisAlignItems = "CENTER";
+            textStack.fills = [];
+            textStack.itemSpacing = 2;
+            bindVar(textStack, "itemSpacing", varMap["appliedfilterchip/sublabel-spacing"]);
+
+            var textColorPath = afcTextColorPath(varMap, variant, isChecked, isInactive, state);
+
+            var textNode = figma.createText();
+            textNode.name = "Label";
+            textNode.fontName = font;
+            textNode.characters = "Label";
+            textNode.fontSize = 14;
+            textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+            bindPaintVar(textNode, "fills", 0, varMap[textColorPath]);
+            bindVar(textNode, "fontSize", varMap["appliedfilterchip/font-size-" + size]);
+            bindVar(textNode, "fontFamily", varMap["appliedfilterchip/font-family"]);
+             var afcWeightVar = (isChecked && isInactive) ? varMap["appliedfilterchip/font-weight-selected-inactive"]
+               : isChecked ? varMap["appliedfilterchip/font-weight-selected"]
+               : isInactive ? varMap["appliedfilterchip/font-weight-inactive"]
+               : varMap["appliedfilterchip/font-weight"];
+             bindVar(textNode, "fontStyle", afcWeightVar || varMap["appliedfilterchip/font-weight"]);
+            bindVar(textNode, "lineHeight", varMap["appliedfilterchip/line-height-" + size]);
+            textStack.appendChild(textNode);
+
+          // --- Optional sub-label (hidden by default; toggled by "Sub-label" prop) ---
+            var subLabelNode = figma.createText();
+            subLabelNode.name = "Sub-label";
+            subLabelNode.fontName = font;
+            subLabelNode.characters = "Sub-label";
+            subLabelNode.fontSize = 12;
+            subLabelNode.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+            bindPaintVar(subLabelNode, "fills", 0, varMap[isChecked ? "appliedfilterchip/sublabel-color-selected" : "appliedfilterchip/sublabel-color"]);
+            bindVar(subLabelNode, "fontSize", varMap["appliedfilterchip/sublabel-font-size-" + size]);
+            bindVar(subLabelNode, "fontFamily", varMap["appliedfilterchip/font-family"]);
+            bindVar(subLabelNode, "lineHeight", varMap["appliedfilterchip/sublabel-line-height-" + size]);
+            subLabelNode.visible = false;
+            textStack.appendChild(subLabelNode);
+
+            comp.appendChild(textStack);
+
+          // --- Optional remove/applied "×" icon (hidden by default; "Show Remove" prop) ---
+            var removeNode = null;
+            // Selected and Selective Inactive have distinct remove colors, each of
+            // which can vary by interaction state (hover/pressed). Resolve most
+            // specific first, degrading Selective Inactive → Selected → base.
+            var removeColorPath = "appliedfilterchip/remove-color";
+            if (isChecked) {
+              var rmState = (state && state !== "default") ? state : null;
+              var removeCands = [];
+              if (isInactive) {
+                if (rmState) removeCands.push("appliedfilterchip/remove-color-selected-inactive-" + rmState);
+                removeCands.push("appliedfilterchip/remove-color-selected-inactive");
+              }
+              if (rmState) removeCands.push("appliedfilterchip/remove-color-selected-" + rmState);
+              removeCands.push("appliedfilterchip/remove-color-selected");
+              removeColorPath = "appliedfilterchip/remove-color-selected";
+              for (var rmci = 0; rmci < removeCands.length; rmci++) {
+                if (varMap[removeCands[rmci]]) { removeColorPath = removeCands[rmci]; break; }
+              }
+            }
+            if (removeIconComp) {
+              removeNode = removeIconComp.createInstance();
+              removeNode.name = "Remove";
+              try { removeNode.resizeWithoutConstraints(iconSize, iconSize); } catch (_e) {}
+              bindVar(removeNode, "width", varMap["appliedfilterchip/remove-size-" + size]);
+              bindVar(removeNode, "height", varMap["appliedfilterchip/remove-size-" + size]);
+              try { removeNode.layoutGrow = 0; } catch (_e) {}
+              var removeVectors = removeNode.findAll(function (n) {
+                return n.type === "VECTOR" || n.type === "LINE" || n.type === "ELLIPSE" ||
+                       n.type === "RECTANGLE" || n.type === "POLYGON" || n.type === "STAR";
+              });
+              for (var rmvi = 0; rmvi < removeVectors.length; rmvi++) {
+                bindVar(removeVectors[rmvi], "strokeWeight", varMap["appliedfilterchip/remove-icon-stroke-width-" + size]);
+                if (removeVectors[rmvi].strokes && removeVectors[rmvi].strokes.length > 0) {
+                  bindPaintVar(removeVectors[rmvi], "strokes", 0, varMap[removeColorPath]);
+                }
+                if (removeVectors[rmvi].fills && removeVectors[rmvi].fills.length > 0) {
+                  bindPaintVar(removeVectors[rmvi], "fills", 0, varMap[removeColorPath]);
+                }
+              }
+            } else {
+              removeNode = figma.createText();
+              removeNode.name = "Remove";
+              removeNode.fontName = font;
+              removeNode.characters = "\u00d7";
+              removeNode.fontSize = 14;
+              removeNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              bindPaintVar(removeNode, "fills", 0, varMap[removeColorPath]);
+              bindVar(removeNode, "fontSize", varMap["appliedfilterchip/remove-size-" + size]);
+            }
+            // Default the remove "×" ON — an applied filter chip always shows it.
+            removeNode.visible = true;
+            comp.appendChild(removeNode);
+
+          // --- Component properties: Checkmark toggle, Sub-label toggle, Remove toggle, Remove swap ---
+            if (typeof comp.addComponentProperty === "function") {
+              if (checkInst) {
+                try {
+                  var checkProp = comp.addComponentProperty("Checkmark", "BOOLEAN", false);
+                  checkInst.componentPropertyReferences = { visible: checkProp };
+                } catch (_eCheck) {}
+              }
+              try {
+                var subProp = comp.addComponentProperty("Sub-label", "BOOLEAN", false);
+                subLabelNode.componentPropertyReferences = { visible: subProp };
+              } catch (_eSub) {}
+
+              var removeRefs = {};
+              try {
+                // Applied filter chips are defined by their removable "×", so the
+                // remove icon defaults ON (docs + main component show it).
+                var showRemoveProp = comp.addComponentProperty("Show Remove", "BOOLEAN", true);
+                removeRefs.visible = showRemoveProp;
+              } catch (_eShow) {}
+              if (removeIconComp) {
+                var chipSwapRefs = createAppliedFilterChipSwapRefs(removeIconComp);
+                for (var csri = 0; csri < chipSwapRefs.length; csri++) {
+                  try {
+                    var chipSwapProp = comp.addComponentProperty("Remove Icon", "INSTANCE_SWAP", chipSwapRefs[csri]);
+                    removeRefs.mainComponent = chipSwapProp;
+                    break;
+                  } catch (_eSwap) {}
+                }
+              }
+              try {
+                if (removeRefs.visible || removeRefs.mainComponent) {
+                  removeNode.componentPropertyReferences = removeRefs;
+                }
+              } catch (_eRef) {}
+            }
+
+          // --- Selective-inactive warning marker ("!") ---
+          // Applied Filter Chips signal inactive with a dashed border + remove
+          // ("×") only; no warning marker.
+            if (false) {
+              var warnSize = Math.max(10, Math.round(iconSize * 0.95));
+              var warn = figma.createFrame();
+              warn.name = "Warning";
+              warn.layoutMode = "HORIZONTAL";
+              warn.primaryAxisSizingMode = "FIXED";
+              warn.counterAxisSizingMode = "FIXED";
+              warn.primaryAxisAlignItems = "CENTER";
+              warn.counterAxisAlignItems = "CENTER";
+              warn.resize(warnSize, warnSize);
+              warn.cornerRadius = warnSize / 2;
+              warn.fills = [{ type: "SOLID", color: { r: 0.9, g: 0.2, b: 0.2 } }];
+              bindPaintVar(warn, "fills", 0, varMap["appliedfilterchip/selective-inactive-warning-color"]);
+              warn.strokes = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              warn.strokeWeight = 1.5;
+              warn.strokeAlign = "OUTSIDE";
+              bindPaintVar(warn, "strokes", 0, varMap["appliedfilterchip/selective-inactive-warning-border"]);
+
+              var warnText = figma.createText();
+              warnText.fontName = font;
+              warnText.characters = "!";
+              warnText.fontSize = Math.max(7, Math.round(warnSize * 0.7));
+              warnText.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              bindPaintVar(warnText, "fills", 0, varMap["appliedfilterchip/selective-inactive-warning-icon"]);
+              warn.appendChild(warnText);
+
+              comp.appendChild(warn);
+              warn.layoutPositioning = "ABSOLUTE";
+              // Pin to the bottom-right corner so it straddles the border like the
+              // reference design. MAX/MAX keeps the corner offset constant when the
+              // instance's label/size changes.
+              warn.constraints = { horizontal: "MAX", vertical: "MAX" };
+              // Sit ~2px inside the visible border (border width + 2).
+              var warnInset = 4;
+              warn.x = comp.width - warnSize - warnInset;
+              warn.y = comp.height - warnSize - warnInset;
+            }
+
+          // Focus ring
+            if (state === "focus") {
+              comp.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.9, a: 0.4 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
+
+          // Disabled opacity
+            if (state === "disabled") {
+              comp.opacity = 0.6;
+            }
+
+          // Grid placement
+            var colIndex = vi * selectiveStates.length + sci;
+            var rowIndex = ((ri * sizes.length + si) * states.length) + sti;
+            comp.x = colIndex * colWidth;
+            comp.y = rowYOffsets[rowIndex];
+            page.appendChild(comp);
+            components.push(comp);
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " chip variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "AppliedFilterChip";
+  return componentSet;
+}
+
+// Helper: build figmaPath for chip background
+// Generic figmaPath resolver for chip color props (background/border/text).
+// Combines variant + checked + inactive + interaction, dropping the least
+// important qualifier first (interaction → inactive → checked → variant) until a
+// bound variable exists, mirroring the preview's resolution order.
+function afcColorPath(varMap, prop, variant, isChecked, isInactive, state) {
+  var resolvedState = (state && state !== "default") ? state : null;
+  function make(useV, useC, useIa, useIt) {
+    var base = useV ? ("appliedfilterchip/" + variant + "-" + prop) : ("appliedfilterchip/" + prop);
+    var s = "";
+    if (useC && isChecked) s += "-selected";
+    if (useIa && isInactive) s += "-inactive";
+    if (useIt && resolvedState) s += "-" + resolvedState;
+    return base + s;
+  }
+  var cands = [];
+  var useVs = [true, false];
+  for (var i = 0; i < useVs.length; i++) {
+    var useV = useVs[i];
+    cands.push(make(useV, true, true, true));
+    cands.push(make(useV, true, true, false));
+    cands.push(make(useV, true, false, true));
+    cands.push(make(useV, true, false, false));
+    cands.push(make(useV, false, true, true));
+    cands.push(make(useV, false, true, false));
+    cands.push(make(useV, false, false, true));
+    cands.push(make(useV, false, false, false));
+  }
+  for (var c = 0; c < cands.length; c++) {
+    if (varMap && varMap[cands[c]]) return cands[c];
+  }
+  return cands[cands.length - 1];
+}
+
+function afcBgPath(varMap, variant, isChecked, isInactive, state) {
+  return afcColorPath(varMap, "background", variant, isChecked, isInactive, state);
+}
+
+// Helper: build figmaPath for chip border
+function afcBorderPath(varMap, variant, isChecked, isInactive, state) {
+  return afcColorPath(varMap, "border", variant, isChecked, isInactive, state);
+}
+
+function afcRadiusPath(varMap, variant, radius) {
+  var resolvedRadius = radius || "default";
+  if (resolvedRadius === "default") {
+    var variantPath = "appliedfilterchip/" + variant + "-radius";
+    if (varMap && varMap[variantPath]) return variantPath;
+  }
+  return "appliedfilterchip/radius-" + resolvedRadius;
+}
+
+// Helper: build figmaPath for chip text color
+function afcTextColorPath(varMap, variant, isChecked, isInactive, state) {
+  return afcColorPath(varMap, "text", variant, isChecked, isInactive, state);
 }
 
 // ---------------------------------------------------------------------------
@@ -14596,9 +16229,16 @@ async function buildAlertComponentSet(varMap, page, font) {
 async function buildModalComponentSet(varMap, page, font, sourceSets) {
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
   var radii = ["default", "xs", "sm", "md", "lg", "xl"];
-  var overlayStates = ["off", "on"];
+  // Overlay commented out — modal overlay is never used, so we no longer emit an
+  // Overlay variant axis (was ["off", "on"]). Keep a single "off" so the loop and
+  // downstream index math stay intact without adding an Overlay property.
+  var overlayStates = ["off"];
   var closeStates = ["off", "on"];
-  var layouts = ["action-right", "basic", "centered-arch", "centered-action"];
+  // Icon is a variant axis (not a boolean) so each state can use its own header
+  // layout: Icon=On stacks an icon + close controls row above the title, while
+  // Icon=Off puts the close inline with the title (vertically centered).
+  var iconStates = ["off", "on"];
+  var layouts = ["action-right", "action-full", "basic", "centered-arch", "centered-action"];
   var variants = ["default", "filled"];
   var components = [];
   var headerOnly = false;
@@ -14657,6 +16297,9 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
   var confirmButtonVariant = findVariantComponent(buttonSet, { Variant: "Filled", Size: "Default", State: "Default" });
   var alertIcons = await findAlertIconComponents();
   var modalCloseIconSource = alertIcons.close || alertIcons.fallback;
+  // Optional leading header icon (toggled via the "Icon" boolean). Defaults to the
+  // info glyph; swappable in Figma via the icon instance.
+  var modalIconSource = alertIcons.info || alertIcons.fallback;
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
@@ -14674,6 +16317,11 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
     var modalTitleVar = mvarFor(variant, "title", ["modal/filled-title"]);
     var modalBodyVar = mvarFor(variant, "body", ["modal/filled-body"]);
     var modalCloseVar = mvarFor(variant, "close", ["modal/filled-close"]);
+    var modalIconVar = mvarFor(variant, "icon", ["modal/filled-icon", "modal/filled-title"]);
+    var modalIconBgVar = mvarFor(variant, "icon-background", ["modal/filled-icon-background", "modal/filled-header-background"]);
+    var modalIconSizeVar = varMap["modal/icon-size"];
+    var modalIconBgSizeVar = varMap["modal/icon-background-size"];
+    var modalCloseSizeVar = varMap["modal/close-icon-size"];
     var modalBorderWidthVar = mvarFor(variant, "border-width", ["modal/border-width"]);
     var titleFontSizeVar = mvarFor(variant, "title-font-size", ["modal/title-font-size"]);
     var titleFontFamilyVar = mvarFor(variant, "title-font-family", ["modal/title-font-family"]);
@@ -14683,8 +16331,12 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
     var bodyFontFamilyVar = mvarFor(variant, "body-font-family", ["modal/body-font-family"]);
     var bodyFontWeightVar = mvarFor(variant, "body-font-weight", ["modal/body-font-weight"]);
     var bodyLineHeightVar = mvarFor(variant, "body-line-height", ["modal/body-line-height"]);
-    var headerPaddingXVar = mvarFor(variant, "header-padding-x", ["modal/header-padding-x", "modal/" + variant + "-padding-x", "modal/padding-x"]);
-    var headerPaddingYVar = mvarFor(variant, "header-padding-y", ["modal/header-padding-y", "modal/" + variant + "-padding-y", "modal/padding-y"]);
+    // Header now uses independent top/right/bottom/left padding (like the body),
+    // replacing the old x/y pair. Fallbacks keep older exports working.
+    var headerPadTopVar = mvarFor(variant, "header-padding-top", ["modal/header-padding-top", "modal/" + variant + "-header-padding-y", "modal/" + variant + "-padding-y", "modal/padding-y"]);
+    var headerPadRightVar = mvarFor(variant, "header-padding-right", ["modal/header-padding-right", "modal/" + variant + "-header-padding-x", "modal/" + variant + "-padding-x", "modal/padding-x"]);
+    var headerPadBottomVar = mvarFor(variant, "header-padding-bottom", ["modal/header-padding-bottom", "modal/" + variant + "-header-padding-y", "modal/" + variant + "-padding-y", "modal/padding-y"]);
+    var headerPadLeftVar = mvarFor(variant, "header-padding-left", ["modal/header-padding-left", "modal/" + variant + "-header-padding-x", "modal/" + variant + "-padding-x", "modal/padding-x"]);
     var bodyPaddingTopVar = mvarFor(variant, "body-padding-top", ["modal/body-padding-top"]);
     var bodyPaddingRightVar = mvarFor(variant, "body-padding-right", ["modal/body-padding-right", "modal/" + variant + "-padding-x", "modal/padding-x"]);
     var bodyPaddingBottomVar = mvarFor(variant, "body-padding-bottom", ["modal/body-padding-bottom", "modal/" + variant + "-padding-y", "modal/padding-y"]);
@@ -14719,13 +16371,22 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
             var isCenteredTitle = isCenteredArch || isCenteredAction;
             var showDividers = variant === "default";
 
+          for (var ii = 0; ii < iconStates.length; ii++) {
+            var withIcon = iconStates[ii] === "on";
+            // The header icon is only offered on the filled variant, so skip the
+            // Icon=On components for every other variant.
+            if (withIcon && variant !== "filled") continue;
+            var capIcon = withIcon ? "On" : "Off";
+
             var comp = figma.createComponent();
             comp.name =
               "Variant=" + capVariant +
               ", Size=" + capSize +
               ", Radius=" + capRadius +
-              ", Overlay=" + capOverlay +
+              // Overlay property removed from the variant name (never used).
+              // ", Overlay=" + capOverlay +
               ", Close=" + capClose +
+              ", Icon=" + capIcon +
               ", Layout=" + capLayout;
             comp.layoutMode = "VERTICAL";
             comp.primaryAxisSizingMode = "AUTO";
@@ -14758,25 +16419,16 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
             header.primaryAxisAlignItems = isCenteredTitle ? "MIN" : "SPACE_BETWEEN";
             header.counterAxisAlignItems = "CENTER";
             header.resize(panelW, isCenteredTitle ? 48 : 44);
-            header.paddingLeft = 16;
-            header.paddingRight = 16;
-            header.paddingTop = 12;
-            header.paddingBottom = 12;
-            header.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.15, b: 0.24 } }];
+            // No outer padding — the header wrapper below owns the padding.
+            header.paddingLeft = 0;
+            header.paddingRight = 0;
+            header.paddingTop = 0;
+            header.paddingBottom = 0;
+            // Transparent — the header wrapper below carries the header background.
+            header.fills = [];
             header.strokes = [];
-            bindVar(header, "paddingLeft", headerPaddingXVar);
-            bindVar(header, "paddingRight", headerPaddingXVar);
-            bindVar(header, "paddingTop", headerPaddingYVar);
-            bindVar(header, "paddingBottom", headerPaddingYVar);
-            bindPaintVar(header, "fills", 0, modalHeaderBgVar);
-            if (isCenteredTitle) {
-              var leftCloseSpacer = figma.createFrame();
-              leftCloseSpacer.name = "close-spacer";
-              leftCloseSpacer.layoutMode = "NONE";
-              leftCloseSpacer.resize(16, 16);
-              leftCloseSpacer.fills = [];
-              header.appendChild(leftCloseSpacer);
-            }
+            // The close now lives in the controls row above (with the icon), so
+            // the header no longer needs close-balancing spacers.
 
             var titleNode = null;
             if (titleVariant && useLinkedTextComponents) {
@@ -14839,12 +16491,22 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               try { titleNode.layoutSizingVertical = "HUG"; } catch (_modalTitleHugErr) {}
             }
 
+            // Build the close control (when enabled) once. Depending on the Icon
+            // variant it's parented either into the icon controls row (Icon=On) or
+            // inline with the title (Icon=Off) — see the branch further below.
+            var modalCloseChild = null;
             if (withClose) {
               if (modalCloseIconSource) {
                 var closeIconInst = modalCloseIconSource.createInstance();
                 closeIconInst.name = "close";
-                try { closeIconInst.resize(16, 16); } catch (e) {}
-                var modalCloseNodes = closeIconInst.findAll(function(n) {
+                try { closeIconInst.resize(16, 16); } catch (_modalCloseResizeErr) {}
+                bindVar(closeIconInst, "width", modalCloseSizeVar);
+                bindVar(closeIconInst, "height", modalCloseSizeVar);
+                bindVar(closeIconInst, "minWidth", modalCloseSizeVar);
+                bindVar(closeIconInst, "maxWidth", modalCloseSizeVar);
+                bindVar(closeIconInst, "minHeight", modalCloseSizeVar);
+                bindVar(closeIconInst, "maxHeight", modalCloseSizeVar);
+                var modalCloseNodes = closeIconInst.findAll(function (n) {
                   return (
                     n.type === "VECTOR" ||
                     n.type === "ELLIPSE" ||
@@ -14864,7 +16526,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                     bindPaintVar(modalCloseNode, "fills", 0, modalCloseVar);
                   }
                 }
-                header.appendChild(closeIconInst);
+                modalCloseChild = closeIconInst;
               } else {
                 var closeNode = figma.createText();
                 closeNode.name = "close";
@@ -14873,17 +16535,144 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 closeNode.fontSize = 18;
                 closeNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
                 bindPaintVar(closeNode, "fills", 0, modalCloseVar);
-                header.appendChild(closeNode);
+                modalCloseChild = closeNode;
               }
-            } else if (isCenteredTitle) {
-              var rightCloseSpacer = figma.createFrame();
-              rightCloseSpacer.name = "close-spacer";
-              rightCloseSpacer.layoutMode = "NONE";
-              rightCloseSpacer.resize(16, 16);
-              rightCloseSpacer.fills = [];
-              header.appendChild(rightCloseSpacer);
             }
-            comp.appendChild(header);
+
+            // Header wrapper: owns the header's top/right/bottom/left padding
+            // (like the body). Its contents depend on the Icon variant.
+            var headerWrap = figma.createFrame();
+            headerWrap.name = "header-wrap";
+            headerWrap.layoutMode = "VERTICAL";
+            headerWrap.primaryAxisSizingMode = "AUTO";
+            headerWrap.counterAxisSizingMode = "FIXED";
+            headerWrap.primaryAxisAlignItems = "MIN";
+            headerWrap.counterAxisAlignItems = "MIN";
+            headerWrap.itemSpacing = 8;
+            headerWrap.paddingTop = 12;
+            headerWrap.paddingRight = 16;
+            headerWrap.paddingBottom = 12;
+            headerWrap.paddingLeft = 16;
+            headerWrap.fills = [{ type: "SOLID", color: { r: 0.14, g: 0.15, b: 0.24 } }];
+            headerWrap.strokes = [];
+            headerWrap.resize(panelW, 44);
+            bindVar(headerWrap, "paddingTop", headerPadTopVar);
+            bindVar(headerWrap, "paddingRight", headerPadRightVar);
+            bindVar(headerWrap, "paddingBottom", headerPadBottomVar);
+            bindVar(headerWrap, "paddingLeft", headerPadLeftVar);
+            bindPaintVar(headerWrap, "fills", 0, modalHeaderBgVar);
+
+            if (withIcon) {
+              // Icon=On: a controls row (icon badge left, close right, centered
+              // together) sits above the title row.
+              var modalIconRow = figma.createFrame();
+              modalIconRow.name = "icon-row";
+              modalIconRow.layoutMode = "HORIZONTAL";
+              modalIconRow.primaryAxisSizingMode = "FIXED";
+              modalIconRow.counterAxisSizingMode = "AUTO";
+              modalIconRow.primaryAxisAlignItems = "MIN";
+              modalIconRow.counterAxisAlignItems = "CENTER";
+              modalIconRow.itemSpacing = 0;
+              modalIconRow.paddingLeft = 0;
+              modalIconRow.paddingRight = 0;
+              modalIconRow.paddingTop = 0;
+              modalIconRow.paddingBottom = 0;
+              modalIconRow.fills = [];
+              modalIconRow.strokes = [];
+              modalIconRow.resize(panelW, 44);
+
+              var modalIconBadge = figma.createFrame();
+              modalIconBadge.name = "icon-badge";
+              modalIconBadge.layoutMode = "HORIZONTAL";
+              modalIconBadge.primaryAxisSizingMode = "FIXED";
+              modalIconBadge.counterAxisSizingMode = "FIXED";
+              modalIconBadge.primaryAxisAlignItems = "CENTER";
+              modalIconBadge.counterAxisAlignItems = "CENTER";
+              modalIconBadge.resize(50, 50);
+              modalIconBadge.cornerRadius = 25;
+              modalIconBadge.fills = [{ type: "SOLID", color: { r: 0.95, g: 0.95, b: 0.97 } }];
+              modalIconBadge.strokes = [];
+              bindPaintVar(modalIconBadge, "fills", 0, modalIconBgVar);
+              // Badge size is tokenized. Binding width/height keeps it square, and
+              // binding all four corner radii to the same size var keeps it a full
+              // circle at any size (radius >= half the box => circle).
+              bindVar(modalIconBadge, "width", modalIconBgSizeVar);
+              bindVar(modalIconBadge, "height", modalIconBgSizeVar);
+              bindVar(modalIconBadge, "minWidth", modalIconBgSizeVar);
+              bindVar(modalIconBadge, "maxWidth", modalIconBgSizeVar);
+              bindVar(modalIconBadge, "minHeight", modalIconBgSizeVar);
+              bindVar(modalIconBadge, "maxHeight", modalIconBgSizeVar);
+              bindVar(modalIconBadge, "topLeftRadius", modalIconBgSizeVar);
+              bindVar(modalIconBadge, "topRightRadius", modalIconBgSizeVar);
+              bindVar(modalIconBadge, "bottomLeftRadius", modalIconBgSizeVar);
+              bindVar(modalIconBadge, "bottomRightRadius", modalIconBgSizeVar);
+
+              if (modalIconSource) {
+                var modalIconInst = modalIconSource.createInstance();
+                modalIconInst.name = "icon";
+                try { modalIconInst.resize(32, 32); } catch (_modalIconResizeErr) {}
+                bindVar(modalIconInst, "width", modalIconSizeVar);
+                bindVar(modalIconInst, "height", modalIconSizeVar);
+                var modalIconNodes = modalIconInst.findAll(function (n) {
+                  return (
+                    n.type === "VECTOR" ||
+                    n.type === "ELLIPSE" ||
+                    n.type === "RECTANGLE" ||
+                    n.type === "POLYGON" ||
+                    n.type === "STAR" ||
+                    n.type === "LINE"
+                  );
+                });
+                for (var mivi = 0; mivi < modalIconNodes.length; mivi++) {
+                  var modalIconNode = modalIconNodes[mivi];
+                  if (modalIconNode.strokes && modalIconNode.strokes.length > 0) {
+                    bindPaintVar(modalIconNode, "strokes", 0, modalIconVar);
+                  }
+                  if (modalIconNode.fills && modalIconNode.fills.length > 0) {
+                    bindPaintVar(modalIconNode, "fills", 0, modalIconVar);
+                  }
+                }
+                modalIconBadge.appendChild(modalIconInst);
+              }
+              modalIconRow.appendChild(modalIconBadge);
+
+              // Growing spacer pins the close to the right edge.
+              var modalControlsSpacer = figma.createFrame();
+              modalControlsSpacer.name = "spacer";
+              modalControlsSpacer.layoutMode = "NONE";
+              modalControlsSpacer.resize(8, 1);
+              modalControlsSpacer.fills = [];
+              modalControlsSpacer.strokes = [];
+              modalIconRow.appendChild(modalControlsSpacer);
+              try { modalControlsSpacer.layoutGrow = 1; } catch (_modalSpacerGrowErr) {}
+
+              if (modalCloseChild) modalIconRow.appendChild(modalCloseChild);
+
+              headerWrap.appendChild(modalIconRow);
+              try { modalIconRow.layoutSizingHorizontal = "FILL"; } catch (_modalIconRowFillErr) {}
+              try { modalIconRow.layoutSizingVertical = "HUG"; } catch (_modalIconRowHugErr) {}
+
+              headerWrap.appendChild(header);
+              try { header.layoutSizingHorizontal = "FILL"; } catch (_modalHeaderFillErr) {}
+              try { header.layoutSizingVertical = "HUG"; } catch (_modalHeaderHugErr) {}
+            } else {
+              // Icon=Off: the close sits inline with the title. The title row is
+              // already a horizontal space-between/centered row, so appending the
+              // close as the trailing child lands it at the right edge, vertically
+              // centered with the title.
+              if (modalCloseChild) {
+                header.appendChild(modalCloseChild);
+                try { modalCloseChild.layoutSizingHorizontal = "HUG"; } catch (_mcHugWErr) {}
+                try { modalCloseChild.layoutSizingVertical = "HUG"; } catch (_mcHugHErr) {}
+              }
+              headerWrap.appendChild(header);
+              try { header.layoutSizingHorizontal = "FILL"; } catch (_modalHeaderFillErr2) {}
+              try { header.layoutSizingVertical = "HUG"; } catch (_modalHeaderHugErr2) {}
+            }
+
+            comp.appendChild(headerWrap);
+            try { headerWrap.layoutSizingHorizontal = "FILL"; } catch (_headerWrapFillErr) {}
+            try { headerWrap.layoutSizingVertical = "HUG"; } catch (_headerWrapHugErr) {}
 
             if (showDividers) {
               var headerDividerWrap = figma.createFrame();
@@ -14899,8 +16688,8 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               headerDividerWrap.fills = [];
               headerDividerWrap.strokes = [];
               headerDividerWrap.resize(panelW, 1);
-              bindVar(headerDividerWrap, "paddingLeft", headerPaddingXVar);
-              bindVar(headerDividerWrap, "paddingRight", headerPaddingXVar);
+              bindVar(headerDividerWrap, "paddingLeft", headerPadLeftVar);
+              bindVar(headerDividerWrap, "paddingRight", headerPadRightVar);
               comp.appendChild(headerDividerWrap);
               try { headerDividerWrap.layoutSizingHorizontal = "FILL"; } catch (_hdivWrapFillErr) {}
               try { headerDividerWrap.layoutSizingVertical = "HUG"; } catch (_hdivWrapHugErr) {}
@@ -14988,7 +16777,7 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               try { bodyNode.layoutSizingHorizontal = "FILL"; } catch (_modalBodyFillErr) {}
               try { bodyNode.layoutSizingVertical = "HUG"; } catch (_modalBodyHugErr2) {}
 
-              if (layout === "action-right" || layout === "centered-arch" || layout === "centered-action") {
+              if (layout === "action-right" || layout === "action-full" || layout === "centered-arch" || layout === "centered-action") {
               if (showDividers) {
                 var footerDividerWrap = figma.createFrame();
                 footerDividerWrap.name = "footer-divider";
@@ -15130,6 +16919,12 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
                 yesTxt.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
                 yesBtn.appendChild(yesTxt);
               }
+              // "action-full": both buttons stretch to share the row equally.
+              if (layout === "action-full") {
+                for (var afi = 0; afi < actionRow.children.length; afi++) {
+                  try { actionRow.children[afi].layoutSizingHorizontal = "FILL"; } catch (_afFillErr) {}
+                }
+              }
               }
 
               if (layout === "centered-ack") {
@@ -15191,12 +16986,13 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
             }
             }
 
-            var colIndex = (ri * overlayStates.length + oi) * closeStates.length + ci;
+            var colIndex = ((ri * overlayStates.length + oi) * closeStates.length + ci) * iconStates.length + ii;
             var rowIndex = ((vi * sizes.length) + si) * layouts.length + li;
             comp.x = colIndex * colWidth;
             comp.y = rowIndex * rowHeight;
             page.appendChild(comp);
             components.push(comp);
+          }
           }
         }
       }
@@ -26152,6 +27948,19 @@ function validateTabsVariables(varMap) {
 
 function progress(msg) {
   figma.ui.postMessage({ type: "sync-progress", message: msg });
+}
+
+// Same as progress(), but carries a determinate step count so the React panel
+// can render a real progress bar (current of total component sets). Any extra
+// fields ride through the relay + plugin UI untouched (both forward the whole
+// message), so no other plumbing needs to know about current/total.
+function progressStep(msg, current, total) {
+  figma.ui.postMessage({
+    type: "sync-progress",
+    message: msg,
+    current: current,
+    total: total,
+  });
 }
 
 function hexToFigmaRgb(hex) {

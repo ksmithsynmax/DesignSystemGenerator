@@ -77,6 +77,14 @@ import {
   ChipPropertiesPanel,
 } from "./components/panels/ChipPreviewPanel";
 import {
+  SelectableFilterChipPreviewContent,
+  SelectableFilterChipPropertiesPanel,
+} from "./components/panels/SelectableFilterChipPreviewPanel";
+import {
+  AppliedFilterChipPreviewContent,
+  AppliedFilterChipPropertiesPanel,
+} from "./components/panels/AppliedFilterChipPreviewPanel";
+import {
   TooltipPreviewContent,
   TooltipPropertiesPanel,
 } from "./components/panels/TooltipPreviewPanel";
@@ -471,6 +479,21 @@ function enforceTextDefaultMappings(brandsInput) {
         delete dims[yKey];
       }
     });
+    // Header padding likewise moved from x/y to per-side (top/right/bottom/left).
+    ["default", "filled"].forEach((mv) => {
+      const xKey = `modal-${mv}-header-padding-x`;
+      const yKey = `modal-${mv}-header-padding-y`;
+      if (dims[xKey]) {
+        if (!dims[`modal-${mv}-header-padding-right`]) dims[`modal-${mv}-header-padding-right`] = dims[xKey];
+        if (!dims[`modal-${mv}-header-padding-left`]) dims[`modal-${mv}-header-padding-left`] = dims[xKey];
+        delete dims[xKey];
+      }
+      if (dims[yKey]) {
+        if (!dims[`modal-${mv}-header-padding-top`]) dims[`modal-${mv}-header-padding-top`] = dims[yKey];
+        if (!dims[`modal-${mv}-header-padding-bottom`]) dims[`modal-${mv}-header-padding-bottom`] = dims[yKey];
+        delete dims[yKey];
+      }
+    });
   });
 
   return next;
@@ -510,6 +533,8 @@ export default function App() {
     "chart-radial": "Radial Bar Chart",
     multiselect: "MultiSelect",
     segmentedcontrol: "SegmentedControl",
+    selectablefilterchip: "SelectableFilterChip",
+    appliedfilterchip: "AppliedFilterChip",
   };
   const getComponentLabel = (name) =>
     COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
@@ -654,6 +679,8 @@ export default function App() {
   const checkboxDefault = getComponentDefaultSize(brands, activeBrand, "checkbox") || "md";
   const radioDefault = getComponentDefaultSize(brands, activeBrand, "radio") || "md";
   const chipDefault = getComponentDefaultSize(brands, activeBrand, "chip") || "md";
+  const selectableFilterChipDefault = getComponentDefaultSize(brands, activeBrand, "selectablefilterchip") || "md";
+  const appliedFilterChipDefault = getComponentDefaultSize(brands, activeBrand, "appliedfilterchip") || "md";
   const textInputDefault = getComponentDefaultSize(brands, activeBrand, "textinput") || "sm";
   const selectDefault = getComponentDefaultSize(brands, activeBrand, "select") || "sm";
   const multiSelectDefault = getComponentDefaultSize(brands, activeBrand, "multiselect") || "sm";
@@ -755,11 +782,21 @@ export default function App() {
   const [activeChipSize, setActiveChipSize] = useState(chipDefault);
   const [activeChipRadius, setActiveChipRadius] = useState(chipDefault);
   const [activeChipChecked, setActiveChipChecked] = useState(false);
-  const [activeChipInactive, setActiveChipInactive] = useState(false);
   const [activeChipState, setActiveChipState] = useState("default");
-  const [activeChipSubLabel, setActiveChipSubLabel] = useState(false);
-  const [activeChipWithRemove, setActiveChipWithRemove] = useState(false);
-  const [activeChipShowCheckmark, setActiveChipShowCheckmark] = useState(false);
+  // Selectable Filter Chip (selective-state + interaction-state model).
+  const [activeSfcSize, setActiveSfcSize] = useState("default");
+  const [activeSfcRadius, setActiveSfcRadius] = useState("default");
+  const [activeSfcChecked, setActiveSfcChecked] = useState(false);
+  const [activeSfcInactive, setActiveSfcInactive] = useState(false);
+  const [activeSfcState, setActiveSfcState] = useState("default");
+  const [activeSfcSubLabel, setActiveSfcSubLabel] = useState(false);
+  const [activeSfcShowCheckmark, setActiveSfcShowCheckmark] = useState(false);
+  // Applied Filter Chip (selective-state + interaction-state, always removable).
+  const [activeAfcSize, setActiveAfcSize] = useState("default");
+  const [activeAfcRadius, setActiveAfcRadius] = useState("default");
+  const [activeAfcChecked, setActiveAfcChecked] = useState(true);
+  const [activeAfcInactive, setActiveAfcInactive] = useState(false);
+  const [activeAfcState, setActiveAfcState] = useState("default");
   const [activeTooltipPosition, setActiveTooltipPosition] = useState("top");
   const [activeTooltipWithArrow, setActiveTooltipWithArrow] = useState(true);
   const [activePopoverPosition, setActivePopoverPosition] = useState("top");
@@ -898,6 +935,7 @@ export default function App() {
   const [activeModalRadius, setActiveModalRadius] = useState(modalDefault);
   const [activeModalLayout, setActiveModalLayout] = useState("basic");
   const [activeModalWithOverlay, setActiveModalWithOverlay] = useState(true);
+  const [activeModalWithIcon, setActiveModalWithIcon] = useState(false);
   const [activeModalWithCloseButton, setActiveModalWithCloseButton] = useState(true);
   const [activeModalCentered, setActiveModalCentered] = useState(true);
   const [activeModalShowSectionDividers, setActiveModalShowSectionDividers] = useState(true);
@@ -956,6 +994,10 @@ export default function App() {
     setActiveRadioSize(rdDef);
     setActiveChipSize(chDef);
     setActiveChipRadius(chDef);
+    setActiveSfcSize("default");
+    setActiveSfcRadius("default");
+    setActiveAfcSize("default");
+    setActiveAfcRadius("default");
     const tiDef = getComponentDefaultSize(brands, newBrand, "textinput") || "sm";
     const seDef = getComponentDefaultSize(brands, newBrand, "select") || "sm";
     const mseDef = getComponentDefaultSize(brands, newBrand, "multiselect") || "sm";
@@ -1090,6 +1132,7 @@ export default function App() {
       setActiveModalRadius(modalDefault);
       setActiveModalLayout("basic");
       setActiveModalWithOverlay(true);
+      setActiveModalWithIcon(false);
       setActiveModalWithCloseButton(true);
       setActiveModalCentered(true);
       setActiveModalShowSectionDividers(true);
@@ -1112,8 +1155,23 @@ export default function App() {
       setActiveChipSize(chipDefault);
       setActiveChipRadius(chipDefault);
       setActiveChipChecked(false);
-      setActiveChipInactive(false);
       setActiveChipState("default");
+    } else if (newComp === "selectablefilterchip") {
+      setActiveSfcSize("default");
+      setActiveSfcRadius("default");
+      setActiveSfcChecked(false);
+      setActiveSfcInactive(false);
+      setActiveSfcState("default");
+      setActiveSfcSubLabel(false);
+      setActiveSfcShowCheckmark(false);
+      setActiveVariant("filled");
+    } else if (newComp === "appliedfilterchip") {
+      setActiveAfcSize("default");
+      setActiveAfcRadius("default");
+      setActiveAfcChecked(true);
+      setActiveAfcInactive(false);
+      setActiveAfcState("default");
+      setActiveVariant("filled");
       setActiveVariant("filled");
     } else if (newComp === "notification") {
       setActiveVariant("default");
@@ -1305,7 +1363,7 @@ export default function App() {
       setActiveVariant("default");
       setActiveCalendarShowOutside(true);
     }
-  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, burgerDefault, segmentedControlDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, textInputDefault, selectDefault, multiSelectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, skeletonDefault, skeletonRadiusDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, chartSizeDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
+  }, [actionIconDefault, buttonDefault, tabsDefault, switchDefault, burgerDefault, segmentedControlDefault, sliderDefault, rangeSliderDefault, checkboxDefault, radioDefault, chipDefault, selectableFilterChipDefault, appliedFilterChipDefault, textInputDefault, selectDefault, multiSelectDefault, cardDefault, pillDefault, badgeDefault, modalDefault, imageDefault, skeletonDefault, skeletonRadiusDefault, anchorDefault, textDefault, progressHeightDefault, progressRadiusDefault, chartSizeDefault, avatarSizeDefault, avatarRadiusDefault, defaultBrandColor]);
 
   useEffect(() => {
     const allowedVariants = VARIANTS_BY_COMPONENT[activeComponent];
@@ -1757,7 +1815,7 @@ export default function App() {
   }, [brands, activeBrand]);
 
   // Parse forced state/checked/variant from the active token card
-  const INTERACTIVE_STATES = ["active", "hover", "focus", "pressed", "inactive", "disabled", "error", "visited"];
+  const INTERACTIVE_STATES = ["active", "hover", "focus", "pressed", "disabled", "error", "visited"];
   const mapTabsTokenVariant = (variantName) => variantName;
   const fromTabsTokenVariant = (variantName) => variantName;
   let forcedState = null;
@@ -1808,24 +1866,6 @@ export default function App() {
     }
   }
 
-  // Chip splits its "selective state" (Active/Selected/Inactive/Selective Inactive)
-  // from its interaction state (Enabled/Hovered/Focused/Pressed/Disabled). Selected
-  // maps to `checked`, unavailable maps to `inactive`; the two are independent axes.
-  const CHIP_INTERACTION_STATES = ["hover", "focus", "pressed", "disabled"];
-  let forcedChipChecked = null;
-  let forcedChipInactive = null;
-  let forcedChipInteraction = null;
-  if (activeComponent === "chip" && activeColorToken) {
-    const cparts = activeColorToken.split("-");
-    if (cparts.includes("selected")) forcedChipChecked = true;
-    if (cparts.includes("inactive")) forcedChipInactive = true;
-    const clast = cparts[cparts.length - 1];
-    if (CHIP_INTERACTION_STATES.includes(clast)) forcedChipInteraction = clast;
-  }
-  const chipSelectedChecked = forcedChipChecked != null ? forcedChipChecked : activeChipChecked;
-  const chipSelectedInactive = forcedChipInactive != null ? forcedChipInactive : activeChipInactive;
-  const chipSelectedInteraction = forcedChipInteraction || activeChipState;
-
   const activeTabsTokenVariant = mapTabsTokenVariant(activeVariant);
 
   const effectiveComponentState =
@@ -1852,7 +1892,11 @@ export default function App() {
           : activeComponent === "radio"
             ? forcedState || activeRadioState
           : activeComponent === "chip"
-            ? chipSelectedInteraction
+            ? forcedState || activeChipState
+          : activeComponent === "selectablefilterchip"
+            ? forcedState || activeSfcState
+          : activeComponent === "appliedfilterchip"
+            ? forcedState || activeAfcState
           : activeComponent === "card"
             ? forcedState || activeCardState
           : activeComponent === "textinput"
@@ -1988,82 +2032,147 @@ export default function App() {
     if (activeComponent === "chip") {
       if (token === "chip-focus-ring") return true;
 
-      const targetChecked = chipSelectedChecked;
-      const targetInactive = chipSelectedInactive;
-      const targetState = chipSelectedInteraction || "default";
-
-      // The selective-inactive warning color is only relevant to inactive selections.
-      if (token.startsWith("chip-selective-inactive")) return targetInactive;
-
-      const CHIP_VARIANTS_L = ["filled", "light", "outline"];
-      // Decompose the token into its independent axes.
-      const segs = token.slice("chip-".length).split("-");
-      let dVariant = null;
-      let dChecked = false;
-      let dInactive = false;
-      let dInteraction = "default";
-      const coreSegs = [];
-      for (const s of segs) {
-        if (CHIP_VARIANTS_L.includes(s) && dVariant === null) dVariant = s;
-        else if (s === "selected") dChecked = true;
-        else if (s === "inactive") dInactive = true;
-        else if (CHIP_INTERACTION_STATES.includes(s)) dInteraction = s;
-        else coreSegs.push(s);
+      const targetState = effectiveComponentState || "default";
+      const tokenState = INTERACTIVE_STATES.includes(parts[parts.length - 1])
+        ? parts[parts.length - 1]
+        : "default";
+      if (tokenState !== targetState) {
+        const canUseDefaultFallback =
+          tokenState === "default" &&
+          targetState !== "default" &&
+          !Boolean(colorTokens[`${token}-${targetState}`]);
+        if (!canUseDefaultFallback) return false;
       }
-      const prop = coreSegs.join("-");
-      const isCoreColor = ["background", "border", "text"].includes(prop);
 
-      // Reconstruct a canonical token key for any axis combination.
-      const keyFor = (variant, checked, inactive, interaction) => {
-        let k = "chip";
-        if (variant) k += `-${variant}`;
-        k += `-${prop}`;
-        if (checked) k += "-selected";
-        if (inactive) k += "-inactive";
-        if (interaction && interaction !== "default") k += `-${interaction}`;
-        return k;
+      const targetChecked = forcedChecked != null ? forcedChecked : activeChipChecked;
+      const isCheckedToken = parts.includes("checked");
+      const isVariantToken = ["filled", "outline", "light"].includes(variantSegment);
+      const hasCheckedCounterpart = (baseToken, tokenStateSuffix) => {
+        const suffixStyleMatch = `${baseToken}-checked${tokenStateSuffix}`;
+        if (Boolean(colorTokens[suffixStyleMatch])) return true;
+        if (baseToken.startsWith("chip-")) {
+          const baseWithoutPrefix = baseToken.slice("chip-".length);
+          const variantStyleMatch = `chip-${activeVariant}-${baseWithoutPrefix}-checked${tokenStateSuffix}`;
+          if (Boolean(colorTokens[variantStyleMatch])) return true;
+          const prefixStyleMatch = `chip-checked-${baseWithoutPrefix}${tokenStateSuffix}`;
+          if (Boolean(colorTokens[prefixStyleMatch])) return true;
+        }
+        return false;
+      };
+      const hasVariantUncheckedCounterpart = (baseToken, tokenStateSuffix) => {
+        if (!baseToken.startsWith("chip-")) return false;
+        const baseWithoutPrefix = baseToken.slice("chip-".length);
+        const variantStyleMatch = `chip-${activeVariant}-${baseWithoutPrefix}${tokenStateSuffix}`;
+        return Boolean(colorTokens[variantStyleMatch]);
       };
 
-      // ── Interaction-state gating (fall back to the default-state token when no
-      //    state-specific token exists for this axis combination) ──
-      if (dInteraction !== targetState) {
-        const preciseExists = Boolean(colorTokens[keyFor(dVariant, dChecked, dInactive, targetState)]);
-        const canFallback = dInteraction === "default" && targetState !== "default" && !preciseExists;
-        if (!canFallback) return false;
-      }
-
-      // Non-core color tokens (icon/sublabel/remove): only gate on the checked axis.
-      if (!isCoreColor) {
-        if (dChecked && !targetChecked) return false;
-        if (!dChecked && targetChecked && Boolean(colorTokens[keyFor(dVariant, true, dInactive, dInteraction)])) {
-          return false;
+      if (isVariantToken) {
+        if (variantSegment !== activeVariant) return false;
+        if (!targetChecked && isCheckedToken) return false;
+        if (targetChecked && !isCheckedToken) {
+          const tokenStateSuffix = tokenState === "default" ? "" : `-${tokenState}`;
+          const baseToken = tokenState === "default" ? token : token.replace(new RegExp(`${tokenStateSuffix}$`), "");
+          // Keep base token only when no checked-specific token exists.
+          return !hasCheckedCounterpart(baseToken, tokenStateSuffix);
         }
         return true;
       }
+      if (!targetChecked && isCheckedToken) return false;
+      if (!targetChecked && !isCheckedToken) {
+        const tokenStateSuffix = tokenState === "default" ? "" : `-${tokenState}`;
+        const baseToken = tokenState === "default" ? token : token.replace(new RegExp(`${tokenStateSuffix}$`), "");
+        if (
+          baseToken.startsWith("chip-border") ||
+          baseToken.startsWith("chip-background") ||
+          baseToken.startsWith("chip-text")
+        ) {
+          // Hide shared unchecked token when variant-specific unchecked token exists.
+          return !hasVariantUncheckedCounterpart(baseToken, tokenStateSuffix);
+        }
+      }
+      if (targetChecked && !isCheckedToken) {
+        const tokenStateSuffix = tokenState === "default" ? "" : `-${tokenState}`;
+        const baseToken = tokenState === "default" ? token : token.replace(new RegExp(`${tokenStateSuffix}$`), "");
+        // Keep base token only when no checked-specific token exists.
+        return !hasCheckedCounterpart(baseToken, tokenStateSuffix);
+      }
+      return true;
+    }
 
-      // ── Variant gating: hide other variants; hide shared token when a
-      //    variant-specific equivalent exists. ──
-      if (dVariant && dVariant !== activeVariant) return false;
-      if (!dVariant && Boolean(colorTokens[keyFor(activeVariant, dChecked, dInactive, dInteraction)])) {
-        return false;
+    if (
+      activeComponent === "selectablefilterchip" ||
+      activeComponent === "appliedfilterchip"
+    ) {
+      const cp = activeComponent;
+      const isSfc = cp === "selectablefilterchip";
+      const rest = token.slice(cp.length + 1); // strip "<prefix>-"
+      const restParts = rest.split("-");
+      const family = restParts[0];
+
+      // Resolve the current Selective State + interaction State. If a token from
+      // this component is currently selected, honor its qualifiers so the list
+      // stays consistent with the highlighted token.
+      let targetChecked = isSfc ? activeSfcChecked : activeAfcChecked;
+      let targetInactive = isSfc ? activeSfcInactive : activeAfcInactive;
+      if (activeColorToken && activeColorToken.startsWith(`${cp}-`)) {
+        const acRest = activeColorToken.slice(cp.length + 1).split("-");
+        if (["background", "border", "text"].includes(acRest[0])) {
+          targetChecked = acRest.includes("selected");
+          targetInactive = acRest.includes("inactive");
+        }
+      }
+      const targetState = effectiveComponentState || "default";
+
+      // Focus ring is a single shared token; always available to edit.
+      if (rest === "focus-ring") return true;
+
+      // Warning marker tokens only apply to the Selective Inactive state.
+      if (rest.startsWith("selective-inactive-warning")) {
+        return targetChecked && targetInactive;
       }
 
-      // ── Checked axis ──
-      if (dChecked && !targetChecked) return false;
-      if (!dChecked && targetChecked) {
-        const hasChecked =
-          Boolean(colorTokens[keyFor(dVariant, true, dInactive, dInteraction)]) ||
-          Boolean(colorTokens[keyFor(dVariant, true, dInactive, "default")]);
-        if (hasChecked) return false;
+      // Sub-label / remove color. Selected and Selective Inactive can each carry
+      // their own value, optionally per interaction state (hover/pressed). Show
+      // only the single token that actually drives the current selection + state
+      // by resolving the most-specific existing candidate (mirrors the preview).
+      if (family === "sublabel" || family === "remove") {
+        const base = `${cp}-${family === "remove" ? "remove-color" : "sublabel-color"}`;
+        const st = targetState !== "default" ? targetState : null;
+        const cands = [];
+        if (targetChecked) {
+          if (targetInactive) {
+            if (st) cands.push(`${base}-selected-inactive-${st}`);
+            cands.push(`${base}-selected-inactive`);
+          }
+          if (st) cands.push(`${base}-selected-${st}`);
+          cands.push(`${base}-selected`);
+        }
+        cands.push(base);
+        const winner = cands.find((k) => colorTokens[k]) || base;
+        return token === winner;
       }
 
-      // ── Inactive axis ──
-      if (dInactive && !targetInactive) return false;
-      if (!dInactive && targetInactive) {
-        const hasInactive =
-          Boolean(colorTokens[keyFor(dVariant, dChecked, true, dInteraction)]) ||
-          Boolean(colorTokens[keyFor(dVariant, dChecked, true, "default")]);
-        if (hasInactive) return false;
+      // background / border / text carry the full selective + interaction matrix.
+      if (family === "background" || family === "border" || family === "text") {
+        const hasSelected = restParts.includes("selected");
+        const hasInactive = restParts.includes("inactive");
+        const last = restParts[restParts.length - 1];
+        const tokenState = ["hover", "focus", "pressed", "disabled"].includes(last)
+          ? last
+          : "default";
+
+        if (hasSelected !== targetChecked) return false;
+        if (hasInactive !== targetInactive) return false;
+        if (tokenState !== targetState) {
+          // Fall back to the base (stateless) token only when no state-specific
+          // token exists for the current state.
+          const canUseDefaultFallback =
+            tokenState === "default" &&
+            targetState !== "default" &&
+            !Boolean(colorTokens[`${token}-${targetState}`]);
+          if (!canUseDefaultFallback) return false;
+        }
+        return true;
       }
 
       return true;
@@ -2320,9 +2429,22 @@ export default function App() {
       if (token === "chip-radius" && activeChipRadius === "default") {
         return !Boolean(dimensionTokens[`chip-${activeVariant}-radius`]);
       }
-      // Padding is per-variant — only show the active variant's padding tokens.
-      const variantPaddingMatch = token.match(/^chip-(filled|outline|light)-(selected-)?padding-(x|y)$/);
-      if (variantPaddingMatch) return variantPaddingMatch[1] === activeVariant;
+      return true;
+    }
+    if (
+      activeComponent === "selectablefilterchip" ||
+      activeComponent === "appliedfilterchip"
+    ) {
+      // The label weight has a distinct token per Selective State. Show only the
+      // one that drives the current state so the visible token is always the
+      // effective one.
+      const isSfc = activeComponent === "selectablefilterchip";
+      const targetChecked = isSfc ? activeSfcChecked : activeAfcChecked;
+      const targetInactive = isSfc ? activeSfcInactive : activeAfcInactive;
+      if (token.endsWith("-font-weight-selected-inactive")) return targetChecked && targetInactive;
+      if (token.endsWith("-font-weight-inactive")) return !targetChecked && targetInactive;
+      if (token.endsWith("-font-weight-selected")) return targetChecked && !targetInactive;
+      if (token.endsWith("-font-weight")) return !targetChecked && !targetInactive;
       return true;
     }
     if (activeComponent === "select" || activeComponent === "multiselect") {
@@ -2575,6 +2697,8 @@ export default function App() {
     checkbox: activeCheckboxSize,
     radio: activeRadioSize,
     chip: activeChipSize,
+    selectablefilterchip: activeSfcSize,
+    appliedfilterchip: activeAfcSize,
     textinput: activeTextInputSize,
     select: activeSelectSize,
     multiselect: activeMultiSelectSize,
@@ -2646,6 +2770,12 @@ export default function App() {
     }
     if (activeComponent === "chip" && /^chip-(filled|outline|light)-radius$/.test(tokenName)) {
       return undefined;
+    }
+    if (activeComponent === "selectablefilterchip" && tokenName === "selectablefilterchip-radius") {
+      return activeSfcRadius;
+    }
+    if (activeComponent === "appliedfilterchip" && tokenName === "appliedfilterchip-radius") {
+      return activeAfcRadius;
     }
     if (activeComponent === "notification" && tokenName === "notification-radius") {
       return activeNotificationRadius;
@@ -3471,6 +3601,7 @@ export default function App() {
                   radius={activeModalRadius}
                   layout={activeModalLayout}
                   withOverlay={activeModalWithOverlay}
+                  withIcon={activeModalWithIcon}
                   withCloseButton={activeModalWithCloseButton}
                   centered={activeModalCentered}
                   showSectionDividers={activeModalShowSectionDividers}
@@ -3523,12 +3654,38 @@ export default function App() {
                   activeChipRadius={activeChipRadius}
                   sizeKeys={sizeKeys}
                   activeColorToken={activeColorToken}
-                  selectedChecked={chipSelectedChecked}
-                  selectedInactive={chipSelectedInactive}
-                  selectedState={chipSelectedInteraction}
-                  subLabel={activeChipSubLabel}
-                  withRemove={activeChipWithRemove}
-                  showCheckmark={activeChipShowCheckmark}
+                  selectedChecked={forcedChecked != null ? forcedChecked : activeChipChecked}
+                  selectedState={forcedState || activeChipState}
+                />
+              )}
+              {activeComponent === "selectablefilterchip" && (
+                <SelectableFilterChipPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  activeChipSize={activeSfcSize}
+                  activeChipRadius={activeSfcRadius}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedChecked={activeSfcChecked}
+                  selectedInactive={activeSfcInactive}
+                  selectedState={activeSfcState}
+                  subLabel={activeSfcSubLabel}
+                  showCheckmark={activeSfcShowCheckmark}
+                />
+              )}
+              {activeComponent === "appliedfilterchip" && (
+                <AppliedFilterChipPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  activeChipSize={activeAfcSize}
+                  activeChipRadius={activeAfcRadius}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedChecked={activeAfcChecked}
+                  selectedInactive={activeAfcInactive}
+                  selectedState={activeAfcState}
                 />
               )}
 
@@ -4297,6 +4454,8 @@ export default function App() {
                   setLayout={setActiveModalLayout}
                   withOverlay={activeModalWithOverlay}
                   setWithOverlay={setActiveModalWithOverlay}
+                  withIcon={activeModalWithIcon}
+                  setWithIcon={setActiveModalWithIcon}
                   withCloseButton={activeModalWithCloseButton}
                   setWithCloseButton={setActiveModalWithCloseButton}
                   centered={activeModalCentered}
@@ -4361,20 +4520,50 @@ export default function App() {
                   activeChipRadius={activeChipRadius}
                   setActiveChipRadius={setActiveChipRadius}
                   sizeKeys={sizeKeys}
-                  selectedChecked={chipSelectedChecked}
+                  selectedChecked={forcedChecked != null ? forcedChecked : activeChipChecked}
                   setSelectedChecked={setActiveChipChecked}
-                  selectedInactive={chipSelectedInactive}
-                  setSelectedInactive={setActiveChipInactive}
-                  selectedState={chipSelectedInteraction}
+                  selectedState={forcedState || activeChipState}
                   setSelectedState={setActiveChipState}
-                  forcedSelective={forcedChipChecked != null || forcedChipInactive != null}
-                  forcedState={forcedChipInteraction}
-                  subLabel={activeChipSubLabel}
-                  setSubLabel={setActiveChipSubLabel}
-                  withRemove={activeChipWithRemove}
-                  setWithRemove={setActiveChipWithRemove}
-                  showCheckmark={activeChipShowCheckmark}
-                  setShowCheckmark={setActiveChipShowCheckmark}
+                  forcedChecked={forcedChecked}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "selectablefilterchip" && (
+                <SelectableFilterChipPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeChipSize={activeSfcSize}
+                  setActiveChipSize={setActiveSfcSize}
+                  activeChipRadius={activeSfcRadius}
+                  setActiveChipRadius={setActiveSfcRadius}
+                  sizeKeys={sizeKeys}
+                  selectedChecked={activeSfcChecked}
+                  setSelectedChecked={setActiveSfcChecked}
+                  selectedInactive={activeSfcInactive}
+                  setSelectedInactive={setActiveSfcInactive}
+                  selectedState={activeSfcState}
+                  setSelectedState={setActiveSfcState}
+                  subLabel={activeSfcSubLabel}
+                  setSubLabel={setActiveSfcSubLabel}
+                  showCheckmark={activeSfcShowCheckmark}
+                  setShowCheckmark={setActiveSfcShowCheckmark}
+                />
+              )}
+              {activeComponent === "appliedfilterchip" && (
+                <AppliedFilterChipPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeChipSize={activeAfcSize}
+                  setActiveChipSize={setActiveAfcSize}
+                  activeChipRadius={activeAfcRadius}
+                  setActiveChipRadius={setActiveAfcRadius}
+                  sizeKeys={sizeKeys}
+                  selectedChecked={activeAfcChecked}
+                  setSelectedChecked={setActiveAfcChecked}
+                  selectedInactive={activeAfcInactive}
+                  setSelectedInactive={setActiveAfcInactive}
+                  selectedState={activeAfcState}
+                  setSelectedState={setActiveAfcState}
                 />
               )}
               {activeComponent === "tooltip" && (
@@ -4979,7 +5168,7 @@ export default function App() {
                   setShowHeader={setActiveCalendarShowHeader}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "selectablefilterchip", "appliedfilterchip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

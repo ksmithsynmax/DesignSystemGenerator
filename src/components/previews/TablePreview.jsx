@@ -99,6 +99,9 @@ const DEMO_ROWS = [
   { title: "Partner integration", description: "Webhook signing verification", region: "Canada", regionEmoji: "🇨🇦", reference: "INT-7741", priority: "medium", progressPct: 60, status: "pending" },
 ];
 
+// "Data export" — the row rendered in the active/selected state for illustration.
+const ACTIVE_ROW_INDEX = 4;
+
 export default function TablePreview({
   brands,
   brandId,
@@ -116,7 +119,11 @@ export default function TablePreview({
       border: pick("table-border"),
       headerText: pick("table-header-text"),
       cellText: pick("table-cell-text"),
+      cellIcon: pick("table-cell-icon"),
       rowHover: pick("table-row-hover"),
+      rowHoverText: pick("table-row-hover-text"),
+      rowActive: pick("table-row-active"),
+      rowActiveText: pick("table-row-active-text"),
       progressTrack: pick("table-progress-track"),
       progressFill: pick("table-progress-fill"),
       progressLabel: pick("table-cell-text"),
@@ -141,12 +148,6 @@ export default function TablePreview({
   const headWeight = mapFontWeight(headWeightLabel);
   const progBarH = 6;
   const progBarR = 8;
-
-  const statusColor = (s) => {
-    if (s === "complete") return colors.statusComplete;
-    if (s === "queued") return colors.statusQueued;
-    return colors.statusPending;
-  };
 
   const borderStyle = `1px solid ${colors.border}`;
 
@@ -285,7 +286,12 @@ export default function TablePreview({
             </thead>
             <tbody>
               {DEMO_ROWS.map((row, i) => {
-                const rowBg = showRowHover && hoveredRow === i ? colors.rowHover : colors.bg;
+                // One row is shown active to illustrate the active/selected state.
+                // Active wins over hover (mutually exclusive), matching DenseTable.
+                const isActive = i === ACTIVE_ROW_INDEX;
+                const isHover = showRowHover && hoveredRow === i && !isActive;
+                const rowBg = isActive ? colors.rowActive : isHover ? colors.rowHover : colors.bg;
+                const rowText = isActive ? colors.rowActiveText : isHover ? colors.rowHoverText : colors.cellText;
                 const levelLabel = row.priority.charAt(0).toUpperCase() + row.priority.slice(1);
                 return (
                   <tr
@@ -301,7 +307,7 @@ export default function TablePreview({
                         padding: `${cellPadY}px ${padTitleCol}px`,
                         verticalAlign: "middle",
                         whiteSpace: "nowrap",
-                        color: colors.cellText,
+                        color: rowText,
                       }}
                     >
                       {row.title}
@@ -313,7 +319,7 @@ export default function TablePreview({
                         padding: `${cellPadY}px ${padRest}px`,
                         verticalAlign: "middle",
                         whiteSpace: "nowrap",
-                        color: colors.cellText,
+                        color: rowText,
                       }}
                     >
                       {row.description}
@@ -325,7 +331,7 @@ export default function TablePreview({
                         padding: `${cellPadY}px ${padRest}px`,
                         verticalAlign: "middle",
                         whiteSpace: "nowrap",
-                        color: colors.cellText,
+                        color: rowText,
                       }}
                     >
                       <span style={{ marginRight: 10, fontSize: 14, lineHeight: 1 }}>{row.regionEmoji}</span>
@@ -339,7 +345,7 @@ export default function TablePreview({
                         verticalAlign: "middle",
                         fontVariantNumeric: "tabular-nums",
                         whiteSpace: "nowrap",
-                        color: colors.cellText,
+                        color: rowText,
                       }}
                     >
                       {row.reference}
@@ -381,14 +387,14 @@ export default function TablePreview({
                         />
                       </div>
                     </td>
-                    <td style={{ ...cellBorderBase, background: rowBg, padding: `${cellPadY}px ${padRest}px`, verticalAlign: "middle", color: colors.cellText }}>
+                    <td style={{ ...cellBorderBase, background: rowBg, padding: `${cellPadY}px ${padRest}px`, verticalAlign: "middle", color: rowText }}>
                       <ProgressCell
                         pct={row.progressPct}
                         track={colors.progressTrack}
                         fill={colors.progressFill}
                         height={progBarH}
                         radius={progBarR}
-                        labelColor={colors.progressLabel}
+                        labelColor={rowText}
                       />
                     </td>
                     <td
@@ -400,7 +406,11 @@ export default function TablePreview({
                         verticalAlign: "middle",
                       }}
                     >
-                      <StatusCell kind={row.status} color={statusColor(row.status)} textColor={colors.cellText} />
+                      <StatusCell
+                        kind={row.status}
+                        color={isActive ? colors.rowActiveText : isHover ? colors.rowHoverText : colors.cellIcon}
+                        textColor={rowText}
+                      />
                     </td>
                   </tr>
                 );

@@ -6,7 +6,9 @@ import ModalPreview from "../previews/ModalPreview";
 export const MODAL_SIZE_OPTIONS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const MODAL_RADIUS_OPTIONS = ["default", "xs", "sm", "md", "lg", "xl"];
 export const MODAL_VARIANT_OPTIONS = ["default", "filled"];
-export const MODAL_LAYOUT_OPTIONS = ["basic", "actions-right", "centered-ack", "centered-action"];
+export const MODAL_LAYOUT_OPTIONS = ["basic", "actions-right", "actions-full", "centered-ack", "centered-action"];
+// Layouts that render a section divider (so the Dividers controls are enabled).
+export const MODAL_DIVIDER_LAYOUTS = ["actions-right", "actions-full", "centered-ack", "centered-action"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -66,6 +68,7 @@ export function ModalPreviewContent({
   radius,
   layout,
   withOverlay,
+  withIcon,
   withCloseButton,
   centered,
   showSectionDividers,
@@ -73,10 +76,9 @@ export function ModalPreviewContent({
   title,
   body,
 }) {
-  const rows = [
-    { label: "overlay off", withOverlay: false },
-    { label: "overlay on", withOverlay: true },
-  ];
+  // Overlay commented out — modal overlay is never used, so the matrix shows a
+  // single row without the overlay on/off variations.
+  const rows = [{ label: "modal", withOverlay: false }];
 
   return (
     <div>
@@ -89,6 +91,7 @@ export function ModalPreviewContent({
           radius={radius}
           layout={layout}
           withOverlay={withOverlay}
+          withIcon={withIcon}
           withCloseButton={withCloseButton}
           centered={centered}
           showSectionDividers={showSectionDividers}
@@ -112,6 +115,7 @@ export function ModalPreviewContent({
             radius={radius}
             layout={layout}
             withOverlay={row.withOverlay}
+            withIcon={withIcon}
             withCloseButton={withCloseButton}
             centered={centered}
             showSectionDividers={showSectionDividers}
@@ -136,6 +140,8 @@ export function ModalPropertiesPanel({
   setLayout,
   withOverlay,
   setWithOverlay,
+  withIcon,
+  setWithIcon,
   withCloseButton,
   setWithCloseButton,
   centered,
@@ -155,11 +161,20 @@ export function ModalPropertiesPanel({
       <PropertyRow label="Size" value={size} onChange={setSize} options={MODAL_SIZE_OPTIONS} />
       <PropertyRow label="Radius" value={radius} onChange={setRadius} options={MODAL_RADIUS_OPTIONS} />
       <PropertyRow label="Layout" value={layout} onChange={setLayout} options={MODAL_LAYOUT_OPTIONS} />
+      {/* Overlay control commented out — modal overlay is never used.
       <PropertyRow
         label="Overlay"
         value={withOverlay ? "on" : "off"}
         onChange={(v) => setWithOverlay(v === "on")}
         options={["off", "on"]}
+      /> */}
+      {/* The header icon is only available on the filled variant. */}
+      <PropertyRow
+        label="Icon"
+        value={variant === "filled" && withIcon ? "on" : "off"}
+        onChange={(v) => setWithIcon(v === "on")}
+        options={["off", "on"]}
+        disabled={variant !== "filled"}
       />
       <PropertyRow
         label="Close Button"
@@ -178,17 +193,14 @@ export function ModalPropertiesPanel({
         value={showSectionDividers ? "on" : "off"}
         onChange={(v) => setShowSectionDividers(v === "on")}
         options={["off", "on"]}
-        disabled={layout !== "centered-ack" && layout !== "centered-action"}
+        disabled={!MODAL_DIVIDER_LAYOUTS.includes(layout)}
       />
       <PropertyRow
         label="Divider Width"
         value={dividerInset ? "inset" : "full"}
         onChange={(v) => setDividerInset(v === "inset")}
         options={["full", "inset"]}
-        disabled={
-          !showSectionDividers ||
-          (layout !== "centered-ack" && layout !== "centered-action")
-        }
+        disabled={!showSectionDividers || !MODAL_DIVIDER_LAYOUTS.includes(layout)}
       />
       <div>
         <SectionLabel mb={6}>Title</SectionLabel>

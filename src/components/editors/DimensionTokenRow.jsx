@@ -46,11 +46,15 @@ export default function DimensionTokenRow({
   }
 
   const isSingleValue = tokenDef.value !== undefined && !tokenDef.sizes;
-  const defaultResolvedSize = defaultSize || sizeKeys[0];
   const hasExplicitDefaultSize = Boolean(tokenDef.sizes && Object.prototype.hasOwnProperty.call(tokenDef.sizes, "default"));
+  // "default" is always resolvable — either an explicit size key or an alias
+  // that resolveDimension maps to the component's default named size — so we can
+  // show and edit it directly. Editing it must write to the literal "default"
+  // override key (not the resolved named size), otherwise editing "default"
+  // would silently mutate a real size like "sm".
   const canUseSelectedForDisplay =
     selectedSize != null &&
-    (selectedSize === "default" ? hasExplicitDefaultSize : sizeKeys.includes(selectedSize));
+    (selectedSize === "default" ? true : sizeKeys.includes(selectedSize));
   const resolveValueForSize = (size) => {
     if (hasExplicitDefaultSize && size === "default") {
       const override = brand.dimensionOverrides?.[tokenName]?.default;
@@ -62,7 +66,7 @@ export default function DimensionTokenRow({
   const visibleSizes = isSingleValue
     ? []
     : selectedSize === "default"
-      ? [hasExplicitDefaultSize ? "default" : defaultResolvedSize]
+      ? ["default"]
       : selectedSize && sizeKeys.includes(selectedSize)
         ? [selectedSize]
         : sizeKeys;

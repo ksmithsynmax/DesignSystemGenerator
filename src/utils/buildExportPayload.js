@@ -337,12 +337,30 @@ export function buildExportPayload(brands, options) {
             const defaultSize = getDefaultSizeKey(brands, brandId, tokenName) || inferDefaultSizeKey(tokenSizeKeys, sizeKeys);
             const hasExplicitDefaultSize = Object.prototype.hasOwnProperty.call(def.sizes || {}, "default");
             if (!hasExplicitDefaultSize && defaultSize) {
-              const defaultVal = resolveDimension(brands, brandId, tokenName, defaultSize);
-              out[brandId].components[`${def.figmaPath}-default`] = {
-                type: "FLOAT",
-                value: defaultVal,
-                aliasOf: `${def.figmaPath}-${defaultSize}`,
-              };
+              // Resolve the canonical "default" exactly as the app preview does.
+              // This honors an explicit "default" override AND derived tokens
+              // (e.g. checkbox/radio icon size scales off the box's default),
+              // so Figma always matches the preview.
+              const defaultVal = resolveDimension(brands, brandId, tokenName, "default");
+              const namedVal = resolveDimension(brands, brandId, tokenName, defaultSize);
+              const explicitDefaultOverride = brand.dimensionOverrides?.[tokenName]?.default;
+              // Only alias to the named size when the default genuinely tracks
+              // it (same value, not decoupled by an explicit "default" edit).
+              // Otherwise emit a literal so the alias can't drag the value back
+              // to the named size.
+              if (explicitDefaultOverride === undefined && defaultVal === namedVal) {
+                out[brandId].components[`${def.figmaPath}-default`] = {
+                  type: "FLOAT",
+                  value: defaultVal,
+                  aliasOf: `${def.figmaPath}-${defaultSize}`,
+                };
+              } else {
+                out[brandId].components[`${def.figmaPath}-default`] = {
+                  type: "FLOAT",
+                  value: defaultVal,
+                  alias: resolveFloatAlias(defaultVal),
+                };
+              }
             }
           } else {
             const val = resolveDimension(brands, brandId, tokenName);
@@ -391,15 +409,28 @@ export function buildExportPayload(brands, options) {
             const defaultSize = getDefaultSizeKey(brands, brandId, tokenName) || inferDefaultSizeKey(tokenSizeKeys, sizeKeys);
             const hasExplicitDefaultSize = Object.prototype.hasOwnProperty.call(def.sizes || {}, "default");
             if (!hasExplicitDefaultSize && defaultSize) {
-              out[brandId].components[`${def.figmaPath}-default`] = {
-                type: "STRING",
-                value: resolveDimension(brands, brandId, tokenName, defaultSize),
-                aliasOf: `${def.figmaPath}-${defaultSize}`,
-              };
+              // Resolve "default" as the app preview does, honoring an explicit
+              // "default" override — mirrors the FLOAT branch above.
+              const defaultStringValue = resolveDimension(brands, brandId, tokenName, "default");
+              const namedStringValue = resolveDimension(brands, brandId, tokenName, defaultSize);
+              const explicitDefaultOverride = brand.dimensionOverrides?.[tokenName]?.default;
+              if (explicitDefaultOverride === undefined && defaultStringValue === namedStringValue) {
+                out[brandId].components[`${def.figmaPath}-default`] = {
+                  type: "STRING",
+                  value: defaultStringValue,
+                  aliasOf: `${def.figmaPath}-${defaultSize}`,
+                };
+              } else {
+                out[brandId].components[`${def.figmaPath}-default`] = {
+                  type: "STRING",
+                  value: defaultStringValue,
+                  alias: resolveStringAlias(defaultStringValue),
+                };
+              }
               // Backward-compatible base string path used by older plugin bindings.
               out[brandId].components[def.figmaPath] = {
                 type: "STRING",
-                value: resolveDimension(brands, brandId, tokenName, defaultSize),
+                value: defaultStringValue,
                 aliasOf: `${def.figmaPath}-default`,
               };
             }

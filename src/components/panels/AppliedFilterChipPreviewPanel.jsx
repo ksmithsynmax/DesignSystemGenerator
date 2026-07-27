@@ -1,12 +1,23 @@
-import ChipPreview from "../previews/ChipPreview";
+import AppliedFilterChipPreview from "../previews/AppliedFilterChipPreview";
 import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-export const CHIP_VARIANTS = ["filled", "outline", "light"];
-export const CHIP_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
-export const CHIP_STATES = ["default", "hover", "focus", "pressed", "disabled"];
-export const CHIP_SELECTIONS = ["unchecked", "checked"];
+export const AFC_VARIANTS = ["filled", "outline", "light"];
+export const AFC_RADIUS_KEYS = ["default", "xs", "sm", "md", "lg", "xl"];
+// Interaction state (columns in the spec: Enabled/Hovered/Focused/Pressed) —
+// "default" renders as Enabled.
+// "disabled" is commented out for now — the Inactive / Selective Inactive
+// selective states already cover the non-interactive case. Re-add to restore it.
+export const AFC_STATES = ["default", "hover", "focus", "pressed" /*, "disabled" */];
+// Applied Filter Chips are always an applied (selected) filter, so they only
+// support the two selected Selective States.
+export const AFC_SELECTIVE_STATES = ["selected", "selective-inactive"];
+
+const selectiveFromFlags = (checked, inactive) =>
+  inactive ? (checked ? "selective-inactive" : "inactive") : checked ? "selected" : "active";
+const selectiveToChecked = (v) => v === "selected" || v === "selective-inactive";
+const selectiveToInactive = (v) => v === "inactive" || v === "selective-inactive";
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -45,7 +56,7 @@ function PropertyRow({ label, value, onChange, options, disabled = false }) {
   );
 }
 
-export function ChipPreviewContent({
+export function AppliedFilterChipPreviewContent({
   brands,
   activeBrand,
   activeVariant,
@@ -54,42 +65,48 @@ export function ChipPreviewContent({
   sizeKeys,
   activeColorToken,
   selectedChecked,
+  selectedInactive,
   selectedState,
+  subLabel,
+  withRemove,
+  showCheckmark,
 }) {
-  const matrixRows = CHIP_VARIANTS.flatMap((v) => [
-    { label: `${v} / unchecked`, variant: v, checked: false },
-    { label: `${v} / checked`, variant: v, checked: true },
-  ]);
+  const matrixRows = [
+    { label: "selected", checked: true, inactive: false },
+    { label: "selective inactive", checked: true, inactive: true },
+  ];
 
   return (
     <div>
       <PreviewStage label={activeColorToken}>
-        <ChipPreview
+        <AppliedFilterChipPreview
           brands={brands}
           brandId={activeBrand}
-          variant={activeVariant}
           size={activeChipSize}
           radius={activeChipRadius}
           checked={selectedChecked}
+          inactive={selectedInactive}
           state={selectedState === "default" ? undefined : selectedState}
+          withRemove
           readOnly
         />
       </PreviewStage>
 
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
-      <SectionLabel mt={20}>All Variants x Sizes</SectionLabel>
+      <SectionLabel mt={20}>All States x Sizes</SectionLabel>
       <PreviewMatrix
         sizeKeys={sizeKeys}
         rows={matrixRows}
         renderCell={(row, s) => (
-          <ChipPreview
+          <AppliedFilterChipPreview
             brands={brands}
             brandId={activeBrand}
-            variant={row.variant}
             size={s}
             radius={activeChipRadius}
             checked={row.checked}
+            inactive={row.inactive}
             state={selectedState === "default" ? undefined : selectedState}
+            withRemove
             readOnly
           />
         )}
@@ -99,7 +116,7 @@ export function ChipPreviewContent({
   );
 }
 
-export function ChipPropertiesPanel({
+export function AppliedFilterChipPropertiesPanel({
   activeVariant,
   setActiveVariant,
   activeChipSize,
@@ -109,38 +126,48 @@ export function ChipPropertiesPanel({
   sizeKeys,
   selectedChecked,
   setSelectedChecked,
+  selectedInactive,
+  setSelectedInactive,
   selectedState,
   setSelectedState,
-  forcedChecked,
+  forcedSelective,
   forcedState,
+  subLabel,
+  setSubLabel,
+  withRemove,
+  setWithRemove,
+  showCheckmark,
+  setShowCheckmark,
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
-      <PropertyRow label="Variant" value={activeVariant} onChange={setActiveVariant} options={CHIP_VARIANTS} />
-      <PropertyRow label="Size" value={activeChipSize} onChange={setActiveChipSize} options={sizeKeys} />
-      <PropertyRow label="Radius" value={activeChipRadius} onChange={setActiveChipRadius} options={CHIP_RADIUS_KEYS} />
+      <PropertyRow label="Size" value={activeChipSize} onChange={setActiveChipSize} options={["default"]} />
+      <PropertyRow label="Radius" value={activeChipRadius} onChange={setActiveChipRadius} options={["default"]} />
       <PropertyRow
-        label="Selection"
-        value={selectedChecked ? "checked" : "unchecked"}
-        onChange={(v) => setSelectedChecked(v === "checked")}
-        options={CHIP_SELECTIONS}
-        disabled={forcedChecked != null}
+        label="Selective State"
+        value={selectiveFromFlags(selectedChecked, selectedInactive)}
+        onChange={(v) => {
+          setSelectedChecked(selectiveToChecked(v));
+          setSelectedInactive(selectiveToInactive(v));
+        }}
+        options={AFC_SELECTIVE_STATES}
+        disabled={Boolean(forcedSelective)}
       />
       <PropertyRow
         label="State"
         value={selectedState}
         onChange={setSelectedState}
-        options={CHIP_STATES}
+        options={AFC_STATES}
         disabled={Boolean(forcedState)}
       />
     </div>
   );
 }
 
-export default function ChipPreviewPanel(props) {
+export default function AppliedFilterChipPreviewPanel(props) {
   return (
     <div>
-      <ChipPropertiesPanel
+      <AppliedFilterChipPropertiesPanel
         activeVariant={props.activeVariant}
         setActiveVariant={props.setActiveVariant}
         activeChipSize={props.activeChipSize}
@@ -150,13 +177,21 @@ export default function ChipPreviewPanel(props) {
         sizeKeys={props.sizeKeys}
         selectedChecked={props.selectedChecked}
         setSelectedChecked={props.setSelectedChecked}
+        selectedInactive={props.selectedInactive}
+        setSelectedInactive={props.setSelectedInactive}
         selectedState={props.selectedState}
         setSelectedState={props.setSelectedState}
-        forcedChecked={props.forcedChecked}
+        forcedSelective={props.forcedSelective}
         forcedState={props.forcedState}
+        subLabel={props.subLabel}
+        setSubLabel={props.setSubLabel}
+        withRemove={props.withRemove}
+        setWithRemove={props.setWithRemove}
+        showCheckmark={props.showCheckmark}
+        setShowCheckmark={props.setShowCheckmark}
       />
       <div style={{ marginTop: 24 }}>
-        <ChipPreviewContent
+        <AppliedFilterChipPreviewContent
           brands={props.brands}
           activeBrand={props.activeBrand}
           activeVariant={props.activeVariant}
@@ -165,7 +200,11 @@ export default function ChipPreviewPanel(props) {
           sizeKeys={props.sizeKeys}
           activeColorToken={props.activeColorToken}
           selectedChecked={props.selectedChecked}
+          selectedInactive={props.selectedInactive}
           selectedState={props.selectedState}
+          subLabel={props.subLabel}
+          withRemove={props.withRemove}
+          showCheckmark={props.showCheckmark}
         />
       </div>
     </div>
