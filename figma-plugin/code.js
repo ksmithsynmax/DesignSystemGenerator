@@ -899,6 +899,23 @@ async function syncTokens(payload) {
     progress("Gradient paint styles skipped: " + String(gradStyleErr));
   }
 
+  // ── Variables-only fast path ──
+  // Variables are fully synced above (idempotent, in place, bindings preserved).
+  // Every component + doc in the file is variable-bound, so they repaint
+  // automatically once the variable values change. Skip cleanup, component
+  // builds, and docs entirely. This is non-destructive: nothing is removed or
+  // rebuilt — it only pushes new token values, which is why it's fast. Reflects
+  // value changes to existing tokens; structural changes (new variants, new
+  // tokens, builder edits) still need a full "Sync to Figma".
+  if (buildOptions.variablesOnly) {
+    var varsOnlyMsg =
+      "Variables updated (" + totalCreated + " synced, " + totalAliases +
+      " aliases). Components & docs repaint live. No rebuild.";
+    progress(varsOnlyMsg);
+    figma.ui.postMessage({ type: "sync-complete", success: true, message: varsOnlyMsg });
+    return;
+  }
+
   // ── Foundations-doc-only path ──
   // Variables are already synced above (idempotent), so the doc has live
   // variables to bind to. We skip rebuilding component sets entirely.

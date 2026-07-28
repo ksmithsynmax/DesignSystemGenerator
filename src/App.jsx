@@ -585,6 +585,15 @@ export default function App() {
   // startup state can never overwrite newer on-disk data.
   const diskLoadedRef = useRef(false);
   const diskSaveTimerRef = useRef(null);
+  // Content signature (brands + activeBrand + previewTheme, WITHOUT the savedAt
+  // timestamp) of the last persisted state. Used to skip no-op writes so a
+  // cross-tab storage event that produces an identical-content-but-new-object
+  // brands can't ping-pong writes between tabs forever (the OOM-crash bug).
+  const lastPersistedSignatureRef = useRef(null);
+  // Always-current brands snapshot for reads inside stable ([]-deps) event
+  // handlers (e.g. the cross-tab storage listener) without re-subscribing.
+  const brandsRef = useRef(brands);
+  brandsRef.current = brands;
   const [brandDeleteModalOpened, setBrandDeleteModalOpened] = useState(false);
   const [brandDeleteTargetId, setBrandDeleteTargetId] = useState(null);
   const [brandDeleteConfirmInput, setBrandDeleteConfirmInput] = useState("");
@@ -1700,10 +1709,15 @@ export default function App() {
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    const stateObj = { brands, activeBrand, previewTheme, savedAt: Date.now() };
-    let payload;
+    // Signature EXCLUDES savedAt: if the actual content is unchanged, there is
+    // nothing to persist. Skipping the write here is what breaks the two-tab
+    // save<->storage feedback loop — a storage-event-driven setBrands that only
+    // changed the object reference (not the data) produces the same signature,
+    // so we don't re-write a fresh timestamp and re-fire the other tab's
+    // storage handler (which was ping-ponging until the tab ran out of memory).
+    let signature;
     try {
-      payload = JSON.stringify(stateObj);
+      signature = JSON.stringify({ brands, activeBrand, previewTheme });
     } catch (err) {
       // A non-serializable value snuck into brands — this would otherwise drop
       // the entire save (and every edit with it) silently.
@@ -1711,6 +1725,10 @@ export default function App() {
       setStorageError("Your changes could not be saved (data could not be serialized). Export your brands to back them up.");
       return;
     }
+    if (signature === lastPersistedSignatureRef.current) return;
+    const stateObj = { brands, activeBrand, previewTheme, savedAt: Date.now() };
+    const payload = JSON.stringify(stateObj);
+    lastPersistedSignatureRef.current = signature;
     try {
       window.localStorage.setItem(APP_STORAGE_KEY, payload);
       // Verify the write actually landed; some browsers (private mode, blocked
@@ -1789,7 +1807,19 @@ export default function App() {
       try {
         const parsed = JSON.parse(e.newValue);
         if (parsed && parsed.brands && typeof parsed.brands === "object") {
-          setBrands(enforceTextDefaultMappings(mergeRecoveredBrands(parsed.brands)));
+          const nextBrands = enforceTextDefaultMappings(mergeRecoveredBrands(parsed.brands));
+          // Only adopt when the CONTENT actually differs from ours. A cross-tab
+          // write with identical brands must not setBrands — that new object
+          // ref would re-run the save effect, stamp a fresh savedAt, and fire
+          // this same handler back in the other tab, looping until the tab
+          // OOM-crashes. Comparing content stops the ping-pong at the source.
+          let same = false;
+          try {
+            same = JSON.stringify(nextBrands) === JSON.stringify(brandsRef.current);
+          } catch (_cmpErr) {
+            same = false;
+          }
+          if (!same) setBrands(nextBrands);
         }
       } catch (_err) {
         // Ignore malformed cross-tab payloads.

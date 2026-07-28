@@ -276,14 +276,20 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
     return `${comps} · ${brandLabel}`;
   }, [buildMode, selectedCount, brandMode, exportBrandIds, brands]);
 
-  const handleSync = useCallback(() => {
-    if (buildMode === "selected" && selectedComponents.length === 0) return;
+  const handleSync = useCallback((opts) => {
+    // Variables-only is a fast path that just pushes token VALUES to Figma
+    // (no component/doc rebuild). Component selection is irrelevant there since
+    // the variable sync always covers every token, so don't gate on it.
+    const variablesOnly = Boolean(opts && opts.variablesOnly);
+    if (!variablesOnly && buildMode === "selected" && selectedComponents.length === 0) return;
     if (exportBrandIds.length === 0) return;
     const scopedIds = exportBrandIds.slice();
     const scopedBrandsConfig = pickBrands(brands, scopedIds);
     var buildOptions = Object.assign({}, syncBuildOptions || {});
     buildOptions.preserveExistingVariables = preserveExistingVariables;
-    if (buildMode === "selected") {
+    if (variablesOnly) {
+      buildOptions.variablesOnly = true;
+    } else if (buildMode === "selected") {
       buildOptions.componentsToBuild = selectedComponents.slice();
     }
     if (Object.keys(buildOptions).length === 0) buildOptions = null;
@@ -427,6 +433,15 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
     status === "syncing" ||
     !pluginConnected ||
     Boolean(selectionError);
+
+  // The fast "values only" path ignores component selection (it always syncs
+  // every token), so it's gated only by connection + brand selection.
+  const variablesOnlyDisabled =
+    status === "disconnected" ||
+    status === "connecting" ||
+    status === "syncing" ||
+    !pluginConnected ||
+    Boolean(brandSelectionError);
 
   const statusLabel =
     status === "syncing" ? "Syncing..." :
@@ -673,7 +688,7 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
 
       <div style={{ display: "flex", alignItems: "center", gap: 8, flexWrap: "wrap" }}>
         <button
-          onClick={handleSync}
+          onClick={() => handleSync()}
           disabled={buttonDisabled}
           style={{
             background: buttonDisabled ? "#373A40" : "#228BE6",
@@ -687,6 +702,23 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
           }}
         >
           Sync to Figma
+        </button>
+        <button
+          onClick={() => handleSync({ variablesOnly: true })}
+          disabled={variablesOnlyDisabled}
+          title="Fast: push token VALUES to Figma without rebuilding components or docs. They repaint live because they're bound to variables. Use the full Sync to Figma for structural/code changes (new variants, new tokens, builder edits)."
+          style={{
+            background: "transparent",
+            color: variablesOnlyDisabled ? "#5C5F66" : "#51CF66",
+            border: `1px solid ${variablesOnlyDisabled ? "#2c2f36" : "#2f9e44"}`,
+            borderRadius: 6,
+            padding: "8px 12px",
+            fontSize: 12,
+            fontWeight: 600,
+            cursor: variablesOnlyDisabled ? "not-allowed" : "pointer",
+          }}
+        >
+          Sync values only (fast)
         </button>
         <button
           onClick={handleBuildFoundationsDoc}
@@ -722,6 +754,11 @@ export default function FigmaSyncButton({ brands, syncBuildOptions }) {
           Export token changes
         </button>
       </div>
+
+      <span style={{ fontSize: 10, color: "#868E96", lineHeight: 1.4 }}>
+        Sync values only updates token values live (seconds, no rebuild). Use full Sync to
+        Figma for structural or code changes (new variants, new tokens, builder edits).
+      </span>
 
       {isSyncing && (
         <div
