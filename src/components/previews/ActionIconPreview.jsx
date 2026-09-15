@@ -61,15 +61,22 @@ export default function ActionIconPreview({
   const border = resolveColor(brands, brandId, tokens[borderKey]?.semantic, "light", borderKey);
   const focusRing = resolveColor(brands, brandId, tokens["actionicon-focus-ring"]?.semantic, "light", "actionicon-focus-ring");
 
+  // When the user edits the literal "*-default" bucket we must resolve the
+  // "default" key directly so that override is honored; otherwise pre-collapsing
+  // "default" to the mapped named size hides those edits in the preview. The
+  // existing named-size fallback chain is preserved for the no-override case.
+  const hasDefaultOverride = (tokenName) =>
+    brands?.[brandId]?.dimensionOverrides?.[tokenName]?.default !== undefined;
   const resolveSizeKey = (tokenName, requestedKey, fallbackKey = "sm") => {
     if (requestedKey !== "default") return requestedKey;
+    if (hasDefaultOverride(tokenName)) return "default";
     return getDefaultSizeKey(brands, brandId, tokenName) || fallbackKey;
   };
 
-  const resolvedActionIconSize = resolveSizeKey("actionicon-size", size, "sm");
+  const resolvedActionIconSize = resolveSizeKey("actionicon-padding", size, "sm");
   const resolvedRadiusSize = resolveSizeKey("actionicon-radius", radius || size, resolvedActionIconSize);
 
-  const actionIconSize = resolveDimension(brands, brandId, "actionicon-size", resolvedActionIconSize);
+  const actionIconPadding = resolveDimension(brands, brandId, "actionicon-padding", resolvedActionIconSize);
   const actionIconRadius = resolveDimension(brands, brandId, "actionicon-radius", resolvedRadiusSize);
   const iconSize = resolveDimension(
     brands,
@@ -77,6 +84,8 @@ export default function ActionIconPreview({
     "actionicon-icon-size",
     resolveSizeKey("actionicon-icon-size", size, resolvedActionIconSize)
   );
+  // Size is derived from padding + icon so the box is driven by padding, not a fixed dimension.
+  const actionIconSize = iconSize + actionIconPadding * 2;
   const iconStrokeWidth = resolveDimension(
     brands,
     brandId,

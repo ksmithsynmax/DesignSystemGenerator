@@ -1,7 +1,7 @@
 import { Button } from "@mantine/core";
 import PlusIcon from "@untitledui-icons/react/line/PlusIcon";
 import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
-import { getDefaultSizeKey, resolveColor, resolveDimension } from "../../utils/resolveToken";
+import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { resolveGradientCss } from "../../utils/resolveGradient";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
@@ -68,10 +68,13 @@ export default function ButtonPreview({
   const text = resolveColor(brands, brandId, tokens[textKey]?.semantic, previewTheme, textKey);
   const border = resolveColor(brands, brandId, tokens[borderKey]?.semantic, previewTheme, borderKey);
 
-  const resolvedSizeFor = (tokenName) => {
-    if (size !== "default") return size;
-    return getDefaultSizeKey(brands, brandId, tokenName) || "sm";
-  };
+  // Pass the size through as-is, INCLUDING the literal "default". resolveDimension
+  // already resolves the "default" alias per token (via componentDefaults) AND
+  // honors a literal `*-default` override first — so we must not pre-collapse
+  // "default" into a named size here. Doing so made edits to the *-default bucket
+  // (e.g. button-padding-x-default) invisible, because the preview then resolved
+  // the mapped named size ("md") and never read the "default" override.
+  const resolvedSizeFor = () => size;
 
   const paddingY = resolveDimension(brands, brandId, "button-padding-y", resolvedSizeFor("button-padding-y"));
   const paddingX = resolveDimension(brands, brandId, "button-padding-x", resolvedSizeFor("button-padding-x"));

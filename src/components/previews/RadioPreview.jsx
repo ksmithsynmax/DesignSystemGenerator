@@ -55,6 +55,7 @@ export default function RadioPreview({
   const labelFontSize = resolveDimension(brands, brandId, "radio-label-font-size", size);
   const labelFontFamily = resolveDimension(brands, brandId, "radio-label-font-family");
   const labelFontWeight = resolveDimension(brands, brandId, "radio-label-font-weight");
+  const labelGap = resolveDimension(brands, brandId, "radio-label-gap", size);
 
   // --radio-color: accent color used for filled bg (when checked) and outline ring (when checked)
   // Both variants use the primary brand color for the accent
@@ -80,6 +81,11 @@ export default function RadioPreview({
           "--radio-color": radioColor,
           "--radio-icon-color": radioIconColor,
           "--radio-icon-size": `${iconSize}px`,
+          // Mantine spaces the label from the control via the label wrapper's
+          // padding-inline-start (--label-offset-start, default spacing-sm).
+          // Drive it from radio-label-gap-{size} so the preview matches Figma's
+          // itemSpacing binding.
+          ...(labelGap != null ? { "--label-offset-start": `${labelGap}px` } : {}),
         },
       })}
       styles={{

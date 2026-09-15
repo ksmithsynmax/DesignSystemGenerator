@@ -56,26 +56,43 @@ function lerp(a, b, t) {
   return a + (b - a) * t;
 }
 
+// Lightness of the two extreme stops the ramp reaches toward.
+const L_LIGHT = 97; // stop 0 target when the base isn't already near-white
+const L_DARK = 12; // stop 9 target when the base isn't already near-black
+
 export function generateScale(baseHex) {
   const base = hexToHsl(baseHex);
+  const normalizedBase = baseHex.toUpperCase();
+
+  // Place the base color at the stop whose lightness matches it, so the exact
+  // input color is always included in the scale. Everything lighter ramps up to
+  // near-white, everything darker ramps down to near-black — keeping a smooth,
+  // visibly distinct progression regardless of how dark or light the base is.
+  const clampedL = Math.max(L_DARK, Math.min(L_LIGHT, base.l));
+  const position = (L_LIGHT - clampedL) / (L_LIGHT - L_DARK); // 0 = lightest .. 1 = darkest
+  const anchor = Math.max(0, Math.min(9, Math.round(position * 9)));
+
   const scale = [];
-
   for (let i = 0; i < 10; i++) {
-    let l, s;
-
-    if (i < 5) {
-      // Light side: lerp from 95% down to base lightness
-      l = lerp(95, base.l, i / 5);
-    } else if (i === 5) {
-      l = base.l;
-    } else {
-      // Dark side: lerp from base lightness down to 8%
-      l = lerp(base.l, 8, (i - 5) / 4);
+    // Anchor stop is the exact base color the user entered.
+    if (i === anchor) {
+      scale.push(normalizedBase);
+      continue;
     }
 
-    // Reduce saturation slightly at extremes for a natural feel
-    const distFromCenter = Math.abs(i - 5) / 5;
-    s = Math.max(0, base.s * (1 - distFromCenter * 0.15));
+    let l;
+    if (i < anchor) {
+      // Lighter side: ramp from near-white down to the base lightness.
+      l = lerp(L_LIGHT, base.l, i / anchor);
+    } else {
+      // Darker side: ramp from the base lightness down to near-black.
+      l = lerp(base.l, L_DARK, (i - anchor) / (9 - anchor));
+    }
+
+    // Keep saturation close to the base, tapering gently toward the extremes.
+    const span = Math.max(anchor, 9 - anchor, 1);
+    const distFromAnchor = Math.abs(i - anchor) / span;
+    const s = Math.max(0, base.s * (1 - distFromAnchor * 0.15));
 
     scale.push(hslToHex(base.h, s, l));
   }

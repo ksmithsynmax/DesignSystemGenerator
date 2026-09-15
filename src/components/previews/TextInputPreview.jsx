@@ -47,6 +47,8 @@ export default function TextInputPreview({
 
   const textColor = isDisabled
     ? resolveColor(brands, brandId, tokens["textinput-text-disabled"]?.semantic, "light", "textinput-text-disabled")
+    : isError
+    ? resolveColor(brands, brandId, tokens["textinput-text-error"]?.semantic, "light", "textinput-text-error")
     : resolveColor(brands, brandId, tokens["textinput-text"]?.semantic, "light", "textinput-text");
   const placeholderColor = isDisabled
     ? resolveColor(
@@ -56,6 +58,8 @@ export default function TextInputPreview({
         "light",
         tokens[`${prefix}-placeholder-disabled`] ? `${prefix}-placeholder-disabled` : "textinput-placeholder"
       )
+    : isError
+    ? resolveColor(brands, brandId, tokens["textinput-placeholder-error"]?.semantic, "light", "textinput-placeholder-error")
     : resolveColor(brands, brandId, tokens["textinput-placeholder"]?.semantic, "light", "textinput-placeholder");
   const labelColor = isDisabled
     ? resolveColor(
@@ -157,7 +161,7 @@ export default function TextInputPreview({
           paddingLeft: showLeftIcon ? `${sectionSize}px` : `${paddingX}px`,
           paddingRight: showRightIcon ? `${sectionSize}px` : `${paddingX}px`,
           // Mantine 8: `.input::placeholder { color: var(--input-placeholder-color) }` — set the variable so token edits win over global CSS.
-          "--input-placeholder-color": isError ? errorColor : placeholderColor,
+          "--input-placeholder-color": placeholderColor,
           fontFamily: fontFamily ? `"${fontFamily}", sans-serif` : undefined,
           fontWeight: fontWeight === "Semi Bold" ? 600 : fontWeight === "Bold" ? 700 : 400,
           lineHeight: lineHeight ? `${lineHeight}px` : undefined,

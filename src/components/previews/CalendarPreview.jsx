@@ -88,6 +88,10 @@ export default function CalendarPreview({
   previewTheme = "dark",
   showOutsideDays = true,
   showHeader = true,
+  // Optional background override. When set (e.g. by DateInput's
+  // dateinput-calendar-background token), it replaces calendar-background for
+  // the card only; everything else still uses the shared calendar/* tokens.
+  backgroundOverride = null,
 }) {
   const colorTheme = previewTheme === "dark" ? "dark" : "light";
 
@@ -313,7 +317,7 @@ export default function CalendarPreview({
     <div
       style={{
         fontFamily: `'${fontFamily}', sans-serif`,
-        background: colors.bg,
+        background: backgroundOverride || colors.bg,
         border: `${borderWidth}px solid ${colors.border}`,
         borderRadius: radius,
         display: "inline-block",

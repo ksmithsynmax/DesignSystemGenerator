@@ -1,7 +1,9 @@
+import { useState } from "react";
 import ChevronRightIcon from "@untitledui-icons/react/line/ChevronRightIcon";
 import Swatch from "../shared/Swatch";
 import Arrow from "../shared/Arrow";
 import Tag from "../shared/Tag";
+import NumberField from "../shared/NumberField";
 
 const GRADIENT_PREFIX = "__gradient__:";
 
@@ -31,6 +33,14 @@ export default function TokenChainCard({
   const paletteSelectValue = isGradient
     ? `${GRADIENT_PREFIX}${String(mapping.gradient).trim()}`
     : mapping.color || "neutral";
+
+  // While the range slider is actively being dragged we display a LOCAL value
+  // so a lagging re-render / persistence echo can never yank the thumb back
+  // mid-drag (that snap-back is what read as the opacity "bouncing between two
+  // values"). The NumberField already self-buffers while focused.
+  const [sliderDrag, setSliderDrag] = useState(null);
+  const sliderValue = sliderDrag != null ? sliderDrag : opacity;
+  const endSliderDrag = () => setSliderDrag(null);
 
   const updateOpacity = (nextValue) => {
     if (isGradient) return;
@@ -237,19 +247,25 @@ export default function TokenChainCard({
                 type="range"
                 min={0}
                 max={100}
-                value={opacity}
+                value={sliderValue}
                 disabled={isTransparent || isGradient}
-                onChange={(e) => updateOpacity(e.target.value)}
+                onChange={(e) => {
+                  setSliderDrag(Number(e.target.value));
+                  updateOpacity(e.target.value);
+                }}
+                onPointerUp={endSliderDrag}
+                onPointerCancel={endSliderDrag}
+                onMouseUp={endSliderDrag}
+                onKeyUp={endSliderDrag}
+                onBlur={endSliderDrag}
                 style={{ flex: 1, accentColor: "#228BE6", opacity: isTransparent || isGradient ? 0.45 : 1 }}
               />
-              <input
-                type="number"
+              <NumberField
                 min={0}
                 max={100}
                 value={opacity}
                 disabled={isTransparent || isGradient}
                 onChange={(e) => updateOpacity(e.target.value)}
-                onWheel={(e) => e.currentTarget.blur()}
                 style={{
                   width: 58,
                   background: "#1A1B1E",

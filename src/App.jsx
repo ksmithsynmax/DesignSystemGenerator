@@ -129,6 +129,14 @@ import {
   TextInputPropertiesPanel,
 } from "./components/panels/TextInputPreviewPanel";
 import {
+  DateInputPreviewContent,
+  DateInputPropertiesPanel,
+} from "./components/panels/DateInputPreviewPanel";
+import {
+  TimeInputPreviewContent,
+  TimeInputPropertiesPanel,
+} from "./components/panels/TimeInputPreviewPanel";
+import {
   SelectPreviewContent,
   SelectPropertiesPanel,
 } from "./components/panels/SelectPreviewPanel";
@@ -211,6 +219,8 @@ const VARIANTS_BY_COMPONENT = {
   notification: ["default"],
   radio: ["filled", "outline"],
   textinput: ["default", "filled"],
+  dateinput: ["default"],
+  timeinput: ["default"],
   select: ["default", "filled"],
   multiselect: ["default", "filled"],
   modal: ["default", "filled"],
@@ -395,6 +405,27 @@ function enforceTextDefaultMappings(brandsInput) {
     }
   });
 
+  // ActionIcon moved from a fixed `actionicon-size` box to a derived model
+  // (box = icon-size + 2 × padding). Drop the removed token everywhere, and
+  // seed Theia's bespoke boxes (18/28/34/40/50) as padding + icon-size on the
+  // first load after this migration. Guarded on the brand-new `actionicon-padding`
+  // key so it runs exactly once and never stomps later user edits. Other brands
+  // (e.g. Hyperion) are untouched and keep the base defaults.
+  Object.keys(next).forEach((brandId) => {
+    const b = next[brandId];
+    if (!b) return;
+    if (b.dimensionOverrides && b.dimensionOverrides["actionicon-size"]) {
+      delete b.dimensionOverrides["actionicon-size"];
+    }
+    if (brandId === "theia") {
+      if (!b.dimensionOverrides) b.dimensionOverrides = {};
+      if (!b.dimensionOverrides["actionicon-padding"]) {
+        b.dimensionOverrides["actionicon-padding"] = { xs: 4, sm: 6, md: 8, lg: 10, xl: 13 };
+        b.dimensionOverrides["actionicon-icon-size"] = { xs: 10, sm: 16, md: 18, lg: 20, xl: 24 };
+      }
+    }
+  });
+
   // Migrate legacy flat modal color overrides to the "filled" variant. The
   // original modal became the `filled` variant, so any persisted overrides like
   // `modal-background` must move to `modal-filled-background` to keep the modal
@@ -499,6 +530,21 @@ function enforceTextDefaultMappings(brandsInput) {
   return next;
 }
 
+// Pulls the first meaningful application frame out of an Error stack, skipping
+// the circuit-breaker's own frames. Used to name the call site that is driving
+// a runaway brands-update loop so the culprit can be pinpointed instantly.
+function topAppFrame(stack) {
+  if (!stack) return "(no stack — DEV only)";
+  const lines = String(stack).split("\n");
+  for (const raw of lines) {
+    const l = raw.trim();
+    if (!l.startsWith("at ")) continue;
+    if (l.includes("setBrands") || l.includes("topAppFrame")) continue;
+    return l.replace(/^at\s+/, "");
+  }
+  return (lines[1] || "").trim() || "(unknown)";
+}
+
 function mergeRecoveredBrands(brandsInput) {
   if (!brandsInput || typeof brandsInput !== "object") return brandsInput;
   const snapshot = STORYBOOK_BRANDS && typeof STORYBOOK_BRANDS === "object" ? STORYBOOK_BRANDS : null;
@@ -513,6 +559,8 @@ export default function App() {
     docs: "Docs Theme",
     actionicon: "ActionIcon",
     textinput: "TextInput",
+    dateinput: "DateInput",
+    timeinput: "TimeInput",
     rangeslider: "RangeSlider",
     chart: "Bar Chart",
     "chart-line": "Line Chart",
@@ -539,7 +587,7 @@ export default function App() {
   const getComponentLabel = (name) =>
     COMPONENT_LABELS[name] || name.charAt(0).toUpperCase() + name.slice(1);
 
-  const [brands, setBrands] = useState(() => {
+  const [brands, setBrandsRaw] = useState(() => {
     const persisted = loadPersistedAppState();
     // When there's no saved local state (fresh browser, cleared storage, or the
     // dev server came up on a different port so localStorage is a blank store),
@@ -555,9 +603,79 @@ export default function App() {
         : STORYBOOK_BRANDS;
     return enforceTextDefaultMappings(mergeRecoveredBrands(source));
   });
+
+  // --- Runaway brands-update loop circuit breaker ---------------------------
+  // EVERY mutation to brand state funnels through setBrands. A true feedback
+  // loop (persistence echo, cross-tab ping-pong, mis-guarded effect) calls this
+  // THOUSANDS of times/second until the renderer OOMs. We must break that — but
+  // WITHOUT ever tripping on real editing, because a dropped write reverts the
+  // value the user just set and reads as the exact "jumps back and forth"
+  // bounce this breaker was meant to stop.
+  //
+  // The distinguishing signal is RATE. The browser coalesces pointermove/input
+  // to the display refresh, so even a frantic slider drag tops out around
+  // ~120 writes/sec. A runaway loop is an order of magnitude faster. We measure
+  // over a short 500ms window and only trip above 900 writes/sec sustained —
+  // ~7.5x faster than any possible human interaction, so legitimate edits can
+  // never be dropped, while a genuine loop is caught within a few milliseconds.
+  const brandsWriteLogRef = useRef([]);
+  const brandsLoopTrippedRef = useRef(false);
+  const BRANDS_LOOP_WINDOW_MS = 500;
+  const BRANDS_LOOP_THRESHOLD = 450; // 450 writes / 500ms = 900/sec
+  const setBrands = useCallback((updater) => {
+    const now = typeof performance !== "undefined" ? performance.now() : Date.now();
+    const isDev = Boolean(import.meta && import.meta.env && import.meta.env.DEV);
+    const log = brandsWriteLogRef.current;
+    log.push({ t: now, stack: isDev ? new Error().stack : null });
+    while (log.length && now - log[0].t > BRANDS_LOOP_WINDOW_MS) log.shift();
+
+    if (log.length >= BRANDS_LOOP_THRESHOLD) {
+      if (!brandsLoopTrippedRef.current) {
+        brandsLoopTrippedRef.current = true;
+        if (isDev) {
+          const counts = {};
+          for (const e of log) {
+            const site = topAppFrame(e.stack);
+            counts[site] = (counts[site] || 0) + 1;
+          }
+          const summary = Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 6)
+            .map(([site, n]) => `  ${n}x  ${site}`)
+            .join("\n");
+          console.error(
+            `[DSG] Runaway brands-update loop STOPPED (${log.length} writes in <${BRANDS_LOOP_WINDOW_MS}ms).\n` +
+              `Top offending call sites:\n${summary}\n\n` +
+              `Most recent full stack:\n${log[log.length - 1] && log[log.length - 1].stack ? log[log.length - 1].stack : "(none)"}`
+          );
+        } else {
+          console.error(
+            "[DSG] A runaway brands-update loop was detected and stopped to prevent a crash."
+          );
+        }
+        try {
+          setStorageError(
+            "A rapid update loop was detected and stopped to keep the app from crashing. " +
+              "If the last value looks wrong, reload the page — your saved data is safe."
+          );
+        } catch (_e) {
+          /* setter not initialized yet */
+        }
+        // Short cooldown so a genuine loop is broken but the app recovers fast.
+        setTimeout(() => {
+          brandsLoopTrippedRef.current = false;
+          brandsWriteLogRef.current = [];
+        }, 300);
+      }
+      return; // Dropping the write is what actually breaks the loop.
+    }
+
+    setBrandsRaw(updater);
+  }, []);
+
   useEffect(() => {
     setBrands((prev) => enforceTextDefaultMappings(prev));
-  }, []);
+  }, [setBrands]);
   const [activeBrand, setActiveBrand] = useState(() => {
     const persisted = loadPersistedAppState();
     return persisted?.activeBrand || "theia";
@@ -597,6 +715,8 @@ export default function App() {
   const [brandDeleteModalOpened, setBrandDeleteModalOpened] = useState(false);
   const [brandDeleteTargetId, setBrandDeleteTargetId] = useState(null);
   const [brandDeleteConfirmInput, setBrandDeleteConfirmInput] = useState("");
+  const [brandRenameModalOpened, setBrandRenameModalOpened] = useState(false);
+  const [brandRenameInput, setBrandRenameInput] = useState("");
   const [paletteDeleteModalOpened, setPaletteDeleteModalOpened] = useState(false);
   const [paletteDeleteTargetName, setPaletteDeleteTargetName] = useState("");
   const [paletteDeleteConfirmInput, setPaletteDeleteConfirmInput] = useState("");
@@ -691,6 +811,8 @@ export default function App() {
   const selectableFilterChipDefault = getComponentDefaultSize(brands, activeBrand, "selectablefilterchip") || "md";
   const appliedFilterChipDefault = getComponentDefaultSize(brands, activeBrand, "appliedfilterchip") || "md";
   const textInputDefault = getComponentDefaultSize(brands, activeBrand, "textinput") || "sm";
+  const dateInputDefault = getComponentDefaultSize(brands, activeBrand, "dateinput") || "sm";
+  const timeInputDefault = getComponentDefaultSize(brands, activeBrand, "timeinput") || "sm";
   const selectDefault = getComponentDefaultSize(brands, activeBrand, "select") || "sm";
   const multiSelectDefault = getComponentDefaultSize(brands, activeBrand, "multiselect") || "sm";
   const cardDefault = getComponentDefaultSize(brands, activeBrand, "card") || "default";
@@ -878,6 +1000,24 @@ export default function App() {
   const [activeTextInputErrorText, setActiveTextInputErrorText] = useState("Error message");
   const [activeTextInputLeftIcon, setActiveTextInputLeftIcon] = useState(false);
   const [activeTextInputRightIcon, setActiveTextInputRightIcon] = useState(false);
+  const [activeDateInputSize, setActiveDateInputSize] = useState(dateInputDefault);
+  const [activeDateInputRadius, setActiveDateInputRadius] = useState(dateInputDefault);
+  const [activeDateInputState, setActiveDateInputState] = useState("default");
+  const [activeDateInputShowLabel, setActiveDateInputShowLabel] = useState(true);
+  const [activeDateInputLabelText, setActiveDateInputLabelText] = useState("Label");
+  const [activeDateInputWithAsterisk, setActiveDateInputWithAsterisk] = useState(false);
+  const [activeDateInputShowError, setActiveDateInputShowError] = useState(false);
+  const [activeDateInputErrorText, setActiveDateInputErrorText] = useState("Error message");
+  const [activeDateInputShowDropdown, setActiveDateInputShowDropdown] = useState(false);
+  const [activeTimeInputSize, setActiveTimeInputSize] = useState(timeInputDefault);
+  const [activeTimeInputRadius, setActiveTimeInputRadius] = useState(timeInputDefault);
+  const [activeTimeInputState, setActiveTimeInputState] = useState("default");
+  const [activeTimeInputShowLabel, setActiveTimeInputShowLabel] = useState(true);
+  const [activeTimeInputLabelText, setActiveTimeInputLabelText] = useState("Label");
+  const [activeTimeInputWithAsterisk, setActiveTimeInputWithAsterisk] = useState(false);
+  const [activeTimeInputShowError, setActiveTimeInputShowError] = useState(false);
+  const [activeTimeInputErrorText, setActiveTimeInputErrorText] = useState("Error message");
+  const [activeTimeInputShowDropdown, setActiveTimeInputShowDropdown] = useState(false);
   const [activeSelectSize, setActiveSelectSize] = useState(selectDefault);
   const [activeSelectRadius, setActiveSelectRadius] = useState(selectDefault);
   const [activeSelectState, setActiveSelectState] = useState("default");
@@ -1008,10 +1148,16 @@ export default function App() {
     setActiveAfcSize("default");
     setActiveAfcRadius("default");
     const tiDef = getComponentDefaultSize(brands, newBrand, "textinput") || "sm";
+    const diDef = getComponentDefaultSize(brands, newBrand, "dateinput") || "sm";
+    const tmiDef = getComponentDefaultSize(brands, newBrand, "timeinput") || "sm";
     const seDef = getComponentDefaultSize(brands, newBrand, "select") || "sm";
     const mseDef = getComponentDefaultSize(brands, newBrand, "multiselect") || "sm";
     setActiveTextInputSize(tiDef);
     setActiveTextInputRadius(tiDef);
+    setActiveDateInputSize(diDef);
+    setActiveDateInputRadius(diDef);
+    setActiveTimeInputSize(tmiDef);
+    setActiveTimeInputRadius(tmiDef);
     setActiveSelectSize(seDef);
     setActiveSelectRadius(seDef);
     setActiveMultiSelectSize(mseDef);
@@ -1212,6 +1358,28 @@ export default function App() {
       setActiveTextInputErrorText("Error message");
       setActiveTextInputLeftIcon(false);
       setActiveTextInputRightIcon(false);
+      setActiveVariant("default");
+    } else if (newComp === "dateinput") {
+      setActiveDateInputSize(dateInputDefault);
+      setActiveDateInputRadius(dateInputDefault);
+      setActiveDateInputState("default");
+      setActiveDateInputShowLabel(true);
+      setActiveDateInputLabelText("Label");
+      setActiveDateInputWithAsterisk(false);
+      setActiveDateInputShowError(false);
+      setActiveDateInputErrorText("Error message");
+      setActiveDateInputShowDropdown(false);
+      setActiveVariant("default");
+    } else if (newComp === "timeinput") {
+      setActiveTimeInputSize(timeInputDefault);
+      setActiveTimeInputRadius(timeInputDefault);
+      setActiveTimeInputState("default");
+      setActiveTimeInputShowLabel(true);
+      setActiveTimeInputLabelText("Label");
+      setActiveTimeInputWithAsterisk(false);
+      setActiveTimeInputShowError(false);
+      setActiveTimeInputErrorText("Error message");
+      setActiveTimeInputShowDropdown(false);
       setActiveVariant("default");
     } else if (newComp === "select") {
       setActiveSelectSize(selectDefault);
@@ -1421,9 +1589,18 @@ export default function App() {
   const updatePrimitive = useCallback(
     (colorName, index, value) => {
       setBrands((prev) => {
-        const next = JSON.parse(JSON.stringify(prev));
-        next[activeBrand].primitives[colorName][index] = value;
-        return next;
+        const brand = prev[activeBrand];
+        if (!brand?.primitives?.[colorName]) return prev;
+        if (brand.primitives[colorName][index] === value) return prev;
+        const nextScale = brand.primitives[colorName].slice();
+        nextScale[index] = value;
+        return {
+          ...prev,
+          [activeBrand]: {
+            ...brand,
+            primitives: { ...brand.primitives, [colorName]: nextScale },
+          },
+        };
       });
     },
     [activeBrand]
@@ -1465,16 +1642,32 @@ export default function App() {
   const updateComponentOverride = useCallback(
     (componentToken, mapping) => {
       setBrands((prev) => {
-        const next = JSON.parse(JSON.stringify(prev));
-        const brand = next[activeBrand];
-        if (!brand.componentOverrides) brand.componentOverrides = {};
-        if (!brand.componentOverridesDark) brand.componentOverridesDark = {};
-        if (previewTheme === "dark") {
-          brand.componentOverridesDark[componentToken] = mapping;
-        } else {
-          brand.componentOverrides[componentToken] = mapping;
+        const brand = prev[activeBrand];
+        if (!brand) return prev;
+        const key = previewTheme === "dark" ? "componentOverridesDark" : "componentOverrides";
+        const prevMap = brand[key] || {};
+        // Idempotency guard: writing an identical mapping returns the SAME state
+        // object so React bails out of the update. This structurally stops the
+        // "color value jumps back and forth until it crashes" loop — any
+        // re-entrant/echoed write of the same mapping is a no-op instead of
+        // another full re-render + persist cycle.
+        const existing = prevMap[componentToken];
+        if (existing) {
+          let same = false;
+          try {
+            same = JSON.stringify(existing) === JSON.stringify(mapping);
+          } catch (_e) {
+            same = false;
+          }
+          if (same) return prev;
         }
-        return next;
+        return {
+          ...prev,
+          [activeBrand]: {
+            ...brand,
+            [key]: { ...prevMap, [componentToken]: mapping },
+          },
+        };
       });
     },
     [activeBrand, previewTheme]
@@ -1483,21 +1676,37 @@ export default function App() {
   const updateSemanticMapping = useCallback(
     (semanticKey, partial) => {
       setBrands((prev) => {
-        const next = JSON.parse(JSON.stringify(prev));
-        const b = next[activeBrand];
+        const b = prev[activeBrand];
         if (!b) return prev;
-        if (!b.semanticMap) b.semanticMap = {};
-        if (!b.darkSemanticOverrides) b.darkSemanticOverrides = {};
         const mapKey = previewTheme === "dark" ? "darkSemanticOverrides" : "semanticMap";
         const merged =
           previewTheme === "dark"
             ? mergeDarkSemanticsForBrand(b)
             : mergeLightSemanticsForBrand(b);
+        const prevMap = b[mapKey] || {};
         // Start from the effective mapping (explicit override or starter default)
         // so changing only color or only index keeps the other field intact.
-        const current = b[mapKey][semanticKey] || merged[semanticKey] || { color: "neutral", index: 0 };
-        b[mapKey][semanticKey] = { ...current, ...partial };
-        return next;
+        const current = prevMap[semanticKey] || merged[semanticKey] || { color: "neutral", index: 0 };
+        const nextMapping = { ...current, ...partial };
+        // Idempotency guard: identical explicit mapping → same state object so
+        // React bails, preventing any echo-driven update loop.
+        const existing = prevMap[semanticKey];
+        if (existing) {
+          let same = false;
+          try {
+            same = JSON.stringify(existing) === JSON.stringify(nextMapping);
+          } catch (_e) {
+            same = false;
+          }
+          if (same) return prev;
+        }
+        return {
+          ...prev,
+          [activeBrand]: {
+            ...b,
+            [mapKey]: { ...prevMap, [semanticKey]: nextMapping },
+          },
+        };
       });
     },
     [activeBrand, previewTheme]
@@ -1506,15 +1715,27 @@ export default function App() {
   const updateDimensionOverride = useCallback(
     (tokenName, size, value) => {
       setBrands((prev) => {
-        const next = JSON.parse(JSON.stringify(prev));
-        if (!next[activeBrand].dimensionOverrides) {
-          next[activeBrand].dimensionOverrides = {};
-        }
-        if (!next[activeBrand].dimensionOverrides[tokenName]) {
-          next[activeBrand].dimensionOverrides[tokenName] = {};
-        }
-        next[activeBrand].dimensionOverrides[tokenName][size] = value;
-        return next;
+        const brand = prev[activeBrand];
+        if (!brand) return prev;
+        const prevOverrides = brand.dimensionOverrides || {};
+        const prevToken = prevOverrides[tokenName] || {};
+        // Idempotency guard: writing the identical value returns the SAME state
+        // object so React bails out of the update. This is what structurally
+        // stops the "value jumps back and forth until it crashes" loop — any
+        // re-entrant write of the same number is a no-op instead of another
+        // full re-render + persist cycle. It also makes each keystroke a cheap,
+        // path-targeted clone instead of deep-cloning the entire brands tree.
+        if (prevToken[size] === value) return prev;
+        return {
+          ...prev,
+          [activeBrand]: {
+            ...brand,
+            dimensionOverrides: {
+              ...prevOverrides,
+              [tokenName]: { ...prevToken, [size]: value },
+            },
+          },
+        };
       });
     },
     [activeBrand]
@@ -1550,6 +1771,50 @@ export default function App() {
     setBrandDeleteTargetId(null);
     setBrandDeleteConfirmInput("");
   }, []);
+
+  const openBrandRenameModal = useCallback(() => {
+    const current = brands[activeBrand];
+    if (!current) return;
+    setBrandRenameInput(String(current.name || activeBrand));
+    setBrandRenameModalOpened(true);
+  }, [activeBrand, brands]);
+
+  const closeBrandRenameModal = useCallback(() => {
+    setBrandRenameModalOpened(false);
+    setBrandRenameInput("");
+  }, []);
+
+  const brandRenameCurrentName = brands[activeBrand]
+    ? String(brands[activeBrand].name || activeBrand)
+    : "";
+
+  // A rename must be non-empty, actually change something, and not collide with
+  // another brand's display name (case-insensitive) so the picker stays legible.
+  const brandRenameTrimmed = brandRenameInput.trim();
+  const brandRenameCollision = Object.entries(brands).some(
+    ([id, b]) =>
+      id !== activeBrand &&
+      String(b?.name || id).trim().toLowerCase() ===
+        brandRenameTrimmed.toLowerCase()
+  );
+  const canSubmitBrandRename =
+    Boolean(brands[activeBrand]) &&
+    brandRenameTrimmed.length > 0 &&
+    brandRenameTrimmed !== brandRenameCurrentName.trim() &&
+    !brandRenameCollision;
+
+  const executeBrandRename = useCallback(() => {
+    const trimmed = brandRenameInput.trim();
+    if (!trimmed) return;
+    setBrands((prev) => {
+      if (!prev[activeBrand]) return prev;
+      return {
+        ...prev,
+        [activeBrand]: { ...prev[activeBrand], name: trimmed },
+      };
+    });
+    closeBrandRenameModal();
+  }, [activeBrand, brandRenameInput, closeBrandRenameModal]);
 
   const brandDeleteExpectedName =
     brandDeleteTargetId && brands[brandDeleteTargetId]
@@ -1869,7 +2134,7 @@ export default function App() {
       forcedIndeterminate = true;
     }
 
-    if (["button", "actionicon", "tabs", "accordion", "checkbox", "chip", "badge", "alert", "radio", "textinput", "select", "multiselect", "card", "modal"].includes(activeComponent)) {
+    if (["button", "actionicon", "tabs", "accordion", "checkbox", "chip", "badge", "alert", "radio", "textinput", "dateinput", "timeinput", "select", "multiselect", "card", "modal"].includes(activeComponent)) {
       const variantSegment = parts[1];
       const knownVariants = {
         button: ["filled", "outlined", "ghost"],
@@ -1883,6 +2148,8 @@ export default function App() {
         alert: ["default", "filled", "light", "outline", "transparent", "white"],
         radio: ["filled", "outline"],
         textinput: ["default", "filled"],
+        dateinput: ["default"],
+        timeinput: ["default"],
         select: ["default", "filled"],
         multiselect: ["default", "filled"],
         modal: ["default", "filled"],
@@ -1931,6 +2198,10 @@ export default function App() {
             ? forcedState || activeCardState
           : activeComponent === "textinput"
             ? forcedState || activeTextInputState
+          : activeComponent === "dateinput"
+            ? forcedState || activeDateInputState
+          : activeComponent === "timeinput"
+            ? forcedState || activeTimeInputState
           : activeComponent === "select"
             ? forcedState || activeSelectState
           : activeComponent === "multiselect"
@@ -2257,6 +2528,56 @@ export default function App() {
       return (effectiveComponentState || "default") === "error";
     }
 
+    if (activeComponent === "dateinput") {
+      const targetState = effectiveComponentState || "default";
+      // Shared error color/font tokens (dateinput-error-*) are error-only.
+      if (token.startsWith("dateinput-error-")) return targetState === "error";
+      const lastSeg = parts[parts.length - 1];
+      const tokenState = INTERACTIVE_STATES.includes(lastSeg) ? lastSeg : "default";
+      // Variant-prefixed tokens (dateinput-default-*): show only for the active
+      // state. "default" is DateInput's only field variant.
+      if (variantSegment === "default") {
+        return tokenState === targetState;
+      }
+      // Shared, state-suffixed tokens (e.g. dateinput-text-disabled): match state.
+      if (tokenState !== "default") {
+        return tokenState === targetState;
+      }
+      // Base shared token (no state suffix): hide it when a state-specific
+      // counterpart supersedes it in the active state (e.g. text vs text-disabled).
+      if (targetState !== "default" && Boolean(colorTokens[`${token}-${targetState}`])) {
+        return false;
+      }
+      return true;
+    }
+
+    if (activeComponent === "timeinput") {
+      const targetState = effectiveComponentState || "default";
+      // Shared error color/font tokens (timeinput-error-*) are error-only.
+      if (token.startsWith("timeinput-error-")) return targetState === "error";
+      // Dropdown / option tokens are dropdown styling, not field state — always show.
+      if (token.startsWith("timeinput-dropdown-") || token.startsWith("timeinput-option-")) {
+        return true;
+      }
+      const lastSeg = parts[parts.length - 1];
+      const tokenState = INTERACTIVE_STATES.includes(lastSeg) ? lastSeg : "default";
+      // Variant-prefixed tokens (timeinput-default-*): show only for the active
+      // state. "default" is TimeInput's only field variant.
+      if (variantSegment === "default") {
+        return tokenState === targetState;
+      }
+      // Shared, state-suffixed tokens (e.g. timeinput-text-disabled): match state.
+      if (tokenState !== "default") {
+        return tokenState === targetState;
+      }
+      // Base shared token (no state suffix): hide it when a state-specific
+      // counterpart supersedes it in the active state.
+      if (targetState !== "default" && Boolean(colorTokens[`${token}-${targetState}`])) {
+        return false;
+      }
+      return true;
+    }
+
     if (activeComponent === "menu" && token.endsWith("-disabled")) {
       return (effectiveComponentState || "default") === "disabled";
     }
@@ -2333,6 +2654,8 @@ export default function App() {
       card: ["default", "dark", "outlined", "brand", "transparent"],
       alert: ["default", "filled", "light", "outline", "transparent", "white"],
       textinput: ["default", "filled"],
+      dateinput: ["default"],
+      timeinput: ["default"],
       select: ["default", "filled"],
       multiselect: ["default", "filled"],
       modal: ["default", "filled"],
@@ -2444,6 +2767,12 @@ export default function App() {
 
   const visibleDimensionTokenEntries = Object.entries(dimensionTokens).filter(([token]) => {
     if (activeComponent === "textinput" && token.startsWith("textinput-error-")) {
+      return (effectiveComponentState || "default") === "error";
+    }
+    if (activeComponent === "dateinput" && token.startsWith("dateinput-error-")) {
+      return (effectiveComponentState || "default") === "error";
+    }
+    if (activeComponent === "timeinput" && token.startsWith("timeinput-error-")) {
       return (effectiveComponentState || "default") === "error";
     }
     if (activeComponent === "modal") {
@@ -2576,6 +2905,8 @@ export default function App() {
       card: ["default", "dark", "outlined", "brand", "transparent"],
       alert: ["default", "filled", "light", "outline", "transparent", "white"],
       textinput: ["default", "filled"],
+      dateinput: ["default"],
+      timeinput: ["default"],
       select: ["default", "filled"],
       multiselect: ["default", "filled"],
     };
@@ -2730,6 +3061,8 @@ export default function App() {
     selectablefilterchip: activeSfcSize,
     appliedfilterchip: activeAfcSize,
     textinput: activeTextInputSize,
+    dateinput: activeDateInputSize,
+    timeinput: activeTimeInputSize,
     select: activeSelectSize,
     multiselect: activeMultiSelectSize,
     card: activeCardSize,
@@ -2772,6 +3105,12 @@ export default function App() {
     }
     if (activeComponent === "textinput" && tokenName === "textinput-radius") {
       return activeTextInputRadius;
+    }
+    if (activeComponent === "dateinput" && tokenName === "dateinput-radius") {
+      return activeDateInputRadius;
+    }
+    if (activeComponent === "timeinput" && tokenName === "timeinput-radius") {
+      return activeTimeInputRadius;
     }
     if (activeComponent === "badge" && tokenName === "badge-radius") {
       return activeBadgeRadius;
@@ -3146,6 +3485,48 @@ export default function App() {
         </Stack>
       </Modal>
       <Modal
+        opened={brandRenameModalOpened}
+        onClose={closeBrandRenameModal}
+        title="Rename brand"
+        centered
+        overlayProps={{ backgroundOpacity: 0.55 }}
+      >
+        <Stack gap="md">
+          <Text size="sm" c="dimmed">
+            Update the display name for{" "}
+            <Text component="span" fw={700} ff="monospace">
+              {brandRenameCurrentName}
+            </Text>
+            . This only changes the label shown in the picker and headings — token
+            data and mappings are unaffected.
+          </Text>
+          <TextInput
+            label="Brand name"
+            placeholder={brandRenameCurrentName || "…"}
+            value={brandRenameInput}
+            onChange={(e) => setBrandRenameInput(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && canSubmitBrandRename) executeBrandRename();
+            }}
+            autoComplete="off"
+            data-autofocus
+            error={
+              brandRenameCollision
+                ? "Another brand already uses that name."
+                : null
+            }
+          />
+          <Group justify="flex-end" mt="xs">
+            <Button variant="default" onClick={closeBrandRenameModal}>
+              Cancel
+            </Button>
+            <Button disabled={!canSubmitBrandRename} onClick={executeBrandRename}>
+              Save name
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+      <Modal
         opened={paletteDeleteModalOpened}
         onClose={closePaletteDeleteModal}
         title="Delete color scale"
@@ -3207,7 +3588,7 @@ export default function App() {
         }}
       >
         <span style={{ fontSize: 18, fontWeight: 700, color: "#E9ECEF" }}>
-          Design System Generator
+          SynMax Design System Generator
         </span>
         <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
           {activeTab === "preview" && (
@@ -3255,6 +3636,7 @@ export default function App() {
               value={activeBrand}
               displayValue={brand.name}
               onChange={handleBrandChange}
+              labelFor={(id) => (brands[id] && brands[id].name) || id}
               placeholder="Search brands..."
               onAdd={addBrand}
               addLabel="+ New brand"
@@ -3271,28 +3653,47 @@ export default function App() {
               New brands start with no brand color palettes — semantics point at shared global primitives until you add
               your own (e.g. blue) with + Add color, then map tokens to those names.
             </div>
-            <button
-              type="button"
-              onClick={openBrandDeleteModal}
-              disabled={brandNames.length <= 1}
-              title={brandNames.length <= 1 ? "Keep at least one brand" : "Delete the selected brand"}
-              style={{
-                marginTop: 10,
-                display: "block",
-                width: "100%",
-                padding: "8px 10px",
-                fontSize: 12,
-                fontFamily: "monospace",
-                fontWeight: 600,
-                color: brandNames.length <= 1 ? "#5C5F66" : "#FA5252",
-                background: brandNames.length <= 1 ? "#1A1B1E" : "transparent",
-                border: `1px solid ${brandNames.length <= 1 ? "#2C2E33" : "#862E2E"}`,
-                borderRadius: 6,
-                cursor: brandNames.length <= 1 ? "not-allowed" : "pointer",
-              }}
-            >
-              Delete this brand…
-            </button>
+            <div style={{ display: "flex", gap: 8, marginTop: 10 }}>
+              <button
+                type="button"
+                onClick={openBrandRenameModal}
+                title="Rename the selected brand"
+                style={{
+                  flex: 1,
+                  padding: "8px 10px",
+                  fontSize: 12,
+                  fontFamily: "monospace",
+                  fontWeight: 600,
+                  color: "#4DABF7",
+                  background: "transparent",
+                  border: "1px solid #2C4A66",
+                  borderRadius: 6,
+                  cursor: "pointer",
+                }}
+              >
+                Rename this brand…
+              </button>
+              <button
+                type="button"
+                onClick={openBrandDeleteModal}
+                disabled={brandNames.length <= 1}
+                title={brandNames.length <= 1 ? "Keep at least one brand" : "Delete the selected brand"}
+                style={{
+                  flex: 1,
+                  padding: "8px 10px",
+                  fontSize: 12,
+                  fontFamily: "monospace",
+                  fontWeight: 600,
+                  color: brandNames.length <= 1 ? "#5C5F66" : "#FA5252",
+                  background: brandNames.length <= 1 ? "#1A1B1E" : "transparent",
+                  border: `1px solid ${brandNames.length <= 1 ? "#2C2E33" : "#862E2E"}`,
+                  borderRadius: 6,
+                  cursor: brandNames.length <= 1 ? "not-allowed" : "pointer",
+                }}
+              >
+                Delete this brand…
+              </button>
+            </div>
             <div style={{ marginTop: 20 }} />
             <Section title={`Primitives — ${brand.name}`}>
               {colorNames.map((c) => (
@@ -3819,6 +4220,44 @@ export default function App() {
                   errorText={activeTextInputErrorText}
                   showLeftIcon={activeTextInputLeftIcon}
                   showRightIcon={activeTextInputRightIcon}
+                />
+              )}
+              {activeComponent === "dateinput" && (
+                <DateInputPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  activeDateInputSize={activeDateInputSize}
+                  activeDateInputRadius={activeDateInputRadius}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedState={forcedState || activeDateInputState}
+                  showLabel={activeDateInputShowLabel}
+                  labelText={activeDateInputLabelText}
+                  withAsterisk={activeDateInputWithAsterisk}
+                  showError={activeDateInputShowError}
+                  errorText={activeDateInputErrorText}
+                  showDropdown={activeDateInputShowDropdown}
+                  onToggleDropdown={() => setActiveDateInputShowDropdown((v) => !v)}
+                />
+              )}
+              {activeComponent === "timeinput" && (
+                <TimeInputPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  activeTimeInputSize={activeTimeInputSize}
+                  activeTimeInputRadius={activeTimeInputRadius}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedState={forcedState || activeTimeInputState}
+                  showLabel={activeTimeInputShowLabel}
+                  labelText={activeTimeInputLabelText}
+                  withAsterisk={activeTimeInputWithAsterisk}
+                  showError={activeTimeInputShowError}
+                  errorText={activeTimeInputErrorText}
+                  showDropdown={activeTimeInputShowDropdown}
+                  onToggleDropdown={() => setActiveTimeInputShowDropdown((v) => !v)}
                 />
               )}
               {activeComponent === "select" && (
@@ -4724,6 +5163,56 @@ export default function App() {
                   forcedState={forcedState}
                 />
               )}
+              {activeComponent === "dateinput" && (
+                <DateInputPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeDateInputSize={activeDateInputSize}
+                  setActiveDateInputSize={setActiveDateInputSize}
+                  activeDateInputRadius={activeDateInputRadius}
+                  setActiveDateInputRadius={setActiveDateInputRadius}
+                  sizeKeys={sizeKeys}
+                  selectedState={forcedState || activeDateInputState}
+                  setSelectedState={setActiveDateInputState}
+                  showLabel={activeDateInputShowLabel}
+                  setShowLabel={setActiveDateInputShowLabel}
+                  labelText={activeDateInputLabelText}
+                  setLabelText={setActiveDateInputLabelText}
+                  withAsterisk={activeDateInputWithAsterisk}
+                  setWithAsterisk={setActiveDateInputWithAsterisk}
+                  showError={activeDateInputShowError}
+                  setShowError={setActiveDateInputShowError}
+                  errorText={activeDateInputErrorText}
+                  setErrorText={setActiveDateInputErrorText}
+                  showDropdown={activeDateInputShowDropdown}
+                  setShowDropdown={setActiveDateInputShowDropdown}
+                  forcedState={forcedState}
+                />
+              )}
+              {activeComponent === "timeinput" && (
+                <TimeInputPropertiesPanel
+                  activeTimeInputSize={activeTimeInputSize}
+                  setActiveTimeInputSize={setActiveTimeInputSize}
+                  activeTimeInputRadius={activeTimeInputRadius}
+                  setActiveTimeInputRadius={setActiveTimeInputRadius}
+                  sizeKeys={sizeKeys}
+                  selectedState={forcedState || activeTimeInputState}
+                  setSelectedState={setActiveTimeInputState}
+                  showLabel={activeTimeInputShowLabel}
+                  setShowLabel={setActiveTimeInputShowLabel}
+                  labelText={activeTimeInputLabelText}
+                  setLabelText={setActiveTimeInputLabelText}
+                  withAsterisk={activeTimeInputWithAsterisk}
+                  setWithAsterisk={setActiveTimeInputWithAsterisk}
+                  showError={activeTimeInputShowError}
+                  setShowError={setActiveTimeInputShowError}
+                  errorText={activeTimeInputErrorText}
+                  setErrorText={setActiveTimeInputErrorText}
+                  showDropdown={activeTimeInputShowDropdown}
+                  setShowDropdown={setActiveTimeInputShowDropdown}
+                  forcedState={forcedState}
+                />
+              )}
               {activeComponent === "select" && (
                 <SelectPropertiesPanel
                   activeVariant={forcedVariant || activeVariant}
@@ -5198,7 +5687,7 @@ export default function App() {
                   setShowHeader={setActiveCalendarShowHeader}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "selectablefilterchip", "appliedfilterchip", "tooltip", "notification", "alert", "textinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "selectablefilterchip", "appliedfilterchip", "tooltip", "notification", "alert", "textinput", "dateinput", "timeinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

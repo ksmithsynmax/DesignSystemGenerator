@@ -219,7 +219,8 @@ export const COMPONENT_TOKENS = {
     "actionicon-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "actionicon/focus-ring" },
 
     // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
-    "actionicon-size":      { type: "FLOAT", unit: "px", sizes: { xs: 28, sm: 32, md: 36, lg: 42, xl: 48 }, figmaPath: "actionicon/size" },
+    // Box size is DERIVED: width = height = icon-size + 2 × padding (keeps it square).
+    "actionicon-padding":   { type: "FLOAT", unit: "px", sizes: { xs: 8, sm: 9, md: 10, lg: 12, xl: 14 }, figmaPath: "actionicon/padding" },
     "actionicon-icon-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "actionicon/icon-size" },
     "actionicon-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xs: 1.25, sm: 1.5, md: 1.75, lg: 2, xl: 2.25 }, figmaPath: "actionicon/icon-stroke-width" },
     "actionicon-radius":    { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 },    figmaPath: "actionicon/radius" },
@@ -2214,7 +2215,9 @@ export const COMPONENT_TOKENS = {
     // ── SHARED COLOR TOKENS ──
     "textinput-text":           { type: "COLOR", semantic: "text-default",     figmaPath: "textinput/text" },
     "textinput-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "textinput/text-disabled" },
+    "textinput-text-error":     { type: "COLOR", semantic: "feedback-error",   figmaPath: "textinput/text-error" },
     "textinput-placeholder":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "textinput/placeholder" },
+    "textinput-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "textinput/placeholder-error" },
     "textinput-default-placeholder-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "textinput/default-placeholder-disabled" },
     "textinput-filled-placeholder-disabled":  { type: "COLOR", semantic: "text-disabled", figmaPath: "textinput/filled-placeholder-disabled" },
     "textinput-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "textinput/label-color" },
@@ -2262,6 +2265,167 @@ export const COMPONENT_TOKENS = {
     "textinput-error-font-weight": { type: "STRING", value: "Regular", figmaPath: "textinput/error-font-weight" },
     "textinput-error-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "textinput/error-line-height" },
     "textinput-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "textinput/error-gap" },
+  },
+
+  // DateInput mirrors TextInput's token surface (it IS a text field with a fixed
+  // calendar icon in the right section). Namespaced dateinput/* so each brand can
+  // tune the date field independently of plain text inputs.
+  dateinput: {
+    // ── DEFAULT VARIANT — BACKGROUND (per state) ──
+    "dateinput-default-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "dateinput/default-background" },
+    "dateinput-default-background-hover":    { type: "COLOR", semantic: "surface-default",      figmaPath: "dateinput/default-background-hover" },
+    "dateinput-default-background-focus":    { type: "COLOR", semantic: "surface-default",      figmaPath: "dateinput/default-background-focus" },
+    "dateinput-default-background-error":    { type: "COLOR", semantic: "surface-default",      figmaPath: "dateinput/default-background-error" },
+    "dateinput-default-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "dateinput/default-background-disabled" },
+
+    // ── DEFAULT VARIANT — BORDER (per state) ──
+    "dateinput-default-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "dateinput/default-border" },
+    "dateinput-default-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "dateinput/default-border-hover" },
+    "dateinput-default-border-focus":    { type: "COLOR", semantic: "border-focus",    figmaPath: "dateinput/default-border-focus" },
+    "dateinput-default-border-error":    { type: "COLOR", semantic: "feedback-error",  figmaPath: "dateinput/default-border-error" },
+    "dateinput-default-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "dateinput/default-border-disabled" },
+
+    // ── SHARED COLOR TOKENS ──
+    "dateinput-text":           { type: "COLOR", semantic: "text-default",     figmaPath: "dateinput/text" },
+    "dateinput-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "dateinput/text-disabled" },
+    "dateinput-text-error":     { type: "COLOR", semantic: "feedback-error",   figmaPath: "dateinput/text-error" },
+    "dateinput-placeholder":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "dateinput/placeholder" },
+    "dateinput-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "dateinput/placeholder-error" },
+    "dateinput-default-placeholder-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "dateinput/default-placeholder-disabled" },
+    "dateinput-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "dateinput/label-color" },
+    "dateinput-label-color-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "dateinput/label-color-disabled" },
+    "dateinput-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "dateinput/asterisk-color" },
+    "dateinput-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "dateinput/error-color" },
+    "dateinput-focus-ring":     { type: "COLOR", semantic: "border-focus",     figmaPath: "dateinput/focus-ring" },
+
+    // ── CALENDAR DROPDOWN ──
+    // The open dropdown reuses the shared Calendar component for everything
+    // EXCEPT its background, which DateInput can override independently.
+    "dateinput-calendar-background": { type: "COLOR", semantic: "surface-default", figmaPath: "dateinput/calendar-background" },
+
+    // ── CALENDAR ICON COLORS (per state) ──
+    "dateinput-default-icon":          { type: "COLOR", semantic: "text-placeholder", figmaPath: "dateinput/default-icon" },
+    "dateinput-default-icon-hover":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "dateinput/default-icon-hover" },
+    "dateinput-default-icon-focus":    { type: "COLOR", semantic: "text-default",     figmaPath: "dateinput/default-icon-focus" },
+    "dateinput-default-icon-error":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "dateinput/default-icon-error" },
+    "dateinput-default-icon-disabled": { type: "COLOR", semantic: "text-disabled",    figmaPath: "dateinput/default-icon-disabled" },
+
+    // ── FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "dateinput-height":    { type: "FLOAT", unit: "px", sizes: { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 },  figmaPath: "dateinput/height" },
+    "dateinput-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },  figmaPath: "dateinput/font-size" },
+    "dateinput-font-family": { type: "STRING", value: "Inter", figmaPath: "dateinput/font-family" },
+    "dateinput-font-weight": { type: "STRING", value: "Regular", figmaPath: "dateinput/font-weight" },
+    "dateinput-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "dateinput/line-height" },
+    "dateinput-padding-x": { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 },  figmaPath: "dateinput/padding-x" },
+    "dateinput-padding-y": { type: "FLOAT", unit: "px", sizes: { xs: 6,  sm: 8,  md: 10, lg: 12, xl: 14 },  figmaPath: "dateinput/padding-y" },
+    "dateinput-icon-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "dateinput/icon-size" },
+    "dateinput-icon-gap": { type: "FLOAT", unit: "px", sizes: { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 }, figmaPath: "dateinput/icon-gap" },
+    "dateinput-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, figmaPath: "dateinput/icon-stroke-width" },
+    "dateinput-section-size": { type: "FLOAT", unit: "px", sizes: { xs: 20, sm: 26, md: 32, lg: 38, xl: 44 }, figmaPath: "dateinput/section-size" },
+
+    // ── FLOAT TOKENS (radius variants: xs, sm, md, lg, xl — independent from size) ──
+    "dateinput-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "dateinput/radius" },
+
+    // ── FLOAT TOKENS (single value, shared across all sizes) ──
+    "dateinput-border-width":    { type: "FLOAT", unit: "px", value: 1,  figmaPath: "dateinput/border-width" },
+    "dateinput-label-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "dateinput/label-font-size" },
+    "dateinput-label-font-family": { type: "STRING", value: "Inter", figmaPath: "dateinput/label-font-family" },
+    "dateinput-label-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "dateinput/label-font-weight" },
+    "dateinput-label-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "dateinput/label-line-height" },
+    "dateinput-label-gap":       { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 }, figmaPath: "dateinput/label-gap" },
+    "dateinput-error-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "dateinput/error-font-size" },
+    "dateinput-error-font-family": { type: "STRING", value: "Inter", figmaPath: "dateinput/error-font-family" },
+    "dateinput-error-font-weight": { type: "STRING", value: "Regular", figmaPath: "dateinput/error-font-weight" },
+    "dateinput-error-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "dateinput/error-line-height" },
+    "dateinput-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "dateinput/error-gap" },
+  },
+
+  // TimeInput mirrors DateInput's field surface (a text field with a fixed clock
+  // icon in the right section). Its open dropdown is a scrollable list of time
+  // options styled like the Select menu, so the dropdown/option tokens mirror
+  // select/*. Namespaced timeinput/* so each brand can tune it independently.
+  timeinput: {
+    // ── FIELD BACKGROUND (per state) ──
+    "timeinput-default-background":          { type: "COLOR", semantic: "surface-default",      figmaPath: "timeinput/default-background" },
+    "timeinput-default-background-hover":    { type: "COLOR", semantic: "surface-default",      figmaPath: "timeinput/default-background-hover" },
+    "timeinput-default-background-focus":    { type: "COLOR", semantic: "surface-default",      figmaPath: "timeinput/default-background-focus" },
+    "timeinput-default-background-error":    { type: "COLOR", semantic: "surface-default",      figmaPath: "timeinput/default-background-error" },
+    "timeinput-default-background-disabled": { type: "COLOR", semantic: "interactive-disabled", figmaPath: "timeinput/default-background-disabled" },
+
+    // ── FIELD BORDER (per state) ──
+    "timeinput-default-border":          { type: "COLOR", semantic: "border-default",  figmaPath: "timeinput/default-border" },
+    "timeinput-default-border-hover":    { type: "COLOR", semantic: "border-default",  figmaPath: "timeinput/default-border-hover" },
+    "timeinput-default-border-focus":    { type: "COLOR", semantic: "border-focus",    figmaPath: "timeinput/default-border-focus" },
+    "timeinput-default-border-error":    { type: "COLOR", semantic: "feedback-error",  figmaPath: "timeinput/default-border-error" },
+    "timeinput-default-border-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "timeinput/default-border-disabled" },
+
+    // ── SHARED FIELD COLOR TOKENS ──
+    "timeinput-text":           { type: "COLOR", semantic: "text-default",     figmaPath: "timeinput/text" },
+    "timeinput-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "timeinput/text-disabled" },
+    "timeinput-text-error":     { type: "COLOR", semantic: "feedback-error",   figmaPath: "timeinput/text-error" },
+    "timeinput-placeholder":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "timeinput/placeholder" },
+    "timeinput-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "timeinput/placeholder-error" },
+    "timeinput-default-placeholder-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "timeinput/default-placeholder-disabled" },
+    "timeinput-label-color":    { type: "COLOR", semantic: "text-default",     figmaPath: "timeinput/label-color" },
+    "timeinput-label-color-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "timeinput/label-color-disabled" },
+    "timeinput-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "timeinput/asterisk-color" },
+    "timeinput-error-color":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "timeinput/error-color" },
+    "timeinput-focus-ring":     { type: "COLOR", semantic: "border-focus",     figmaPath: "timeinput/focus-ring" },
+
+    // ── CLOCK ICON COLORS (per state) ──
+    "timeinput-default-icon":          { type: "COLOR", semantic: "text-placeholder", figmaPath: "timeinput/default-icon" },
+    "timeinput-default-icon-hover":    { type: "COLOR", semantic: "text-placeholder", figmaPath: "timeinput/default-icon-hover" },
+    "timeinput-default-icon-focus":    { type: "COLOR", semantic: "text-default",     figmaPath: "timeinput/default-icon-focus" },
+    "timeinput-default-icon-error":    { type: "COLOR", semantic: "feedback-error",   figmaPath: "timeinput/default-icon-error" },
+    "timeinput-default-icon-disabled": { type: "COLOR", semantic: "text-disabled",    figmaPath: "timeinput/default-icon-disabled" },
+
+    // ── DROPDOWN (open time list) — mirrors select/* option tokens ──
+    "timeinput-dropdown-background":         { type: "COLOR", semantic: "surface-default", figmaPath: "timeinput/dropdown-background" },
+    "timeinput-dropdown-border":             { type: "COLOR", semantic: "border-default",  figmaPath: "timeinput/dropdown-border" },
+    "timeinput-option-text":                 { type: "COLOR", semantic: "text-default",    figmaPath: "timeinput/option-text" },
+    "timeinput-option-selected-background":  { type: "COLOR", semantic: "subtle-primary",  figmaPath: "timeinput/option-selected-background" },
+    "timeinput-option-selected-text":        { type: "COLOR", semantic: "text-on-interactive", figmaPath: "timeinput/option-selected-text" },
+    "timeinput-option-hover-background":     { type: "COLOR", semantic: "subtle-secondary", figmaPath: "timeinput/option-hover-background" },
+    "timeinput-option-hover-text":           { type: "COLOR", semantic: "text-default",    figmaPath: "timeinput/option-hover-text" },
+
+    // ── FIELD FLOAT TOKENS (size variants: xs, sm, md, lg, xl) ──
+    "timeinput-height":    { type: "FLOAT", unit: "px", sizes: { xs: 30, sm: 36, md: 42, lg: 50, xl: 60 },  figmaPath: "timeinput/height" },
+    "timeinput-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 },  figmaPath: "timeinput/font-size" },
+    "timeinput-font-family": { type: "STRING", value: "Inter", figmaPath: "timeinput/font-family" },
+    "timeinput-font-weight": { type: "STRING", value: "Regular", figmaPath: "timeinput/font-weight" },
+    "timeinput-line-height": { type: "FLOAT", unit: "px", sizes: { xs: 16, sm: 20, md: 24, lg: 28, xl: 32 }, figmaPath: "timeinput/line-height" },
+    "timeinput-padding-x": { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 },  figmaPath: "timeinput/padding-x" },
+    "timeinput-padding-y": { type: "FLOAT", unit: "px", sizes: { xs: 6,  sm: 8,  md: 10, lg: 12, xl: 14 },  figmaPath: "timeinput/padding-y" },
+    "timeinput-icon-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "timeinput/icon-size" },
+    "timeinput-icon-gap": { type: "FLOAT", unit: "px", sizes: { xs: 4, sm: 6, md: 8, lg: 10, xl: 12 }, figmaPath: "timeinput/icon-gap" },
+    "timeinput-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, figmaPath: "timeinput/icon-stroke-width" },
+    "timeinput-section-size": { type: "FLOAT", unit: "px", sizes: { xs: 20, sm: 26, md: 32, lg: 38, xl: 44 }, figmaPath: "timeinput/section-size" },
+
+    // ── RADIUS (independent from size) ──
+    "timeinput-radius": { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 8, lg: 16, xl: 32 }, figmaPath: "timeinput/radius" },
+
+    // ── DROPDOWN FLOAT TOKENS ──
+    "timeinput-dropdown-radius":      { type: "FLOAT", unit: "px", value: 8, figmaPath: "timeinput/dropdown-radius" },
+    "timeinput-dropdown-border-width":{ type: "FLOAT", unit: "px", value: 1, figmaPath: "timeinput/dropdown-border-width" },
+    "timeinput-dropdown-padding":     { type: "FLOAT", unit: "px", value: 4, figmaPath: "timeinput/dropdown-padding" },
+    "timeinput-dropdown-max-height":  { type: "FLOAT", unit: "px", value: 200, figmaPath: "timeinput/dropdown-max-height" },
+    "timeinput-option-font-size":     { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "timeinput/option-font-size" },
+    "timeinput-option-radius":        { type: "FLOAT", unit: "px", value: 4, figmaPath: "timeinput/option-radius" },
+    "timeinput-option-padding-x":     { type: "FLOAT", unit: "px", sizes: { xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "timeinput/option-padding-x" },
+    "timeinput-option-padding-y":     { type: "FLOAT", unit: "px", sizes: { xs: 6,  sm: 7,  md: 8,  lg: 10, xl: 12 }, figmaPath: "timeinput/option-padding-y" },
+
+    // ── SINGLE-VALUE FLOAT TOKENS (shared across sizes) ──
+    "timeinput-border-width":    { type: "FLOAT", unit: "px", value: 1,  figmaPath: "timeinput/border-width" },
+    "timeinput-label-font-size": { type: "FLOAT", unit: "px", sizes: { xs: 12, sm: 14, md: 16, lg: 18, xl: 20 }, figmaPath: "timeinput/label-font-size" },
+    "timeinput-label-font-family": { type: "STRING", value: "Inter", figmaPath: "timeinput/label-font-family" },
+    "timeinput-label-font-weight": { type: "STRING", value: "Semi Bold", figmaPath: "timeinput/label-font-weight" },
+    "timeinput-label-line-height": { type: "FLOAT", unit: "px", value: 20, figmaPath: "timeinput/label-line-height" },
+    "timeinput-label-gap":       { type: "FLOAT", unit: "px", sizes: { xs: 2, sm: 4, md: 6, lg: 8, xl: 10 }, figmaPath: "timeinput/label-gap" },
+    "timeinput-error-font-size": { type: "FLOAT", unit: "px", value: 12, figmaPath: "timeinput/error-font-size" },
+    "timeinput-error-font-family": { type: "STRING", value: "Inter", figmaPath: "timeinput/error-font-family" },
+    "timeinput-error-font-weight": { type: "STRING", value: "Regular", figmaPath: "timeinput/error-font-weight" },
+    "timeinput-error-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "timeinput/error-line-height" },
+    "timeinput-error-gap":       { type: "FLOAT", unit: "px", value: 4,  figmaPath: "timeinput/error-gap" },
   },
 
   select: {
@@ -2965,6 +3129,8 @@ export const COMPONENT_DISPLAY_NAMES = {
   selectablefilterchip: "Selectable Filter Chip",
   appliedfilterchip: "Applied Filter Chip",
   textinput: "TextInput",
+  dateinput: "DateInput",
+  timeinput: "TimeInput",
   rangeslider: "RangeSlider",
   multiselect: "MultiSelect",
   segmentedcontrol: "SegmentedControl",
@@ -3045,6 +3211,8 @@ export const COMPONENT_SIZE_KEYS = {
   skeleton: ["default", "xs", "sm", "md", "lg", "xl"],
   anchor: ["xs", "sm", "md", "lg", "xl"],
   textinput: ["default", "xs", "sm", "md", "lg", "xl"],
+  dateinput: ["default", "xs", "sm", "md", "lg", "xl"],
+  timeinput: ["default", "xs", "sm", "md", "lg", "xl"],
   select: ["default", "xs", "sm", "md", "lg", "xl"],
   multiselect: ["default", "xs", "sm", "md", "lg", "xl"],
   menu: ["default", "xs", "sm", "md", "lg", "xl"],

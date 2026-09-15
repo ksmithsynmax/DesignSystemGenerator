@@ -315,7 +315,7 @@ export const STORYBOOK_BRANDS = {
       "button-line-height-default": "sm",
       "button-icon-size-default": "sm",
       "button-icon-stroke-width-default": "sm",
-      "actionicon-size-default": "sm",
+      "actionicon-padding-default": "sm",
       "actionicon-icon-size-default": "sm",
       "actionicon-radius-default": "sm",
       "tabs-radius-default": "sm",
@@ -436,17 +436,19 @@ export const STORYBOOK_BRANDS = {
       "button-focus-ring-spacing": {
         "_value": 2
       },
-      "actionicon-size": {
-        "sm": 32,
-        "md": 40,
-        "lg": 48,
-        "xl": 52
+      "actionicon-padding": {
+        "xs": 4,
+        "sm": 6,
+        "md": 8,
+        "lg": 10,
+        "xl": 13
       },
       "actionicon-icon-size": {
+        "xs": 10,
         "sm": 16,
-        "md": 20,
+        "md": 18,
         "lg": 20,
-        "xl": 22
+        "xl": 24
       },
       "actionicon-icon-stroke-width": {
         "xs": 1.5,
@@ -7015,7 +7017,7 @@ export const STORYBOOK_BRANDS = {
       "button-line-height-default": "md",
       "button-icon-size-default": "md",
       "button-icon-stroke-width-default": "md",
-      "actionicon-size-default": "md",
+      "actionicon-padding-default": "md",
       "actionicon-icon-size-default": "md",
       "actionicon-radius-default": "md",
       "tabs-radius-default": "md",
@@ -10072,7 +10074,7 @@ export const STORYBOOK_BRANDS = {
       "button-line-height-default": "sm",
       "button-icon-size-default": "sm",
       "button-icon-stroke-width-default": "sm",
-      "actionicon-size-default": "sm",
+      "actionicon-padding-default": "sm",
       "actionicon-icon-size-default": "sm",
       "actionicon-radius-default": "sm",
       "actionicon-focus-ring-width-default": "sm",
@@ -10508,7 +10510,7 @@ export const STORYBOOK_BRANDS = {
       "button-line-height-default": "sm",
       "button-icon-size-default": "sm",
       "button-icon-stroke-width-default": "sm",
-      "actionicon-size-default": "sm",
+      "actionicon-padding-default": "sm",
       "actionicon-icon-size-default": "sm",
       "actionicon-radius-default": "sm",
       "actionicon-focus-ring-width-default": "sm",

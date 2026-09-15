@@ -47,8 +47,12 @@ export default function BurgerPreview({
     "burger-focus-ring"
   );
 
+  const hasDefaultOverride = (tokenName) =>
+    brands?.[brandId]?.dimensionOverrides?.[tokenName]?.default !== undefined;
   const resolveSizeKey = (tokenName, requestedKey, fallbackKey = "md") => {
     if (requestedKey !== "default") return requestedKey;
+    // Honor a literal "*-default" override before collapsing to the mapped size.
+    if (hasDefaultOverride(tokenName)) return "default";
     return getDefaultSizeKey(brands, brandId, tokenName) || fallbackKey;
   };
   const sizeKey = resolveSizeKey("burger-size", size, "md");

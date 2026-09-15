@@ -9,7 +9,17 @@ export default function ComponentSelect({
   onAdd,
   addLabel = "+ Add new",
   addPlaceholder = "Name...",
+  labelFor,
 }) {
+  // Options are stable identifiers (e.g. brand ids). The visible label may
+  // differ (e.g. a brand's editable display name), so resolve it through
+  // labelFor when provided. Defaults to identity for callers whose option
+  // value IS its label.
+  const labelOf = (opt) => {
+    if (!labelFor) return opt;
+    const label = labelFor(opt);
+    return label == null || label === "" ? opt : label;
+  };
   const [open, setOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [adding, setAdding] = useState(false);
@@ -19,7 +29,7 @@ export default function ComponentSelect({
   const containerRef = useRef(null);
 
   const filtered = search
-    ? options.filter((o) => o.toLowerCase().includes(search.toLowerCase()))
+    ? options.filter((o) => labelOf(o).toLowerCase().includes(search.toLowerCase()))
     : options;
 
   useEffect(() => {
@@ -199,7 +209,7 @@ export default function ComponentSelect({
                     e.currentTarget.style.background = "transparent";
                 }}
               >
-                {opt}
+                {labelOf(opt)}
               </button>
             ))}
           </div>

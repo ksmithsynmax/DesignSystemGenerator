@@ -1139,7 +1139,7 @@ function resolveManagedComponentKeyFromName(name) {
     "chartarea",
     "chart",
     "avatar",
-    "pill", "badge", "textinput", "multiselect", "select", "card", "actionicon",
+    "pill", "badge", "textinput", "dateinput", "timeinput", "multiselect", "select", "card", "actionicon",
     "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image",
     "skeleton",
     "calendar",
@@ -1291,6 +1291,11 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     }
     if (requestedSet.accordion) {
       requestedSet.accordionitem = true;
+    }
+    if (requestedSet.dateinput) {
+      // DateInput's open state embeds a Calendar instance, so Calendar must be
+      // built alongside (and before) DateInput.
+      requestedSet.calendar = true;
     }
     if (requestedSet.tabs) {
       requestedSet.tabsitem = true;
@@ -1566,6 +1571,14 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var calendarSet = await buildSet("Calendar", async function () {
     return await buildCalendarComponentSet(varMap, page, font, resolvedComponentFloat, resolvedComponentString);
   });
+  // DateInput builds AFTER Calendar so its open state can embed a Calendar
+  // instance (dependency is forced in requestedSet above).
+  var dateInputSet = await buildSet("DateInput", function () {
+    return buildDateInputComponentSet(varMap, page, font, calendarSet);
+  });
+  var timeInputSet = await buildSet("TimeInput", function () {
+    return buildTimeInputComponentSet(varMap, page, font);
+  });
   var tableBuildResult = await buildSet("Table", async function () {
     return await buildTableComponentSet(varMap, page, font, {
       badgeSet: badgeSet,
@@ -1649,6 +1662,8 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     pillSet,
     badgeSet,
     textInputSet,
+    dateInputSet,
+    timeInputSet,
     selectSet,
     multiSelectSet,
     cardSet,
@@ -4475,14 +4490,19 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
     // Select / MultiSelect document the open dropdown menu in addition to states.
     var selectDropdownSlot = null;
-    if ((lowerSetName === "select" || lowerSetName === "multiselect") && getPropKey(variantProps, "Dropdown")) {
+    if ((lowerSetName === "select" || lowerSetName === "multiselect" || lowerSetName === "dateinput" || lowerSetName === "timeinput") && getPropKey(variantProps, "Dropdown")) {
       var selectDocDropdownValues = pickOrdered(getPropValues(variantProps, "Dropdown"), ["Closed", "Open"]);
       var selectDocHasOpen = false;
       for (var sddi = 0; sddi < selectDocDropdownValues.length; sddi++) {
         if (String(selectDocDropdownValues[sddi]).toLowerCase() === "open") { selectDocHasOpen = true; break; }
       }
       if (selectDocHasOpen && selectDocDropdownValues.length > 0) {
-        doc.appendChild(createSectionHeader("Dropdown", "Closed control and the open menu with selectable options.", DOC_COLORS.subtitle));
+        var dropdownDocSubtitle = lowerSetName === "dateinput"
+          ? "Closed field and the open state with the calendar picker."
+          : lowerSetName === "timeinput"
+          ? "Closed field and the open state with the time picker."
+          : "Closed control and the open menu with selectable options.";
+        doc.appendChild(createSectionHeader("Dropdown", dropdownDocSubtitle, DOC_COLORS.subtitle));
         selectDropdownSlot = createPanel("slot:" + slug + ":dropdown", 10);
         selectDropdownSlot.resize(1192, selectDropdownSlot.height);
         doc.appendChild(selectDropdownSlot);
@@ -5233,6 +5253,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               return makePillRemoveInstance(sizeName, pillRemoveOn);
             }, true, { font: mediumFont, size: 14 });
           }
+        } else if ((lowerSetName === "dateinput" || lowerSetName === "timeinput") && orderedSizes.length > 3) {
+          // The date/time field is wide, so five across gets cramped and XL wraps
+          // its placeholder. Break to a second row (XS/SM/MD, then LG/XL).
+          addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
+            return makeInstance({ Size: sizeName });
+          }, false, { itemsPerRow: 3 });
         } else if (lowerSetName === "divider") {
           renderDividerDocsRows(sizeSlot, orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName });
@@ -23655,6 +23681,13 @@ async function buildTextInputComponentSet(varMap, page, font) {
               if (varMap["textinput/text"]) {
                 bindPaintVar(textNode, "fills", 0, varMap["textinput/text"]);
               }
+            } else if (state === "error") {
+              // Error shows placeholder text tinted with the dedicated error token.
+              textNode.fills = [{ type: "SOLID", color: { r: 0.9, g: 0.2, b: 0.2 } }];
+              var textInputErrPlaceholder = varMap["textinput/placeholder-error"] || varMap["textinput/placeholder"];
+              if (textInputErrPlaceholder) {
+                bindPaintVar(textNode, "fills", 0, textInputErrPlaceholder);
+              }
             } else {
               textNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
               if (varMap["textinput/placeholder"]) {
@@ -23818,6 +23851,1145 @@ async function findTextInputIconComponents() {
   }
 
   return result;
+}
+
+// ---------------------------------------------------------------------------
+// DateInput
+// ---------------------------------------------------------------------------
+// DateInput mirrors TextInput's structure (label row + input frame + error text)
+// but drops the Left/Right icon axes: it always shows a single calendar icon in
+// the right section. Everything is bound to the dateinput/* variable surface.
+
+async function buildDateInputComponentSet(varMap, page, font, calendarSet) {
+  var variants = ["default"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "error", "disabled"];
+  var labelModes = ["none", "label", "required"];
+  var dropdownModes = ["closed", "open"];
+  var components = [];
+  var calendarIcon = await findDateInputIconComponent();
+  // The open state embeds one instance of the shared Calendar component.
+  var calendarDropdownSource = findDateInputCalendarSource(calendarSet, page);
+
+  var sizeHeights = { default: 36, xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
+  var gap = 20;
+  var colWidth = 220;
+  var openColBase = variants.length * labelModes.length * (colWidth + gap) + gap;
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+
+    for (var li = 0; li < labelModes.length; li++) {
+      var labelMode = labelModes[li];
+      var capLabelMode = labelMode.charAt(0).toUpperCase() + labelMode.slice(1);
+      var hasLabel = (labelMode !== "none");
+      var hasAsterisk = (labelMode === "required");
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
+
+        // DateInput has a single field variant, so the (only) variant builds the
+        // full radius range — radius is an independent, user-facing property.
+        var variantRadii = radii;
+        for (var ri = 0; ri < variantRadii.length; ri++) {
+          var rad = variantRadii[ri];
+          var capRad = rad === "default" ? "Default" : rad.toUpperCase();
+
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+          for (var dmi = 0; dmi < dropdownModes.length; dmi++) {
+            var dropdownMode = dropdownModes[dmi];
+            var isOpen = dropdownMode === "open";
+            // The Calendar dropdown looks identical regardless of field size /
+            // radius / interaction state, so only build ONE open variant per
+            // Variant×Label (default size + radius + default state). Keeps the
+            // set light instead of doubling every closed combo.
+            if (isOpen && !(size === "default" && rad === "default" && state === "default")) continue;
+            var capDropdown = isOpen ? "Open" : "Closed";
+
+            var comp = figma.createComponent();
+            comp.name =
+              "Variant=" + capVariant +
+              ", Size=" + capSize +
+              ", Radius=" + capRad +
+              ", State=" + capState +
+              ", Label=" + capLabelMode +
+              ", Dropdown=" + capDropdown;
+
+            comp.layoutMode = "VERTICAL";
+            comp.primaryAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "FIXED";
+            comp.itemSpacing = 4;
+            comp.fills = [];
+            try { comp.layoutSizingHorizontal = "FIXED"; } catch (_sizeModeErr) {}
+
+            var dateInputLabelGapVar =
+              varMap["dateinput/label-gap-" + size] ||
+              varMap["dateinput/label-gap-default"] ||
+              varMap["dateinput/label-gap"];
+            if (dateInputLabelGapVar) {
+              bindVar(comp, "itemSpacing", dateInputLabelGapVar);
+            }
+
+            // --- Optional label row ---
+            if (hasLabel) {
+              var labelRow = figma.createFrame();
+              labelRow.name = "LabelRow";
+              labelRow.layoutMode = "HORIZONTAL";
+              labelRow.primaryAxisSizingMode = "AUTO";
+              labelRow.counterAxisSizingMode = "AUTO";
+              labelRow.layoutAlign = "STRETCH";
+              labelRow.itemSpacing = 2;
+              labelRow.fills = [];
+              try { labelRow.layoutSizingHorizontal = "FILL"; } catch (_labelSizeModeErr) {}
+
+              var labelNode = figma.createText();
+              labelNode.name = "Label";
+              labelNode.fontName = font;
+              labelNode.characters = "Label";
+              labelNode.fontSize = 14;
+              labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              if (state === "disabled" && varMap["dateinput/label-color-disabled"]) {
+                bindPaintVar(labelNode, "fills", 0, varMap["dateinput/label-color-disabled"]);
+              } else if (varMap["dateinput/label-color"]) {
+                bindPaintVar(labelNode, "fills", 0, varMap["dateinput/label-color"]);
+              }
+              var dateInputLabelFontSizeVar =
+                varMap["dateinput/label-font-size-" + size] ||
+                varMap["dateinput/label-font-size-default"] ||
+                varMap["dateinput/label-font-size"];
+              if (dateInputLabelFontSizeVar) {
+                bindVar(labelNode, "fontSize", dateInputLabelFontSizeVar);
+                bindVar(labelNode, "fontFamily", varMap["dateinput/label-font-family"]);
+                bindVar(labelNode, "fontStyle", varMap["dateinput/label-font-weight"]);
+                bindVar(labelNode, "lineHeight", varMap["dateinput/label-line-height"]);
+              }
+              labelRow.appendChild(labelNode);
+
+              if (hasAsterisk) {
+                var asteriskNode = figma.createText();
+                asteriskNode.name = "Asterisk";
+                asteriskNode.fontName = font;
+                asteriskNode.characters = " *";
+                asteriskNode.fontSize = 14;
+                asteriskNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+                if (varMap["dateinput/asterisk-color"]) {
+                  bindPaintVar(asteriskNode, "fills", 0, varMap["dateinput/asterisk-color"]);
+                }
+                if (dateInputLabelFontSizeVar) {
+                  bindVar(asteriskNode, "fontSize", dateInputLabelFontSizeVar);
+                  bindVar(asteriskNode, "fontFamily", varMap["dateinput/label-font-family"]);
+                  bindVar(asteriskNode, "fontStyle", varMap["dateinput/label-font-weight"]);
+                  bindVar(asteriskNode, "lineHeight", varMap["dateinput/label-line-height"]);
+                }
+                labelRow.appendChild(asteriskNode);
+              }
+
+              comp.appendChild(labelRow);
+            }
+
+            // --- Input frame ---
+            var input = figma.createFrame();
+            input.name = "Input";
+            input.layoutMode = "HORIZONTAL";
+            input.primaryAxisSizingMode = "AUTO";
+            input.counterAxisSizingMode = "AUTO";
+            input.layoutAlign = "STRETCH";
+            input.primaryAxisAlignItems = "MIN";
+            input.counterAxisAlignItems = "CENTER";
+            input.resize(colWidth, sizeHeights[size]);
+            try { input.layoutSizingHorizontal = "FILL"; } catch (_inputSizeModeErr) {}
+            input.cornerRadius = 4;
+            input.paddingLeft = 10;
+            input.paddingRight = 10;
+            input.paddingTop = 0;
+            input.paddingBottom = 0;
+            input.minHeight = null;
+            input.itemSpacing = 8;
+
+            if (varMap["dateinput/padding-x-" + size]) {
+              bindVar(input, "paddingLeft", varMap["dateinput/padding-x-" + size]);
+              bindVar(input, "paddingRight", varMap["dateinput/padding-x-" + size]);
+            }
+            var dateInputPaddingYVar =
+              varMap["dateinput/padding-y-" + size] ||
+              varMap["dateinput/padding-y-default"] ||
+              varMap["dateinput/padding-y"];
+            if (dateInputPaddingYVar) {
+              bindVar(input, "paddingTop", dateInputPaddingYVar);
+              bindVar(input, "paddingBottom", dateInputPaddingYVar);
+            }
+            var dateInputIconGapVar =
+              varMap["dateinput/icon-gap-" + size] ||
+              varMap["dateinput/icon-gap-default"] ||
+              varMap["dateinput/icon-gap"];
+            if (dateInputIconGapVar) {
+              bindVar(input, "itemSpacing", dateInputIconGapVar);
+            }
+            if (varMap["dateinput/radius-" + rad]) {
+              bindVar(input, "topLeftRadius", varMap["dateinput/radius-" + rad]);
+              bindVar(input, "topRightRadius", varMap["dateinput/radius-" + rad]);
+              bindVar(input, "bottomLeftRadius", varMap["dateinput/radius-" + rad]);
+              bindVar(input, "bottomRightRadius", varMap["dateinput/radius-" + rad]);
+            }
+
+            // Input background
+            var bgPath = dateInputColorPath(variant, "background", state);
+            if (variant === "filled") {
+              input.fills = [{ type: "SOLID", color: { r: 0.95, g: 0.95, b: 0.95 } }];
+            } else {
+              input.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            }
+            if (varMap[bgPath]) {
+              bindPaintVar(input, "fills", 0, varMap[bgPath]);
+            }
+
+            // Input border
+            var borderPath = dateInputColorPath(variant, "border", state);
+            input.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+            input.strokeWeight = 1;
+            input.strokeAlign = "INSIDE";
+            if (varMap[borderPath]) {
+              bindPaintVar(input, "strokes", 0, varMap[borderPath]);
+            }
+            if (varMap["dateinput/border-width"]) {
+              bindVar(input, "strokeWeight", varMap["dateinput/border-width"]);
+            }
+
+            // Icon color is per variant and per state, e.g. dateinput/default-icon-hover.
+            var dateInputIconStateSuffix =
+              state === "disabled" ? "-disabled"
+              : state === "error" ? "-error"
+              : state === "focus" ? "-focus"
+              : state === "hover" ? "-hover"
+              : "";
+            var dateInputIconColorPath =
+              varMap["dateinput/" + variant + "-icon" + dateInputIconStateSuffix]
+                ? "dateinput/" + variant + "-icon" + dateInputIconStateSuffix
+                : (varMap["dateinput/" + variant + "-icon"]
+                    ? "dateinput/" + variant + "-icon"
+                    : (state === "disabled"
+                        ? "dateinput/text-disabled"
+                        : (state === "focus" ? "dateinput/text" : "dateinput/placeholder")));
+
+            var dateInputIconStrokeVar =
+              varMap["dateinput/icon-stroke-width-" + size] ||
+              varMap["dateinput/icon-stroke-width-default"] ||
+              varMap["dateinput/icon-stroke-width"];
+
+            function appendDateInputIcon(iconComp, iconName) {
+              if (!iconComp) return null;
+              var iconInst = iconComp.createInstance();
+              iconInst.name = iconName;
+              try { iconInst.resize(16, 16); } catch (_resizeErr) {}
+              var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
+              for (var vci = 0; vci < vectors.length; vci++) {
+                if (vectors[vci].strokes && vectors[vci].strokes.length > 0 && varMap[dateInputIconColorPath]) {
+                  vectors[vci].strokes = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+                  bindPaintVar(vectors[vci], "strokes", 0, varMap[dateInputIconColorPath]);
+                }
+                if (vectors[vci].fills && vectors[vci].fills.length > 0 && varMap[dateInputIconColorPath]) {
+                  vectors[vci].fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+                  bindPaintVar(vectors[vci], "fills", 0, varMap[dateInputIconColorPath]);
+                }
+                if (dateInputIconStrokeVar && "strokeWeight" in vectors[vci]) {
+                  bindVar(vectors[vci], "strokeWeight", dateInputIconStrokeVar);
+                }
+              }
+              return iconInst;
+            }
+
+            // Text inside input
+            var textNode = figma.createText();
+            textNode.name = (state === "focus") ? "InputText" : "Placeholder";
+            textNode.fontName = font;
+            textNode.characters = (state === "focus") ? "01 / 15 / 2026" : "MM / DD / YYYY";
+            textNode.fontSize = 14;
+
+            if (state === "disabled") {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+              var disabledPlaceholderVar =
+                varMap["dateinput/" + variant + "-placeholder-disabled"] ||
+                varMap["dateinput/text-disabled"];
+              if (disabledPlaceholderVar) {
+                bindPaintVar(textNode, "fills", 0, disabledPlaceholderVar);
+              }
+            } else if (state === "focus") {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              if (varMap["dateinput/text"]) {
+                bindPaintVar(textNode, "fills", 0, varMap["dateinput/text"]);
+              }
+            } else if (state === "error") {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.9, g: 0.2, b: 0.2 } }];
+              var dateInputErrPlaceholder = varMap["dateinput/placeholder-error"] || varMap["dateinput/placeholder"];
+              if (dateInputErrPlaceholder) {
+                bindPaintVar(textNode, "fills", 0, dateInputErrPlaceholder);
+              }
+            } else {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+              if (varMap["dateinput/placeholder"]) {
+                bindPaintVar(textNode, "fills", 0, varMap["dateinput/placeholder"]);
+              }
+            }
+            if (varMap["dateinput/font-size-" + size]) {
+              bindVar(textNode, "fontSize", varMap["dateinput/font-size-" + size]);
+              bindVar(textNode, "fontFamily", varMap["dateinput/font-family"]);
+              bindVar(textNode, "fontStyle", varMap["dateinput/font-weight"]);
+              bindVar(textNode, "lineHeight", varMap["dateinput/line-height-" + size]);
+            }
+
+            // Closed fields hug their content so the placeholder never wraps
+            // (e.g. XL "MM / DD / YYYY" at 20px). The open variant keeps a fixed
+            // width matching the calendar dropdown, so its text fills instead.
+            if (isOpen) {
+              textNode.layoutGrow = 1;
+            } else {
+              textNode.layoutGrow = 0;
+              try { textNode.textAutoResize = "WIDTH_AND_HEIGHT"; } catch (_txtAutoErr) {}
+            }
+            input.appendChild(textNode);
+
+            // Calendar icon always sits in the right section.
+            var calendarNode = appendDateInputIcon(calendarIcon, "CalendarIcon");
+            if (calendarNode) input.appendChild(calendarNode);
+
+            if (state === "focus") {
+              input.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.87, a: 0.25 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
+
+            comp.appendChild(input);
+            // Closed: field hugs its content width (no wrap). Open: field fills
+            // the fixed root width so it lines up with the calendar dropdown.
+            try { input.layoutSizingHorizontal = isOpen ? "FILL" : "HUG"; } catch (_inputFillErr) {}
+            try { input.layoutSizingVertical = "HUG"; } catch (_inputHugErr) {}
+            // Closed fields hug their content but never shrink below 220px so
+            // small sizes stay a usable, consistent width.
+            if (!isOpen) {
+              try { input.minWidth = 220; } catch (_inputMinWErr) {}
+            }
+
+            // --- Error text (only for error state) ---
+            if (state === "error") {
+              var errorNode = figma.createText();
+              errorNode.name = "Error";
+              errorNode.fontName = font;
+              errorNode.characters = "Error message";
+              errorNode.fontSize = 12;
+              errorNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+              if (varMap["dateinput/error-color"]) {
+                bindPaintVar(errorNode, "fills", 0, varMap["dateinput/error-color"]);
+              }
+              if (varMap["dateinput/error-font-size"]) {
+                bindVar(errorNode, "fontSize", varMap["dateinput/error-font-size"]);
+                bindVar(errorNode, "fontFamily", varMap["dateinput/error-font-family"]);
+                bindVar(errorNode, "fontStyle", varMap["dateinput/error-font-weight"]);
+                bindVar(errorNode, "lineHeight", varMap["dateinput/error-line-height"]);
+              }
+              comp.appendChild(errorNode);
+            }
+
+            // Open state: embed one instance of the shared Calendar component
+            // below the field and widen the root to match so the field lines up.
+            if (isOpen && calendarDropdownSource) {
+              var calInst = createDateInputCalendarInstance(calendarDropdownSource);
+              if (calInst) {
+                calInst.name = "CalendarDropdown";
+                comp.appendChild(calInst);
+                // Override ONLY the card background with the DateInput-specific
+                // token; the rest of the calendar keeps its calendar/* bindings.
+                if (varMap["dateinput/calendar-background"]) {
+                  try {
+                    if (calInst.fills && calInst.fills.length > 0) {
+                      var calFills = JSON.parse(JSON.stringify(calInst.fills));
+                      calInst.fills = calFills;
+                    }
+                    bindPaintVar(calInst, "fills", 0, varMap["dateinput/calendar-background"]);
+                  } catch (_calBgErr) {}
+                }
+                try {
+                  var calW = calInst.width;
+                  if (calW && calW > colWidth) comp.resize(calW, comp.height);
+                  else comp.resize(colWidth, comp.height);
+                } catch (_calResizeErr) {
+                  try { comp.resize(colWidth, comp.height); } catch (_e2) {}
+                }
+              } else {
+                try { comp.resize(colWidth, comp.height); } catch (_rootResizeErr) {}
+              }
+            } else if (isOpen) {
+              try {
+                comp.resize(colWidth, comp.height);
+              } catch (_rootResizeErr2) {}
+            } else {
+              // Closed variants hug their content width so larger sizes grow to
+              // fit the placeholder instead of wrapping it onto a second line.
+              try { comp.layoutSizingHorizontal = "HUG"; } catch (_rootHugErr) {}
+            }
+
+            // Grid placement: columns = variant x label (6), rows = size x radius
+            // x state. Open variants sit in their own column region to the right.
+            var colIndex = (vi * labelModes.length + li);
+            var rowIndex = (si * radii.length + ri) * states.length + sti;
+            if (isOpen) {
+              // Open variants embed a Calendar dropdown that is wider than the
+              // closed field's colWidth, so spacing them by colWidth+gap makes the
+              // dropdowns overlap. Stride by the variant's actual width (the
+              // calendar) plus a generous margin so they're clearly separated.
+              var openStride = Math.max(colWidth, comp.width || colWidth) + 80;
+              comp.x = openColBase + colIndex * openStride;
+            } else {
+              comp.x = colIndex * (colWidth + gap);
+            }
+            comp.y = rowIndex * 80;
+
+            page.appendChild(comp);
+            components.push(comp);
+          }
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " date input variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "DateInput";
+  return componentSet;
+}
+
+// Resolves the built Calendar component (set) to embed as the DateInput dropdown.
+// Prefers the calendarSet passed in from the build flow; falls back to searching
+// the page for a component set / component named "Calendar".
+function findDateInputCalendarSource(calendarSet, page) {
+  if (calendarSet && (calendarSet.type === "COMPONENT_SET" || calendarSet.type === "COMPONENT")) {
+    return calendarSet;
+  }
+  var kids = (page && page.children) ? page.children : [];
+  for (var i = 0; i < kids.length; i++) {
+    if (kids[i].type === "COMPONENT_SET" && normalizeComponentKey(kids[i].name) === "calendar") {
+      return kids[i];
+    }
+  }
+  for (var j = 0; j < kids.length; j++) {
+    if (kids[j].type === "COMPONENT" && normalizeComponentKey(kids[j].name) === "calendar") {
+      return kids[j];
+    }
+  }
+  return null;
+}
+
+// Creates one instance of the Calendar source (set's default/first variant, or a
+// plain component). Returns null on failure so open variants degrade gracefully.
+function createDateInputCalendarInstance(source) {
+  try {
+    if (source.type === "COMPONENT_SET") {
+      var kids = source.children || [];
+      // The DateInput field already shows the selected date, so the embedded
+      // calendar must use the header-less variant (View=Day, Header=Off).
+      // Otherwise the calendar's own "Select date" header duplicates the field
+      // ("two select dates"). Prefer that exact child, then any Header=Off,
+      // then the set default.
+      var headerOffDay = null;
+      var headerOffAny = null;
+      for (var i = 0; i < kids.length; i++) {
+        if (kids[i].type !== "COMPONENT") continue;
+        var norm = String(kids[i].name || "").toLowerCase().replace(/\s+/g, "");
+        var isHeaderOff = norm.indexOf("header=off") >= 0;
+        if (!isHeaderOff) continue;
+        if (!headerOffAny) headerOffAny = kids[i];
+        if (norm.indexOf("view=day") >= 0) { headerOffDay = kids[i]; break; }
+      }
+      var main = headerOffDay || headerOffAny || source.defaultVariant;
+      if (!main) {
+        for (var k = 0; k < kids.length; k++) {
+          if (kids[k].type === "COMPONENT") { main = kids[k]; break; }
+        }
+      }
+      if (!main) return null;
+      var inst = main.createInstance();
+      // Safety net: if we fell back to a Header=On variant, force the variant
+      // property to Off so the redundant header never renders.
+      try { inst.setProperties({ Header: "Off" }); } catch (_setHeaderErr) {}
+      return inst;
+    }
+    if (source.type === "COMPONENT") {
+      return source.createInstance();
+    }
+  } catch (_instErr) {}
+  return null;
+}
+
+function dateInputColorPath(variant, property, state) {
+  if (state === "default") {
+    return "dateinput/" + variant + "-" + property;
+  }
+  return "dateinput/" + variant + "-" + property + "-" + state;
+}
+
+// Finds a single calendar icon component to place in the right section. Prefers
+// a component whose name contains "calendar"; falls back to the first icon.
+async function findDateInputIconComponent() {
+  var iconCandidates = [];
+  var iconsPage = null;
+
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var pg = figma.root.children[pi];
+    if (pg.type !== "PAGE") continue;
+    await pg.loadAsync();
+    if (!iconsPage && pg.name && pg.name.toLowerCase() === "icons") {
+      iconsPage = pg;
+    }
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function(n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") iconCandidates.push(setChildren[ci]);
+      }
+    }
+  }
+
+  var calendar = null;
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var normalized = String(iconCandidates[j].name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+    if (normalized.indexOf("calendar") >= 0) {
+      calendar = iconCandidates[j];
+      break;
+    }
+  }
+
+  if (!calendar && iconCandidates.length > 0) {
+    var sorted = iconCandidates.slice().sort(function(a, b) {
+      return a.name.localeCompare(b.name);
+    });
+    calendar = sorted[0];
+  }
+
+  if (calendar) {
+    progress("[DateInput] Calendar icon source: " + calendar.name);
+  } else {
+    progress("[DateInput] Warning: no calendar icon component found; icon omitted.");
+  }
+
+  return calendar;
+}
+
+// ---------------------------------------------------------------------------
+// TimeInput
+// ---------------------------------------------------------------------------
+
+function timeInputColorPath(variant, property, state) {
+  if (state === "default") {
+    return "timeinput/" + variant + "-" + property;
+  }
+  return "timeinput/" + variant + "-" + property + "-" + state;
+}
+
+// Finds a single clock icon component for the right section. Prefers a component
+// whose name contains "clock"; falls back to the first icon alphabetically.
+async function findTimeInputIconComponent() {
+  var iconCandidates = [];
+  var iconsPage = null;
+
+  for (var pi = 0; pi < figma.root.children.length; pi++) {
+    var pg = figma.root.children[pi];
+    if (pg.type !== "PAGE") continue;
+    await pg.loadAsync();
+    if (!iconsPage && pg.name && pg.name.toLowerCase() === "icons") {
+      iconsPage = pg;
+    }
+  }
+
+  var searchScope = iconsPage || figma.root;
+  var nodes = searchScope.findAll(function(n) {
+    return n.type === "COMPONENT" || n.type === "COMPONENT_SET";
+  });
+
+  for (var i = 0; i < nodes.length; i++) {
+    if (nodes[i].type === "COMPONENT") {
+      iconCandidates.push(nodes[i]);
+    } else if (nodes[i].type === "COMPONENT_SET") {
+      var setChildren = nodes[i].children || [];
+      for (var ci = 0; ci < setChildren.length; ci++) {
+        if (setChildren[ci].type === "COMPONENT") iconCandidates.push(setChildren[ci]);
+      }
+    }
+  }
+
+  // Prefer an exact "clock" icon over alarm-clock / clock-plus / etc.
+  var clock = null;
+  var clockScore = -1;
+  for (var j = 0; j < iconCandidates.length; j++) {
+    var normalized = String(iconCandidates[j].name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+    if (normalized.indexOf("clock") < 0) continue;
+    var score = normalized === "clock" ? 100 : (normalized.indexOf("alarm") >= 0 ? 10 : 50);
+    if (score > clockScore) { clock = iconCandidates[j]; clockScore = score; }
+  }
+
+  if (!clock && iconCandidates.length > 0) {
+    var sorted = iconCandidates.slice().sort(function(a, b) {
+      return a.name.localeCompare(b.name);
+    });
+    clock = sorted[0];
+  }
+
+  if (clock) {
+    progress("[TimeInput] Clock icon source: " + clock.name);
+  } else {
+    progress("[TimeInput] Warning: no clock icon component found; icon omitted.");
+  }
+
+  return clock;
+}
+
+async function buildTimeInputComponentSet(varMap, page, font) {
+  var variants = ["default"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "error", "disabled"];
+  var labelModes = ["none", "label", "required"];
+  var dropdownModes = ["closed", "open"];
+  var components = [];
+  var clockIcon = await findTimeInputIconComponent();
+
+  // Column data for the hour / minute / AM–PM picker shown in the open dropdown
+  // (mirrors the preview's TimePicker layout). One value per column is
+  // pre-selected to demo the selected-option state.
+  var hourOptions = ["12", "01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11"];
+  var minuteOptions = [];
+  for (var moi = 0; moi < 60; moi++) { minuteOptions.push(moi < 10 ? "0" + moi : "" + moi); }
+  var periodOptions = ["AM", "PM"];
+  var selectedHour = "09";
+  var selectedMinute = "00";
+  var selectedPeriod = "AM";
+  var selectedTime = selectedHour + ":" + selectedMinute + " " + selectedPeriod;
+
+  // Rotate a column so its selected value sits at the top — since a Figma frame
+  // can't scroll, this keeps the selected cell visible inside the clipped viewport.
+  function rotateToSelected(list, sel) {
+    var idx = list.indexOf(sel);
+    if (idx <= 0) return list.slice();
+    return list.slice(idx).concat(list.slice(0, idx));
+  }
+
+  var sizeHeights = { default: 36, xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
+  var gap = 20;
+  var colWidth = 220;
+  var openColBase = variants.length * labelModes.length * (colWidth + gap) + gap;
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+
+    for (var li = 0; li < labelModes.length; li++) {
+      var labelMode = labelModes[li];
+      var capLabelMode = labelMode.charAt(0).toUpperCase() + labelMode.slice(1);
+      var hasLabel = (labelMode !== "none");
+      var hasAsterisk = (labelMode === "required");
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
+
+        var variantRadii = radii;
+        for (var ri = 0; ri < variantRadii.length; ri++) {
+          var rad = variantRadii[ri];
+          var capRad = rad === "default" ? "Default" : rad.toUpperCase();
+
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+          for (var dmi = 0; dmi < dropdownModes.length; dmi++) {
+            var dropdownMode = dropdownModes[dmi];
+            var isOpen = dropdownMode === "open";
+            // Build ONE open variant (default size + radius + default state) so
+            // the set stays light instead of doubling every closed combo.
+            if (isOpen && !(size === "default" && rad === "default" && state === "default")) continue;
+            var capDropdown = isOpen ? "Open" : "Closed";
+
+            var comp = figma.createComponent();
+            comp.name =
+              "Variant=" + capVariant +
+              ", Size=" + capSize +
+              ", Radius=" + capRad +
+              ", State=" + capState +
+              ", Label=" + capLabelMode +
+              ", Dropdown=" + capDropdown;
+
+            comp.layoutMode = "VERTICAL";
+            comp.primaryAxisSizingMode = "AUTO";
+            comp.counterAxisSizingMode = "FIXED";
+            comp.itemSpacing = 4;
+            comp.fills = [];
+            try { comp.layoutSizingHorizontal = "FIXED"; } catch (_sizeModeErr) {}
+
+            var timeLabelGapVar =
+              varMap["timeinput/label-gap-" + size] ||
+              varMap["timeinput/label-gap-default"] ||
+              varMap["timeinput/label-gap"];
+            if (timeLabelGapVar) {
+              bindVar(comp, "itemSpacing", timeLabelGapVar);
+            }
+
+            // --- Optional label row ---
+            if (hasLabel) {
+              var labelRow = figma.createFrame();
+              labelRow.name = "LabelRow";
+              labelRow.layoutMode = "HORIZONTAL";
+              labelRow.primaryAxisSizingMode = "AUTO";
+              labelRow.counterAxisSizingMode = "AUTO";
+              labelRow.layoutAlign = "STRETCH";
+              labelRow.itemSpacing = 2;
+              labelRow.fills = [];
+              try { labelRow.layoutSizingHorizontal = "FILL"; } catch (_labelSizeModeErr) {}
+
+              var labelNode = figma.createText();
+              labelNode.name = "Label";
+              labelNode.fontName = font;
+              labelNode.characters = "Label";
+              labelNode.fontSize = 14;
+              labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              if (state === "disabled" && varMap["timeinput/label-color-disabled"]) {
+                bindPaintVar(labelNode, "fills", 0, varMap["timeinput/label-color-disabled"]);
+              } else if (varMap["timeinput/label-color"]) {
+                bindPaintVar(labelNode, "fills", 0, varMap["timeinput/label-color"]);
+              }
+              var timeLabelFontSizeVar =
+                varMap["timeinput/label-font-size-" + size] ||
+                varMap["timeinput/label-font-size-default"] ||
+                varMap["timeinput/label-font-size"];
+              if (timeLabelFontSizeVar) {
+                bindVar(labelNode, "fontSize", timeLabelFontSizeVar);
+                bindVar(labelNode, "fontFamily", varMap["timeinput/label-font-family"]);
+                bindVar(labelNode, "fontStyle", varMap["timeinput/label-font-weight"]);
+                bindVar(labelNode, "lineHeight", varMap["timeinput/label-line-height"]);
+              }
+              labelRow.appendChild(labelNode);
+
+              if (hasAsterisk) {
+                var asteriskNode = figma.createText();
+                asteriskNode.name = "Asterisk";
+                asteriskNode.fontName = font;
+                asteriskNode.characters = " *";
+                asteriskNode.fontSize = 14;
+                asteriskNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+                if (varMap["timeinput/asterisk-color"]) {
+                  bindPaintVar(asteriskNode, "fills", 0, varMap["timeinput/asterisk-color"]);
+                }
+                if (timeLabelFontSizeVar) {
+                  bindVar(asteriskNode, "fontSize", timeLabelFontSizeVar);
+                  bindVar(asteriskNode, "fontFamily", varMap["timeinput/label-font-family"]);
+                  bindVar(asteriskNode, "fontStyle", varMap["timeinput/label-font-weight"]);
+                  bindVar(asteriskNode, "lineHeight", varMap["timeinput/label-line-height"]);
+                }
+                labelRow.appendChild(asteriskNode);
+              }
+
+              comp.appendChild(labelRow);
+            }
+
+            // --- Input frame ---
+            var input = figma.createFrame();
+            input.name = "Input";
+            input.layoutMode = "HORIZONTAL";
+            input.primaryAxisSizingMode = "AUTO";
+            input.counterAxisSizingMode = "AUTO";
+            input.layoutAlign = "STRETCH";
+            input.primaryAxisAlignItems = "MIN";
+            input.counterAxisAlignItems = "CENTER";
+            input.resize(colWidth, sizeHeights[size]);
+            try { input.layoutSizingHorizontal = "FILL"; } catch (_inputSizeModeErr) {}
+            input.cornerRadius = 4;
+            input.paddingLeft = 10;
+            input.paddingRight = 10;
+            input.paddingTop = 0;
+            input.paddingBottom = 0;
+            input.minHeight = null;
+            input.itemSpacing = 8;
+
+            if (varMap["timeinput/padding-x-" + size]) {
+              bindVar(input, "paddingLeft", varMap["timeinput/padding-x-" + size]);
+              bindVar(input, "paddingRight", varMap["timeinput/padding-x-" + size]);
+            }
+            var timePaddingYVar =
+              varMap["timeinput/padding-y-" + size] ||
+              varMap["timeinput/padding-y-default"] ||
+              varMap["timeinput/padding-y"];
+            if (timePaddingYVar) {
+              bindVar(input, "paddingTop", timePaddingYVar);
+              bindVar(input, "paddingBottom", timePaddingYVar);
+            }
+            var timeIconGapVar =
+              varMap["timeinput/icon-gap-" + size] ||
+              varMap["timeinput/icon-gap-default"] ||
+              varMap["timeinput/icon-gap"];
+            if (timeIconGapVar) {
+              bindVar(input, "itemSpacing", timeIconGapVar);
+            }
+            if (varMap["timeinput/radius-" + rad]) {
+              bindVar(input, "topLeftRadius", varMap["timeinput/radius-" + rad]);
+              bindVar(input, "topRightRadius", varMap["timeinput/radius-" + rad]);
+              bindVar(input, "bottomLeftRadius", varMap["timeinput/radius-" + rad]);
+              bindVar(input, "bottomRightRadius", varMap["timeinput/radius-" + rad]);
+            }
+
+            // Input background
+            var bgPath = timeInputColorPath(variant, "background", state);
+            input.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+            if (varMap[bgPath]) {
+              bindPaintVar(input, "fills", 0, varMap[bgPath]);
+            }
+
+            // Input border
+            var borderPath = timeInputColorPath(variant, "border", state);
+            input.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+            input.strokeWeight = 1;
+            input.strokeAlign = "INSIDE";
+            if (varMap[borderPath]) {
+              bindPaintVar(input, "strokes", 0, varMap[borderPath]);
+            }
+            if (varMap["timeinput/border-width"]) {
+              bindVar(input, "strokeWeight", varMap["timeinput/border-width"]);
+            }
+
+            // Icon color is per state, e.g. timeinput/default-icon-hover.
+            var timeIconStateSuffix =
+              state === "disabled" ? "-disabled"
+              : state === "error" ? "-error"
+              : state === "focus" ? "-focus"
+              : state === "hover" ? "-hover"
+              : "";
+            var timeIconColorPath =
+              varMap["timeinput/" + variant + "-icon" + timeIconStateSuffix]
+                ? "timeinput/" + variant + "-icon" + timeIconStateSuffix
+                : (varMap["timeinput/" + variant + "-icon"]
+                    ? "timeinput/" + variant + "-icon"
+                    : (state === "disabled"
+                        ? "timeinput/text-disabled"
+                        : (state === "focus" ? "timeinput/text" : "timeinput/placeholder")));
+
+            var timeIconStrokeVar =
+              varMap["timeinput/icon-stroke-width-" + size] ||
+              varMap["timeinput/icon-stroke-width-default"] ||
+              varMap["timeinput/icon-stroke-width"];
+
+            function appendTimeInputIcon(iconComp, iconName) {
+              if (!iconComp) return null;
+              var iconInst = iconComp.createInstance();
+              iconInst.name = iconName;
+              try { iconInst.resize(16, 16); } catch (_resizeErr) {}
+              var vectors = iconInst.findAll(function(n) { return n.type === "VECTOR"; });
+              for (var vci = 0; vci < vectors.length; vci++) {
+                if (vectors[vci].strokes && vectors[vci].strokes.length > 0 && varMap[timeIconColorPath]) {
+                  vectors[vci].strokes = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+                  bindPaintVar(vectors[vci], "strokes", 0, varMap[timeIconColorPath]);
+                }
+                if (vectors[vci].fills && vectors[vci].fills.length > 0 && varMap[timeIconColorPath]) {
+                  vectors[vci].fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
+                  bindPaintVar(vectors[vci], "fills", 0, varMap[timeIconColorPath]);
+                }
+                if (timeIconStrokeVar && "strokeWeight" in vectors[vci]) {
+                  bindVar(vectors[vci], "strokeWeight", timeIconStrokeVar);
+                }
+              }
+              return iconInst;
+            }
+
+            // Text inside input
+            var textNode = figma.createText();
+            var showsValue = (state === "focus") || isOpen;
+            textNode.name = showsValue ? "InputText" : "Placeholder";
+            textNode.fontName = font;
+            textNode.characters = showsValue ? selectedTime : "HH:MM";
+            textNode.fontSize = 14;
+
+            if (state === "disabled") {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+              var disabledPlaceholderVar =
+                varMap["timeinput/" + variant + "-placeholder-disabled"] ||
+                varMap["timeinput/text-disabled"];
+              if (disabledPlaceholderVar) {
+                bindPaintVar(textNode, "fills", 0, disabledPlaceholderVar);
+              }
+            } else if (showsValue) {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+              if (varMap["timeinput/text"]) {
+                bindPaintVar(textNode, "fills", 0, varMap["timeinput/text"]);
+              }
+            } else if (state === "error") {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.9, g: 0.2, b: 0.2 } }];
+              var timeInputErrPlaceholder = varMap["timeinput/placeholder-error"] || varMap["timeinput/placeholder"];
+              if (timeInputErrPlaceholder) {
+                bindPaintVar(textNode, "fills", 0, timeInputErrPlaceholder);
+              }
+            } else {
+              textNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+              if (varMap["timeinput/placeholder"]) {
+                bindPaintVar(textNode, "fills", 0, varMap["timeinput/placeholder"]);
+              }
+            }
+            if (varMap["timeinput/font-size-" + size]) {
+              bindVar(textNode, "fontSize", varMap["timeinput/font-size-" + size]);
+              bindVar(textNode, "fontFamily", varMap["timeinput/font-family"]);
+              bindVar(textNode, "fontStyle", varMap["timeinput/font-weight"]);
+              bindVar(textNode, "lineHeight", varMap["timeinput/line-height-" + size]);
+            }
+
+            if (isOpen) {
+              textNode.layoutGrow = 1;
+            } else {
+              textNode.layoutGrow = 0;
+              try { textNode.textAutoResize = "WIDTH_AND_HEIGHT"; } catch (_txtAutoErr) {}
+            }
+            input.appendChild(textNode);
+
+            // Clock icon always sits in the right section.
+            var clockNode = appendTimeInputIcon(clockIcon, "ClockIcon");
+            if (clockNode) input.appendChild(clockNode);
+
+            if (state === "focus") {
+              input.effects = [{
+                type: "DROP_SHADOW",
+                color: { r: 0.2, g: 0.53, b: 0.87, a: 0.25 },
+                offset: { x: 0, y: 0 },
+                radius: 0,
+                spread: 3,
+                visible: true,
+                blendMode: "NORMAL"
+              }];
+            }
+
+            comp.appendChild(input);
+            try { input.layoutSizingHorizontal = isOpen ? "FILL" : "HUG"; } catch (_inputFillErr) {}
+            try { input.layoutSizingVertical = "HUG"; } catch (_inputHugErr) {}
+            if (!isOpen) {
+              try { input.minWidth = 220; } catch (_inputMinWErr) {}
+            }
+
+            // --- Error text (only for error state) ---
+            if (state === "error") {
+              var errorNode = figma.createText();
+              errorNode.name = "Error";
+              errorNode.fontName = font;
+              errorNode.characters = "Error message";
+              errorNode.fontSize = 12;
+              errorNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+              if (varMap["timeinput/error-color"]) {
+                bindPaintVar(errorNode, "fills", 0, varMap["timeinput/error-color"]);
+              }
+              if (varMap["timeinput/error-font-size"]) {
+                bindVar(errorNode, "fontSize", varMap["timeinput/error-font-size"]);
+                bindVar(errorNode, "fontFamily", varMap["timeinput/error-font-family"]);
+                bindVar(errorNode, "fontStyle", varMap["timeinput/error-font-weight"]);
+                bindVar(errorNode, "lineHeight", varMap["timeinput/error-line-height"]);
+              }
+              comp.appendChild(errorNode);
+            }
+
+            // Open state: build a Select-style dropdown of time options below the
+            // field, styled entirely from timeinput/dropdown-* and option-* tokens.
+            if (isOpen) {
+              var dropdown = figma.createFrame();
+              dropdown.name = "TimeDropdown";
+              dropdown.layoutMode = "HORIZONTAL";
+              dropdown.primaryAxisSizingMode = "AUTO";
+              dropdown.counterAxisSizingMode = "FIXED";
+              dropdown.counterAxisAlignItems = "MIN";
+              dropdown.layoutAlign = "STRETCH";
+              dropdown.itemSpacing = 4;
+              dropdown.clipsContent = true;
+              dropdown.paddingTop = 4;
+              dropdown.paddingBottom = 4;
+              dropdown.paddingLeft = 4;
+              dropdown.paddingRight = 4;
+              dropdown.cornerRadius = 8;
+              dropdown.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              if (varMap["timeinput/dropdown-background"]) {
+                bindPaintVar(dropdown, "fills", 0, varMap["timeinput/dropdown-background"]);
+              }
+              dropdown.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+              dropdown.strokeWeight = 1;
+              dropdown.strokeAlign = "INSIDE";
+              if (varMap["timeinput/dropdown-border"]) {
+                bindPaintVar(dropdown, "strokes", 0, varMap["timeinput/dropdown-border"]);
+              }
+              if (varMap["timeinput/dropdown-border-width"]) {
+                bindVar(dropdown, "strokeWeight", varMap["timeinput/dropdown-border-width"]);
+              }
+              if (varMap["timeinput/dropdown-radius"]) {
+                bindVar(dropdown, "topLeftRadius", varMap["timeinput/dropdown-radius"]);
+                bindVar(dropdown, "topRightRadius", varMap["timeinput/dropdown-radius"]);
+                bindVar(dropdown, "bottomLeftRadius", varMap["timeinput/dropdown-radius"]);
+                bindVar(dropdown, "bottomRightRadius", varMap["timeinput/dropdown-radius"]);
+              }
+              if (varMap["timeinput/dropdown-padding"]) {
+                bindVar(dropdown, "paddingTop", varMap["timeinput/dropdown-padding"]);
+                bindVar(dropdown, "paddingBottom", varMap["timeinput/dropdown-padding"]);
+                bindVar(dropdown, "paddingLeft", varMap["timeinput/dropdown-padding"]);
+                bindVar(dropdown, "paddingRight", varMap["timeinput/dropdown-padding"]);
+              }
+
+              var optPadXVar =
+                varMap["timeinput/option-padding-x-" + size] ||
+                varMap["timeinput/option-padding-x-default"] ||
+                varMap["timeinput/option-padding-x"];
+              var optPadYVar =
+                varMap["timeinput/option-padding-y-" + size] ||
+                varMap["timeinput/option-padding-y-default"] ||
+                varMap["timeinput/option-padding-y"];
+              var optFontVar =
+                varMap["timeinput/option-font-size-" + size] ||
+                varMap["timeinput/option-font-size-default"] ||
+                varMap["timeinput/option-font-size"];
+
+              var pickerColumns = [
+                { options: rotateToSelected(hourOptions, selectedHour), selected: selectedHour },
+                { options: rotateToSelected(minuteOptions, selectedMinute), selected: selectedMinute },
+                { options: periodOptions, selected: selectedPeriod },
+              ];
+
+              for (var ci = 0; ci < pickerColumns.length; ci++) {
+                var colDef = pickerColumns[ci];
+                var colFrame = figma.createFrame();
+                colFrame.name = "Column";
+                colFrame.layoutMode = "VERTICAL";
+                colFrame.primaryAxisSizingMode = "AUTO";
+                colFrame.counterAxisSizingMode = "FIXED";
+                colFrame.itemSpacing = 2;
+                colFrame.fills = [];
+
+                for (var oi = 0; oi < colDef.options.length; oi++) {
+                  var optValue = colDef.options[oi];
+                  var isSelectedOpt = optValue === colDef.selected;
+
+                  var optRow = figma.createFrame();
+                  optRow.name = isSelectedOpt ? "Option (selected)" : "Option";
+                  optRow.layoutMode = "HORIZONTAL";
+                  optRow.primaryAxisSizingMode = "AUTO";
+                  optRow.counterAxisSizingMode = "AUTO";
+                  optRow.layoutAlign = "STRETCH";
+                  optRow.primaryAxisAlignItems = "CENTER";
+                  optRow.counterAxisAlignItems = "CENTER";
+                  optRow.paddingTop = 7;
+                  optRow.paddingBottom = 7;
+                  optRow.paddingLeft = 10;
+                  optRow.paddingRight = 10;
+                  optRow.cornerRadius = 4;
+                  optRow.fills = [];
+                  if (isSelectedOpt) {
+                    optRow.fills = [{ type: "SOLID", color: { r: 0.9, g: 0.94, b: 1 } }];
+                    if (varMap["timeinput/option-selected-background"]) {
+                      bindPaintVar(optRow, "fills", 0, varMap["timeinput/option-selected-background"]);
+                    }
+                  }
+                  if (optPadXVar) {
+                    bindVar(optRow, "paddingLeft", optPadXVar);
+                    bindVar(optRow, "paddingRight", optPadXVar);
+                  }
+                  if (optPadYVar) {
+                    bindVar(optRow, "paddingTop", optPadYVar);
+                    bindVar(optRow, "paddingBottom", optPadYVar);
+                  }
+                  if (varMap["timeinput/option-radius"]) {
+                    bindVar(optRow, "topLeftRadius", varMap["timeinput/option-radius"]);
+                    bindVar(optRow, "topRightRadius", varMap["timeinput/option-radius"]);
+                    bindVar(optRow, "bottomLeftRadius", varMap["timeinput/option-radius"]);
+                    bindVar(optRow, "bottomRightRadius", varMap["timeinput/option-radius"]);
+                  }
+
+                  var optText = figma.createText();
+                  optText.name = "OptionLabel";
+                  optText.fontName = font;
+                  optText.characters = optValue;
+                  optText.fontSize = 14;
+                  optText.textAlignHorizontal = "CENTER";
+                  optText.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                  var optColorVar = isSelectedOpt
+                    ? (varMap["timeinput/option-selected-text"] || varMap["timeinput/option-text"])
+                    : varMap["timeinput/option-text"];
+                  if (optColorVar) {
+                    bindPaintVar(optText, "fills", 0, optColorVar);
+                  }
+                  if (optFontVar) {
+                    bindVar(optText, "fontSize", optFontVar);
+                    bindVar(optText, "fontFamily", varMap["timeinput/font-family"]);
+                  }
+                  optRow.appendChild(optText);
+                  try { optText.layoutSizingHorizontal = "HUG"; } catch (_optTxtErr) {}
+
+                  colFrame.appendChild(optRow);
+                  try { optRow.layoutSizingHorizontal = "FILL"; } catch (_optRowFillErr) {}
+                  try { optRow.layoutSizingVertical = "HUG"; } catch (_optRowHugErr) {}
+                }
+
+                dropdown.appendChild(colFrame);
+                try { colFrame.layoutSizingHorizontal = "FILL"; } catch (_colFillErr) {}
+                try { colFrame.layoutSizingVertical = "HUG"; } catch (_colHugErr) {}
+              }
+
+              comp.appendChild(dropdown);
+              try { dropdown.layoutSizingHorizontal = "FILL"; } catch (_ddFillErr) {}
+              // Fixed, clipped viewport height (like the scrollable preview) so the
+              // 60-row minute column doesn't make the dropdown huge. Selected values
+              // are rotated to the top of each column so they stay visible.
+              try { dropdown.layoutSizingVertical = "FIXED"; } catch (_ddFixedErr) {}
+              try { dropdown.resize(dropdown.width || colWidth, 200); } catch (_ddResizeErr) {}
+              if (varMap["timeinput/dropdown-max-height"]) {
+                bindVar(dropdown, "height", varMap["timeinput/dropdown-max-height"]);
+              }
+              try { comp.resize(colWidth, comp.height); } catch (_rootResizeErr) {}
+            } else {
+              // Closed variants hug their content width so larger sizes grow to
+              // fit the placeholder instead of wrapping it onto a second line.
+              try { comp.layoutSizingHorizontal = "HUG"; } catch (_rootHugErr) {}
+            }
+
+            // Grid placement.
+            var colIndex = (vi * labelModes.length + li);
+            var rowIndex = (si * radii.length + ri) * states.length + sti;
+            if (isOpen) {
+              var openStride = Math.max(colWidth, comp.width || colWidth) + 80;
+              comp.x = openColBase + colIndex * openStride;
+            } else {
+              comp.x = colIndex * (colWidth + gap);
+            }
+            comp.y = rowIndex * 80;
+
+            page.appendChild(comp);
+            components.push(comp);
+          }
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " time input variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "TimeInput";
+  return componentSet;
 }
 
 // ---------------------------------------------------------------------------
@@ -25151,19 +26323,40 @@ async function findSelectChevronIconComponent() {
     }
   }
 
+  // Score candidates so the auto-swap ALWAYS defaults to the single
+  // "chevron-down" glyph. The old loop broke on the first loose match in
+  // whatever (non-deterministic) order findAll returned, so it could grab a
+  // double chevron ("chevrons-down"), a selector ("chevron-selector-vertical"),
+  // or an up-chevron variant from the same set. Here we normalize the name,
+  // reject multi/plural/selector variants, and pick the highest score with a
+  // stable lexicographic tie-break so the result is consistent every sync.
   var preferred = null;
+  var preferredScore = -1;
   for (var j = 0; j < iconCandidates.length; j++) {
-    var name = iconCandidates[j].name.toLowerCase();
+    var norm = String(iconCandidates[j].name || "").toLowerCase().replace(/[\s_\-\/]+/g, "");
+    // Never let an "up" chevron/caret/arrow win the default.
+    if (norm.indexOf("up") >= 0) continue;
+    var isMulti =
+      norm.indexOf("double") >= 0 ||
+      norm.indexOf("chevrons") >= 0 ||
+      norm.indexOf("selector") >= 0 ||
+      norm.indexOf("expand") >= 0;
+    var score = -1;
+    if (norm === "chevrondown") score = 100;
+    else if (norm.indexOf("chevrondown") >= 0 && !isMulti) score = 90;
+    else if (norm === "caretdown") score = 80;
+    else if (norm.indexOf("caretdown") >= 0 && !isMulti) score = 70;
+    else if (norm === "angledown" || norm === "arrowdown") score = 60;
+    else if ((norm.indexOf("angledown") >= 0 || norm.indexOf("arrowdown") >= 0) && !isMulti) score = 50;
+    if (score < 0) continue;
     if (
-      name.indexOf("chevron-down") >= 0 ||
-      (name.indexOf("chevron") >= 0 && name.indexOf("down") >= 0) ||
-      name.indexOf("caret-down") >= 0 ||
-      (name.indexOf("caret") >= 0 && name.indexOf("down") >= 0) ||
-      name.indexOf("angle-down") >= 0 ||
-      name.indexOf("arrow-down") >= 0
+      score > preferredScore ||
+      (score === preferredScore &&
+        preferred &&
+        iconCandidates[j].name.localeCompare(preferred.name) < 0)
     ) {
       preferred = iconCandidates[j];
-      break;
+      preferredScore = score;
     }
   }
   if (preferred) return preferred;
@@ -25536,6 +26729,8 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
   else console.log("[ActionIcon] WARNING: minus icon not found on icons page");
 
   var sizePx = { default: 36, xs: 28, sm: 32, md: 36, lg: 42, xl: 48 };
+  // Fallback padding (pre-variable-binding). Box = icon-size + 2 × padding.
+  var padPx = { default: 10, xs: 8, sm: 9, md: 10, lg: 12, xl: 14 };
   var gap = 18;
   var colGap = 24;
 
@@ -25615,19 +26810,19 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
               surfaceNode = figma.createFrame();
               surfaceNode.name = "Surface";
               surfaceNode.layoutMode = "HORIZONTAL";
-              surfaceNode.primaryAxisSizingMode = "FIXED";
-              surfaceNode.counterAxisSizingMode = "FIXED";
+              // Box size is derived from padding + icon, so the surface HUGs its content.
+              surfaceNode.primaryAxisSizingMode = "AUTO";
+              surfaceNode.counterAxisSizingMode = "AUTO";
               surfaceNode.primaryAxisAlignItems = "CENTER";
               surfaceNode.counterAxisAlignItems = "CENTER";
               surfaceNode.itemSpacing = 0;
-              surfaceNode.resize(sizePx[size], sizePx[size]);
               surfaceNode.cornerRadius = 8;
               surfaceNode.clipsContent = true;
               comp.appendChild(surfaceNode);
             } else {
-              comp.primaryAxisSizingMode = "FIXED";
-              comp.counterAxisSizingMode = "FIXED";
-              comp.resize(sizePx[size], sizePx[size]);
+              // Box size is derived from padding + icon, so the component HUGs its content.
+              comp.primaryAxisSizingMode = "AUTO";
+              comp.counterAxisSizingMode = "AUTO";
               comp.cornerRadius = 8;
               comp.clipsContent = !isAttachedFocus;
             }
@@ -25644,8 +26839,17 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
             surfaceNode.strokeAlign = "INSIDE";
             bindPaintVar(surfaceNode, "strokes", 0, varMap[borderPath]);
 
-            bindVar(surfaceNode, "width", varMap["actionicon/size-" + size]);
-            bindVar(surfaceNode, "height", varMap["actionicon/size-" + size]);
+            // Padding drives the box size (icon-size + 2 × padding). Equal on all sides keeps it square.
+            var actionIconPadVar = varMap["actionicon/padding-" + size];
+            var actionIconPadFallback = padPx[size] != null ? padPx[size] : 10;
+            surfaceNode.paddingTop = actionIconPadFallback;
+            surfaceNode.paddingRight = actionIconPadFallback;
+            surfaceNode.paddingBottom = actionIconPadFallback;
+            surfaceNode.paddingLeft = actionIconPadFallback;
+            bindVar(surfaceNode, "paddingTop", actionIconPadVar);
+            bindVar(surfaceNode, "paddingRight", actionIconPadVar);
+            bindVar(surfaceNode, "paddingBottom", actionIconPadVar);
+            bindVar(surfaceNode, "paddingLeft", actionIconPadVar);
             bindVar(surfaceNode, "topLeftRadius", varMap["actionicon/radius-" + rad]);
             bindVar(surfaceNode, "topRightRadius", varMap["actionicon/radius-" + rad]);
             bindVar(surfaceNode, "bottomLeftRadius", varMap["actionicon/radius-" + rad]);
