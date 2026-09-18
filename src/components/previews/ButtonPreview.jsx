@@ -9,6 +9,9 @@ const VARIANT_MAP = {
   filled: "filled",
   outlined: "outline",
   ghost: "subtle",
+  light: "light",
+  subtle: "subtle",
+  default: "default",
 };
 
 const WEIGHT_TO_CSS = {

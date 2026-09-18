@@ -1378,7 +1378,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     }
     return next.length > 0 ? next : allowed.slice();
   }
-  var buttonVariants = resolveVariantList(buildOptions && buildOptions.buttonVariants, ["filled", "outlined", "ghost"]);
+  var buttonVariants = resolveVariantList(buildOptions && buildOptions.buttonVariants, ["filled", "outlined", "ghost", "light", "subtle", "default"]);
   var actionIconVariants = resolveVariantList(buildOptions && buildOptions.actionIconVariants, ["default", "filled", "light", "outlined", "transparent"]);
   var tabsVariants = resolveVariantList(buildOptions && buildOptions.tabsVariants, ["default", "outlined", "pills"]);
   async function buildSet(name, builder) {
@@ -2789,6 +2789,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       if (variant === "filled") return "Serves as the primary button and CTA, representing the most important action to move forward in the flow.";
       if (variant === "outlined") return "Provides a medium level of emphasis, guiding user to take action on functions and features.";
       if (variant === "ghost" || variant === "transparent") return "Low-emphasis action used for tertiary interactions and secondary moments.";
+      if (variant === "light") return "Soft tinted background with colored text for medium-low emphasis actions that still read as branded.";
+      if (variant === "subtle") return "Transparent until interacted with; a quiet action that surfaces a light tint on hover.";
+      if (variant === "default") return "Neutral bordered button for standard, non-branded actions where color emphasis isn't needed.";
     }
     if (comp === "badge") {
       if (variant === "filled") {
@@ -6660,11 +6663,60 @@ async function buildFoundationsDocsPage(payload, titleFont) {
   function primVar(family, index) { return primVarByName[family + "/" + index] || null; }
   function hexVar(family, index) { return hexVarByName[family + "/" + index] || null; }
 
-  // ── PRIMITIVE COLORS (union of brands; families a brand lacks auto-hide via the present/* boolean) ──
+  // Tracks the widest color ramp (global + brand) so semantic group panels below
+  // can be sized to match. Declared before the global section so both contribute.
   var maxRampW = 0;
+
+  // ── GLOBAL PRIMITIVE COLORS (shared across all brands; single-mode, constant) ──
+  // Lookup for the single-mode "Primitive/Global" color vars (named "<palette>/<index>").
+  var globalColorVarByName = {};
+  for (var gcv = 0; gcv < colorVars.length; gcv++) {
+    if ((colNameById[colorVars[gcv].variableCollectionId] || "") === "Primitive/Global") {
+      globalColorVarByName[String(colorVars[gcv].name)] = colorVars[gcv];
+    }
+  }
+  function globalPrimVar(palette, index) { return globalColorVarByName[palette + "/" + index] || null; }
+
+  var globalPalettes = payload.globalPrimitives || {};
+  var globalRampNames = [];
+  var gpnAll = Object.keys(globalPalettes);
+  for (var gpn = 0; gpn < gpnAll.length; gpn++) {
+    var gpName = gpnAll[gpn];
+    if (gpName === "transparent") continue; // utility token, not a color ramp
+    var gpRampChk = globalPalettes[gpName];
+    if (gpRampChk && gpRampChk.length) globalRampNames.push(gpName);
+  }
+  if (globalRampNames.length) {
+    sectionHeader(doc, "Global Primitive Colors", "Base color ramps shared across every brand. These are constant and do not change with the brand/theme appearance.");
+    for (var grni = 0; grni < globalRampNames.length; grni++) {
+      var gFamily = globalRampNames[grni];
+      var gRamp = globalPalettes[gFamily];
+      var gFamPanel = panel("Global Family " + gFamily, 14);
+      gFamPanel.counterAxisAlignItems = "CENTER";
+      var gFamInner = stack("Global Family Inner", "VERTICAL", 14, "MIN");
+      appendText(gFamInner, mediumFont, cap(gFamily), 14, DOC.title, "Family Name");
+      var gRampRow = stack("Global Ramp", "HORIZONTAL", 8, "MIN");
+      for (var grmi = 0; grmi < gRamp.length; grmi++) {
+        var gRampCell = stack("Global Ramp Cell", "VERTICAL", 6, "CENTER");
+        var gSw = swatch(44, gRamp[grmi] ? gRamp[grmi] : "#FFFFFF", 6);
+        gRampCell.appendChild(gSw);
+        bindPaintVar(gSw, "fills", 0, globalPrimVar(gFamily, grmi));
+        appendText(gRampCell, mediumFont, String(grmi), 11, DOC.title, "Ramp Index");
+        appendText(gRampCell, bodyFont, gRamp[grmi] ? String(gRamp[grmi]).toUpperCase() : "", 10, DOC.body, "Ramp Hex");
+        gRampRow.appendChild(gRampCell);
+      }
+      gFamInner.appendChild(gRampRow);
+      gFamPanel.appendChild(gFamInner);
+      doc.appendChild(gFamPanel);
+      fillWidth(gFamPanel);
+      try { if (gRampRow.width > maxRampW) maxRampW = gRampRow.width; } catch (_grwErr) {}
+    }
+  }
+
+  // ── BRAND PRIMITIVE COLORS (union of brands; families a brand lacks auto-hide via the present/* boolean) ──
   if (famUnion.length) {
     var brandName = cap(currentBrandId || (brandIds.length ? brandIds[0] : ""));
-    sectionHeader(doc, "Primitive Colors", "Base color ramps. Colors and labels switch with the brand/theme appearance, and families a brand doesn't define are hidden automatically.");
+    sectionHeader(doc, "Brand Primitive Colors", "Per-brand color ramps. Colors and labels switch with the brand/theme appearance, and families a brand doesn't define are hidden automatically.");
     var fallbackPalettes = (currentBrandId && payload[currentBrandId]) ? payload[currentBrandId].primitives : {};
     for (var fni = 0; fni < famUnion.length; fni++) {
       var family = famUnion[fni];
@@ -7005,7 +7057,7 @@ async function buildFoundationsDocsPage(payload, titleFont) {
 async function buildButtonComponentSet(varMap, page, font, focusRingStyle, selectedVariants) {
   var variants = (selectedVariants && selectedVariants.length > 0)
     ? selectedVariants.slice()
-    : ["filled", "outlined", "ghost"];
+    : ["filled", "outlined", "ghost", "light", "subtle", "default"];
   var colors = ["primary", "error"];
   var sizes = ["default", "xxs", "xs", "sm", "md", "lg", "xl"];
   var states = ["default", "hover", "focus", "pressed", "disabled"];
@@ -29139,6 +29191,10 @@ function validateTabsVariables(varMap) {
       var suffix = state === "default" ? "" : "-" + state;
       if (variant !== "default") {
         required.push("tabs/" + variant + "-tab-background" + suffix);
+      }
+      if (variant === "default" && state === "default") {
+        required.push("tabs/default-tab-background");
+        required.push("tabs/default-tab-border");
       }
       if (variant === "default" && state === "active") {
         required.push("tabs/default-tab-background-active");

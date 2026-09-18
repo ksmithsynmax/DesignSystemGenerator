@@ -1,3 +1,16 @@
+// Perceived luminance of a #RRGGBB(AA) color; >0.6 reads as a light surface, so
+// the muted stage label flips to a dark tone for contrast.
+function isLightSurface(hex) {
+  if (typeof hex !== "string") return false;
+  const m = hex.trim().replace(/^#/, "");
+  if (m.length < 6) return false;
+  const r = parseInt(m.slice(0, 2), 16);
+  const g = parseInt(m.slice(2, 4), 16);
+  const b = parseInt(m.slice(4, 6), 16);
+  if (Number.isNaN(r) || Number.isNaN(g) || Number.isNaN(b)) return false;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) / 255 > 0.6;
+}
+
 export default function PreviewStage({
   children,
   label,
@@ -11,11 +24,25 @@ export default function PreviewStage({
   const previewBrand =
     typeof window !== "undefined" ? String(window.__DSG_PREVIEW_BRAND || "").toLowerCase() : "";
 
-  // Temporary preview-only brand backgrounds until true light/dark token sets are ready.
+  // Follow the active brand's `surface-primary` token (per theme), exposed by App
+  // on window.__DSG_PREVIEW_SURFACE, so any brand's canvas matches what it sets.
+  // Fall back to the legacy constants only if a token color isn't available.
+  const tokenSurface =
+    typeof window !== "undefined" ? window.__DSG_PREVIEW_SURFACE : null;
   const isTheia = previewBrand === "theia";
   const isHyperion = previewBrand === "hyperion";
-  const background = isTheia ? "#181926" : isHyperion ? "#F1F3F5" : previewTheme === "light" ? "#F1F3F5" : "#181926";
-  const labelColor = isTheia ? "#868E96" : isHyperion ? "#495057" : previewTheme === "light" ? "#495057" : "#868E96";
+  const fallbackBackground = isTheia
+    ? "#181926"
+    : isHyperion
+      ? "#F1F3F5"
+      : previewTheme === "light"
+        ? "#F1F3F5"
+        : "#181926";
+  const background =
+    typeof tokenSurface === "string" && tokenSurface.startsWith("#")
+      ? tokenSurface
+      : fallbackBackground;
+  const labelColor = isLightSurface(background) ? "#495057" : "#868E96";
 
   return (
     <div

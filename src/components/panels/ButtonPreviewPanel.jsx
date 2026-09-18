@@ -4,7 +4,7 @@ import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-const BUTTON_VARIANTS = ["filled", "outlined", "ghost"];
+const BUTTON_VARIANTS = ["filled", "outlined", "ghost", "light", "subtle", "default"];
 const BUTTON_COLORS = ["primary", "error"];
 const BUTTON_STATES = ["default", "hover", "focus", "pressed", "disabled"];
 const ON_OFF_OPTIONS = ["off", "on"];
@@ -13,6 +13,9 @@ const BUTTON_VARIANT_LABELS = {
   filled: "filled",
   outlined: "outlined",
   ghost: "transparent",
+  light: "light",
+  subtle: "subtle",
+  default: "default",
 };
 
 function buttonVariantLabel(value) {

@@ -207,7 +207,7 @@ import { buildComponentDocsExport } from "./utils/buildComponentDocsExport";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
 
 const VARIANTS_BY_COMPONENT = {
-  button: ["filled", "outlined", "ghost"],
+  button: ["filled", "outlined", "ghost", "light", "subtle", "default"],
   actionicon: ["default", "filled", "light", "outlined", "transparent"],
   tabs: ["default", "outlined", "pills"],
   accordion: ["default", "contained", "filled"],
@@ -708,6 +708,13 @@ export default function App() {
   // cross-tab storage event that produces an identical-content-but-new-object
   // brands can't ping-pong writes between tabs forever (the OOM-crash bug).
   const lastPersistedSignatureRef = useRef(null);
+  // The savedAt timestamp of the newest state THIS tab knows about (whatever we
+  // last wrote, plus anything newer we've adopted from another tab). This is the
+  // clock that makes cross-tab sync a true last-write-wins: an incoming snapshot
+  // is only adopted when it is strictly newer. Without it, a stale background
+  // tab (or a slow disk read / persistence echo) could push its OLD content over
+  // the value you just edited, snapping the token back to a previous value.
+  const lastPersistedSavedAtRef = useRef(Number(initialLocalRef.current?.savedAt || 0));
   // Always-current brands snapshot for reads inside stable ([]-deps) event
   // handlers (e.g. the cross-tab storage listener) without re-subscribing.
   const brandsRef = useRef(brands);
@@ -732,6 +739,16 @@ export default function App() {
   if (typeof window !== "undefined") {
     window.__DSG_PREVIEW_THEME = previewTheme;
     window.__DSG_PREVIEW_BRAND = activeBrand;
+    // Drives the shared PreviewStage background from the active brand's real
+    // `surface-primary` token for the current theme, so every brand's canvas
+    // reflects what they set (replaces the old hardcoded theia/hyperion values).
+    window.__DSG_PREVIEW_SURFACE = resolveColor(
+      brands,
+      activeBrand,
+      "surface-primary",
+      previewTheme,
+      null
+    );
   }
   const [storybookLoading, setStorybookLoading] = useState(false);
   const [storybookError, setStorybookError] = useState(null);
@@ -1994,6 +2011,9 @@ export default function App() {
     const stateObj = { brands, activeBrand, previewTheme, savedAt: Date.now() };
     const payload = JSON.stringify(stateObj);
     lastPersistedSignatureRef.current = signature;
+    // Advance our last-write clock so a cross-tab write with an older (or equal)
+    // timestamp can't revert what we just saved.
+    lastPersistedSavedAtRef.current = stateObj.savedAt;
     try {
       window.localStorage.setItem(APP_STORAGE_KEY, payload);
       // Verify the write actually landed; some browsers (private mode, blocked
@@ -2029,11 +2049,18 @@ export default function App() {
         const res = await fetch(`${RELAY_HTTP}/api/brands`);
         const data = res.ok ? await res.json() : null;
         if (!cancelled && data && !data.missing && data.brands && typeof data.brands === "object") {
-          const localAt = initialLocalRef.current.savedAt;
           const localHasBrands = initialLocalRef.current.hasBrands;
           const diskAt = Number(data.savedAt || 0);
+          // Compare against the LIVE clock, not just the mount-time snapshot, so
+          // an edit made in the moments before this (async) disk read resolves
+          // isn't reverted by an older on-disk snapshot.
+          const localAt = lastPersistedSavedAtRef.current;
           if (!localHasBrands || diskAt >= localAt) {
             adopted = true;
+            lastPersistedSavedAtRef.current = Math.max(
+              lastPersistedSavedAtRef.current,
+              diskAt
+            );
             setBrands(enforceTextDefaultMappings(mergeRecoveredBrands(data.brands)));
             if (data.activeBrand) setActiveBrand(data.activeBrand);
             if (data.previewTheme === "light" || data.previewTheme === "dark") {
@@ -2072,6 +2099,15 @@ export default function App() {
       try {
         const parsed = JSON.parse(e.newValue);
         if (parsed && parsed.brands && typeof parsed.brands === "object") {
+          // Last-write-wins: never adopt a snapshot that is OLDER than (or the
+          // same age as) the newest state we already know about. A stale
+          // background tab re-saving its old content is exactly what made a
+          // freshly-edited token value flicker back to a previous value — this
+          // guard drops that stale write instead of letting it clobber our edit.
+          const incomingSavedAt = Number(parsed.savedAt || 0);
+          if (incomingSavedAt && incomingSavedAt <= lastPersistedSavedAtRef.current) {
+            return;
+          }
           const nextBrands = enforceTextDefaultMappings(mergeRecoveredBrands(parsed.brands));
           // Only adopt when the CONTENT actually differs from ours. A cross-tab
           // write with identical brands must not setBrands — that new object
@@ -2084,6 +2120,9 @@ export default function App() {
           } catch (_cmpErr) {
             same = false;
           }
+          // Adopt the newer clock regardless, so an identical-content write from
+          // another tab doesn't keep re-passing this guard on every event.
+          if (incomingSavedAt) lastPersistedSavedAtRef.current = incomingSavedAt;
           if (!same) setBrands(nextBrands);
         }
       } catch (_err) {
@@ -2137,7 +2176,7 @@ export default function App() {
     if (["button", "actionicon", "tabs", "accordion", "checkbox", "chip", "badge", "alert", "radio", "textinput", "dateinput", "timeinput", "select", "multiselect", "card", "modal"].includes(activeComponent)) {
       const variantSegment = parts[1];
       const knownVariants = {
-        button: ["filled", "outlined", "ghost"],
+        button: ["filled", "outlined", "ghost", "light", "subtle", "default"],
         actionicon: ["default", "filled", "light", "outlined", "transparent"],
         tabs: ["default", "outlined", "pills"],
         accordion: ["default", "contained", "filled"],
@@ -2643,7 +2682,7 @@ export default function App() {
     }
 
     const variantsByComponent = {
-      button: ["filled", "outlined", "ghost"],
+      button: ["filled", "outlined", "ghost", "light", "subtle", "default"],
       actionicon: ["default", "filled", "light", "outlined", "transparent"],
       tabs: ["default", "outlined", "pills"],
       accordion: ["default", "contained", "filled"],
@@ -2896,7 +2935,7 @@ export default function App() {
     }
     const variantSegment = parts[1];
     const variantsByComponent = {
-      button: ["filled", "outlined", "ghost"],
+      button: ["filled", "outlined", "ghost", "light", "subtle", "default"],
       actionicon: ["default", "filled", "light", "outlined", "transparent"],
       tabs: ["default", "outlined", "pills"],
       checkbox: ["filled", "outlined"],

@@ -78,7 +78,7 @@ export default function TabsPreview({
   const listBg = getColor(brands, brandId, `${prefix}-list-background`, tokens);
   const listBorder = getColor(brands, brandId, `${prefix}-list-border`, tokens);
   const listBorderDisabled = getColor(brands, brandId, `${prefix}-list-border-disabled`, tokens);
-  const tabBg = isDefaultVariant ? "transparent" : getColor(brands, brandId, `${prefix}-tab-background`, tokens);
+  const tabBg = getColor(brands, brandId, `${prefix}-tab-background`, tokens);
   const tabBgHover = isDefaultVariant ? "transparent" : getColor(brands, brandId, `${prefix}-tab-background-hover`, tokens);
   const tabBgActive = getColor(brands, brandId, `${prefix}-tab-background-active`, tokens);
   const tabBgDisabled = isDefaultVariant ? "transparent" : getColor(brands, brandId, `${prefix}-tab-background-disabled`, tokens);
@@ -86,7 +86,7 @@ export default function TabsPreview({
   const tabTextHover = getColor(brands, brandId, `${prefix}-tab-text-hover`, tokens);
   const tabTextActive = getColor(brands, brandId, `${prefix}-tab-text-active`, tokens);
   const tabTextDisabled = getColor(brands, brandId, `${prefix}-tab-text-disabled`, tokens);
-  const tabBorder = isDefaultVariant ? listBorder : getColor(brands, brandId, `${prefix}-tab-border`, tokens);
+  const tabBorder = getColor(brands, brandId, `${prefix}-tab-border`, tokens);
   const tabBorderHover = getColor(brands, brandId, `${prefix}-tab-border-hover`, tokens);
   const tabBorderActive = getColor(brands, brandId, `${prefix}-tab-border-active`, tokens);
   const tabBorderDisabled = getColor(brands, brandId, `${prefix}-tab-border-disabled`, tokens);

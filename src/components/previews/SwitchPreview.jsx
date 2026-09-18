@@ -81,6 +81,18 @@ export default function SwitchPreview({
   const height = resolveDimension(brands, brandId, "switch-height", size);
   const thumbSize = resolveDimension(brands, brandId, "switch-thumb-size", size);
   const borderRadius = resolveDimension(brands, brandId, "switch-border-radius", size);
+
+  // Off-state horizontal inset of the thumb. Mantine drives this via
+  // --switch-track-label-padding, which we DON'T normally override — so it stays
+  // at Mantine's default (~2.5-3px) while the vertical gap is only
+  // (height - 2*border - thumbSize)/2. That mismatch made the track show more
+  // space on the left of the thumb than above/below (the "extra border on the
+  // left" bug). Match the horizontal inset to the vertical gap so spacing is
+  // even on all four sides in both the on and off positions.
+  const thumbSpacing = Math.max(
+    0,
+    (Number(height) - 2 * trackBorderWidth - Number(thumbSize)) / 2
+  );
   const labelFontSize = resolveDimension(brands, brandId, "switch-label-font-size", size);
   const labelFontFamily = resolveDimension(brands, brandId, "switch-label-font-family");
   const labelFontWeight = resolveDimension(brands, brandId, "switch-label-font-weight");
@@ -101,6 +113,7 @@ export default function SwitchPreview({
           "--switch-height": `${height}px`,
           "--switch-thumb-size": `${thumbSize}px`,
           "--switch-radius": `${borderRadius}px`,
+          "--switch-track-label-padding": `${thumbSpacing}px`,
           "--switch-thumb-bg": thumbBg,
           "--switch-disabled-color": checked ? checkedDisabledBg : uncheckedDisabledBg,
           "--switch-thumb-icon": "none",
