@@ -52,7 +52,6 @@ export default {
     selectionMode: { control: "inline-radio", options: ["single", "multi"] },
     size: { control: "select", options: ["xs", "sm", "md", "lg", "xl"] },
     radius: { control: "select", options: ["xs", "sm", "md", "lg", "xl"] },
-    slotLayout: { control: "select", options: ["custom", "vessel", "user", "simple"] },
     showLabel: { control: "boolean" },
     labelText: { control: "text" },
     withAsterisk: { control: "boolean" },
@@ -66,7 +65,6 @@ export default {
     selectionMode: "multi",
     size: "sm",
     radius: "sm",
-    slotLayout: "custom",
     showLabel: true,
     labelText: "Label",
     withAsterisk: false,
@@ -92,12 +90,8 @@ export default {
 };
 
 export const List = { args: { variant: "list" } };
-// Grid starts as an empty, token-styled slot — the dev drops any layout in.
-export const GridEmptySlot = { args: { variant: "grid", slotLayout: "custom" } };
+// Grid is an empty, token-styled slot — the dev drops any component in each row.
+export const GridEmptySlot = { args: { variant: "grid" } };
 export const GridSingleSelect = { args: { variant: "grid", selectionMode: "single" } };
-// Example slot contents — same container tokens, different (consumer-owned) layout.
-export const GridExampleVessel = { args: { variant: "grid", slotLayout: "vessel" } };
-export const GridExampleUser = { args: { variant: "grid", slotLayout: "user" } };
-export const GridExampleSimple = { args: { variant: "grid", slotLayout: "simple" } };
 export const WithError = { args: { showError: true, errorText: "This field is required" } };
 export const Disabled = { args: { disabled: true } };

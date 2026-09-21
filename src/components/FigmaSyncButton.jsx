@@ -142,6 +142,7 @@ const BUILDABLE_COMPONENTS = [
   "timeinput",
   "select",
   "multiselect",
+  "combobox",
   "card",
   "actionicon",
   "tabs",

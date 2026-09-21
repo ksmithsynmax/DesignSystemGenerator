@@ -2908,6 +2908,8 @@ export const COMPONENT_TOKENS = {
     "combobox-pill-remove-icon-stroke-width": { type: "FLOAT", unit: "px", sizes: { default: 2, xs: 1.5, sm: 1.75, md: 2, lg: 2.25, xl: 2.5 }, figmaPath: "combobox/pill-remove-icon-stroke-width" },
 
     // ── GRID-VARIANT-ONLY FLOAT TOKENS (row container structure only) ──
+    // These pad/space the example preset rows in the generator PREVIEW. The Figma
+    // export uses pure edge-to-edge slots and doesn't bind these.
     "combobox-grid-row-padding-x": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "combobox/grid-row-padding-x" },
     "combobox-grid-row-padding-y": { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8,  sm: 10, md: 12, lg: 14, xl: 16 }, figmaPath: "combobox/grid-row-padding-y" },
     "combobox-grid-column-gap":    { type: "FLOAT", unit: "px", sizes: { default: 12, xs: 8,  sm: 10, md: 12, lg: 16, xl: 20 }, figmaPath: "combobox/grid-column-gap" },

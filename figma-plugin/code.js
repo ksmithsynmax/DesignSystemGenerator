@@ -1139,7 +1139,7 @@ function resolveManagedComponentKeyFromName(name) {
     "chartarea",
     "chart",
     "avatar",
-    "pill", "badge", "textinput", "dateinput", "timeinput", "multiselect", "select", "card", "actionicon",
+    "pill", "badge", "textinput", "dateinput", "timeinput", "multiselect", "combobox", "select", "card", "actionicon",
     "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image",
     "skeleton",
     "calendar",
@@ -1532,6 +1532,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   var multiSelectSet = await buildSet("MultiSelect", function () {
     return buildMultiSelectComponentSet(varMap, page, font);
   });
+  var comboboxSet = await buildSet("Combobox", function () {
+    return buildComboboxComponentSet(varMap, page, font);
+  });
   var cardSet = await buildSet("Card", function () {
     return buildCardComponentSet(varMap, page, font, { compact: true });
   });
@@ -1666,6 +1669,7 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     timeInputSet,
     selectSet,
     multiSelectSet,
+    comboboxSet,
     cardSet,
     actionIconSet,
     tabsItemSet,
@@ -2793,6 +2797,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       if (variant === "subtle") return "Transparent until interacted with; a quiet action that surfaces a light tint on hover.";
       if (variant === "default") return "Neutral bordered button for standard, non-branded actions where color emphasis isn't needed.";
     }
+    if (comp === "combobox") {
+      if (variant === "list") return "Simple text option rows";
+      if (variant === "grid") return "A slot row — the design system styles the row container and selection; the consumer renders any component inside each row";
+    }
     if (comp === "badge") {
       if (variant === "filled") {
         return "Filled emphasis for labels and counts. Default, success, warning, and error colors set semantic tone.";
@@ -3806,7 +3814,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
         // Select / MultiSelect document the open dropdown menu in addition to
         // the (closed) state row, so the spec shows what the open menu looks like.
-        if (lowerSetName === "select" || lowerSetName === "multiselect") {
+        if (lowerSetName === "select" || lowerSetName === "multiselect" || lowerSetName === "combobox") {
           var selectTplDropdownKey = getPropKey(variantProps, "Dropdown");
           if (selectTplDropdownKey) {
             var selectTplDropdownValues = pickOrdered(getPropValues(variantProps, "Dropdown"), ["Closed", "Open"]);
@@ -4493,7 +4501,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
     // Select / MultiSelect document the open dropdown menu in addition to states.
     var selectDropdownSlot = null;
-    if ((lowerSetName === "select" || lowerSetName === "multiselect" || lowerSetName === "dateinput" || lowerSetName === "timeinput") && getPropKey(variantProps, "Dropdown")) {
+    if ((lowerSetName === "select" || lowerSetName === "multiselect" || lowerSetName === "combobox" || lowerSetName === "dateinput" || lowerSetName === "timeinput") && getPropKey(variantProps, "Dropdown")) {
       var selectDocDropdownValues = pickOrdered(getPropValues(variantProps, "Dropdown"), ["Closed", "Open"]);
       var selectDocHasOpen = false;
       for (var sddi = 0; sddi < selectDocDropdownValues.length; sddi++) {
@@ -26327,6 +26335,923 @@ async function buildMultiSelectComponentSet(varMap, page, font) {
   var multiSelectComponentSet = figma.combineAsVariants(components, page);
   multiSelectComponentSet.name = "MultiSelect";
   return multiSelectComponentSet;
+}
+
+// ---------------------------------------------------------------------------
+// Combobox
+// ---------------------------------------------------------------------------
+// Near-copy of buildMultiSelectComponentSet, with two key differences:
+//   1. Color tokens are SHARED (no variant prefix) — bound via cbColorPath.
+//   2. The Variant axis is List / Grid, and the OPEN dropdown is the only place
+//      the two variants differ. List = check-icon + text option rows (like
+//      MultiSelect). Grid = pure, empty dev-owned slot rows (row container is
+//      tokenized; the consumer renders any component inside each row).
+async function buildComboboxComponentSet(varMap, page, font) {
+  function createComboboxSwapRefs(iconComp) {
+    var refs = [];
+    if (!iconComp) return refs;
+    try {
+      var mainComp = iconComp.mainComponent || iconComp;
+      if (mainComp && mainComp.key) refs.push(mainComp.key);
+    } catch (_err) {}
+    if (iconComp.key) refs.push(iconComp.key);
+    if (iconComp.id) refs.push(iconComp.id);
+    return refs;
+  }
+
+  function cbColorPath(property, state) {
+    if (state === "default") return "combobox/" + property;
+    return "combobox/" + property + "-" + state;
+  }
+
+  var variants = ["list", "grid"];
+  var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
+  var radii = ["default", "xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "error", "disabled"];
+  var dropdownModes = ["closed", "open"];
+  var labelModes = ["none", "label", "required"];
+  var pillLabels = ["Option one"];
+  var optionLabels = ["Option one", "Option two", "Option three"];
+  var selectedOptionIndices = { 0: true };
+  var hoverOptionIndex = 2;
+  var components = [];
+
+  var chevronIconComp = await findSelectChevronIconComponent();
+  if (chevronIconComp) {
+    progress("[Combobox] Right icon source: " + chevronIconComp.name);
+  } else {
+    progress("[Combobox] Warning: no icon component found, using vector fallback");
+  }
+
+  var checkIconComp = await findCheckIconComponent();
+  if (checkIconComp) {
+    progress("[Combobox] Selected-option check icon source: " + checkIconComp.name);
+  } else {
+    progress("[Combobox] No check icon component found; selected options use a vector checkmark fallback.");
+  }
+
+  var pillRemoveIconComp = await findPillRemoveIconComponent();
+  if (pillRemoveIconComp) {
+    progress("[Combobox] Pill remove icon source: " + pillRemoveIconComp.name);
+  } else {
+    progress("[Combobox] No close icon component found; pill remove uses a text fallback.");
+  }
+
+  var sizeHeights = { default: 36, xs: 30, sm: 36, md: 42, lg: 50, xl: 60 };
+  var gap = 20;
+  var colWidth = 220;
+  var rowHeight = 220;
+
+  function stateDropdownRow(state, dropdownMode) {
+    if (state === "default") return dropdownMode === "open" ? 1 : 0;
+    if (state === "hover") return dropdownMode === "open" ? 3 : 2;
+    if (state === "focus") return dropdownMode === "open" ? 5 : 4;
+    if (state === "error") return 6;
+    if (state === "disabled") return 7;
+    return 0;
+  }
+
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
+    var isDefaultVariant = false;
+
+    for (var li = 0; li < labelModes.length; li++) {
+      var labelMode = labelModes[li];
+      var capLabelMode = labelMode.charAt(0).toUpperCase() + labelMode.slice(1);
+      var hasLabel = (labelMode !== "none");
+      var hasAsterisk = (labelMode === "required");
+
+      for (var si = 0; si < sizes.length; si++) {
+        var size = sizes[si];
+        var capSize = size === "default" ? "Default" : size.toUpperCase();
+
+        for (var ri = 0; ri < radii.length; ri++) {
+          var rad = radii[ri];
+          var capRad = rad === "default" ? "Default" : rad.toUpperCase();
+          var effectiveRad = isDefaultVariant ? "default" : rad;
+
+          for (var sti = 0; sti < states.length; sti++) {
+            var state = states[sti];
+            var capState = state.charAt(0).toUpperCase() + state.slice(1);
+
+            for (var dmi = 0; dmi < dropdownModes.length; dmi++) {
+              var dropdownMode = dropdownModes[dmi];
+              if ((state === "disabled" || state === "error") && dropdownMode === "open") continue;
+              var capDropdown = dropdownMode === "open" ? "Open" : "Closed";
+
+              var comp = figma.createComponent();
+              comp.name =
+                "Variant=" + capVariant +
+                ", Size=" + capSize +
+                ", Radius=" + capRad +
+                ", State=" + capState +
+                ", Label=" + capLabelMode +
+                ", Dropdown=" + capDropdown;
+              comp.layoutMode = "VERTICAL";
+              comp.primaryAxisSizingMode = "AUTO";
+              comp.counterAxisSizingMode = "AUTO";
+              comp.itemSpacing = 4;
+              comp.fills = [];
+
+              var labelGapVar =
+                varMap["combobox/label-gap-" + size] ||
+                varMap["combobox/label-gap-default"] ||
+                varMap["combobox/label-gap"];
+              if (labelGapVar) bindVar(comp, "itemSpacing", labelGapVar);
+
+              if (hasLabel) {
+                var labelRow = figma.createFrame();
+                labelRow.name = "LabelRow";
+                labelRow.layoutMode = "HORIZONTAL";
+                labelRow.primaryAxisSizingMode = "AUTO";
+                labelRow.counterAxisSizingMode = "AUTO";
+                labelRow.itemSpacing = 2;
+                labelRow.fills = [];
+
+                var labelNode = figma.createText();
+                labelNode.name = "Label";
+                labelNode.fontName = font;
+                labelNode.characters = "Label";
+                labelNode.fontSize = 14;
+                labelNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                var comboboxLabelColorVar =
+                  (state === "disabled" && varMap["combobox/label-disabled"]) ||
+                  varMap["combobox/label-color"];
+                if (comboboxLabelColorVar) {
+                  bindPaintVar(labelNode, "fills", 0, comboboxLabelColorVar);
+                }
+                var labelFontSizeVar =
+                  varMap["combobox/label-font-size-" + size] ||
+                  varMap["combobox/label-font-size-default"] ||
+                  varMap["combobox/label-font-size"];
+                if (labelFontSizeVar) {
+                  bindVar(labelNode, "fontSize", labelFontSizeVar);
+                  bindVar(labelNode, "fontFamily", varMap["combobox/label-font-family"]);
+                  bindVar(labelNode, "fontStyle", varMap["combobox/label-font-weight"]);
+                  bindVar(labelNode, "lineHeight", varMap["combobox/label-line-height"]);
+                }
+                labelRow.appendChild(labelNode);
+
+                if (hasAsterisk) {
+                  var asteriskNode = figma.createText();
+                  asteriskNode.name = "Asterisk";
+                  asteriskNode.fontName = font;
+                  asteriskNode.characters = " *";
+                  asteriskNode.fontSize = 14;
+                  asteriskNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+                  if (varMap["combobox/asterisk-color"]) {
+                    bindPaintVar(asteriskNode, "fills", 0, varMap["combobox/asterisk-color"]);
+                  }
+                  if (labelFontSizeVar) {
+                    bindVar(asteriskNode, "fontSize", labelFontSizeVar);
+                    bindVar(asteriskNode, "fontFamily", varMap["combobox/label-font-family"]);
+                    bindVar(asteriskNode, "fontStyle", varMap["combobox/label-font-weight"]);
+                    bindVar(asteriskNode, "lineHeight", varMap["combobox/label-line-height"]);
+                  }
+                  labelRow.appendChild(asteriskNode);
+                }
+                comp.appendChild(labelRow);
+              }
+
+              var input = figma.createFrame();
+              input.name = "ComboboxInput";
+              input.layoutMode = "HORIZONTAL";
+              input.primaryAxisSizingMode = "FIXED";
+              input.counterAxisSizingMode = "AUTO";
+              input.primaryAxisAlignItems = "SPACE_BETWEEN";
+              input.counterAxisAlignItems = "CENTER";
+              input.resize(colWidth, sizeHeights[size] || 36);
+              input.cornerRadius = 4;
+              input.paddingLeft = 10;
+              input.paddingRight = 10;
+              input.paddingTop = 8;
+              input.paddingBottom = 8;
+              input.itemSpacing = 8;
+              input.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+              input.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+              input.strokeWeight = 1;
+              input.strokeAlign = "INSIDE";
+
+              var paddingXVar =
+                varMap["combobox/padding-x-" + size] ||
+                varMap["combobox/padding-x-default"] ||
+                varMap["combobox/padding-x"];
+              var paddingYVar =
+                varMap["combobox/padding-y-" + size] ||
+                varMap["combobox/padding-y-default"] ||
+                varMap["combobox/padding-y"];
+              var sectionSizeVar =
+                varMap["combobox/icon-size-" + size] ||
+                varMap["combobox/icon-size-default"] ||
+                varMap["combobox/icon-size"];
+              if (paddingXVar) {
+                bindVar(input, "paddingLeft", paddingXVar);
+                bindVar(input, "paddingRight", paddingXVar);
+              }
+              if (paddingYVar) {
+                bindVar(input, "paddingTop", paddingYVar);
+                bindVar(input, "paddingBottom", paddingYVar);
+              }
+              if (varMap["combobox/radius-" + effectiveRad]) {
+                bindVar(input, "topLeftRadius", varMap["combobox/radius-" + effectiveRad]);
+                bindVar(input, "topRightRadius", varMap["combobox/radius-" + effectiveRad]);
+                bindVar(input, "bottomLeftRadius", varMap["combobox/radius-" + effectiveRad]);
+                bindVar(input, "bottomRightRadius", varMap["combobox/radius-" + effectiveRad]);
+              }
+              if (varMap["combobox/border-width"]) bindVar(input, "strokeWeight", varMap["combobox/border-width"]);
+
+              var bgPath = cbColorPath("background", state);
+              if (varMap[bgPath]) bindPaintVar(input, "fills", 0, varMap[bgPath]);
+              var borderPath = cbColorPath("border", state);
+              if (varMap[borderPath]) bindPaintVar(input, "strokes", 0, varMap[borderPath]);
+
+              var fontFamilyVar = selectVarWithFallback(varMap, [
+                "combobox/font-family",
+                "combobox/font-family-default",
+              ]);
+              var fontWeightVar = selectVarWithFallback(varMap, [
+                "combobox/font-weight",
+                "combobox/font-weight-default",
+              ]);
+              var lineHeightVar =
+                varMap["combobox/line-height-" + size] ||
+                varMap["combobox/line-height-default"] ||
+                varMap["combobox/line-height"];
+              var pillFontSizeVar =
+                varMap["combobox/pill-font-size-" + size] ||
+                varMap["combobox/pill-font-size-default"] ||
+                varMap["combobox/pill-font-size"];
+              var pillGapVar =
+                varMap["combobox/pill-gap-" + size] ||
+                varMap["combobox/pill-gap-default"] ||
+                varMap["combobox/pill-gap"];
+              var pillRadiusVar =
+                varMap["combobox/pill-radius-" + effectiveRad] ||
+                varMap["combobox/pill-radius-default"] ||
+                varMap["combobox/pill-radius"];
+              var basePillBackgroundVar = varMap["combobox/pill-background"];
+              var pillBackgroundVar = state === "disabled"
+                ? (varMap["combobox/pill-background-disabled"] || basePillBackgroundVar)
+                : state === "error"
+                  ? (varMap["combobox/pill-background-error"] || basePillBackgroundVar)
+                  : basePillBackgroundVar;
+              var pillTextVar = state === "disabled"
+                ? (varMap["combobox/pill-text-disabled"] || varMap["combobox/pill-text"])
+                : state === "error"
+                  ? (varMap["combobox/pill-text-error"] || varMap["combobox/pill-text"])
+                  : varMap["combobox/pill-text"];
+              var pillRemoveIconVar = state === "disabled"
+                ? (varMap["combobox/pill-remove-icon-disabled"] || varMap["combobox/pill-remove-icon"])
+                : state === "error"
+                  ? (varMap["combobox/pill-remove-icon-error"] || varMap["combobox/pill-remove-icon"])
+                  : varMap["combobox/pill-remove-icon"];
+
+              // Selected-value pills shown in the trigger.
+              var pillsFrame = figma.createFrame();
+              pillsFrame.name = "Pills";
+              pillsFrame.layoutMode = "HORIZONTAL";
+              pillsFrame.primaryAxisSizingMode = "AUTO";
+              pillsFrame.counterAxisSizingMode = "AUTO";
+              pillsFrame.counterAxisAlignItems = "CENTER";
+              pillsFrame.itemSpacing = 4;
+              pillsFrame.fills = [];
+              if (pillGapVar) bindVar(pillsFrame, "itemSpacing", pillGapVar);
+
+              for (var pli = 0; pli < pillLabels.length; pli++) {
+                var pill = figma.createFrame();
+                pill.name = "Pill/" + pillLabels[pli];
+                pill.layoutMode = "HORIZONTAL";
+                pill.primaryAxisSizingMode = "AUTO";
+                pill.counterAxisSizingMode = "AUTO";
+                pill.counterAxisAlignItems = "CENTER";
+                pill.itemSpacing = 4;
+                pill.paddingLeft = 6;
+                pill.paddingRight = 6;
+                pill.paddingTop = 3;
+                pill.paddingBottom = 3;
+                pill.cornerRadius = 4;
+                pill.fills = [{ type: "SOLID", color: { r: 0.9, g: 0.9, b: 0.92 } }];
+                if (pillBackgroundVar) bindPaintVar(pill, "fills", 0, pillBackgroundVar);
+                if (pillRadiusVar) {
+                  bindVar(pill, "topLeftRadius", pillRadiusVar);
+                  bindVar(pill, "topRightRadius", pillRadiusVar);
+                  bindVar(pill, "bottomLeftRadius", pillRadiusVar);
+                  bindVar(pill, "bottomRightRadius", pillRadiusVar);
+                }
+
+                var pillTextNode = figma.createText();
+                pillTextNode.name = "Label";
+                pillTextNode.fontName = font;
+                pillTextNode.characters = pillLabels[pli];
+                pillTextNode.fontSize = 12;
+                pillTextNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+                if (pillTextVar) bindPaintVar(pillTextNode, "fills", 0, pillTextVar);
+                if (pillFontSizeVar) {
+                  bindVar(pillTextNode, "fontSize", pillFontSizeVar);
+                  if (fontFamilyVar) bindVar(pillTextNode, "fontFamily", fontFamilyVar);
+                  if (fontWeightVar) bindVar(pillTextNode, "fontStyle", fontWeightVar);
+                }
+                pill.appendChild(pillTextNode);
+
+                if (pillRemoveIconComp) {
+                  var pillRemoveInst = pillRemoveIconComp.createInstance();
+                  pillRemoveInst.name = "Remove";
+                  try { pillRemoveInst.resizeWithoutConstraints(12, 12); } catch (e) {}
+                  // Center-aligned pill auto-layout keeps a fixed-size icon
+                  // vertically centered (the text glyph rode high off baseline).
+                  try { pillRemoveInst.layoutGrow = 0; } catch (_cbPillGrowErr) {}
+                  try { pillRemoveInst.layoutAlign = "INHERIT"; } catch (_cbPillAlignErr) {}
+                  var pillRemoveVectors = pillRemoveInst.findAll(function (n) {
+                    return (
+                      n.type === "VECTOR" ||
+                      n.type === "LINE" ||
+                      n.type === "ELLIPSE" ||
+                      n.type === "RECTANGLE" ||
+                      n.type === "POLYGON" ||
+                      n.type === "STAR"
+                    );
+                  });
+                  var pillRemoveStrokeVar =
+                    varMap["combobox/pill-remove-icon-stroke-width-" + size] ||
+                    varMap["combobox/pill-remove-icon-stroke-width-default"] ||
+                    varMap["combobox/pill-remove-icon-stroke-width"];
+                  for (var prvi = 0; prvi < pillRemoveVectors.length; prvi++) {
+                    if (pillRemoveStrokeVar) bindVar(pillRemoveVectors[prvi], "strokeWeight", pillRemoveStrokeVar);
+                    if (pillRemoveVectors[prvi].strokes && pillRemoveVectors[prvi].strokes.length > 0 && pillRemoveIconVar) {
+                      bindPaintVar(pillRemoveVectors[prvi], "strokes", 0, pillRemoveIconVar);
+                    }
+                    if (pillRemoveVectors[prvi].fills && pillRemoveVectors[prvi].fills.length > 0 && pillRemoveIconVar) {
+                      bindPaintVar(pillRemoveVectors[prvi], "fills", 0, pillRemoveIconVar);
+                    }
+                  }
+                  pill.appendChild(pillRemoveInst);
+
+                  if (typeof comp.addComponentProperty === "function") {
+                    var pillRemoveSwapRefs = createComboboxSwapRefs(pillRemoveIconComp);
+                    var pillRemoveSwapProp = null;
+                    for (var prsi = 0; prsi < pillRemoveSwapRefs.length; prsi++) {
+                      try {
+                        pillRemoveSwapProp = comp.addComponentProperty("Pill Remove Icon", "INSTANCE_SWAP", pillRemoveSwapRefs[prsi]);
+                        break;
+                      } catch (ePillSwap) {}
+                    }
+                    if (pillRemoveSwapProp) {
+                      try { pillRemoveInst.componentPropertyReferences = { mainComponent: pillRemoveSwapProp }; } catch (_cbPillSwapRefErr) {}
+                    }
+                  }
+                } else {
+                  var pillRemoveNode = figma.createText();
+                  pillRemoveNode.name = "Remove";
+                  pillRemoveNode.fontName = font;
+                  pillRemoveNode.characters = "\u00d7";
+                  pillRemoveNode.fontSize = 12;
+                  pillRemoveNode.fills = [{ type: "SOLID", color: { r: 0.6, g: 0.6, b: 0.6 } }];
+                  if (pillRemoveIconVar) bindPaintVar(pillRemoveNode, "fills", 0, pillRemoveIconVar);
+                  if (pillFontSizeVar) bindVar(pillRemoveNode, "fontSize", pillFontSizeVar);
+                  pill.appendChild(pillRemoveNode);
+                }
+
+                pillsFrame.appendChild(pill);
+              }
+
+              input.appendChild(pillsFrame);
+
+              var chevronSlot = figma.createFrame();
+              chevronSlot.name = "ChevronSlot";
+              chevronSlot.layoutMode = "HORIZONTAL";
+              chevronSlot.primaryAxisSizingMode = "AUTO";
+              chevronSlot.counterAxisSizingMode = "AUTO";
+              chevronSlot.primaryAxisAlignItems = "CENTER";
+              chevronSlot.counterAxisAlignItems = "CENTER";
+              chevronSlot.fills = [];
+              chevronSlot.strokes = [];
+              input.appendChild(chevronSlot);
+
+              var iconPaintVar =
+                state === "disabled" && varMap["combobox/icon-disabled"]
+                  ? varMap["combobox/icon-disabled"]
+                  : state === "error" && varMap["combobox/icon-error"]
+                    ? varMap["combobox/icon-error"]
+                    : varMap["combobox/icon"];
+              var iconStrokeVar =
+                varMap["combobox/icon-stroke-width-" + size] ||
+                varMap["combobox/icon-stroke-width-default"] ||
+                varMap["combobox/icon-stroke-width"];
+
+              if (chevronIconComp) {
+                var chevronInstance = chevronIconComp.createInstance();
+                chevronInstance.name = "Chevron";
+                try { chevronInstance.resizeWithoutConstraints(12, 12); } catch (e) {}
+                if (sectionSizeVar) {
+                  bindVar(chevronInstance, "width", sectionSizeVar);
+                  bindVar(chevronInstance, "height", sectionSizeVar);
+                }
+                chevronSlot.appendChild(chevronInstance);
+                try { chevronInstance.layoutGrow = 0; } catch (_growErr) {}
+                try { chevronInstance.layoutAlign = "CENTER"; } catch (_alignErr) {}
+
+                if (typeof comp.addComponentProperty === "function") {
+                  var swapRefs = createComboboxSwapRefs(chevronIconComp);
+                  var swapProp = null;
+                  var swapErr = null;
+                  for (var ssri = 0; ssri < swapRefs.length; ssri++) {
+                    try {
+                      swapProp = comp.addComponentProperty("Chevron", "INSTANCE_SWAP", swapRefs[ssri]);
+                      break;
+                    } catch (eSwap) {
+                      swapErr = eSwap;
+                    }
+                  }
+                  if (swapProp) {
+                    try {
+                      chevronInstance.componentPropertyReferences = { mainComponent: swapProp };
+                    } catch (_swapRefErr) {}
+                  } else if (swapErr) {
+                    progress("[Combobox] Chevron INSTANCE_SWAP create failed: " + String(swapErr));
+                  }
+                }
+                if (iconPaintVar && typeof chevronInstance.findAll === "function") {
+                  var chevronVectors = chevronInstance.findAll(function (n) {
+                    return n.type === "VECTOR";
+                  });
+                  for (var cvi = 0; cvi < chevronVectors.length; cvi++) {
+                    try {
+                      if (iconStrokeVar) bindVar(chevronVectors[cvi], "strokeWeight", iconStrokeVar);
+                      if (chevronVectors[cvi].strokes && chevronVectors[cvi].strokes.length > 0) {
+                        bindPaintVar(chevronVectors[cvi], "strokes", 0, iconPaintVar);
+                      }
+                    } catch (_cv) {}
+                  }
+                }
+              } else {
+                var chevronVector = figma.createVector();
+                chevronVector.name = "Chevron";
+                chevronVector.vectorPaths = [{ windingRule: "NONZERO", data: "M 1 1 L 6 6 L 11 1" }];
+                chevronVector.resize(12, 6);
+                if (sectionSizeVar) {
+                  bindVar(chevronVector, "width", sectionSizeVar);
+                  bindVar(chevronVector, "height", sectionSizeVar);
+                }
+                chevronVector.fills = [];
+                chevronVector.strokes = [{ type: "SOLID", color: { r: 0.45, g: 0.45, b: 0.45 } }];
+                chevronVector.strokeWeight = 1.5;
+                if (iconStrokeVar) bindVar(chevronVector, "strokeWeight", iconStrokeVar);
+                chevronVector.strokeJoin = "ROUND";
+                chevronVector.strokeCap = "ROUND";
+                if (iconPaintVar) bindPaintVar(chevronVector, "strokes", 0, iconPaintVar);
+                chevronSlot.appendChild(chevronVector);
+              }
+
+              // No trailing spacer: the input uses SPACE_BETWEEN, so with exactly
+              // two children (pills + chevron slot) the chevron is pinned to the
+              // right edge. A third spacer child would push the chevron to the
+              // middle, which was the default-variant bug.
+
+              if (state === "focus") {
+                input.effects = [{
+                  type: "DROP_SHADOW",
+                  color: { r: 0.2, g: 0.53, b: 0.87, a: 0.25 },
+                  offset: { x: 0, y: 0 },
+                  radius: 0,
+                  spread: 3,
+                  visible: true,
+                  blendMode: "NORMAL"
+                }];
+              }
+
+              comp.appendChild(input);
+
+              if (dropdownMode === "open") {
+                var dropdown = figma.createFrame();
+                dropdown.name = "Dropdown";
+                dropdown.layoutMode = "VERTICAL";
+                dropdown.primaryAxisSizingMode = "AUTO";
+                dropdown.counterAxisSizingMode = "FIXED";
+                dropdown.counterAxisAlignItems = "MIN";
+                dropdown.itemSpacing = 0;
+                dropdown.paddingLeft = 8;
+                dropdown.paddingRight = 8;
+                dropdown.paddingTop = 8;
+                dropdown.paddingBottom = 8;
+                dropdown.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                dropdown.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+                dropdown.strokeWeight = 1;
+                dropdown.strokeAlign = "INSIDE";
+                dropdown.cornerRadius = 4;
+                dropdown.resize(colWidth, 1);
+                try { dropdown.layoutSizingVertical = "HUG"; } catch (_dropdownHugErr) {}
+                // GRID variant holds dev-owned data rows (e.g. wide vessel rows) that are
+                // often WIDER than the input. Let the dropdown HUG its content width so it
+                // GROWS to fit whatever row is dropped in, instead of clipping it to the
+                // input width. The LIST variant stays input-width (FIXED) like a normal
+                // option list.
+                if (variant === "grid") {
+                  try { dropdown.counterAxisSizingMode = "AUTO"; } catch (_dropdownGridWErr) {}
+                  // The dropdown now grows wider than the input to fit a dropped data row.
+                  // Make the input FILL the container width so it lines up with the wider
+                  // dropdown instead of sitting narrow at the top-left.
+                  try { input.layoutSizingHorizontal = "FILL"; } catch (_comboInputFillErr) {}
+                }
+                // The max-height + clip is only for the LIST variant (a long option
+                // list should scroll). The GRID variant holds dev-owned slots that must
+                // GROW freely to fit whatever is dropped in, so we never cap/clip it.
+                var dropdownMaxHeightVar = variant === "grid" ? null : varMap["combobox/dropdown-max-height"];
+                if (dropdownMaxHeightVar) {
+                  bindVar(dropdown, "maxHeight", dropdownMaxHeightVar);
+                  dropdown.clipsContent = true;
+                } else {
+                  try { dropdown.clipsContent = false; } catch (_dropdownClipErr) {}
+                }
+                var dropdownBackgroundVar = varMap["combobox/dropdown-background"];
+                var dropdownBorderVar = varMap["combobox/dropdown-border"];
+                if (dropdownBackgroundVar) bindPaintVar(dropdown, "fills", 0, dropdownBackgroundVar);
+                if (dropdownBorderVar) bindPaintVar(dropdown, "strokes", 0, dropdownBorderVar);
+                if (varMap["combobox/radius-" + effectiveRad]) {
+                  bindVar(dropdown, "topLeftRadius", varMap["combobox/radius-" + effectiveRad]);
+                  bindVar(dropdown, "topRightRadius", varMap["combobox/radius-" + effectiveRad]);
+                  bindVar(dropdown, "bottomLeftRadius", varMap["combobox/radius-" + effectiveRad]);
+                  bindVar(dropdown, "bottomRightRadius", varMap["combobox/radius-" + effectiveRad]);
+                }
+
+                var optionHeight = sizeHeights[size] || 36;
+
+                if (variant === "list") {
+                  // LIST variant: leading check-icon column + text label (mirrors MultiSelect).
+                  for (var oi = 0; oi < optionLabels.length; oi++) {
+                    var option = figma.createFrame();
+                    option.name = "Option/" + optionLabels[oi];
+                    option.layoutMode = "HORIZONTAL";
+                    option.primaryAxisSizingMode = "FIXED";
+                    option.counterAxisSizingMode = "FIXED";
+                    option.primaryAxisAlignItems = "MIN";
+                    option.counterAxisAlignItems = "CENTER";
+                    option.itemSpacing = 8;
+                    option.paddingLeft = 10;
+                    option.paddingRight = 10;
+                    option.cornerRadius = 4;
+                    if (paddingXVar) {
+                      bindVar(option, "paddingLeft", paddingXVar);
+                      bindVar(option, "paddingRight", paddingXVar);
+                    }
+                    if (paddingYVar) {
+                      bindVar(option, "paddingTop", paddingYVar);
+                      bindVar(option, "paddingBottom", paddingYVar);
+                    }
+                    if (varMap["combobox/radius-" + effectiveRad]) {
+                      bindVar(option, "topLeftRadius", varMap["combobox/radius-" + effectiveRad]);
+                      bindVar(option, "topRightRadius", varMap["combobox/radius-" + effectiveRad]);
+                      bindVar(option, "bottomLeftRadius", varMap["combobox/radius-" + effectiveRad]);
+                      bindVar(option, "bottomRightRadius", varMap["combobox/radius-" + effectiveRad]);
+                    }
+                    option.resize(184, optionHeight);
+                    option.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0 }];
+
+                    var isSelectedOption = selectedOptionIndices[oi] === true;
+                    var isHoverOption = oi === hoverOptionIndex;
+                    var optionBgVar = null;
+                    if (isSelectedOption) {
+                      optionBgVar = varMap["combobox/option-selected-background"];
+                    } else if (isHoverOption) {
+                      optionBgVar = varMap["combobox/option-hover-background"];
+                    }
+                    if (optionBgVar) {
+                      option.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                      bindPaintVar(option, "fills", 0, optionBgVar);
+                    }
+
+                    var optionText = figma.createText();
+                    optionText.name = "Label";
+                    optionText.fontName = font;
+                    optionText.characters = optionLabels[oi];
+                    optionText.fontSize = 14;
+                    optionText.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
+                    if (isHoverOption && varMap["combobox/option-hover-text"]) {
+                      bindPaintVar(optionText, "fills", 0, varMap["combobox/option-hover-text"]);
+                    } else if (isSelectedOption && varMap["combobox/option-selected-text"]) {
+                      bindPaintVar(optionText, "fills", 0, varMap["combobox/option-selected-text"]);
+                    } else if (varMap["combobox/text"]) {
+                      bindPaintVar(optionText, "fills", 0, varMap["combobox/text"]);
+                    }
+                    if (varMap["combobox/font-size-" + size]) {
+                      bindVar(optionText, "fontSize", varMap["combobox/font-size-" + size]);
+                      if (fontFamilyVar) bindVar(optionText, "fontFamily", fontFamilyVar);
+                      if (fontWeightVar) bindVar(optionText, "fontStyle", fontWeightVar);
+                      if (lineHeightVar) bindVar(optionText, "lineHeight", lineHeightVar);
+                    }
+                    option.appendChild(optionText);
+
+                    var checkColorVar =
+                      varMap["combobox/option-check-icon"] ||
+                      varMap["combobox/text"] ||
+                      null;
+                    var checkSizeVar =
+                      varMap["combobox/icon-size-" + size] ||
+                      varMap["combobox/icon-size-default"] ||
+                      varMap["combobox/icon-size"];
+                    var checkStrokeVar =
+                      varMap["combobox/icon-stroke-width-" + size] ||
+                      varMap["combobox/icon-stroke-width-default"] ||
+                      varMap["combobox/icon-stroke-width"];
+
+                    // Always reserve a fixed leading icon column so selected and
+                    // unselected labels line up. The checkmark only fills it when selected.
+                    var checkSlot = figma.createFrame();
+                    checkSlot.name = "CheckSlot";
+                    checkSlot.layoutMode = "HORIZONTAL";
+                    checkSlot.primaryAxisSizingMode = "FIXED";
+                    checkSlot.counterAxisSizingMode = "FIXED";
+                    checkSlot.primaryAxisAlignItems = "CENTER";
+                    checkSlot.counterAxisAlignItems = "CENTER";
+                    checkSlot.clipsContent = false;
+                    checkSlot.fills = [];
+                    checkSlot.strokes = [];
+                    checkSlot.resize(16, 16);
+                    if (checkSizeVar) {
+                      bindVar(checkSlot, "width", checkSizeVar);
+                      bindVar(checkSlot, "height", checkSizeVar);
+                    }
+                    option.insertChild(0, checkSlot);
+                    try { checkSlot.layoutGrow = 0; } catch (_chkSlotGrowErr) {}
+                    try { checkSlot.layoutAlign = "CENTER"; } catch (_chkSlotAlignErr) {}
+
+                    if (isSelectedOption) {
+                      if (checkIconComp) {
+                        var checkInstance = checkIconComp.createInstance();
+                        checkInstance.name = "Check";
+                        try { checkInstance.resizeWithoutConstraints(16, 16); } catch (_chkResizeErr) {}
+                        checkSlot.appendChild(checkInstance);
+                        try { checkInstance.layoutSizingHorizontal = "FILL"; } catch (_chkFillHErr) {}
+                        try { checkInstance.layoutSizingVertical = "FILL"; } catch (_chkFillVErr) {}
+                        if (typeof comp.addComponentProperty === "function") {
+                          var checkSwapRefs = createComboboxSwapRefs(checkIconComp);
+                          var checkSwapProp = null;
+                          for (var csri = 0; csri < checkSwapRefs.length; csri++) {
+                            try {
+                              checkSwapProp = comp.addComponentProperty("Check", "INSTANCE_SWAP", checkSwapRefs[csri]);
+                              break;
+                            } catch (_chkSwapErr) {}
+                          }
+                          if (checkSwapProp) {
+                            try { checkInstance.componentPropertyReferences = { mainComponent: checkSwapProp }; } catch (_chkSwapRefErr) {}
+                          }
+                        }
+                        if (checkColorVar && typeof checkInstance.findAll === "function") {
+                          var checkVectors = checkInstance.findAll(function (n) { return n.type === "VECTOR"; });
+                          for (var chvi = 0; chvi < checkVectors.length; chvi++) {
+                            try {
+                              if (checkStrokeVar) bindVar(checkVectors[chvi], "strokeWeight", checkStrokeVar);
+                              if (checkVectors[chvi].strokes && checkVectors[chvi].strokes.length > 0) {
+                                bindPaintVar(checkVectors[chvi], "strokes", 0, checkColorVar);
+                              }
+                              if (checkVectors[chvi].fills && checkVectors[chvi].fills.length > 0) {
+                                bindPaintVar(checkVectors[chvi], "fills", 0, checkColorVar);
+                              }
+                            } catch (_chkVecErr) {}
+                          }
+                        }
+                      } else {
+                        var checkVector = figma.createVector();
+                        checkVector.name = "Check";
+                        checkVector.vectorPaths = [{ windingRule: "NONZERO", data: "M 1 5 L 5 9 L 13 1" }];
+                        checkVector.resize(14, 10);
+                        checkVector.fills = [];
+                        checkVector.strokes = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
+                        checkVector.strokeWeight = 1.5;
+                        if (checkStrokeVar) bindVar(checkVector, "strokeWeight", checkStrokeVar);
+                        checkVector.strokeJoin = "ROUND";
+                        checkVector.strokeCap = "ROUND";
+                        if (checkColorVar) bindPaintVar(checkVector, "strokes", 0, checkColorVar);
+                        checkSlot.appendChild(checkVector);
+                      }
+                    }
+
+                    dropdown.appendChild(option);
+                    try { option.layoutSizingHorizontal = "FILL"; } catch (_optionFillErr) {}
+                  }
+                } else {
+                  // GRID variant: PURE, EMPTY dev-owned slot rows. The design system
+                  // styles ONLY the row container (padding, column gap, divider,
+                  // selection/hover background). The consumer renders any component
+                  // inside each row — so we render a single dashed empty slot per row
+                  // and intentionally NO checkbox/radio/media/meta content.
+                  var gridColumnGapVar =
+                    varMap["combobox/grid-column-gap-" + size] ||
+                    varMap["combobox/grid-column-gap-default"] ||
+                    varMap["combobox/grid-column-gap"];
+                  var gridRowDividerVar = varMap["combobox/grid-row-divider"];
+                  var gridRowDividerWidthVar = varMap["combobox/grid-row-divider-width"];
+                  var gridSlotFontSizeVar = varMap["combobox/font-size-" + size];
+                  var gridPlaceholderColorVar = varMap["combobox/placeholder"];
+
+                  for (var gri = 0; gri < 3; gri++) {
+                    var gridRow = figma.createFrame();
+                    gridRow.name = "GridRow/" + (gri + 1);
+                    gridRow.layoutMode = "HORIZONTAL";
+                    gridRow.primaryAxisSizingMode = "FIXED";
+                    gridRow.counterAxisSizingMode = "AUTO";
+                    gridRow.primaryAxisAlignItems = "MIN";
+                    gridRow.counterAxisAlignItems = "CENTER";
+                    gridRow.itemSpacing = 12;
+                    // No row padding: the slot spans the row edge-to-edge so it lines up
+                    // exactly with the full-bleed selection/hover background. The consumer
+                    // controls their own internal spacing on whatever they drop in.
+                    gridRow.paddingLeft = 0;
+                    gridRow.paddingRight = 0;
+                    gridRow.paddingTop = 0;
+                    gridRow.paddingBottom = 0;
+                    gridRow.resize(184, optionHeight);
+                    if (gridColumnGapVar) bindVar(gridRow, "itemSpacing", gridColumnGapVar);
+
+                    // Row background: index 0 = selected, index 2 = hovered, else transparent.
+                    var gridRowBgVar = null;
+                    if (gri === 0) {
+                      gridRowBgVar = varMap["combobox/option-selected-background"];
+                    } else if (gri === 2) {
+                      gridRowBgVar = varMap["combobox/option-hover-background"];
+                    }
+                    if (gridRowBgVar) {
+                      gridRow.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+                      bindPaintVar(gridRow, "fills", 0, gridRowBgVar);
+                    } else {
+                      gridRow.fills = [];
+                    }
+
+                    // Divider between rows: a top stroke on rows after the first,
+                    // drawn INSIDE so it doesn't shift layout (matches how row
+                    // dividers are drawn elsewhere in this file).
+                    if (gri > 0) {
+                      gridRow.strokes = [{ type: "SOLID", color: { r: 0.8, g: 0.8, b: 0.8 } }];
+                      gridRow.strokeAlign = "INSIDE";
+                      try {
+                        gridRow.strokeTopWeight = 1;
+                        gridRow.strokeLeftWeight = 0;
+                        gridRow.strokeRightWeight = 0;
+                        gridRow.strokeBottomWeight = 0;
+                      } catch (_gridStrokeErr) {}
+                      if (gridRowDividerWidthVar) {
+                        try { bindVar(gridRow, "strokeTopWeight", gridRowDividerWidthVar); } catch (_gridStrokeWErr) {}
+                      }
+                      if (gridRowDividerVar) bindPaintVar(gridRow, "strokes", 0, gridRowDividerVar);
+                    } else {
+                      gridRow.strokes = [];
+                    }
+
+                    // The empty dev-owned slot. Prefer Figma's NATIVE slot node
+                    // (createSlot) so consumers can drop ANY component into each
+                    // row directly in Figma — matching the Accordion content slot.
+                    // Fall back to a dashed placeholder frame + hint label on
+                    // older editor versions that lack the slot API.
+                    var gridSlot = null;
+                    try {
+                      if (comp && typeof comp.createSlot === "function") {
+                        gridSlot = comp.createSlot();
+                      } else if (typeof figma.createSlot === "function") {
+                        gridSlot = figma.createSlot();
+                      }
+                    } catch (_gridSlotCreateErr) {
+                      gridSlot = null;
+                    }
+                    var gridSlotIsNative = !!gridSlot && gridSlot.type === "SLOT";
+                    if (!gridSlot) gridSlot = figma.createFrame();
+                    gridSlot.name = "Slot";
+                    // VERTICAL flow is deliberate: Figma's "fill items to container by
+                    // default" (stretchChildOnInsert, configured below) fills inserted
+                    // content on the axis ACROSS the flow — so vertical flow => dropped
+                    // components auto-fill the row WIDTH. Height HUGs, so the row/dropdown
+                    // GROW to the component instead of clipping it.
+                    try { gridSlot.layoutMode = "VERTICAL"; } catch (_gridSlotLayoutErr) {}
+                    try { gridSlot.primaryAxisSizingMode = "AUTO"; } catch (_gridSlotPrimErr) {}
+                    try { gridSlot.counterAxisSizingMode = "AUTO"; } catch (_gridSlotCountErr) {}
+                    try { gridSlot.primaryAxisAlignItems = "CENTER"; } catch (_gridSlotPrimAlignErr) {}
+                    try { gridSlot.counterAxisAlignItems = "CENTER"; } catch (_gridSlotCountAlignErr) {}
+                    try { gridSlot.paddingLeft = 0; } catch (_gridSlotPadLErr) {}
+                    try { gridSlot.paddingRight = 0; } catch (_gridSlotPadRErr) {}
+                    try { gridSlot.paddingTop = 0; } catch (_gridSlotPadTErr) {}
+                    try { gridSlot.paddingBottom = 0; } catch (_gridSlotPadBErr) {}
+                    try { gridSlot.fills = []; } catch (_gridSlotFillsErr) {}
+                    // minHeight keeps an EMPTY slot at the row height (so it never
+                    // collapses to nothing) while HUG still lets it GROW past that when
+                    // a taller component is dropped in.
+                    try { gridSlot.minHeight = optionHeight; } catch (_gridSlotMinHErr) {}
+                    // Seed an explicit size so the slot renders at a sane row height up
+                    // front instead of the native default.
+                    try {
+                      gridSlot.resizeWithoutConstraints(colWidth, optionHeight);
+                    } catch (_gridSlotResizeErr) {
+                      try { gridSlot.resize(colWidth, optionHeight); } catch (_gridSlotResize2Err) {}
+                    }
+
+                    // Configure the slot property so devs can't build it wrong:
+                    // - stretchChildOnInsert: inserted components auto-fill the row width.
+                    // - displayEmptyByDefault: empty slots keep their indicator visible.
+                    if (gridSlotIsNative && typeof comp.editComponentProperty === "function") {
+                      try {
+                        var gridSlotPropId =
+                          gridSlot.componentPropertyReferences &&
+                          gridSlot.componentPropertyReferences.slotContentId;
+                        if (gridSlotPropId) {
+                          comp.editComponentProperty(gridSlotPropId, {
+                            slotSettings: {
+                              // Do NOT stretch the inserted component. The dropdown/row/slot
+                              // all HUG their content, so a dropped row shows at its NATURAL
+                              // width and the dropdown GROWS to fit it (no clipping, no squash).
+                              stretchChildOnInsert: false,
+                              displayEmptyByDefault: true,
+                            },
+                          });
+                        }
+                      } catch (_gridSlotSettingsErr) {}
+                    }
+
+                    // Keep NATIVE slots empty — no default content — so they behave as
+                    // pure, droppable slots (consumers add their own component and get
+                    // Figma's own pink slot indicator). The dashed border + hint label
+                    // are ONLY for the fallback frame on editors without the slot API.
+                    if (!gridSlotIsNative) {
+                      try { gridSlot.cornerRadius = 4; } catch (_gridSlotRadErr) {}
+                      gridSlot.strokes = [{ type: "SOLID", color: { r: 0.7, g: 0.7, b: 0.7 } }];
+                      gridSlot.strokeWeight = 1;
+                      gridSlot.strokeAlign = "INSIDE";
+                      gridSlot.dashPattern = [4, 3];
+                      if (gridRowDividerVar) bindPaintVar(gridSlot, "strokes", 0, gridRowDividerVar);
+
+                      var gridSlotText = figma.createText();
+                      gridSlotText.name = "SlotHint";
+                      gridSlotText.fontName = font;
+                      gridSlotText.characters = "Slot component here";
+                      try { gridSlotText.textAlignHorizontal = "CENTER"; } catch (_gridSlotTextAlignErr) {}
+                      gridSlotText.fontSize = 12;
+                      gridSlotText.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } }];
+                      if (gridPlaceholderColorVar) bindPaintVar(gridSlotText, "fills", 0, gridPlaceholderColorVar);
+                      if (gridSlotFontSizeVar) {
+                        bindVar(gridSlotText, "fontSize", gridSlotFontSizeVar);
+                        if (fontFamilyVar) bindVar(gridSlotText, "fontFamily", fontFamilyVar);
+                      }
+                      gridSlot.appendChild(gridSlotText);
+                    }
+
+                    gridRow.appendChild(gridSlot);
+                    // Slot HUGS both axes: it wraps whatever the consumer drops in at its
+                    // natural size, so the row grows to fit the component instead of
+                    // clipping or squashing it. Empty slots sit at the seeded colWidth.
+                    try { gridSlot.layoutSizingHorizontal = "HUG"; } catch (_gridSlotFillErr) {}
+                    try { gridSlot.layoutSizingVertical = "HUG"; } catch (_gridSlotVFillErr) {}
+
+                    dropdown.appendChild(gridRow);
+                    // Row FILLS the dropdown width so every row's selection/hover background
+                    // spans edge-to-edge. The HUG slot inside still drives the dropdown's
+                    // hugged width (dropdown counterAxisSizingMode AUTO for grid), so the
+                    // picker grows to the widest dropped row while rows stay flush.
+                    try { gridRow.layoutSizingHorizontal = "FILL"; } catch (_gridRowFillErr) {}
+                    // Row HUGS its height. This MUST be re-asserted here: the earlier
+                    // gridRow.resize(...) flips an auto-layout frame back to FIXED sizing,
+                    // which was locking the row to optionHeight and clipping taller dropped
+                    // content. Hugging lets the row grow to whatever is dropped in.
+                    try { gridRow.layoutSizingVertical = "HUG"; } catch (_gridRowHugErr) {}
+                  }
+                }
+
+                comp.appendChild(dropdown);
+              }
+
+              if (state === "error") {
+                var errorNode = figma.createText();
+                errorNode.name = "Error";
+                errorNode.fontName = font;
+                errorNode.characters = "Error message";
+                errorNode.fontSize = 12;
+                errorNode.fills = [{ type: "SOLID", color: { r: 0.97, g: 0.33, b: 0.29 } }];
+                if (varMap["combobox/error-color"]) bindPaintVar(errorNode, "fills", 0, varMap["combobox/error-color"]);
+                if (varMap["combobox/error-font-size"]) {
+                  bindVar(errorNode, "fontSize", varMap["combobox/error-font-size"]);
+                  bindVar(errorNode, "fontFamily", varMap["combobox/error-font-family"]);
+                  bindVar(errorNode, "fontStyle", varMap["combobox/error-font-weight"]);
+                  bindVar(errorNode, "lineHeight", varMap["combobox/error-line-height"]);
+                }
+                comp.appendChild(errorNode);
+              }
+
+              if (state === "disabled") comp.opacity = 0.6;
+
+              var columnsPerRadius = variants.length * labelModes.length;
+              var colIndex = (ri * columnsPerRadius) + (vi * labelModes.length + li);
+              var rowIndex = (si * 8) + stateDropdownRow(state, dropdownMode);
+              comp.x = colIndex * (colWidth + gap);
+              comp.y = rowIndex * rowHeight;
+              page.appendChild(comp);
+              components.push(comp);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  progress("Created " + components.length + " combobox variants");
+  var comboboxComponentSet = figma.combineAsVariants(components, page);
+  comboboxComponentSet.name = "Combobox";
+  return comboboxComponentSet;
 }
 
 function selectColorPath(variant, property, state) {
