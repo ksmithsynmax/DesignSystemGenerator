@@ -53,9 +53,9 @@ function ColorFamilyRow({ name, ramp }) {
 
 export const SEMANTIC_GROUPS = [
   ["Interactive", ["interactive-primary", "interactive-primary-hover", "interactive-primary-pressed", "interactive-secondary", "interactive-secondary-hover", "interactive-disabled"]],
-  ["Text", ["text-default", "text-subtle", "text-on-interactive", "text-placeholder", "text-disabled", "text-inverse"]],
-  ["Surface", ["surface-primary", "surface-secondary", "subtle-primary", "subtle-secondary", "surface-default", "surface-inverse"]],
-  ["Border", ["border-primary", "border-default", "border-subtle", "border-focus", "border-disabled"]],
+  ["Text", ["text-primary", "text-secondary", "text-subtle", "text-on-interactive", "text-placeholder", "text-disabled", "text-inverse"]],
+  ["Surface", ["surface-primary", "surface-secondary", "surface-canvas", "surface-subtle-primary", "surface-subtle-secondary", "surface-inverse"]],
+  ["Border", ["border-primary", "border-secondary", "border-subtle", "border-focus", "border-disabled"]],
   ["Feedback", ["feedback-info", "feedback-success", "feedback-warning", "feedback-error"]],
 ];
 

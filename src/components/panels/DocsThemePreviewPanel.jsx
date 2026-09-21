@@ -8,10 +8,10 @@ export function DocsThemePreviewContent({ brands, activeBrand, previewTheme = "l
   const brand = brands?.[activeBrand];
   const theme = previewTheme === "dark" ? "dark" : "light";
 
-  const pageBg = resolveColor(brands, activeBrand, "surface-primary", theme, "docs-page-background");
+  const pageBg = resolveColor(brands, activeBrand, "surface-canvas", theme, "docs-page-background");
   const cardBg = resolveColor(brands, activeBrand, "surface-secondary", theme, "docs-card-background");
-  const cardBorder = resolveColor(brands, activeBrand, "border-primary", theme, "docs-card-border");
-  const titleColor = resolveColor(brands, activeBrand, "text-default", theme, "docs-title");
+  const cardBorder = resolveColor(brands, activeBrand, "border-secondary", theme, "docs-card-border");
+  const titleColor = resolveColor(brands, activeBrand, "text-primary", theme, "docs-title");
   const subtleColor = resolveColor(brands, activeBrand, "text-subtle", theme, "docs-body-text");
   const headingColor = resolveColor(brands, activeBrand, "interactive-primary", theme, "docs-section-heading");
 

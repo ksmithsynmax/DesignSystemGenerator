@@ -6,7 +6,7 @@ export const GLOBAL_PRIMITIVES = {
   ],
   "neutral": [
     "#FFFFFF",
-    "#F2F2F2",
+    "#FAFAFA",
     "#E5E5E5",
     "#CCCCCC",
     "#B2B2B2",
@@ -148,7 +148,7 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0
       },
-      "text-default": {
+      "text-primary": {
         "color": "neutral",
         "index": 0
       },
@@ -212,11 +212,11 @@ export const STORYBOOK_BRANDS = {
         "color": "steel",
         "index": 8
       },
-      "subtle-primary": {
+      "surface-subtle-primary": {
         "color": "steel",
         "index": 9
       },
-      "subtle-secondary": {
+      "surface-subtle-secondary": {
         "color": "steel",
         "index": 8
       },
@@ -238,7 +238,7 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 7
       },
-      "text-default": {
+      "text-primary": {
         "color": "neutral",
         "index": 0
       },
@@ -290,11 +290,11 @@ export const STORYBOOK_BRANDS = {
         "color": "steel",
         "index": 8
       },
-      "subtle-primary": {
+      "surface-subtle-primary": {
         "color": "steel",
         "index": 9
       },
-      "subtle-secondary": {
+      "surface-subtle-secondary": {
         "color": "steel",
         "index": 8
       },
@@ -6842,7 +6842,7 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0
       },
-      "text-default": {
+      "text-primary": {
         "color": "slate-purple",
         "index": 9
       },
@@ -6906,11 +6906,11 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0
       },
-      "subtle-primary": {
+      "surface-subtle-primary": {
         "color": "slate-purple",
         "index": 0
       },
-      "subtle-secondary": {
+      "surface-subtle-secondary": {
         "color": "neutral",
         "index": 0
       },
@@ -6936,7 +6936,7 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 7
       },
-      "text-default": {
+      "text-primary": {
         "color": "slate-purple",
         "index": 9
       },
@@ -6988,11 +6988,11 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0
       },
-      "subtle-primary": {
+      "surface-subtle-primary": {
         "color": "slate-purple",
         "index": 0
       },
-      "subtle-secondary": {
+      "surface-subtle-secondary": {
         "color": "neutral",
         "index": 0
       },
@@ -9818,7 +9818,7 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0
       },
-      "text-default": {
+      "text-primary": {
         "color": "neutral",
         "index": 0
       },
@@ -9834,11 +9834,11 @@ export const STORYBOOK_BRANDS = {
         "color": "slate-gray",
         "index": 8
       },
-      "subtle-primary": {
+      "surface-subtle-primary": {
         "color": "slate-purple",
         "index": 1
       },
-      "subtle-secondary": {
+      "surface-subtle-secondary": {
         "color": "slate-gray",
         "index": 1
       },
@@ -9908,7 +9908,7 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 7
       },
-      "text-default": {
+      "text-primary": {
         "color": "neutral",
         "index": 0
       },
@@ -9924,11 +9924,11 @@ export const STORYBOOK_BRANDS = {
         "color": "slate-gray",
         "index": 8
       },
-      "subtle-primary": {
+      "surface-subtle-primary": {
         "color": "slate-purple",
         "index": 1
       },
-      "subtle-secondary": {
+      "surface-subtle-secondary": {
         "color": "slate-gray",
         "index": 8
       },
@@ -10254,7 +10254,7 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 0
       },
-      "text-default": {
+      "text-primary": {
         "color": "neutral",
         "index": 0
       },
@@ -10270,11 +10270,11 @@ export const STORYBOOK_BRANDS = {
         "color": "slate-gray",
         "index": 8
       },
-      "subtle-primary": {
+      "surface-subtle-primary": {
         "color": "slate-purple",
         "index": 1
       },
-      "subtle-secondary": {
+      "surface-subtle-secondary": {
         "color": "slate-gray",
         "index": 1
       },
@@ -10344,7 +10344,7 @@ export const STORYBOOK_BRANDS = {
         "color": "neutral",
         "index": 7
       },
-      "text-default": {
+      "text-primary": {
         "color": "neutral",
         "index": 0
       },
@@ -10360,11 +10360,11 @@ export const STORYBOOK_BRANDS = {
         "color": "slate-gray",
         "index": 8
       },
-      "subtle-primary": {
+      "surface-subtle-primary": {
         "color": "slate-purple",
         "index": 1
       },
-      "subtle-secondary": {
+      "surface-subtle-secondary": {
         "color": "slate-gray",
         "index": 8
       },

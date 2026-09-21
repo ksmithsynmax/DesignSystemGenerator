@@ -145,6 +145,10 @@ import {
   MultiSelectPropertiesPanel,
 } from "./components/panels/MultiSelectPreviewPanel";
 import {
+  ComboboxPreviewContent,
+  ComboboxPropertiesPanel,
+} from "./components/panels/ComboboxPreviewPanel";
+import {
   NotificationPreviewContent,
   NotificationPropertiesPanel,
 } from "./components/panels/NotificationPreviewPanel";
@@ -223,6 +227,7 @@ const VARIANTS_BY_COMPONENT = {
   timeinput: ["default"],
   select: ["default", "filled"],
   multiselect: ["default", "filled"],
+  combobox: ["list", "grid"],
   modal: ["default", "filled"],
   table: ["default"],
   densetable: ["default"],
@@ -294,24 +299,122 @@ function enforceTextDefaultMappings(brandsInput) {
     });
   };
 
+  // ── Rename semantic key text-default → text-primary for all persisted brands ──
+  // text-default was renamed to text-primary. Migrate every brand's semantic maps
+  // so the renamed key still resolves (edits made under the old name are kept).
+  Object.keys(next).forEach((brandId) => {
+    const b = next[brandId];
+    if (!b || typeof b !== "object") return;
+    ["semanticMap", "darkSemanticOverrides"].forEach((mapKey) => {
+      const map = b[mapKey];
+      if (!map || typeof map !== "object") return;
+      if (isValidMapping(map["text-default"]) && !isValidMapping(map["text-primary"])) {
+        map["text-primary"] = { ...map["text-default"] };
+      }
+      delete map["text-default"];
+    });
+  });
+
+  // ── Consolidate surface/border "default" + "primary" into one primary scale ──
+  // The names were backwards: `surface-default` was the workhorse component fill
+  // and `surface-primary` was actually the page/canvas background. We rename so
+  // `surface-primary` = the component fill (keeps every component's look), move
+  // the old canvas value to the clearer `surface-canvas`, and do the analogous
+  // move for border, promoting the old `border-primary` to `border-secondary`.
+  // Order matters: capture old values before overwriting. Idempotent on re-run.
+  Object.keys(next).forEach((brandId) => {
+    const b = next[brandId];
+    if (!b || typeof b !== "object") return;
+    ["semanticMap", "darkSemanticOverrides"].forEach((mapKey) => {
+      const map = b[mapKey];
+      if (!map || typeof map !== "object") return;
+      // SURFACE
+      const oldSurfacePrimary = map["surface-primary"];
+      const oldSurfaceDefault = map["surface-default"];
+      if (isValidMapping(oldSurfacePrimary) && !isValidMapping(map["surface-canvas"])) {
+        map["surface-canvas"] = { ...oldSurfacePrimary };
+      }
+      if (isValidMapping(oldSurfaceDefault)) {
+        map["surface-primary"] = { ...oldSurfaceDefault };
+      }
+      delete map["surface-default"];
+      // BORDER
+      const oldBorderPrimary = map["border-primary"];
+      const oldBorderDefault = map["border-default"];
+      if (isValidMapping(oldBorderPrimary) && !isValidMapping(map["border-secondary"])) {
+        map["border-secondary"] = { ...oldBorderPrimary };
+      }
+      if (isValidMapping(oldBorderDefault)) {
+        map["border-primary"] = { ...oldBorderDefault };
+      }
+      delete map["border-default"];
+    });
+  });
+
+  // ── Rename subtle-primary/secondary → surface-subtle-primary/secondary ──
+  // These are surface roles; giving them the `surface-` prefix keeps the
+  // Surface group consistent (surface-primary/secondary/canvas). Value-
+  // preserving: the renamed key inherits the old value. Idempotent on re-run.
+  Object.keys(next).forEach((brandId) => {
+    const b = next[brandId];
+    if (!b || typeof b !== "object") return;
+    ["semanticMap", "darkSemanticOverrides"].forEach((mapKey) => {
+      const map = b[mapKey];
+      if (!map || typeof map !== "object") return;
+      if (isValidMapping(map["subtle-primary"]) && !isValidMapping(map["surface-subtle-primary"])) {
+        map["surface-subtle-primary"] = { ...map["subtle-primary"] };
+      }
+      delete map["subtle-primary"];
+      if (isValidMapping(map["subtle-secondary"]) && !isValidMapping(map["surface-subtle-secondary"])) {
+        map["surface-subtle-secondary"] = { ...map["subtle-secondary"] };
+      }
+      delete map["subtle-secondary"];
+    });
+  });
+
   applyMappings("theia", {
-    "text-default": { color: "neutral", index: 0 },
+    "text-primary": { color: "neutral", index: 0 },
+    "text-secondary": { color: "slate-gray", index: 2 },
     "text-subtle": { color: "slate-gray", index: 3 },
-    "surface-primary": { color: "steel", index: 9 },
+    "surface-primary": { color: "neutral", index: 0 },
     "surface-secondary": { color: "steel", index: 8 },
-    "subtle-primary": { color: "steel", index: 9 },
-    "subtle-secondary": { color: "steel", index: 8 },
-    "border-primary": { color: "steel", index: 7 },
+    "surface-canvas": { color: "steel", index: 9 },
+    "surface-subtle-primary": { color: "steel", index: 9 },
+    "surface-subtle-secondary": { color: "steel", index: 8 },
+    "border-primary": { color: "neutral", index: 3 },
+    "border-secondary": { color: "steel", index: 7 },
   });
   applyMappings("hyperion", {
-    "text-default": { color: "slate-purple", index: 9 },
+    "text-primary": { color: "slate-purple", index: 9 },
+    "text-secondary": { color: "slate-purple", index: 7 },
     "text-subtle": { color: "slate-purple", index: 6 },
-    "surface-primary": { color: "slate-purple", index: 0 },
+    "surface-primary": { color: "neutral", index: 0 },
     "surface-secondary": { color: "neutral", index: 0 },
-    "subtle-primary": { color: "slate-purple", index: 0 },
-    "subtle-secondary": { color: "neutral", index: 0 },
-    "border-primary": { color: "slate-gray", index: 0 },
-    "primary-border": { color: "slate-gray", index: 0 },
+    "surface-canvas": { color: "slate-purple", index: 0 },
+    "surface-subtle-primary": { color: "slate-purple", index: 0 },
+    "surface-subtle-secondary": { color: "neutral", index: 0 },
+    "border-primary": { color: "neutral", index: 3 },
+    "border-secondary": { color: "slate-gray", index: 0 },
+  });
+
+  // Seed the newly-added text-secondary role for any brand still missing it
+  // (custom/persisted brands not covered by the intentional maps above). We
+  // derive a sensible mid-weight starting value from text-subtle — one step more
+  // prominent — which the user can then fine-tune in the Semantic Colors editor.
+  Object.keys(next).forEach((brandId) => {
+    const b = next[brandId];
+    if (!b || typeof b !== "object") return;
+    ["semanticMap", "darkSemanticOverrides"].forEach((mapKey) => {
+      const map = b[mapKey];
+      if (!map || typeof map !== "object") return;
+      if (isValidMapping(map["text-secondary"])) return;
+      const sub = map["text-subtle"];
+      if (isValidMapping(sub)) {
+        map["text-secondary"] = { color: sub.color, index: Math.max(0, Number(sub.index) - 1) };
+      } else if (isValidMapping(map["text-primary"])) {
+        map["text-secondary"] = { ...map["text-primary"] };
+      }
+    });
   });
 
   // Backfill newly introduced semantic scalar maps for users with persisted local state.
@@ -740,12 +843,12 @@ export default function App() {
     window.__DSG_PREVIEW_THEME = previewTheme;
     window.__DSG_PREVIEW_BRAND = activeBrand;
     // Drives the shared PreviewStage background from the active brand's real
-    // `surface-primary` token for the current theme, so every brand's canvas
+    // `surface-canvas` token for the current theme, so every brand's canvas
     // reflects what they set (replaces the old hardcoded theia/hyperion values).
     window.__DSG_PREVIEW_SURFACE = resolveColor(
       brands,
       activeBrand,
-      "surface-primary",
+      "surface-canvas",
       previewTheme,
       null
     );
@@ -832,6 +935,7 @@ export default function App() {
   const timeInputDefault = getComponentDefaultSize(brands, activeBrand, "timeinput") || "sm";
   const selectDefault = getComponentDefaultSize(brands, activeBrand, "select") || "sm";
   const multiSelectDefault = getComponentDefaultSize(brands, activeBrand, "multiselect") || "sm";
+  const comboboxDefault = getComponentDefaultSize(brands, activeBrand, "combobox") || "sm";
   const cardDefault = getComponentDefaultSize(brands, activeBrand, "card") || "default";
   const pillDefault = getComponentDefaultSize(brands, activeBrand, "pill") || "default";
   const badgeDefault = getComponentDefaultSize(brands, activeBrand, "badge") || "default";
@@ -1057,6 +1161,17 @@ export default function App() {
   const [activeMultiSelectSearchable, setActiveMultiSelectSearchable] = useState(false);
   const [activeMultiSelectClearable, setActiveMultiSelectClearable] = useState(false);
   const [activeMultiSelectShowDropdown, setActiveMultiSelectShowDropdown] = useState(true);
+  const [activeComboboxSize, setActiveComboboxSize] = useState(comboboxDefault);
+  const [activeComboboxRadius, setActiveComboboxRadius] = useState(comboboxDefault);
+  const [activeComboboxState, setActiveComboboxState] = useState("default");
+  const [activeComboboxSelectionMode, setActiveComboboxSelectionMode] = useState("multi");
+  const [activeComboboxSlotLayout, setActiveComboboxSlotLayout] = useState("custom");
+  const [activeComboboxShowLabel, setActiveComboboxShowLabel] = useState(true);
+  const [activeComboboxLabelText, setActiveComboboxLabelText] = useState("Label");
+  const [activeComboboxWithAsterisk, setActiveComboboxWithAsterisk] = useState(false);
+  const [activeComboboxShowError, setActiveComboboxShowError] = useState(false);
+  const [activeComboboxErrorText, setActiveComboboxErrorText] = useState("Error message");
+  const [activeComboboxShowDropdown, setActiveComboboxShowDropdown] = useState(true);
   const [activeCardSize, setActiveCardSize] = useState(cardDefault);
   const [activeCardRadius, setActiveCardRadius] = useState(cardDefault);
   const [activeCardWithBorder, setActiveCardWithBorder] = useState(true);
@@ -1169,6 +1284,7 @@ export default function App() {
     const tmiDef = getComponentDefaultSize(brands, newBrand, "timeinput") || "sm";
     const seDef = getComponentDefaultSize(brands, newBrand, "select") || "sm";
     const mseDef = getComponentDefaultSize(brands, newBrand, "multiselect") || "sm";
+    const cboDef = getComponentDefaultSize(brands, newBrand, "combobox") || "sm";
     setActiveTextInputSize(tiDef);
     setActiveTextInputRadius(tiDef);
     setActiveDateInputSize(diDef);
@@ -1179,6 +1295,8 @@ export default function App() {
     setActiveSelectRadius(seDef);
     setActiveMultiSelectSize(mseDef);
     setActiveMultiSelectRadius(mseDef);
+    setActiveComboboxSize(cboDef);
+    setActiveComboboxRadius(cboDef);
     setActiveCardSize(caDef);
     setActiveCardRadius(caDef);
     setActiveLoaderSize("default");
@@ -1423,6 +1541,19 @@ export default function App() {
       setActiveMultiSelectClearable(false);
       setActiveMultiSelectShowDropdown(true);
       setActiveVariant("default");
+    } else if (newComp === "combobox") {
+      setActiveComboboxSize(comboboxDefault);
+      setActiveComboboxRadius(comboboxDefault);
+      setActiveComboboxState("default");
+      setActiveComboboxSelectionMode("multi");
+      setActiveComboboxSlotLayout("custom");
+      setActiveComboboxShowLabel(true);
+      setActiveComboboxLabelText("Label");
+      setActiveComboboxWithAsterisk(false);
+      setActiveComboboxShowError(false);
+      setActiveComboboxErrorText("Error message");
+      setActiveComboboxShowDropdown(true);
+      setActiveVariant("list");
     } else if (newComp === "card") {
       setActiveCardSize(cardDefault);
       setActiveCardRadius(cardDefault);
@@ -2173,7 +2304,7 @@ export default function App() {
       forcedIndeterminate = true;
     }
 
-    if (["button", "actionicon", "tabs", "accordion", "checkbox", "chip", "badge", "alert", "radio", "textinput", "dateinput", "timeinput", "select", "multiselect", "card", "modal"].includes(activeComponent)) {
+    if (["button", "actionicon", "tabs", "accordion", "checkbox", "chip", "badge", "alert", "radio", "textinput", "dateinput", "timeinput", "select", "multiselect", "combobox", "card", "modal"].includes(activeComponent)) {
       const variantSegment = parts[1];
       const knownVariants = {
         button: ["filled", "outlined", "ghost", "light", "subtle", "default"],
@@ -2191,6 +2322,7 @@ export default function App() {
         timeinput: ["default"],
         select: ["default", "filled"],
         multiselect: ["default", "filled"],
+        combobox: ["list", "grid"],
         modal: ["default", "filled"],
       };
       if (knownVariants[activeComponent]?.includes(variantSegment)) {
@@ -2245,6 +2377,8 @@ export default function App() {
             ? forcedState || activeSelectState
           : activeComponent === "multiselect"
             ? forcedState || activeMultiSelectState
+          : activeComponent === "combobox"
+            ? forcedState || activeComboboxState
           : activeComponent === "menu"
             ? forcedState || activeMenuState
           : forcedState;
@@ -2681,6 +2815,69 @@ export default function App() {
       }
     }
 
+    if (activeComponent === "combobox") {
+      // Combobox appearance is SHARED across variants — list vs grid is a layout
+      // change, not a color change — so background/border/placeholder/pill/etc.
+      // are plain `combobox-*` and only gated by state. The only variant-specific
+      // tokens are the grid row-container ones (`combobox-grid-*`), handled by the
+      // generic variant filter below.
+      const targetState = effectiveComponentState || "default";
+      // Placeholder is shared; gate the resting/error split by state.
+      if (token === "combobox-placeholder") return targetState !== "error";
+      if (
+        token === "combobox-error-color" ||
+        token === "combobox-icon-error" ||
+        token === "combobox-placeholder-error"
+      ) {
+        return targetState === "error";
+      }
+      if (token === "combobox-icon-disabled") {
+        return targetState === "disabled";
+      }
+      if (token === "combobox-icon" && (targetState === "error" || targetState === "disabled")) {
+        return false;
+      }
+      if (
+        token === "combobox-pill-background-error" ||
+        token === "combobox-pill-text-error" ||
+        token === "combobox-pill-remove-icon-error"
+      ) {
+        return targetState === "error";
+      }
+      if (
+        token === "combobox-pill-background-disabled" ||
+        token === "combobox-pill-text-disabled" ||
+        token === "combobox-pill-remove-icon-disabled"
+      ) {
+        return targetState === "disabled";
+      }
+      if (token === "combobox-pill-background") {
+        return targetState !== "error" && targetState !== "disabled";
+      }
+      if (token === "combobox-pill-text" || token === "combobox-pill-remove-icon") {
+        return targetState !== "error" && targetState !== "disabled";
+      }
+      // Grid row-container tokens (combobox-grid-*) are gated purely by variant,
+      // in any field state.
+      if (token.startsWith("combobox-grid-")) {
+        return activeVariant === "grid";
+      }
+      // Everything else is a SHARED appearance token gated purely by state:
+      // state-suffixed tokens (background-hover, border-focus, text-disabled…)
+      // show ONLY in their state; base tokens show unless a state-specific
+      // counterpart supersedes them in the active state. This is what hides
+      // hover/focus/error/disabled tokens while you're on the default state.
+      const lastSeg = parts[parts.length - 1];
+      const tokenState = INTERACTIVE_STATES.includes(lastSeg) ? lastSeg : "default";
+      if (tokenState !== "default") {
+        return tokenState === targetState;
+      }
+      if (targetState !== "default" && Boolean(colorTokens[`${token}-${targetState}`])) {
+        return false;
+      }
+      return true;
+    }
+
     const variantsByComponent = {
       button: ["filled", "outlined", "ghost", "light", "subtle", "default"],
       actionicon: ["default", "filled", "light", "outlined", "transparent"],
@@ -2697,6 +2894,7 @@ export default function App() {
       timeinput: ["default"],
       select: ["default", "filled"],
       multiselect: ["default", "filled"],
+      combobox: ["list", "grid"],
       modal: ["default", "filled"],
     };
     const variants = variantsByComponent[activeComponent];
@@ -2778,6 +2976,7 @@ export default function App() {
       activeComponent === "textinput"
       || activeComponent === "select"
       || activeComponent === "multiselect"
+      || activeComponent === "combobox"
       || activeComponent === "alert"
     ) {
       if (!variants.includes(variantSegment)) return true;
@@ -2862,6 +3061,14 @@ export default function App() {
       }
       return true;
     }
+    if (activeComponent === "combobox") {
+      const targetState = effectiveComponentState || "default";
+      // Error dims only in the error state.
+      if (token.startsWith("combobox-error-")) return targetState === "error";
+      // Grid row-container dims (padding/gap/divider) only apply to the grid variant.
+      if (token.startsWith("combobox-grid-")) return activeVariant === "grid";
+      return true;
+    }
     if (activeComponent !== "tabs") return true;
     if (activeVariant === "default") {
       if (/^tabs-(default|outlined|pills)-radius$/.test(token)) return false;
@@ -2933,6 +3140,44 @@ export default function App() {
         return;
       }
     }
+    if (activeComponent === "combobox") {
+      const targetState = effectiveComponentState || "default";
+      if (activeColorToken === "combobox-placeholder" && targetState === "error") {
+        setActiveColorToken(null);
+        return;
+      }
+      if (
+        (activeColorToken === "combobox-placeholder-error" ||
+          activeColorToken === "combobox-error-color" ||
+          activeColorToken === "combobox-icon-error" ||
+          activeColorToken === "combobox-pill-background-error" ||
+          activeColorToken === "combobox-pill-text-error" ||
+          activeColorToken === "combobox-pill-remove-icon-error") &&
+        targetState !== "error"
+      ) {
+        setActiveColorToken(null);
+        return;
+      }
+      if (
+        (activeColorToken === "combobox-icon-disabled" ||
+          activeColorToken === "combobox-pill-background-disabled" ||
+          activeColorToken === "combobox-pill-text-disabled" ||
+          activeColorToken === "combobox-pill-remove-icon-disabled") &&
+        targetState !== "disabled"
+      ) {
+        setActiveColorToken(null);
+        return;
+      }
+      if (
+        (activeColorToken === "combobox-pill-background" ||
+          activeColorToken === "combobox-pill-text" ||
+          activeColorToken === "combobox-pill-remove-icon") &&
+        (targetState === "error" || targetState === "disabled")
+      ) {
+        setActiveColorToken(null);
+        return;
+      }
+    }
     const variantSegment = parts[1];
     const variantsByComponent = {
       button: ["filled", "outlined", "ghost", "light", "subtle", "default"],
@@ -2948,6 +3193,7 @@ export default function App() {
       timeinput: ["default"],
       select: ["default", "filled"],
       multiselect: ["default", "filled"],
+      combobox: ["list", "grid"],
     };
     const variants = variantsByComponent[activeComponent];
     if (!variants) return;
@@ -3035,6 +3281,18 @@ export default function App() {
       }
       return;
     }
+    if (activeComponent === "combobox") {
+      const targetState = effectiveComponentState || "default";
+      if (activeDimensionToken.startsWith("combobox-error-") && targetState !== "error") {
+        setActiveDimensionToken(null);
+        return;
+      }
+      if (activeDimensionToken.startsWith("combobox-grid-") && activeVariant !== "grid") {
+        setActiveDimensionToken(null);
+        return;
+      }
+      return;
+    }
     if (activeComponent !== "tabs") return;
     if (
       activeVariant === "default" &&
@@ -3104,6 +3362,7 @@ export default function App() {
     timeinput: activeTimeInputSize,
     select: activeSelectSize,
     multiselect: activeMultiSelectSize,
+    combobox: activeComboboxSize,
     card: activeCardSize,
     loader: activeLoaderSize,
     divider: activeDividerSize,
@@ -3166,6 +3425,10 @@ export default function App() {
     if (activeComponent === "multiselect") {
       if (tokenName === "multiselect-radius") return activeMultiSelectRadius;
       if (tokenName === "multiselect-pill-radius") return activeMultiSelectRadius;
+    }
+    if (activeComponent === "combobox") {
+      if (tokenName === "combobox-radius") return activeComboboxRadius;
+      if (tokenName === "combobox-pill-radius") return activeComboboxRadius;
     }
     if (activeComponent === "card" && tokenName === "card-radius") {
       return activeCardRadius;
@@ -4342,6 +4605,27 @@ export default function App() {
                   onToggleDropdown={() => setActiveMultiSelectShowDropdown((v) => !v)}
                 />
               )}
+              {activeComponent === "combobox" && (
+                <ComboboxPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeVariant={forcedVariant || activeVariant}
+                  activeComboboxSize={activeComboboxSize}
+                  activeComboboxRadius={activeComboboxRadius}
+                  sizeKeys={sizeKeys}
+                  activeColorToken={activeColorToken}
+                  selectedState={forcedState || activeComboboxState}
+                  selectionMode={activeComboboxSelectionMode}
+                  slotLayout={activeComboboxSlotLayout}
+                  showLabel={activeComboboxShowLabel}
+                  labelText={activeComboboxLabelText}
+                  withAsterisk={activeComboboxWithAsterisk}
+                  showError={activeComboboxShowError}
+                  errorText={activeComboboxErrorText}
+                  showDropdown={activeComboboxShowDropdown}
+                  onToggleDropdown={() => setActiveComboboxShowDropdown((v) => !v)}
+                />
+              )}
               {activeComponent === "card" && (
                 <CardPreviewContent
                   brands={brands}
@@ -5312,6 +5596,36 @@ export default function App() {
                   forcedState={forcedState}
                 />
               )}
+              {activeComponent === "combobox" && (
+                <ComboboxPropertiesPanel
+                  activeVariant={forcedVariant || activeVariant}
+                  setActiveVariant={setActiveVariant}
+                  activeComboboxSize={activeComboboxSize}
+                  setActiveComboboxSize={setActiveComboboxSize}
+                  activeComboboxRadius={activeComboboxRadius}
+                  setActiveComboboxRadius={setActiveComboboxRadius}
+                  sizeKeys={sizeKeys}
+                  selectedState={forcedState || activeComboboxState}
+                  setSelectedState={setActiveComboboxState}
+                  selectionMode={activeComboboxSelectionMode}
+                  setSelectionMode={setActiveComboboxSelectionMode}
+                  slotLayout={activeComboboxSlotLayout}
+                  setSlotLayout={setActiveComboboxSlotLayout}
+                  showLabel={activeComboboxShowLabel}
+                  setShowLabel={setActiveComboboxShowLabel}
+                  labelText={activeComboboxLabelText}
+                  setLabelText={setActiveComboboxLabelText}
+                  withAsterisk={activeComboboxWithAsterisk}
+                  setWithAsterisk={setActiveComboboxWithAsterisk}
+                  showError={activeComboboxShowError}
+                  setShowError={setActiveComboboxShowError}
+                  errorText={activeComboboxErrorText}
+                  setErrorText={setActiveComboboxErrorText}
+                  showDropdown={activeComboboxShowDropdown}
+                  setShowDropdown={setActiveComboboxShowDropdown}
+                  forcedState={forcedState}
+                />
+              )}
               {activeComponent === "card" && (
                 <CardPropertiesPanel
                   activeVariant={forcedVariant || activeVariant}
@@ -5726,7 +6040,7 @@ export default function App() {
                   setShowHeader={setActiveCalendarShowHeader}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "selectablefilterchip", "appliedfilterchip", "tooltip", "notification", "alert", "textinput", "dateinput", "timeinput", "select", "multiselect", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "selectablefilterchip", "appliedfilterchip", "tooltip", "notification", "alert", "textinput", "dateinput", "timeinput", "select", "multiselect", "combobox", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

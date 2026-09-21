@@ -2018,11 +2018,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
   var DOC_COLOR_VAR_NAMES = {
     // Dedicated, per-brand docs-chrome variables take priority; fall back to the
     // brand's surface/border semantics so older files keep their look.
-    pageBg: ["docs/page-background", "docs-page-background", "surface-primary", "surface/primary", "surface primary", "subtle-primary", "subtle/primary", "subtle primary"],
-    panelBg: ["docs/card-background", "docs-card-background", "surface-secondary", "surface/secondary", "surface secondary", "subtle-secondary", "subtle/secondary", "subtle secondary"],
-    panelStroke: ["docs/card-border", "docs-card-border", "border-primary", "border/primary", "border primary"],
+    pageBg: ["docs/page-background", "docs-page-background", "surface-canvas", "surface/canvas", "surface canvas", "surface-primary", "surface/primary", "surface primary", "surface-subtle-primary", "surface/subtle-primary", "surface subtle-primary", "subtle-primary", "subtle/primary", "subtle primary"],
+    panelBg: ["docs/card-background", "docs-card-background", "surface-secondary", "surface/secondary", "surface secondary", "surface-subtle-secondary", "surface/subtle-secondary", "surface subtle-secondary", "subtle-secondary", "subtle/secondary", "subtle secondary"],
+    panelStroke: ["docs/card-border", "docs-card-border", "border-secondary", "border/secondary", "border secondary", "border-primary", "border/primary", "border primary"],
     sectionHeading: ["docs/section-heading", "docs-section-heading", "interactive-primary", "interactive/primary", "interactive primary"],
-    title: ["docs/title", "docs-title", "text-default", "text/default", "text default"],
+    title: ["docs/title", "docs-title", "text-primary", "text/primary", "text primary", "text-default", "text/default", "text default"],
     textSubtle: ["docs/body-text", "docs-body-text", "text-subtle", "text/subtle", "text subtle"],
   };
 
@@ -6429,11 +6429,11 @@ async function buildFoundationsDocsPage(payload, titleFont) {
     return null;
   }
   var docVars = {
-    pageBg: resolveDocVar(["docs/page-background", "docs-page-background", "surface-primary", "surface/primary", "surface primary", "subtle-primary", "subtle/primary", "subtle primary"]),
-    panelBg: resolveDocVar(["docs/card-background", "docs-card-background", "surface-secondary", "surface/secondary", "surface secondary", "subtle-secondary", "subtle/secondary", "subtle secondary"]),
-    panelStroke: resolveDocVar(["docs/card-border", "docs-card-border", "border-primary", "border/primary", "border primary"]),
+    pageBg: resolveDocVar(["docs/page-background", "docs-page-background", "surface-canvas", "surface/canvas", "surface canvas", "surface-primary", "surface/primary", "surface primary", "surface-subtle-primary", "surface/subtle-primary", "surface subtle-primary", "subtle-primary", "subtle/primary", "subtle primary"]),
+    panelBg: resolveDocVar(["docs/card-background", "docs-card-background", "surface-secondary", "surface/secondary", "surface secondary", "surface-subtle-secondary", "surface/subtle-secondary", "surface subtle-secondary", "subtle-secondary", "subtle/secondary", "subtle secondary"]),
+    panelStroke: resolveDocVar(["docs/card-border", "docs-card-border", "border-secondary", "border/secondary", "border secondary", "border-primary", "border/primary", "border primary"]),
     heading: resolveDocVar(["docs/section-heading", "docs-section-heading", "interactive-primary", "interactive/primary", "interactive primary"]),
-    title: resolveDocVar(["docs/title", "docs-title", "text-default", "text/default", "text default"]),
+    title: resolveDocVar(["docs/title", "docs-title", "text-primary", "text/primary", "text primary", "text-default", "text/default", "text default"]),
     textSubtle: resolveDocVar(["docs/body-text", "docs-body-text", "text-subtle", "text/subtle", "text subtle"])
   };
 
@@ -6765,10 +6765,10 @@ async function buildFoundationsDocsPage(payload, titleFont) {
     ? (payload[currentBrandId].semantic.light || {}) : {};
   var SEMANTIC_GROUPS = [
     ["Interactive", ["interactive-primary", "interactive-primary-hover", "interactive-primary-pressed", "interactive-secondary", "interactive-secondary-hover", "interactive-disabled"]],
-    ["Text", ["text-default", "text-subtle", "text-on-interactive", "text-placeholder", "text-disabled", "text-inverse"]],
-    ["Surface", ["surface-primary", "surface-secondary", "subtle-primary", "subtle-secondary", "surface-default", "surface-inverse"]],
-    ["Border", ["border-primary", "border-default", "border-subtle", "border-focus", "border-disabled"]],
-    ["Feedback", ["feedback-error", "feedback-success", "feedback-warning"]]
+    ["Text", ["text-primary", "text-secondary", "text-subtle", "text-on-interactive", "text-placeholder", "text-disabled", "text-inverse"]],
+    ["Surface", ["surface-primary", "surface-secondary", "surface-canvas", "surface-subtle-primary", "surface-subtle-secondary", "surface-inverse"]],
+    ["Border", ["border-primary", "border-secondary", "border-subtle", "border-focus", "border-disabled"]],
+    ["Feedback", ["feedback-info", "feedback-success", "feedback-warning", "feedback-error"]]
   ];
   var groupedSet = {};
   for (var sg0 = 0; sg0 < SEMANTIC_GROUPS.length; sg0++) {

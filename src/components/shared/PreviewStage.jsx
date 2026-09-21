@@ -24,7 +24,7 @@ export default function PreviewStage({
   const previewBrand =
     typeof window !== "undefined" ? String(window.__DSG_PREVIEW_BRAND || "").toLowerCase() : "";
 
-  // Follow the active brand's `surface-primary` token (per theme), exposed by App
+  // Follow the active brand's `surface-canvas` token (per theme), exposed by App
   // on window.__DSG_PREVIEW_SURFACE, so any brand's canvas matches what it sets.
   // Fall back to the legacy constants only if a token color isn't available.
   const tokenSurface =
