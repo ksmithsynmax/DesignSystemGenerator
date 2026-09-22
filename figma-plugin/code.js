@@ -2186,7 +2186,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
   function createSectionHeader(title, subtitle, subtitleColor) {
     var block = createStack("Section Header", 8);
     appendText(block, titleFont, title, 20, DOC_COLORS.sectionHeading, "Section Heading", "sectionHeading");
-    appendText(block, bodyFont, subtitle, 14, subtitleColor || DOC_COLORS.subtitle, "Section Subtitle", "textSubtle");
+    var subNode = appendText(block, bodyFont, subtitle, 14, subtitleColor || DOC_COLORS.subtitle, "Section Subtitle", "textSubtle");
+    // Constrain to content width so long subtitles WRAP instead of running off the page.
+    try { subNode.textAutoResize = "HEIGHT"; } catch (_shAutoErr) {}
+    try { subNode.layoutSizingHorizontal = "FIXED"; } catch (_shFixedErr) {}
+    try { subNode.resize(1192, subNode.height); } catch (_shResizeErr) {}
     return block;
   }
 
@@ -2797,9 +2801,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       if (variant === "subtle") return "Transparent until interacted with; a quiet action that surfaces a light tint on hover.";
       if (variant === "default") return "Neutral bordered button for standard, non-branded actions where color emphasis isn't needed.";
     }
+    if (comp === "slider") {
+      if (variant === "default") return "Continuous slider for selecting a value across a smooth range. Optional marks add reference points.";
+      if (variant === "stepped") return "Segmented scale that snaps to discrete, labeled stops. Each segment is colored via slider-scale-1..7 with a dot per stop (slider-scale-dot-color). Figma shows 7 segments as a reference — the step count and labels are configured in code.";
+    }
     if (comp === "combobox") {
-      if (variant === "list") return "Simple text option rows";
-      if (variant === "grid") return "A slot row — the design system styles the row container and selection; the consumer renders any component inside each row";
+      if (variant === "list") return "Built-in text option rows. Use when options are simple labels — no custom content needed.";
+      if (variant === "grid") return "Each row is an empty SLOT — insert your own component (e.g. a row / list-item). The design system styles only the row container: divider, padding, and the selected/hover background. Give your inserted component a transparent background so the row's selection highlight shows through.";
     }
     if (comp === "badge") {
       if (variant === "filled") {
@@ -4512,10 +4520,18 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           ? "Closed field and the open state with the calendar picker."
           : lowerSetName === "timeinput"
           ? "Closed field and the open state with the time picker."
+          : lowerSetName === "combobox"
+          ? "Closed control, plus the open menu for both the List and Grid variants. The Active (selected) and Hover highlights are shown as separate examples."
           : "Closed control and the open menu with selectable options.";
         doc.appendChild(createSectionHeader("Dropdown", dropdownDocSubtitle, DOC_COLORS.subtitle));
-        selectDropdownSlot = createPanel("slot:" + slug + ":dropdown", 10);
-        selectDropdownSlot.resize(1192, selectDropdownSlot.height);
+        if (lowerSetName === "combobox") {
+          // Combobox uses TWO separate cards (List + Grid), so the container itself is a
+          // transparent vertical stack; the cards are built during the fill phase.
+          selectDropdownSlot = createStack("slot:" + slug + ":dropdown", 24);
+        } else {
+          selectDropdownSlot = createPanel("slot:" + slug + ":dropdown", 10);
+          selectDropdownSlot.resize(1192, selectDropdownSlot.height);
+        }
         doc.appendChild(selectDropdownSlot);
       }
     }
@@ -4892,6 +4908,17 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           var resolvedKey = getPropKey(variantProps, userKey);
           if (resolvedKey) props[resolvedKey] = propPatch[userKey];
         }
+        // Slider: the Stepped variant only exists with Marks=On (its segments
+        // are inherent), so force it — otherwise setProperties can't resolve the
+        // combo and silently falls back to Default. Default documents Marks=Off
+        // for a clean continuous baseline.
+        if (lowerSetName === "slider" && variantKey) {
+          var sliderMarksKey = getPropKey(variantProps, "Marks");
+          if (sliderMarksKey) {
+            props[sliderMarksKey] =
+              String(props[variantKey]).toLowerCase() === "stepped" ? "On" : "Off";
+          }
+        }
         try { inst.setProperties(props); } catch (e) {}
         clearExplicitModesInSubtree(inst);
         return inst;
@@ -4983,7 +5010,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           var variantBlock = createStack("variant-block-" + normalizeName(variantName), 8);
           var variantHeader = createStack("variant-header-" + normalizeName(variantName), 6);
           appendText(variantHeader, titleFont, String(variantName), 18, DOC_COLORS.panelHeading, "Variant Heading", "title");
-          appendText(variantHeader, bodyFont, getVariantDescription(setName, variantName), 12, DOC_COLORS.panelBody, "Variant Description");
+          var variantDescNode = appendText(variantHeader, bodyFont, getVariantDescription(setName, variantName), 12, DOC_COLORS.panelBody, "Variant Description");
+          // Constrain the description to the content width so long guidance (e.g. the
+          // grid slot instructions) WRAPS instead of growing horizontally off the page.
+          try { variantDescNode.textAutoResize = "HEIGHT"; } catch (_vdAutoErr) {}
+          try { variantDescNode.layoutSizingHorizontal = "FIXED"; } catch (_vdFixedErr) {}
+          try { variantDescNode.resize(1192, variantDescNode.height); } catch (_vdResizeErr) {}
           variantBlock.appendChild(variantHeader);
 
           var variantSection = createPanel("variant-section-" + normalizeName(variantName), 10);
@@ -5674,26 +5706,77 @@ async function buildUsageDocsPage(componentSets, titleFont) {
 
       if (selectDropdownSlot) {
         clearChildren(selectDropdownSlot);
-        var selectDocDropdownFillValues = pickOrdered(getPropValues(variantProps, "Dropdown"), ["Closed", "Open"]);
-        addInstancesRow(
-          selectDropdownSlot,
-          "Dropdown",
-          selectDocDropdownFillValues,
-          function (dropdownName) {
-            var dropdownProps = { Dropdown: dropdownName };
-            // The open menu should showcase the active/selected option highlight.
-            // makeInstance doesn't default Active/Hover, so the open example would
-            // otherwise inherit Active=Off (nothing selected). Pin the first option
-            // active and hover off so the selected-state tokens render.
-            if (String(dropdownName).toLowerCase() === "open") {
-              if (getPropKey(variantProps, "Active")) dropdownProps.Active = "One";
-              if (getPropKey(variantProps, "Hover")) dropdownProps.Hover = "Off";
-            }
-            return makeInstance(dropdownProps);
-          },
-          false,
-          { itemsPerRow: 2, rowItemSpacing: 24 }
-        );
+        // Helper: an OPEN example is decoupled to imply a FOCUSED trigger — the only
+        // variants with Dropdown=Open are built under State=Focus. Active and Hover are
+        // shown as SEPARATE examples (one highlight each) so each reads cleanly:
+        //   Active example = selected row only (Active=One, Hover=Off)
+        //   Hover example  = pointer-hovered row only (Active=Off, Hover=One)
+        function comboboxOpenProps(variantValue, highlight) {
+          var props = { Dropdown: "Open" };
+          if (getPropKey(variantProps, "State")) props.State = "Focus";
+          if (variantValue != null && getPropKey(variantProps, "Variant")) props.Variant = variantValue;
+          if (highlight === "hover") {
+            if (getPropKey(variantProps, "Active")) props.Active = "Off";
+            if (getPropKey(variantProps, "Hover")) props.Hover = "One";
+          } else {
+            if (getPropKey(variantProps, "Active")) props.Active = "One";
+            if (getPropKey(variantProps, "Hover")) props.Hover = "Off";
+          }
+          return props;
+        }
+
+        if (lowerSetName === "combobox" && getPropKey(variantProps, "Variant")) {
+          // Combobox documents the open menu for BOTH variants (List = built-in option
+          // rows, Grid = dev-owned slot rows). Each variant gets its OWN card with a
+          // clean 3-up row: Closed, Active, Hover (single highlight each).
+          function buildComboboxDropdownCard(variantValue) {
+            var card = createPanel("combobox-dropdown-" + variantValue.toLowerCase(), 12);
+            card.resize(1192, card.height);
+            var cardHeader = createStack("combobox-dropdown-" + variantValue.toLowerCase() + "-header", 4);
+            appendText(cardHeader, titleFont, variantValue, 16, DOC_COLORS.panelHeading, "Variant Heading", "title");
+            card.appendChild(cardHeader);
+            addInstancesRow(
+              card,
+              "Dropdown",
+              ["Closed", "Active", "Hover"],
+              function (label) {
+                var l = String(label).toLowerCase();
+                if (l.indexOf("closed") >= 0) {
+                  var closedProps = { Dropdown: "Closed" };
+                  if (getPropKey(variantProps, "Variant")) closedProps.Variant = variantValue;
+                  return makeInstance(closedProps);
+                }
+                var highlight = l.indexOf("hover") >= 0 ? "hover" : "active";
+                return makeInstance(comboboxOpenProps(variantValue, highlight));
+              },
+              false,
+              { itemsPerRow: 3, rowItemSpacing: 24 }
+            );
+            selectDropdownSlot.appendChild(card);
+          }
+          buildComboboxDropdownCard("List");
+          buildComboboxDropdownCard("Grid");
+        } else {
+          var selectDocDropdownFillValues = pickOrdered(getPropValues(variantProps, "Dropdown"), ["Closed", "Open"]);
+          addInstancesRow(
+            selectDropdownSlot,
+            "Dropdown",
+            selectDocDropdownFillValues,
+            function (dropdownName) {
+              var dropdownProps = { Dropdown: dropdownName };
+              // Pin the first option active and hover off so the selected-state tokens
+              // render in the open example instead of Active=Off (nothing selected).
+              if (String(dropdownName).toLowerCase() === "open") {
+                if (getPropKey(variantProps, "State")) dropdownProps.State = "Focus";
+                if (getPropKey(variantProps, "Active")) dropdownProps.Active = "One";
+                if (getPropKey(variantProps, "Hover")) dropdownProps.Hover = "Off";
+              }
+              return makeInstance(dropdownProps);
+            },
+            false,
+            { itemsPerRow: 2, rowItemSpacing: 24 }
+          );
+        }
       }
 
       if (burgerOpenedSlot) {
@@ -8133,7 +8216,8 @@ function buildSliderComponentSet(varMap, page, font) {
 
           var comp = figma.createComponent();
           comp.name =
-            "Size=" + capSize +
+            "Variant=Default" +
+            ", Size=" + capSize +
             ", Radius=" + capRadius +
             ", State=" + capState +
             ", Marks=" + capMarks;
@@ -8244,6 +8328,160 @@ function buildSliderComponentSet(varMap, page, font) {
           page.appendChild(comp);
           components.push(comp);
         }
+      }
+    }
+  }
+
+  // -----------------------------------------------------------------------
+  // Stepped variant: a segmented scale. Figma shows a representative 7 segments
+  // (the real step count/labels are configurable in code). Each band binds to
+  // slider/scale-1..7, dots to slider/scale-dot-color, labels are editable text,
+  // and the thumb snaps to a segment. Marks are inherent, so Marks is always On.
+  // -----------------------------------------------------------------------
+  var steppedSegCount = 7;
+  var steppedLabels = ["1", "2", "3", "4", "5", "6", "7"];
+  var steppedActive = 4; // 0-indexed active segment (matches the AIS reference)
+  // Dots scale with the size so they sit on the track instead of dwarfing the
+  // thin xs/sm tracks (a fixed 8px dot reads as off-center on a 2px track).
+  var steppedDotSize = { default: 8, xs: 6, sm: 6, md: 8, lg: 8, xl: 10 };
+  var steppedBaseY = runningY + 140; // sit below the default-variant grid
+
+  for (var sri = 0; sri < radii.length; sri++) {
+    var sRadius = radii[sri];
+    var sCapRadius = sRadius.toUpperCase();
+
+    for (var ssi = 0; ssi < sizes.length; ssi++) {
+      var sSize = sizes[ssi];
+      var sCapSize = sSize.toUpperCase();
+
+      for (var ssti = 0; ssti < states.length; ssti++) {
+        var sState = states[ssti];
+        var sCapState = sState.charAt(0).toUpperCase() + sState.slice(1);
+
+        var scomp = figma.createComponent();
+        scomp.name =
+          "Variant=Stepped" +
+          ", Size=" + sCapSize +
+          ", Radius=" + sCapRadius +
+          ", State=" + sCapState +
+          ", Marks=On";
+        scomp.resize(trackWidth, 58);
+        scomp.fills = [];
+
+        var sThumbPx = sizeThumb[sSize] != null ? sizeThumb[sSize] : sizeThumb.default;
+        var sTrackPx = sizeTrack[sSize] != null ? sizeTrack[sSize] : sizeTrack.default;
+        var sTrackY = (sThumbPx - sTrackPx) / 2;
+        var segW = trackWidth / steppedSegCount;
+
+        for (var seg = 0; seg < steppedSegCount; seg++) {
+          var band = figma.createRectangle();
+          band.name = "Segment-" + (seg + 1);
+          band.resize(segW, sTrackPx);
+          band.x = seg * segW;
+          band.y = sTrackY;
+          band.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } }];
+          bindPaintVar(band, "fills", 0, varMap["slider/scale-" + (seg + 1)]);
+          bindVar(band, "height", varMap["slider/track-height-" + sSize]);
+          // Round only the outer ends of the scale so it reads as one track.
+          if (seg === 0) {
+            bindVar(band, "topLeftRadius", varMap["slider/radius-" + sRadius]);
+            bindVar(band, "bottomLeftRadius", varMap["slider/radius-" + sRadius]);
+          }
+          if (seg === steppedSegCount - 1) {
+            bindVar(band, "topRightRadius", varMap["slider/radius-" + sRadius]);
+            bindVar(band, "bottomRightRadius", varMap["slider/radius-" + sRadius]);
+          }
+          scomp.appendChild(band);
+          // Disabled: mute the scale ramp so it reads inactive (mirrors the
+          // default variant's disabled treatment and the web preview).
+          if (sState === "disabled") band.opacity = 0.5;
+          // Re-center the band on the thumb axis using its ACTUAL (bound) height.
+          // The track-height variable can resolve to a different value than the
+          // build-time number (e.g. xs resolves to 4, not 2), which would
+          // otherwise leave the band's center 1px below the dots/thumb — the
+          // xs/sm mis-centering bug. Done after append so the bound value is
+          // fully resolved before we read band.height.
+          band.y = Math.round(sThumbPx / 2 - band.height / 2);
+
+          var dotSize = steppedDotSize[sSize] != null ? steppedDotSize[sSize] : 8;
+          var dot = figma.createEllipse();
+          dot.name = "Dot-" + (seg + 1);
+          dot.resize(dotSize, dotSize);
+          // Center on the segment (x) and on the thumb/track axis (y), rounded
+          // to whole pixels so thin-track sizes stay crisply centered.
+          dot.x = Math.round(seg * segW + segW / 2 - dotSize / 2);
+          dot.y = Math.round(sThumbPx / 2 - dotSize / 2);
+          dot.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+          // Disabled: drop the interactive blue for the neutral disabled mark
+          // color so the dots stop reading as "active".
+          var sDotVar = sState === "disabled"
+            ? (varMap["slider/mark-color-disabled"] || varMap["slider/scale-dot-color"])
+            : varMap["slider/scale-dot-color"];
+          bindPaintVar(dot, "fills", 0, sDotVar);
+          scomp.appendChild(dot);
+
+          var sLabel = figma.createText();
+          sLabel.name = "Label-" + (seg + 1);
+          sLabel.fontName = font;
+          sLabel.characters = steppedLabels[seg];
+          sLabel.fontSize = 12;
+          sLabel.textAlignHorizontal = "CENTER";
+          sLabel.textAutoResize = "HEIGHT";
+          sLabel.resize(segW, sLabel.height);
+          sLabel.x = seg * segW;
+          sLabel.y = sTrackY + sTrackPx + 10;
+          sLabel.fills = [{ type: "SOLID", color: { r: 0.7, g: 0.72, b: 0.75 } }];
+          bindPaintVar(sLabel, "fills", 0, varMap[sliderMarkLabelColorPath(sState)]);
+          bindVar(sLabel, "fontSize", varMap["slider/mark-label-font-size-" + sSize]);
+          bindVar(sLabel, "fontFamily", varMap["slider/mark-label-font-family"]);
+          bindVar(sLabel, "fontStyle", varMap["slider/mark-label-font-weight"]);
+          bindVar(sLabel, "lineHeight", varMap["slider/mark-label-line-height-" + sSize]);
+          scomp.appendChild(sLabel);
+        }
+
+        // Thumb on the active segment (appended last so it sits above the dot).
+        var sThumb = figma.createEllipse();
+        sThumb.name = "Thumb";
+        sThumb.resize(sThumbPx, sThumbPx);
+        sThumb.x = steppedActive * segW + segW / 2 - Math.round(sThumbPx / 2);
+        sThumb.y = 0;
+        sThumb.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
+        sThumb.strokes = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
+        sThumb.strokeWeight = 2;
+        bindPaintVar(sThumb, "fills", 0, varMap[sliderThumbBgPath(sState)]);
+        bindPaintVar(sThumb, "strokes", 0, varMap[sliderThumbBorderPath(sState)]);
+        bindVar(sThumb, "width", varMap["slider/thumb-size-" + sSize]);
+        bindVar(sThumb, "height", varMap["slider/thumb-size-" + sSize]);
+        bindVar(sThumb, "strokeWeight", varMap["slider/thumb-border-width-" + sSize]);
+        if (sState === "focus") {
+          sThumb.effects = [{
+            type: "DROP_SHADOW",
+            color: { r: 0.2, g: 0.53, b: 0.9, a: 0.35 },
+            offset: { x: 0, y: 0 },
+            radius: 0,
+            spread: 3,
+            visible: true,
+            blendMode: "NORMAL"
+          }];
+        }
+        scomp.appendChild(sThumb);
+
+        // Hug the actual content (labels are the lowest element) instead of a
+        // fixed height, so the frame doesn't carry dead space beneath the row.
+        var sContentBottom = sLabel.y + sLabel.height;
+        if (sThumb.y + sThumbPx > sContentBottom) sContentBottom = sThumb.y + sThumbPx;
+        scomp.resize(trackWidth, Math.ceil(sContentBottom + 4));
+
+        if (sState === "disabled") {
+          scomp.opacity = 0.65;
+        }
+
+        var sColIndex = sri;
+        var sRowIndex = (ssi * states.length) + ssti;
+        scomp.x = sColIndex * colWidth;
+        scomp.y = steppedBaseY + rowYOffsets[sRowIndex];
+        page.appendChild(scomp);
+        components.push(scomp);
       }
     }
   }
@@ -26372,8 +26610,9 @@ async function buildComboboxComponentSet(varMap, page, font) {
   var labelModes = ["none", "label", "required"];
   var pillLabels = ["Option one"];
   var optionLabels = ["Option one", "Option two", "Option three"];
-  var selectedOptionIndices = { 0: true };
-  var hoverOptionIndex = 2;
+  // Which row is selected/active and which is hovered while OPEN is no longer
+  // hardcoded — both are driven by the per-variant "Active" and "Hover" axes
+  // (see the build loop), mirroring Select.
   var components = [];
 
   var chevronIconComp = await findSelectChevronIconComponent();
@@ -26402,14 +26641,11 @@ async function buildComboboxComponentSet(varMap, page, font) {
   var colWidth = 220;
   var rowHeight = 220;
 
-  function stateDropdownRow(state, dropdownMode) {
-    if (state === "default") return dropdownMode === "open" ? 1 : 0;
-    if (state === "hover") return dropdownMode === "open" ? 3 : 2;
-    if (state === "focus") return dropdownMode === "open" ? 5 : 4;
-    if (state === "error") return 6;
-    if (state === "disabled") return 7;
-    return 0;
-  }
+  // Variants are packed densely per column (mirrors Select) using a running Y cursor,
+  // because the OPEN state now fans out into a variable number of Active x Hover
+  // variants that a fixed row grid can't cleanly reserve space for.
+  var comboColYCursors = {};
+  var rowGap = 20;
 
   for (var vi = 0; vi < variants.length; vi++) {
     var variant = variants[vi];
@@ -26437,8 +26673,37 @@ async function buildComboboxComponentSet(varMap, page, font) {
 
             for (var dmi = 0; dmi < dropdownModes.length; dmi++) {
               var dropdownMode = dropdownModes[dmi];
-              if ((state === "disabled" || state === "error") && dropdownMode === "open") continue;
+              // Decoupled open state: an OPEN dropdown implies a FOCUSED trigger, so we
+              // only emit the open variants for state === "focus". Default/Hover/Error/
+              // Disabled + Open were redundant or incoherent (an open list with no focus
+              // indication), so they're intentionally dropped.
+              if (dropdownMode === "open" && state !== "focus") continue;
               var capDropdown = dropdownMode === "open" ? "Open" : "Closed";
+
+              // Two decoupled open-state axes (mirrors Select):
+              //   Active = the selected / active-descendant row (checkmark + selected bg)
+              //   Hover  = the row under the pointer (hover bg)
+              // Index -1 = "Off" (that axis highlights no row).
+              var activeOptionIndices = [-1];
+              var hoverOptionIndices = [-1];
+              if (dropdownMode === "open") {
+                // Open default: option one is the active/selected row; nothing hovered.
+                activeOptionIndices = [0];
+                hoverOptionIndices = [-1];
+                // Memory guard: only build the full Active x Hover matrix on the default
+                // size + radius. Otherwise every size/radius would multiply by 16
+                // (4 active x 4 hover) and blow up the set.
+                if (size === "default" && rad === "default") {
+                  activeOptionIndices = [0, -1, 1, 2];
+                  hoverOptionIndices = [-1, 0, 1, 2];
+                }
+              }
+              for (var aoi = 0; aoi < activeOptionIndices.length; aoi++) {
+                var activeOptionIndex = activeOptionIndices[aoi];
+                var activeOptionName = activeOptionIndex < 0 ? "Off" : activeOptionIndex === 0 ? "One" : activeOptionIndex === 1 ? "Two" : "Three";
+                for (var hoi = 0; hoi < hoverOptionIndices.length; hoi++) {
+                  var hoverOptionIndex = hoverOptionIndices[hoi];
+                  var hoverOptionName = hoverOptionIndex < 0 ? "Off" : hoverOptionIndex === 0 ? "One" : hoverOptionIndex === 1 ? "Two" : "Three";
 
               var comp = figma.createComponent();
               comp.name =
@@ -26447,7 +26712,9 @@ async function buildComboboxComponentSet(varMap, page, font) {
                 ", Radius=" + capRad +
                 ", State=" + capState +
                 ", Label=" + capLabelMode +
-                ", Dropdown=" + capDropdown;
+                ", Dropdown=" + capDropdown +
+                ", Active=" + activeOptionName +
+                ", Hover=" + hoverOptionName;
               comp.layoutMode = "VERTICAL";
               comp.primaryAxisSizingMode = "AUTO";
               comp.counterAxisSizingMode = "AUTO";
@@ -26907,7 +27174,10 @@ async function buildComboboxComponentSet(varMap, page, font) {
                     option.resize(184, optionHeight);
                     option.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 }, opacity: 0 }];
 
-                    var isSelectedOption = selectedOptionIndices[oi] === true;
+                    // Active = selected/active-descendant row (checkmark + selected bg);
+                    // Hover = pointer-hovered row (hover bg). Selected wins when a row is
+                    // both, so the active row always reads as selected.
+                    var isSelectedOption = oi === activeOptionIndex;
                     var isHoverOption = oi === hoverOptionIndex;
                     var optionBgVar = null;
                     if (isSelectedOption) {
@@ -26926,10 +27196,10 @@ async function buildComboboxComponentSet(varMap, page, font) {
                     optionText.characters = optionLabels[oi];
                     optionText.fontSize = 14;
                     optionText.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.2, b: 0.2 } }];
-                    if (isHoverOption && varMap["combobox/option-hover-text"]) {
-                      bindPaintVar(optionText, "fills", 0, varMap["combobox/option-hover-text"]);
-                    } else if (isSelectedOption && varMap["combobox/option-selected-text"]) {
+                    if (isSelectedOption && varMap["combobox/option-selected-text"]) {
                       bindPaintVar(optionText, "fills", 0, varMap["combobox/option-selected-text"]);
+                    } else if (isHoverOption && varMap["combobox/option-hover-text"]) {
+                      bindPaintVar(optionText, "fills", 0, varMap["combobox/option-hover-text"]);
                     } else if (varMap["combobox/text"]) {
                       bindPaintVar(optionText, "fills", 0, varMap["combobox/text"]);
                     }
@@ -27063,11 +27333,13 @@ async function buildComboboxComponentSet(varMap, page, font) {
                     gridRow.resize(184, optionHeight);
                     if (gridColumnGapVar) bindVar(gridRow, "itemSpacing", gridColumnGapVar);
 
-                    // Row background: index 0 = selected, index 2 = hovered, else transparent.
+                    // Row background: Active = selected/active-descendant row (selected bg),
+                    // Hover = pointer-hovered row (hover bg). Selected wins when a row is
+                    // both, so the active row always reads as selected.
                     var gridRowBgVar = null;
-                    if (gri === 0) {
+                    if (gri === activeOptionIndex) {
                       gridRowBgVar = varMap["combobox/option-selected-background"];
-                    } else if (gri === 2) {
+                    } else if (gri === hoverOptionIndex) {
                       gridRowBgVar = varMap["combobox/option-hover-background"];
                     }
                     if (gridRowBgVar) {
@@ -27114,7 +27386,13 @@ async function buildComboboxComponentSet(varMap, page, font) {
                     }
                     var gridSlotIsNative = !!gridSlot && gridSlot.type === "SLOT";
                     if (!gridSlot) gridSlot = figma.createFrame();
-                    gridSlot.name = "Slot";
+                    // Each row's slot gets a UNIQUE, stable name ("Slot 1/2/3"). Figma
+                    // carries slot content across variant switches (e.g. toggling Label)
+                    // by MATCHING LAYER NAMES. When every slot was named "Slot", the match
+                    // was ambiguous and only the first row's content survived a property
+                    // change — rows 2/3 reverted to empty. Unique names make each row map
+                    // 1:1 across every variant, so filled slots persist when you switch props.
+                    gridSlot.name = "Slot " + (gri + 1);
                     // VERTICAL flow is deliberate: Figma's "fill items to container by
                     // default" (stretchChildOnInsert, configured below) fills inserted
                     // content on the axis ACROSS the flow — so vertical flow => dropped
@@ -27234,13 +27512,18 @@ async function buildComboboxComponentSet(varMap, page, font) {
 
               if (state === "disabled") comp.opacity = 0.6;
 
+              // Pack radius variants into columns, then stack each column densely by the
+              // running Y cursor (mirrors Select) so the variable Active x Hover fan-out
+              // never overlaps or leaves big reserved gaps.
               var columnsPerRadius = variants.length * labelModes.length;
               var colIndex = (ri * columnsPerRadius) + (vi * labelModes.length + li);
-              var rowIndex = (si * 8) + stateDropdownRow(state, dropdownMode);
               comp.x = colIndex * (colWidth + gap);
-              comp.y = rowIndex * rowHeight;
+              comp.y = comboColYCursors[colIndex] || 0;
+              comboColYCursors[colIndex] = comp.y + comp.height + rowGap;
               page.appendChild(comp);
               components.push(comp);
+                } // end Hover axis loop
+              } // end Active axis loop
             }
           }
         }

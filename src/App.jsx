@@ -998,6 +998,9 @@ export default function App() {
   const [activeSliderMarks, setActiveSliderMarks] = useState(true);
   const [activeSliderValue, setActiveSliderValue] = useState(40);
   const [activeSliderLabelMode, setActiveSliderLabelMode] = useState("hover");
+  const [activeSliderVariant, setActiveSliderVariant] = useState("default");
+  const [activeSliderSteps, setActiveSliderSteps] = useState("0, 25, 50, 75, 100");
+  const [activeSliderStepIndex, setActiveSliderStepIndex] = useState(2);
   const [activeRangeSliderSize, setActiveRangeSliderSize] = useState(rangeSliderDefault);
   const [activeRangeSliderRadius, setActiveRangeSliderRadius] = useState(rangeSliderDefault);
   const [activeRangeSliderState, setActiveRangeSliderState] = useState("default");
@@ -1386,6 +1389,9 @@ export default function App() {
       setActiveSliderMarks(true);
       setActiveSliderValue(40);
       setActiveSliderLabelMode("hover");
+      setActiveSliderVariant("default");
+      setActiveSliderSteps("0, 25, 50, 75, 100");
+      setActiveSliderStepIndex(2);
     } else if (newComp === "rangeslider") {
       setActiveRangeSliderSize(rangeSliderDefault);
       setActiveRangeSliderRadius(rangeSliderDefault);
@@ -4264,6 +4270,9 @@ export default function App() {
                   showMarks={activeSliderMarks}
                   value={activeSliderValue}
                   labelMode={activeSliderLabelMode}
+                  variant={activeSliderVariant}
+                  steps={activeSliderSteps}
+                  stepIndex={activeSliderStepIndex}
                 />
               )}
 
@@ -5161,6 +5170,12 @@ export default function App() {
                   setValue={setActiveSliderValue}
                   labelMode={activeSliderLabelMode}
                   setLabelMode={setActiveSliderLabelMode}
+                  variant={activeSliderVariant}
+                  setVariant={setActiveSliderVariant}
+                  steps={activeSliderSteps}
+                  setSteps={setActiveSliderSteps}
+                  stepIndex={activeSliderStepIndex}
+                  setStepIndex={setActiveSliderStepIndex}
                   forcedState={forcedState}
                 />
               )}

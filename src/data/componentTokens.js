@@ -1259,6 +1259,18 @@ export const COMPONENT_TOKENS = {
     "slider-mark-label-color": { type: "COLOR", semantic: "text-primary", figmaPath: "slider/mark-label-color" },
     "slider-mark-label-color-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "slider/mark-label-color-disabled" },
 
+    // ── STEPPED VARIANT: SCALE SEGMENT COLORS (light → dark) ──
+    // A 7-stop grayscale ramp. Each segment of the stepped scale samples this
+    // ramp; every stop is independently editable. The dot color is separate.
+    "slider-scale-1": { type: "COLOR", defaultMapping: { color: "neutral", index: 0, opacity: 100 }, figmaPath: "slider/scale-1" },
+    "slider-scale-2": { type: "COLOR", defaultMapping: { color: "neutral", index: 2, opacity: 100 }, figmaPath: "slider/scale-2" },
+    "slider-scale-3": { type: "COLOR", defaultMapping: { color: "neutral", index: 3, opacity: 100 }, figmaPath: "slider/scale-3" },
+    "slider-scale-4": { type: "COLOR", defaultMapping: { color: "neutral", index: 4, opacity: 100 }, figmaPath: "slider/scale-4" },
+    "slider-scale-5": { type: "COLOR", defaultMapping: { color: "neutral", index: 5, opacity: 100 }, figmaPath: "slider/scale-5" },
+    "slider-scale-6": { type: "COLOR", defaultMapping: { color: "neutral", index: 7, opacity: 100 }, figmaPath: "slider/scale-6" },
+    "slider-scale-7": { type: "COLOR", defaultMapping: { color: "neutral", index: 8, opacity: 100 }, figmaPath: "slider/scale-7" },
+    "slider-scale-dot-color": { type: "COLOR", semantic: "interactive-primary", figmaPath: "slider/scale-dot-color" },
+
     // ── SHARED COLOR TOKEN ──
     "slider-focus-ring": { type: "COLOR", semantic: "border-focus", figmaPath: "slider/focus-ring" },
 

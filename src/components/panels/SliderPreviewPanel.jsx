@@ -1,10 +1,12 @@
 import SliderPreview from "../previews/SliderPreview";
+import { parseSteps } from "../../utils/sliderSteps";
 import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
 export const SLIDER_STATES = ["default", "focus", "disabled"];
 export const SLIDER_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
+export const SLIDER_VARIANTS = ["default", "stepped"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
@@ -43,6 +45,31 @@ function PropertyRow({ label, value, onChange, options, disabled = false }) {
   );
 }
 
+function TextInputRow({ label, value, onChange, placeholder }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <SectionLabel mb={0}>{label}</SectionLabel>
+      <input
+        type="text"
+        value={value}
+        placeholder={placeholder}
+        onChange={(e) => onChange(e.target.value)}
+        style={{
+          background: "#25262B",
+          color: "#E9ECEF",
+          border: "1px solid #373A40",
+          borderRadius: 6,
+          padding: "6px 12px",
+          fontSize: 13,
+          fontWeight: 600,
+          fontFamily: "monospace",
+          outline: "none",
+        }}
+      />
+    </div>
+  );
+}
+
 export function SliderPreviewContent({
   brands,
   activeBrand,
@@ -54,11 +81,17 @@ export function SliderPreviewContent({
   showMarks,
   value,
   labelMode,
+  variant = "default",
+  steps,
+  stepIndex,
 }) {
-  const matrixRows = [
-    { label: "no marks", withMarks: false },
-    { label: "with marks", withMarks: true },
-  ];
+  const isStepped = variant === "stepped";
+  const matrixRows = isStepped
+    ? [{ label: "stepped", withMarks: true }]
+    : [
+        { label: "no marks", withMarks: false },
+        { label: "with marks", withMarks: true },
+      ];
 
   return (
     <div>
@@ -72,11 +105,14 @@ export function SliderPreviewContent({
           showMarks={showMarks}
           value={value}
           labelMode={labelMode}
+          variant={variant}
+          steps={steps}
+          stepIndex={stepIndex}
         />
       </PreviewStage>
 
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
-      <SectionLabel mt={20}>All Sizes x Marks</SectionLabel>
+      <SectionLabel mt={20}>{isStepped ? "All Sizes" : "All Sizes x Marks"}</SectionLabel>
       <PreviewMatrix
         sizeKeys={sizeKeys}
         rows={matrixRows}
@@ -90,6 +126,9 @@ export function SliderPreviewContent({
             showMarks={row.withMarks}
             value={value}
             labelMode={labelMode}
+            variant={variant}
+            steps={steps}
+            stepIndex={stepIndex}
           />
         )}
       />
@@ -112,9 +151,20 @@ export function SliderPropertiesPanel({
   labelMode,
   setLabelMode,
   forcedState,
+  variant = "default",
+  setVariant,
+  steps,
+  setSteps,
+  stepIndex,
+  setStepIndex,
 }) {
+  const isStepped = variant === "stepped";
+  const stepLabels = parseSteps(steps);
+  const stopOptions = stepLabels.map((_, i) => String(i));
+
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      <PropertyRow label="Variant" value={variant} onChange={setVariant} options={SLIDER_VARIANTS} />
       <PropertyRow label="Size" value={activeSliderSize} onChange={setActiveSliderSize} options={sizeKeys} />
       <PropertyRow
         label="Radius"
@@ -130,23 +180,43 @@ export function SliderPropertiesPanel({
         disabled={Boolean(forcedState)}
       />
       <PropertyRow
-        label="Marks"
-        value={showMarks ? "on" : "off"}
-        onChange={(v) => setShowMarks(v === "on")}
-        options={["on", "off"]}
-      />
-      <PropertyRow
         label="Label"
         value={labelMode}
         onChange={setLabelMode}
         options={["hover", "always", "off"]}
       />
-      <PropertyRow
-        label="Value"
-        value={String(value)}
-        onChange={(v) => setValue(Number(v))}
-        options={["20", "40", "60", "80"]}
-      />
+
+      {isStepped ? (
+        <>
+          <TextInputRow
+            label="Steps"
+            value={typeof steps === "string" ? steps : parseSteps(steps).join(", ")}
+            onChange={setSteps}
+            placeholder="0, 25, 50, 75, 100"
+          />
+          <PropertyRow
+            label="Active stop"
+            value={String(Math.min(stepIndex ?? 0, Math.max(stepLabels.length - 1, 0)))}
+            onChange={(v) => setStepIndex(Number(v))}
+            options={stopOptions.length ? stopOptions : ["0"]}
+          />
+        </>
+      ) : (
+        <>
+          <PropertyRow
+            label="Marks"
+            value={showMarks ? "on" : "off"}
+            onChange={(v) => setShowMarks(v === "on")}
+            options={["on", "off"]}
+          />
+          <PropertyRow
+            label="Value"
+            value={String(value)}
+            onChange={(v) => setValue(Number(v))}
+            options={["20", "40", "60", "80"]}
+          />
+        </>
+      )}
     </div>
   );
 }
