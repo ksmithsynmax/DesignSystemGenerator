@@ -43,6 +43,7 @@ export default function SegmentedControlPreview({
   const labelTextHover = getColor("segmentedcontrol-label-text-hover");
   const labelTextActive = getColor("segmentedcontrol-label-text-active");
   const labelTextDisabled = getColor("segmentedcontrol-label-text-disabled");
+  const labelTextActiveDisabled = getColor("segmentedcontrol-label-text-active-disabled");
 
   // Pass the raw size through so resolveDimension resolves each token's own
   // "default" entry (and any brand override at the default size). Pre-mapping
@@ -76,7 +77,7 @@ export default function SegmentedControlPreview({
   };
 
   const labelColorFor = (isActive) => {
-    if (isDisabled) return labelTextDisabled;
+    if (isDisabled) return isActive ? labelTextActiveDisabled : labelTextDisabled;
     if (isActive) return labelTextActive;
     if (isHover) return labelTextHover;
     return labelText;

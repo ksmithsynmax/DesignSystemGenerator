@@ -6918,10 +6918,6 @@ export const STORYBOOK_BRANDS = {
         "color": "slate-gray",
         "index": 0
       },
-      "primary-border": {
-        "color": "slate-gray",
-        "index": 0
-      },
       "feedback-warning": {
         "color": "orange",
         "index": 5
@@ -6997,10 +6993,6 @@ export const STORYBOOK_BRANDS = {
         "index": 0
       },
       "border-primary": {
-        "color": "slate-gray",
-        "index": 0
-      },
-      "primary-border": {
         "color": "slate-gray",
         "index": 0
       },

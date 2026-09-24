@@ -656,6 +656,7 @@ export const COMPONENT_TOKENS = {
     "segmentedcontrol-label-text-hover":    { type: "COLOR", semantic: "text-primary",  figmaPath: "segmentedcontrol/label-text-hover" },
     "segmentedcontrol-label-text-active":   { type: "COLOR", semantic: "text-primary",  figmaPath: "segmentedcontrol/label-text-active" },
     "segmentedcontrol-label-text-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "segmentedcontrol/label-text-disabled" },
+    "segmentedcontrol-label-text-active-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "segmentedcontrol/label-text-active-disabled" },
 
     // ── FLOAT TOKENS (size variants: default, xs, sm, md, lg, xl) ──
     "segmentedcontrol-font-size":   { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 12, sm: 13, md: 14, lg: 16, xl: 18 }, figmaPath: "segmentedcontrol/font-size" },
@@ -2863,8 +2864,9 @@ export const COMPONENT_TOKENS = {
     // ── SHARED COLOR TOKENS ──
     "combobox-text":           { type: "COLOR", semantic: "text-primary",     figmaPath: "combobox/text" },
     "combobox-text-disabled":  { type: "COLOR", semantic: "text-disabled",    figmaPath: "combobox/text-disabled" },
-    "combobox-placeholder":       { type: "COLOR", semantic: "text-placeholder", figmaPath: "combobox/placeholder" },
-    "combobox-placeholder-error": { type: "COLOR", semantic: "feedback-error", figmaPath: "combobox/placeholder-error" },
+    "combobox-placeholder":          { type: "COLOR", semantic: "text-placeholder", figmaPath: "combobox/placeholder" },
+    "combobox-placeholder-error":    { type: "COLOR", semantic: "feedback-error", figmaPath: "combobox/placeholder-error" },
+    "combobox-placeholder-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "combobox/placeholder-disabled" },
     "combobox-label-color":    { type: "COLOR", semantic: "text-primary",     figmaPath: "combobox/label-color" },
     "combobox-label-disabled": { type: "COLOR", semantic: "text-disabled", figmaPath: "combobox/label-disabled" },
     "combobox-asterisk-color": { type: "COLOR", semantic: "feedback-error",   figmaPath: "combobox/asterisk-color" },
@@ -3102,6 +3104,72 @@ export const COMPONENT_TOKENS = {
     "text-font-weight-medium": { type: "STRING", value: "Medium", figmaPath: "text/font-weight-medium" },
     "text-font-weight-semibold": { type: "STRING", value: "Semi Bold", figmaPath: "text/font-weight-semibold" },
     "text-font-weight-bold": { type: "STRING", value: "Bold", figmaPath: "text/font-weight-bold" },
+  },
+
+  /**
+   * KeyValuePair — a stacked label/value pair composed from the Text (key) and
+   * Title (value) primitives. The key is a small, subtle label sitting above a
+   * larger, prominent value. An optional icon can sit to the right of the value.
+   * Size scale (sm/md/lg) scales the key type, value type, gap, and icon together.
+   */
+  keyvaluepair: {
+    // ── COLOR TOKENS ──
+    /** Small label above the value (the "key"), e.g. "IMO". Subtle by design. */
+    "keyvaluepair-key-color": { type: "COLOR", semantic: "text-subtle", figmaPath: "keyvaluepair/key-color" },
+    /** The prominent value below the key, e.g. "9456123". */
+    "keyvaluepair-value-color": { type: "COLOR", semantic: "text-primary", figmaPath: "keyvaluepair/value-color" },
+    /** Optional icon shown to the right of the value. */
+    "keyvaluepair-icon-color": { type: "COLOR", semantic: "text-primary", figmaPath: "keyvaluepair/icon-color" },
+
+    // ── KEY (label) TYPOGRAPHY ──
+    "keyvaluepair-key-font-family": { type: "STRING", value: "Inter", figmaPath: "keyvaluepair/key-font-family" },
+    "keyvaluepair-key-font-weight": { type: "STRING", value: "Medium", figmaPath: "keyvaluepair/key-font-weight" },
+    "keyvaluepair-key-font-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { sm: 12, md: 14, lg: 16 },
+      figmaPath: "keyvaluepair/key-font-size",
+    },
+    "keyvaluepair-key-line-height": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { sm: 16, md: 20, lg: 24 },
+      figmaPath: "keyvaluepair/key-line-height",
+    },
+
+    // ── VALUE TYPOGRAPHY ──
+    "keyvaluepair-value-font-family": { type: "STRING", value: "Inter", figmaPath: "keyvaluepair/value-font-family" },
+    "keyvaluepair-value-font-weight": { type: "STRING", value: "Bold", figmaPath: "keyvaluepair/value-font-weight" },
+    "keyvaluepair-value-font-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { sm: 20, md: 24, lg: 30 },
+      figmaPath: "keyvaluepair/value-font-size",
+    },
+    "keyvaluepair-value-line-height": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { sm: 26, md: 32, lg: 38 },
+      figmaPath: "keyvaluepair/value-line-height",
+    },
+
+    // ── LAYOUT ──
+    /** Vertical gap between the key label and the value. */
+    "keyvaluepair-gap": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { sm: 2, md: 4, lg: 6 },
+      figmaPath: "keyvaluepair/gap",
+    },
+    /** Horizontal gap between the value and the optional trailing icon. */
+    "keyvaluepair-icon-gap": { type: "FLOAT", unit: "px", value: 8, figmaPath: "keyvaluepair/icon-gap" },
+    /** Size (width/height) of the optional trailing icon. */
+    "keyvaluepair-icon-size": {
+      type: "FLOAT",
+      unit: "px",
+      sizes: { sm: 18, md: 22, lg: 26 },
+      figmaPath: "keyvaluepair/icon-size",
+    },
   },
 
   /** Default data table (dense variant later). */
@@ -3360,6 +3428,7 @@ export const COMPONENT_DISPLAY_NAMES = {
   multiselect: "MultiSelect",
   combobox: "Combobox",
   segmentedcontrol: "SegmentedControl",
+  keyvaluepair: "KeyValuePair",
   densetable: "DenseTable",
   accordionitem: "Accordion Item",
   chart: "Bar Chart",
@@ -3448,6 +3517,7 @@ export const COMPONENT_SIZE_KEYS = {
   popover: ["default", "xs", "sm", "md", "lg", "xl"],
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
   text: ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"],
+  keyvaluepair: ["sm", "md", "lg"],
 };
 
 // Chart subtypes (chart-line, future chart-area) inherit the shared `chart`

@@ -181,6 +181,10 @@ import {
   TextPropertiesPanel,
 } from "./components/panels/TextPreviewPanel";
 import {
+  KeyValuePairPreviewContent,
+  KeyValuePairPropertiesPanel,
+} from "./components/panels/KeyValuePairPreviewPanel";
+import {
   ModalPreviewContent,
   ModalPropertiesPanel,
 } from "./components/panels/ModalPreviewPanel";
@@ -1026,6 +1030,10 @@ export default function App() {
   const [activeTextText, setActiveTextText] = useState(
     DEFAULT_TITLE_TEXT
   );
+  const [activeKeyValuePairSize, setActiveKeyValuePairSize] = useState("md");
+  const [activeKeyValuePairShowIcon, setActiveKeyValuePairShowIcon] = useState(false);
+  const [activeKeyValuePairKey, setActiveKeyValuePairKey] = useState("IMO");
+  const [activeKeyValuePairValue, setActiveKeyValuePairValue] = useState("9456123");
   const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
   const [activeCheckboxRadius, setActiveCheckboxRadius] = useState(checkboxDefault);
   const [activeCheckboxSelection, setActiveCheckboxSelection] = useState("unchecked");
@@ -1416,6 +1424,11 @@ export default function App() {
       setActiveTextLineClamp(0);
       setActiveTextTruncate("off");
       setActiveTextText(DEFAULT_TITLE_TEXT);
+    } else if (newComp === "keyvaluepair") {
+      setActiveKeyValuePairSize("md");
+      setActiveKeyValuePairShowIcon(false);
+      setActiveKeyValuePairKey("IMO");
+      setActiveKeyValuePairValue("9456123");
     } else if (newComp === "anchor") {
       setActiveAnchorSize(anchorDefault);
       setActiveAnchorUnderline("always");
@@ -3357,6 +3370,7 @@ export default function App() {
     rangeslider: activeRangeSliderSize,
     title: activeTitleSize,
     text: activeTextSizeToken,
+    keyvaluepair: activeKeyValuePairSize,
     anchor: activeAnchorSize,
     checkbox: activeCheckboxSize,
     radio: activeRadioSize,
@@ -4321,6 +4335,30 @@ export default function App() {
                   text={activeTextText}
                 />
               )}
+              {activeComponent === "keyvaluepair" && (
+                <KeyValuePairPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  size={activeKeyValuePairSize}
+                  showIcon={activeKeyValuePairShowIcon}
+                  keyText={activeKeyValuePairKey}
+                  valueText={activeKeyValuePairValue}
+                />
+              )}
+              {activeComponent === "keyvaluepair" && (
+                <KeyValuePairPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  size={activeKeyValuePairSize}
+                  showIcon={activeKeyValuePairShowIcon}
+                  keyText={activeKeyValuePairKey}
+                  valueText={activeKeyValuePairValue}
+                />
+              )}
               {activeComponent === "anchor" && (
                 <AnchorPreviewContent
                   brands={brands}
@@ -5235,6 +5273,18 @@ export default function App() {
                   setText={setActiveTextText}
                 />
               )}
+              {activeComponent === "keyvaluepair" && (
+                <KeyValuePairPropertiesPanel
+                  size={activeKeyValuePairSize}
+                  setSize={setActiveKeyValuePairSize}
+                  showIcon={activeKeyValuePairShowIcon}
+                  setShowIcon={setActiveKeyValuePairShowIcon}
+                  keyText={activeKeyValuePairKey}
+                  setKeyText={setActiveKeyValuePairKey}
+                  valueText={activeKeyValuePairValue}
+                  setValueText={setActiveKeyValuePairValue}
+                />
+              )}
               {activeComponent === "anchor" && (
                 <AnchorPropertiesPanel
                   size={activeAnchorSize}
@@ -6055,7 +6105,7 @@ export default function App() {
                   setShowHeader={setActiveCalendarShowHeader}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "anchor", "modal", "checkbox", "radio", "chip", "selectablefilterchip", "appliedfilterchip", "tooltip", "notification", "alert", "textinput", "dateinput", "timeinput", "select", "multiselect", "combobox", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "keyvaluepair", "anchor", "modal", "checkbox", "radio", "chip", "selectablefilterchip", "appliedfilterchip", "tooltip", "notification", "alert", "textinput", "dateinput", "timeinput", "select", "multiselect", "combobox", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

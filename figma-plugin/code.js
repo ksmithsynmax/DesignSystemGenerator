@@ -1140,7 +1140,7 @@ function resolveManagedComponentKeyFromName(name) {
     "chart",
     "avatar",
     "pill", "badge", "textinput", "dateinput", "timeinput", "multiselect", "combobox", "select", "card", "actionicon",
-    "tabs", "accordionitem", "accordion", "anchor", "title", "text", "image",
+    "tabs", "accordionitem", "accordion", "anchor", "title", "text", "keyvaluepair", "image",
     "skeleton",
     "calendar",
     "densetable",
@@ -1561,6 +1561,9 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
   });
   var textSet = await buildSet("Text", function () {
     return buildTextComponentSet(varMap, page, font, textSampleText);
+  });
+  var keyValuePairSet = await buildSet("KeyValuePair", function () {
+    return buildKeyValuePairComponentSet(varMap, page, font);
   });
   var imageSet = await buildSet("Image", function () {
     return buildImageComponentSet(varMap, page, font);
@@ -3070,8 +3073,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         templatedDoc.appendChild(templateListIconsBlock);
       }
 
-      var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Oval", "Bars", "Dots", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
-      var templateVariantLimit = lowerSetName === "tablebody"
+      var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Subtle", "Transparent", "Pills", "Oval", "Bars", "Dots", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
+      // Buttons: show the whole variant ladder (see note on variantLimit below).
+      var templateVariantLimit = (lowerSetName === "tablebody" || lowerSetName === "button")
         ? Math.max(6, variants.length)
         : (lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3));
       var templateOrderedVariants = pickOrdered(variants, templateVariantOrder).slice(0, templateVariantLimit);
@@ -3820,9 +3824,10 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           }
         }
 
-        // Select / MultiSelect document the open dropdown menu in addition to
-        // the (closed) state row, so the spec shows what the open menu looks like.
-        if (lowerSetName === "select" || lowerSetName === "multiselect" || lowerSetName === "combobox") {
+        // Select / MultiSelect / Combobox / DateInput / TimeInput document the open
+        // dropdown (menu / calendar / time picker) in addition to the (closed) state
+        // row, so the spec shows what the open surface looks like.
+        if (lowerSetName === "select" || lowerSetName === "multiselect" || lowerSetName === "combobox" || lowerSetName === "dateinput" || lowerSetName === "timeinput") {
           var selectTplDropdownKey = getPropKey(variantProps, "Dropdown");
           if (selectTplDropdownKey) {
             var selectTplDropdownValues = pickOrdered(getPropValues(variantProps, "Dropdown"), ["Closed", "Open"]);
@@ -3831,7 +3836,12 @@ async function buildUsageDocsPage(componentSets, titleFont) {
               if (String(selectTplDropdownValues[sdvi]).toLowerCase() === "open") { selectTplHasOpen = true; break; }
             }
             if (selectTplHasOpen && selectTplDropdownValues.length > 0) {
-              templatedDoc.appendChild(createSectionHeader("Dropdown", "Closed control and the open menu with selectable options.", DOC_COLORS.subtitle));
+              var tplDropdownSubtitle = lowerSetName === "dateinput"
+                ? "Closed field and the open state with the calendar picker."
+                : lowerSetName === "timeinput"
+                ? "Closed field and the open state with the time picker."
+                : "Closed control and the open menu with selectable options.";
+              templatedDoc.appendChild(createSectionHeader("Dropdown", tplDropdownSubtitle, DOC_COLORS.subtitle));
               var selectTplDropdownPanel = createPanel(lowerSetName + "-template-dropdown", 10);
               selectTplDropdownPanel.resize(1192, selectTplDropdownPanel.height);
               templatedDoc.appendChild(selectTplDropdownPanel);
@@ -3840,7 +3850,20 @@ async function buildUsageDocsPage(componentSets, titleFont) {
                 "Dropdown",
                 selectTplDropdownValues,
                 function (dropdownName) {
-                  return makeTemplateInstance({ Dropdown: dropdownName });
+                  // Dropdown=Open variants are only built under State=Default (Select's
+                  // selected-row Active=One example exists ONLY there — under Focus/Hover
+                  // its sole Open variant is Active=Off/Hover=Off; DateInput/TimeInput
+                  // build a single Open under State=Default with no Active/Hover axis).
+                  // Pin State=Default (+ Active=One/Hover=Off where those props exist) so
+                  // the open surface resolves to a real variant instead of silently
+                  // falling back to Closed (which left the doc with no open dropdown).
+                  var tplDropdownProps = { Dropdown: dropdownName };
+                  if (String(dropdownName).toLowerCase() === "open") {
+                    if (getPropKey(variantProps, "State")) tplDropdownProps.State = "Default";
+                    if (getPropKey(variantProps, "Active")) tplDropdownProps.Active = "One";
+                    if (getPropKey(variantProps, "Hover")) tplDropdownProps.Hover = "Off";
+                  }
+                  return makeTemplateInstance(tplDropdownProps);
                 },
                 false,
                 { itemsPerRow: 2, rowItemSpacing: 24 }
@@ -4705,8 +4728,11 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         ? pickOrdered(getPropValues(variantProps, selectiveKey), ["Active", "Selected", "Inactive", "Selective Inactive"])
         : [];
 
-      var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Transparent", "Pills", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
-      var variantLimit = lowerSetName === "tablebody"
+      var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Subtle", "Transparent", "Pills", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
+      // Buttons carry the full emphasis ladder (filled/outlined/light/subtle/
+      // transparent/default) — show them all instead of the generic cap of 3,
+      // otherwise Transparent/Light/Subtle silently drop out of the docs.
+      var variantLimit = (lowerSetName === "tablebody" || lowerSetName === "button")
         ? Math.max(6, variants.length)
         : (lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3));
       var orderedVariants = pickOrdered(variants, variantOrder).slice(0, variantLimit);
@@ -5764,10 +5790,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             selectDocDropdownFillValues,
             function (dropdownName) {
               var dropdownProps = { Dropdown: dropdownName };
-              // Pin the first option active and hover off so the selected-state tokens
-              // render in the open example instead of Active=Off (nothing selected).
+              // Select's Dropdown=Open variants are only built under State=Default, and the
+              // selected-row (Active=One) example exists ONLY there — under Focus/Hover the
+              // sole Open variant is Active=Off/Hover=Off. Pin State=Default + Active=One +
+              // Hover=Off so the open menu resolves to a real variant with a selected option
+              // instead of silently falling back to Closed (no open dropdown in the doc).
               if (String(dropdownName).toLowerCase() === "open") {
-                if (getPropKey(variantProps, "State")) dropdownProps.State = "Focus";
+                if (getPropKey(variantProps, "State")) dropdownProps.State = "Default";
                 if (getPropKey(variantProps, "Active")) dropdownProps.Active = "One";
                 if (getPropKey(variantProps, "Hover")) dropdownProps.Hover = "Off";
               }
@@ -8018,7 +8047,11 @@ function buildSegmentedControlComponentSet(varMap, page, font) {
           var rootBorderPath = isDisabled ? "segmentedcontrol/root-border-disabled" : "segmentedcontrol/root-border";
           var indicatorBgPath = isDisabled ? "segmentedcontrol/indicator-background-disabled" : "segmentedcontrol/indicator-background";
           var indicatorBorderPath = isDisabled ? "segmentedcontrol/indicator-border-disabled" : "segmentedcontrol/indicator-border";
-          var labelActivePath = isDisabled ? "segmentedcontrol/label-text-disabled" : "segmentedcontrol/label-text-active";
+          var labelActivePath = isDisabled
+            ? (varMap["segmentedcontrol/label-text-active-disabled"]
+                ? "segmentedcontrol/label-text-active-disabled"
+                : "segmentedcontrol/label-text-disabled")
+            : "segmentedcontrol/label-text-active";
           var labelInactivePath = isDisabled
             ? "segmentedcontrol/label-text-disabled"
             : (isHover ? "segmentedcontrol/label-text-hover" : "segmentedcontrol/label-text");
@@ -13914,6 +13947,153 @@ function textColorPath(mode) {
 }
 
 // ---------------------------------------------------------------------------
+// KeyValuePair
+// ---------------------------------------------------------------------------
+// A stacked label/value pair composed from the Text (key) and Title (value)
+// primitives: a small, subtle key label sits above a larger, prominent value.
+// An optional icon sits to the right of the value. Everything is bound to the
+// keyvaluepair/* variable surface; the size axis (Sm/Md/Lg) scales the key type,
+// value type, vertical gap, and icon together.
+async function buildKeyValuePairComponentSet(varMap, page, fallbackFont, sampleKey, sampleValue) {
+  var sizes = ["sm", "md", "lg"];
+  var iconModes = ["off", "on"];
+  var components = [];
+
+  var keyLabel = sampleKey || "IMO";
+  var valueLabel = sampleValue || "9456123";
+
+  // The key is a Medium-weight label; the value is Bold. Load the closest
+  // available Inter weights so the bound font-weight variables resolve cleanly.
+  var keyFont = fallbackFont;
+  var valueFont = fallbackFont;
+  var keyCandidates = [
+    { family: "Inter", style: "Medium" },
+    { family: "Inter", style: "Regular" },
+  ];
+  var valueCandidates = [
+    { family: "Inter", style: "Bold" },
+    { family: "Inter", style: "Semi Bold" },
+    { family: "Inter", style: "SemiBold" },
+  ];
+  for (var kci = 0; kci < keyCandidates.length; kci++) {
+    try { await figma.loadFontAsync(keyCandidates[kci]); keyFont = keyCandidates[kci]; break; } catch (e) {}
+  }
+  for (var vci = 0; vci < valueCandidates.length; vci++) {
+    try { await figma.loadFontAsync(valueCandidates[vci]); valueFont = valueCandidates[vci]; break; } catch (e) {}
+  }
+
+  var colGap = 40;
+  var rowGap = 32;
+  var rowHeight = 120 + rowGap;
+
+  for (var si = 0; si < sizes.length; si++) {
+    var size = sizes[si];
+    var capSize = size.charAt(0).toUpperCase() + size.slice(1);
+
+    for (var ii = 0; ii < iconModes.length; ii++) {
+      var iconMode = iconModes[ii];
+      var hasIcon = iconMode === "on";
+      var capIcon = hasIcon ? "On" : "Off";
+
+      var comp = figma.createComponent();
+      comp.name = "Size=" + capSize + ", Icon=" + capIcon;
+      comp.layoutMode = "VERTICAL";
+      comp.primaryAxisSizingMode = "AUTO";
+      comp.counterAxisSizingMode = "AUTO";
+      comp.primaryAxisAlignItems = "MIN";
+      comp.counterAxisAlignItems = "MIN";
+      comp.itemSpacing = 4;
+      comp.fills = [];
+      comp.clipsContent = false;
+      bindVar(comp, "itemSpacing", varMap["keyvaluepair/gap-" + size]);
+
+      // ── Key (small, subtle label) ──
+      var keyNode = figma.createText();
+      keyNode.name = "Key";
+      keyNode.fontName = keyFont;
+      keyNode.characters = keyLabel;
+      keyNode.fontSize = 14;
+      keyNode.textAutoResize = "WIDTH_AND_HEIGHT";
+      keyNode.textAlignHorizontal = "LEFT";
+      keyNode.fills = [{ type: "SOLID", color: { r: 0.65, g: 0.67, b: 0.72 } }];
+      bindVar(keyNode, "fontSize", varMap["keyvaluepair/key-font-size-" + size]);
+      bindVar(keyNode, "fontFamily", varMap["keyvaluepair/key-font-family"]);
+      bindVar(keyNode, "fontStyle", varMap["keyvaluepair/key-font-weight"]);
+      bindVar(keyNode, "lineHeight", varMap["keyvaluepair/key-line-height-" + size]);
+      bindPaintVar(keyNode, "fills", 0, varMap["keyvaluepair/key-color"]);
+      comp.appendChild(keyNode);
+
+      // ── Value row (prominent value + optional trailing icon) ──
+      var valueRow = figma.createFrame();
+      valueRow.name = "Value Row";
+      valueRow.layoutMode = "HORIZONTAL";
+      valueRow.primaryAxisSizingMode = "AUTO";
+      valueRow.counterAxisSizingMode = "AUTO";
+      valueRow.primaryAxisAlignItems = "MIN";
+      valueRow.counterAxisAlignItems = "CENTER";
+      valueRow.itemSpacing = 8;
+      valueRow.fills = [];
+      valueRow.clipsContent = false;
+      bindVar(valueRow, "itemSpacing", varMap["keyvaluepair/icon-gap"]);
+
+      var valueNode = figma.createText();
+      valueNode.name = "Value";
+      valueNode.fontName = valueFont;
+      valueNode.characters = valueLabel;
+      valueNode.fontSize = 24;
+      valueNode.textAutoResize = "WIDTH_AND_HEIGHT";
+      valueNode.textAlignHorizontal = "LEFT";
+      valueNode.fills = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
+      bindVar(valueNode, "fontSize", varMap["keyvaluepair/value-font-size-" + size]);
+      bindVar(valueNode, "fontFamily", varMap["keyvaluepair/value-font-family"]);
+      bindVar(valueNode, "fontStyle", varMap["keyvaluepair/value-font-weight"]);
+      bindVar(valueNode, "lineHeight", varMap["keyvaluepair/value-line-height-" + size]);
+      bindPaintVar(valueNode, "fills", 0, varMap["keyvaluepair/value-color"]);
+      valueRow.appendChild(valueNode);
+
+      if (hasIcon) {
+        // Simple info-circle placeholder icon (devs swap for a real glyph). The
+        // frame + ring are sized by the icon-size variable and tinted by icon-color.
+        var iconFrame = figma.createFrame();
+        iconFrame.name = "Icon";
+        iconFrame.layoutMode = "NONE";
+        iconFrame.fills = [];
+        iconFrame.clipsContent = false;
+        iconFrame.resize(22, 22);
+        bindVar(iconFrame, "width", varMap["keyvaluepair/icon-size-" + size]);
+        bindVar(iconFrame, "height", varMap["keyvaluepair/icon-size-" + size]);
+
+        var iconRing = figma.createEllipse();
+        iconRing.name = "Ring";
+        iconRing.resize(22, 22);
+        iconRing.fills = [];
+        iconRing.strokes = [{ type: "SOLID", color: { r: 0.85, g: 0.86, b: 0.88 } }];
+        iconRing.strokeWeight = 2;
+        bindVar(iconRing, "width", varMap["keyvaluepair/icon-size-" + size]);
+        bindVar(iconRing, "height", varMap["keyvaluepair/icon-size-" + size]);
+        bindPaintVar(iconRing, "strokes", 0, varMap["keyvaluepair/icon-color"]);
+        iconFrame.appendChild(iconRing);
+        try { iconRing.constraints = { horizontal: "STRETCH", vertical: "STRETCH" }; } catch (_kvpIconConstraintErr) {}
+
+        valueRow.appendChild(iconFrame);
+      }
+
+      comp.appendChild(valueRow);
+
+      page.appendChild(comp);
+      comp.x = ii * 260;
+      comp.y = si * rowHeight;
+      components.push(comp);
+    }
+  }
+
+  progress("Created " + components.length + " keyvaluepair variants");
+  var componentSet = figma.combineAsVariants(components, page);
+  componentSet.name = "KeyValuePair";
+  return componentSet;
+}
+
+// ---------------------------------------------------------------------------
 // Checkbox
 // ---------------------------------------------------------------------------
 
@@ -14336,11 +14516,14 @@ function buildRadioComponentSet(varMap, page, font) {
             bindVar(circle, "height", varMap["radio/size-" + size]);
 
             // Radio fill: mirror preview behavior exactly.
-            // - Filled + checked uses checked background token.
-            // - Outline always uses unchecked background token for circle fill.
+            // - Checked uses the checked-background token (filled = accent fill,
+            //   outline = surface fill behind the ring/dot). This keeps the
+            //   radio-<variant>-background-checked-<state> tokens live for both
+            //   variants instead of dropping them for outline.
+            // - Unchecked uses the plain background token.
             var uncheckedBgPath = radioBgPath(varMap, variant, "unchecked", state);
             var checkedBgPath = radioBgPath(varMap, variant, "checked", state);
-            var bgPath = (isChecked && variant === "filled") ? checkedBgPath : uncheckedBgPath;
+            var bgPath = isChecked ? checkedBgPath : uncheckedBgPath;
             if (isChecked && variant === "filled") {
               circle.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
             } else {

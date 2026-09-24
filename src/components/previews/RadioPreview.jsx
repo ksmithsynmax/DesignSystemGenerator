@@ -96,7 +96,14 @@ export default function RadioPreview({
           alignItems: "center",
         },
         radio: {
-          backgroundColor: checked && variant !== "outline" ? undefined : uncheckedBg,
+          // Checked: filled lets Mantine paint the accent fill (via --radio-color);
+          // outline uses its checked-background token as the circle fill (behind the
+          // ring/dot) so radio-outline-background-checked-<state> is actually live.
+          backgroundColor: checked
+            ? variant === "outline"
+              ? filledBg
+              : undefined
+            : uncheckedBg,
           // A checked filled radio normally hides its ring (the accent fill is
           // the whole circle). In the disabled state, though, Figma draws the
           // ring using radio-<variant>-border-disabled, so keep the border

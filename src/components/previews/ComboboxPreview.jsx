@@ -114,9 +114,11 @@ export default function ComboboxPreview({
   const borderColor = col(`${prefix}-border${stateSuffix}`);
   const textColor = isDisabled ? col("combobox-text-disabled") : col("combobox-text");
   const placeholderColor = col(
-    isError
-      ? [`${prefix}-placeholder-error`, "combobox-placeholder-error", `${prefix}-placeholder`]
-      : [`${prefix}-placeholder`]
+    isDisabled
+      ? [`${prefix}-placeholder-disabled`, "combobox-placeholder-disabled", `${prefix}-placeholder`]
+      : isError
+        ? [`${prefix}-placeholder-error`, "combobox-placeholder-error", `${prefix}-placeholder`]
+        : [`${prefix}-placeholder`]
   );
   const labelColor = isDisabled
     ? col([`${prefix}-label-disabled`, "combobox-label-color"])

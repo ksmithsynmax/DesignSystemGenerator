@@ -2,11 +2,8 @@ import { Notification } from "@mantine/core";
 import MessageNotificationCircleIcon from "@untitledui-icons/react/line/MessageNotificationCircleIcon";
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
-import { notificationSemanticToMantineColor } from "../../utils/notificationSemanticColors";
 
-/** Matches Figma `buildNotificationComponentSet` (accent x=8, w=6; title x=24 when accent, no icon). */
-const NOTIFICATION_ACCENT_LEFT = 8;
-const NOTIFICATION_ACCENT_WIDTH = 6;
+/** Matches Figma `buildNotificationComponentSet` (title x=24 when accent, no icon). */
 const NOTIFICATION_TEXT_INSET_ACCENT = 24;
 
 export default function NotificationPreview({
@@ -136,8 +133,6 @@ export default function NotificationPreview({
   const effectiveWithAccent = Boolean(withAccent) && !loading;
   const showAccentBar = effectiveWithAccent;
   const effectiveWithBorder = Boolean(withBorder);
-  const mantineColor = notificationSemanticToMantineColor(color);
-  const effectiveMantineColor = showAccentBar ? mantineColor : undefined;
 
   const bw = Number(borderWidth);
   const borderW = Number.isFinite(bw) && bw > 0 ? bw : 1;
@@ -150,8 +145,6 @@ export default function NotificationPreview({
   const padXSafe = Number.isFinite(padX) ? padX : 12;
   const padYSafe = Number.isFinite(padY) ? padY : 10;
 
-  const accentInsetY = Math.max(8, radiusPx);
-
   const rootPadding =
     showAccentBar && !iconNode
       ? {
@@ -162,50 +155,30 @@ export default function NotificationPreview({
         }
       : { padding: `${padYSafe}px ${padXSafe}px` };
 
-  const accentBarBefore =
-    showAccentBar && !iconNode
-      ? {
-          display: "block",
-          insetInlineStart: NOTIFICATION_ACCENT_LEFT,
-          width: NOTIFICATION_ACCENT_WIDTH,
-          top: accentInsetY,
-          bottom: accentInsetY,
-          borderRadius: radiusPx,
-          backgroundColor: accentColor,
-        }
-      : null;
-
   const notification = (
     <Notification
       title={title}
-      color={effectiveMantineColor}
       icon={iconNode}
       loading={loading}
       withCloseButton={withCloseButton}
       withBorder={false}
+      // Drive Mantine's accent rail (--notification-color) from our token color
+      // instead of a hardcoded palette color. Using the `vars` prop is the only
+      // reliable override — the `styles` prop can't set pseudo-elements and loses
+      // to Mantine's color-derived variable. Transparent hides the rail.
+      vars={() => ({
+        root: {
+          "--notification-color": showAccentBar ? accentColor : "transparent",
+        },
+      })}
       styles={{
         root: {
-          // Always neutralize Mantine's built-in accent rail so preview
-          // only reflects our token-driven accent toggle logic.
-          "--notification-color": "transparent",
           background: background,
           boxSizing: "border-box",
           borderInlineStart: "0 solid transparent",
           borderRadius: radiusPx,
           width: 360,
           ...rootPadding,
-          ...(accentBarBefore
-            ? { "&::before": accentBarBefore }
-            : !showAccentBar
-              ? {
-                  "&::before": {
-                    display: "none",
-                    content: "none",
-                    width: 0,
-                    opacity: 0,
-                  },
-                }
-              : {}),
         },
         title: {
           color: titleColor,
