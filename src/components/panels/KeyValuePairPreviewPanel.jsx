@@ -3,7 +3,7 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 import KeyValuePairPreview from "../previews/KeyValuePairPreview";
 
-export const KEYVALUEPAIR_SIZE_OPTIONS = ["sm", "md", "lg"];
+const KEYVALUEPAIR_SIZE_OPTIONS = ["sm", "md", "lg"];
 
 function PropertyRow({ label, value, onChange, options, disabled = false }) {
   return (
