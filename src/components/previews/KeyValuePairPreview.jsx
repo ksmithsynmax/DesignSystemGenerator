@@ -5,7 +5,7 @@ import { COMPONENT_TOKENS } from "../../data/componentTokens";
 // Map the KeyValuePair size scale to a Mantine Title `order` so the value reads
 // as a real heading element (semantics), while the exact font-size/line-height
 // still come from the resolved tokens.
-const VALUE_ORDER_BY_SIZE = { sm: 4, md: 3, lg: 2 };
+const VALUE_ORDER_BY_SIZE = { default: 3, sm: 4, md: 3, lg: 2 };
 
 function fontWeightToNumber(weight) {
   if (weight === "Bold") return 700;

@@ -126,7 +126,25 @@
       if (!event.data || !event.data.pluginMessage) return;
       const msg = event.data.pluginMessage;
 
-      log("send", msg.type + (msg.message ? ": " + msg.message : ""));
+      // Render live sync progress/errors clearly instead of the raw "send: type"
+      // form, so you can watch the sync move and see exactly where it stops.
+      const text = msg.message || "";
+      const isError =
+        (msg.type === "sync-complete" && msg.success === false) ||
+        /❌|failed|error/i.test(text);
+      if (msg.type === "sync-progress") {
+        let line = text;
+        if (typeof msg.current === "number" && typeof msg.total === "number") {
+          line = "[" + msg.current + "/" + msg.total + "] " + text;
+        }
+        log(isError ? "err" : "recv", line);
+      } else if (msg.type === "sync-complete") {
+        log(isError ? "err" : "send", msg.success === false
+          ? ("SYNC FAILED: " + (msg.error || text))
+          : ("✅ " + (text || "sync complete")));
+      } else {
+        log("send", msg.type + (text ? ": " + text : ""));
+      }
 
       // Forward status back to React app through relay
       if (ws && ws.readyState === 1) {

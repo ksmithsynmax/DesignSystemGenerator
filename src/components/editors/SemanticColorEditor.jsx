@@ -1,4 +1,5 @@
 import { SEMANTIC_GROUPS } from "../previews/FoundationsPreview";
+import { isAlphaFamily, ALPHA_STEPS } from "../../utils/alphaPrimitives";
 
 const TEXT = "#C1C2C5";
 const TEXT_MUTED = "#909296";
@@ -17,11 +18,12 @@ const SELECT_STYLE = {
   padding: "4px 6px",
 };
 
-function SemanticRow({ role, mapping, hex, brandColors, globalColors, rampLength, onUpdate }) {
+function SemanticRow({ role, mapping, hex, brandColors, globalColors, alphaColors = [], rampLength, onUpdate }) {
   const color = mapping?.color ?? "neutral";
   const index = Number.isFinite(Number(mapping?.index)) ? Number(mapping.index) : 0;
   const isTransparent = color === "transparent";
-  const maxIndex = Math.max(1, Number(rampLength) || 10);
+  const isAlpha = !isTransparent && isAlphaFamily(color);
+  const maxIndex = isAlpha ? ALPHA_STEPS.length : Math.max(1, Number(rampLength) || 10);
 
   return (
     <div
@@ -59,7 +61,11 @@ function SemanticRow({ role, mapping, hex, brandColors, globalColors, rampLength
           {role}
         </div>
         <div style={{ fontSize: 10, fontFamily: MONO, color: TEXT_FAINT }}>
-          {isTransparent ? "transparent" : `${color} / ${index}`}
+          {isTransparent
+            ? "transparent"
+            : isAlpha
+              ? `${color} / ${ALPHA_STEPS[index] ?? "?"}%`
+              : `${color} / ${index}`}
         </div>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 4, flexShrink: 0 }}>
@@ -87,6 +93,15 @@ function SemanticRow({ role, mapping, hex, brandColors, globalColors, rampLength
               ))}
             </optgroup>
           )}
+          {alphaColors.length > 0 && (
+            <optgroup label="Alpha">
+              {alphaColors.map((c) => (
+                <option key={`a-${c}`} value={c}>
+                  {c}
+                </option>
+              ))}
+            </optgroup>
+          )}
         </select>
         <span style={{ color: TEXT_FAINT, fontSize: 12 }}>/</span>
         <select
@@ -97,7 +112,7 @@ function SemanticRow({ role, mapping, hex, brandColors, globalColors, rampLength
         >
           {Array.from({ length: maxIndex }, (_, i) => (
             <option key={i} value={i}>
-              {i}
+              {isAlpha ? `${ALPHA_STEPS[i]}%` : i}
             </option>
           ))}
         </select>
@@ -115,6 +130,7 @@ export default function SemanticColorEditor({
   mergedMap = {},
   brandColors = [],
   globalColors = [],
+  alphaColors = [],
   resolveHex,
   rampLengthOf,
   onUpdate,
@@ -151,6 +167,7 @@ export default function SemanticColorEditor({
                 hex={typeof resolveHex === "function" ? resolveHex(role) : null}
                 brandColors={brandColors}
                 globalColors={globalColors}
+                alphaColors={alphaColors}
                 rampLength={rampLength}
                 onUpdate={onUpdate}
               />

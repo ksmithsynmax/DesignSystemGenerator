@@ -1,6 +1,6 @@
 import { useState } from "react";
 
-export default function PrimitiveScale({ name, scale, onUpdate, readOnly, onDelete }) {
+export default function PrimitiveScale({ name, scale, onUpdate, readOnly, onDelete, labels, checkerboard }) {
   const [editing, setEditing] = useState(null);
   const [val, setVal] = useState("");
   const normalizeHex = (raw) => {
@@ -34,7 +34,7 @@ export default function PrimitiveScale({ name, scale, onUpdate, readOnly, onDele
         >
           {name}
         </div>
-        {!readOnly && typeof onDelete === "function" ? (
+        {typeof onDelete === "function" ? (
           <button
             onClick={() => onDelete(name)}
             style={{
@@ -104,7 +104,12 @@ export default function PrimitiveScale({ name, scale, onUpdate, readOnly, onDele
                   width: "100%",
                   height: 36,
                   borderRadius: 4,
-                  background: c,
+                  // Composite the (possibly translucent) color over a checkerboard
+                  // so alpha swatches read as transparent instead of blending
+                  // into the panel background.
+                  background: checkerboard
+                    ? `linear-gradient(${c}, ${c}), repeating-conic-gradient(#444 0% 25%, #222 0% 50%) 50% / 10px 10px`
+                    : c,
                   cursor: readOnly ? "default" : "pointer",
                   border: "2px solid transparent",
                   transition: "border-color 0.15s",
@@ -121,7 +126,7 @@ export default function PrimitiveScale({ name, scale, onUpdate, readOnly, onDele
             <span
               style={{ fontSize: 9, color: "#5C5F66", fontFamily: "monospace" }}
             >
-              {i}
+              {labels && labels[i] != null ? labels[i] : i}
             </span>
           </div>
         ))}

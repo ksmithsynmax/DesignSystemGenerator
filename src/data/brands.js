@@ -8,7 +8,19 @@ export const GLOBAL_PRIMITIVES = {
 };
 
 // Primitive/Global FLOAT scale
-export const GLOBAL_SPACING = [2, 4, 6, 7, 8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 30, 32, 36, 40, 42, 48, 50, 60, 64];
+export const GLOBAL_SPACING = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 16, 18, 20, 22, 24, 25, 28, 30, 32, 36, 40, 42, 48, 50, 60, 64, 75, 100, 150, 200];
+// Layout SIZE scale — component widths/heights/lengths (distinct from spacing so
+// the spacing scale stays a spacing scale). Referenced by *-width/-height/
+// -length/section-size/track-width tokens via `size/<value>`.
+export const GLOBAL_SIZES = [26, 34, 35, 38, 44, 52, 56, 80, 96, 110, 120, 160, 175, 180, 200, 220, 240, 260, 280, 300, 320, 340, 360, 420, 480, 520, 640];
+// Enum STRING primitives — non-dimensional keyword tokens (line/border styles,
+// curve types). Emitted into Primitive/Global so *-style / *-curve component
+// tokens can reference `enum/<group>/<value>` instead of a raw string literal.
+export const GLOBAL_ENUMS = {
+  "border-style": ["none", "solid", "dashed", "dotted", "double"],
+  "line-style": ["solid", "dashed", "dotted"],
+  "line-curve": ["linear", "smooth", "straight", "stepped", "step"],
+};
 
 export const GLOBAL_FONTS = {
   sans: "Inter",
@@ -22,9 +34,9 @@ export const GLOBAL_WEIGHTS = {
   bold: "Bold"
 };
 
-export const GLOBAL_BORDER_WIDTHS = [0, 1, 1.25, 1.5, 1.75, 2, 2.25, 4];
-export const GLOBAL_FONT_SIZES = [8, 10, 12, 13, 14, 16, 18, 20, 24, 28, 30, 32, 36, 40, 48, 64];
-export const GLOBAL_LINE_HEIGHTS = [8, 10, 12, 14, 16, 17, 18, 20, 22, 24, 28, 30, 32, 34, 36, 42, 44, 48];
+export const GLOBAL_BORDER_WIDTHS = [0, 0.5, 1, 1.25, 1.5, 1.6, 1.75, 2, 2.25, 2.5, 3, 3.5, 4, 4.5, 5, 6];
+export const GLOBAL_FONT_SIZES = [8, 10, 11, 12, 13, 14, 15, 16, 18, 20, 22, 24, 28, 30, 32, 34, 36, 40, 48, 64];
+export const GLOBAL_LINE_HEIGHTS = [8, 10, 12, 14, 16, 17, 18, 20, 22, 24, 26, 27, 28, 30, 32, 34, 36, 38, 42, 44, 48];
 
 /** Semantic → primitive mappings using only keys from GLOBAL_PRIMITIVES (for new brands with empty `primitives`). */
 export const BRAND_STARTER_SEMANTIC_MAP = {

@@ -376,6 +376,23 @@ export default function TabsPreview({
                 (tabVisual.visualState === "disabled" && isWouldBeActiveTab);
               const resolvedTabBorderWidth =
                 isDefaultUnderlineState ? tabBorderWidthActive : tabBorderWidth;
+              // In the joined outlined variant each non-first tab omits its own
+              // left border and borrows the previous tab's right border for that
+              // edge. That leaves a highlighted (active/hover) tab with a grey
+              // left edge while its top/right are the active color. To keep the
+              // active outline symmetric, the highlighted tab draws its OWN left
+              // border in the active color and the tab before it drops its right
+              // border so the two don't stack into a double line.
+              const nextItem = TAB_ITEMS[tabIndex + 1];
+              const nextUsesActiveBorder = (() => {
+                if (!nextItem) return false;
+                const vs = getVisualState(nextItem.key);
+                return (
+                  vs === "active" ||
+                  vs === "hover" ||
+                  (vs === "disabled" && nextItem.key === activeDemoKey)
+                );
+              })();
               const tabStyle = isDefaultVariant
                 ? {
                     display: "inline-flex",
@@ -407,17 +424,22 @@ export default function TabsPreview({
                     borderStyle: "solid",
                     borderColor: tabVisual.border,
                     borderTopWidth: `${resolvedTabBorderWidth}px`,
-                    // Every tab draws its own right border (Figma model). The
-                    // left edge of each tab is provided by the previous tab's
-                    // right border, so only the first tab draws a left border.
-                    // This means an active tab's left edge is the previous
-                    // (default-colored) tab's right border, while its own top
-                    // and right borders use the active color/width.
-                    borderRightWidth: `${resolvedTabBorderWidth}px`,
+                    // Every tab draws its own right border (Figma model) and
+                    // borrows the previous tab's right border for its left edge
+                    // — EXCEPT: (a) a highlighted tab draws its own left border
+                    // so its active outline is symmetric, and (b) the tab before
+                    // a highlighted tab drops its right border so they don't
+                    // stack into a double line.
+                    borderRightWidth:
+                      isOutlinedVariant &&
+                      orientation === "horizontal" &&
+                      nextUsesActiveBorder
+                        ? "0px"
+                        : `${resolvedTabBorderWidth}px`,
                     borderBottomWidth: `${resolvedTabBorderWidth}px`,
                     borderLeftWidth:
                       isOutlinedVariant && orientation === "horizontal"
-                        ? tabIndex === 0
+                        ? tabIndex === 0 || isDefaultUnderlineState
                           ? `${resolvedTabBorderWidth}px`
                           : "0px"
                         : `${resolvedTabBorderWidth}px`,

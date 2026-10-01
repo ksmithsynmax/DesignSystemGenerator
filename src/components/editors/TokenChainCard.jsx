@@ -4,8 +4,14 @@ import Swatch from "../shared/Swatch";
 import Arrow from "../shared/Arrow";
 import Tag from "../shared/Tag";
 import NumberField from "../shared/NumberField";
+import { isAlphaFamily, ALPHA_STEPS } from "../../utils/alphaPrimitives";
 
 const GRADIENT_PREFIX = "__gradient__:";
+
+// Chart area/radar fills are the one place arbitrary opacity is still allowed
+// (they're derived translucent literals). Everywhere else, transparency comes
+// only from selecting an alpha token.
+const CHART_OPACITY_RE = /^chart-(series|shade)-opacity-\d+$/;
 
 export default function TokenChainCard({
   componentToken,
@@ -17,6 +23,7 @@ export default function TokenChainCard({
   onUpdate,
   brandColors,
   globalColors,
+  alphaColors = [],
   gradientIds = [],
 }) {
   const opacity = Number.isFinite(Number(mapping.opacity))
@@ -24,11 +31,18 @@ export default function TokenChainCard({
     : 100;
   const isGradient = Boolean(mapping?.gradient && String(mapping.gradient).trim());
   const isTransparent = !isGradient && mapping.color === "transparent";
+  const isAlpha = !isGradient && !isTransparent && isAlphaFamily(mapping.color);
+  // Opacity is editable only for chart *-opacity-* tokens (derived translucent
+  // fills). Alpha tokens bake opacity into the token, so no slider there either.
+  const isChartOpacity = CHART_OPACITY_RE.test(componentToken || "");
+  const showOpacity = isChartOpacity && !isGradient && !isTransparent && !isAlpha;
   const primitive = isGradient
     ? `gradient/${String(mapping.gradient).trim()}`
     : isTransparent
       ? "transparent"
-      : `${mapping.color}/${mapping.index}${opacity !== 100 ? ` @ ${opacity}%` : ""}`;
+      : isAlpha
+        ? `${mapping.color}/${mapping.index}`
+        : `${mapping.color}/${mapping.index}${opacity !== 100 ? ` @ ${opacity}%` : ""}`;
 
   const paletteSelectValue = isGradient
     ? `${GRADIENT_PREFIX}${String(mapping.gradient).trim()}`
@@ -146,7 +160,13 @@ export default function TokenChainCard({
                   });
                   return;
                 }
-                const nextOpacity = isTransparent && opacity === 0 ? 100 : opacity;
+                const selectingAlpha = isAlphaFamily(raw);
+                // Alpha tokens bake opacity into the token value, so force 100.
+                const nextOpacity = selectingAlpha
+                  ? 100
+                  : isTransparent && opacity === 0
+                    ? 100
+                    : opacity;
                 onUpdate(componentToken, {
                   color: raw,
                   index: isGradient ? 5 : (Number.isFinite(Number(mapping.index)) ? Number(mapping.index) : 5),
@@ -189,6 +209,13 @@ export default function TokenChainCard({
                   <option key={c} value={c}>{c}</option>
                 ))}
               </optgroup>
+              {alphaColors.length > 0 && (
+                <optgroup label="Alpha">
+                  {alphaColors.map((c) => (
+                    <option key={`alpha-${c}`} value={c}>{c}</option>
+                  ))}
+                </optgroup>
+              )}
               <optgroup label="Special">
                 <option value="transparent">transparent</option>
               </optgroup>
@@ -204,7 +231,7 @@ export default function TokenChainCard({
                 })
               }
               style={{
-                width: 56,
+                width: isAlpha ? 72 : 56,
                 flexShrink: 0,
                 background: "#1A1B1E",
                 border: "1px solid #373A40",
@@ -224,11 +251,12 @@ export default function TokenChainCard({
             >
               {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9].map((i) => (
                 <option key={i} value={i}>
-                  {i}
+                  {isAlpha ? `${ALPHA_STEPS[i]}%` : i}
                 </option>
               ))}
             </select>
           </div>
+          {showOpacity && (
           <div style={{ marginTop: 8 }}>
             <div
               style={{
@@ -281,6 +309,7 @@ export default function TokenChainCard({
               <span style={{ color: "#5C5F66", fontSize: 12, flexShrink: 0 }}>%</span>
             </div>
           </div>
+          )}
         </div>
       )}
     </div>

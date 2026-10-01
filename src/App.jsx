@@ -35,6 +35,7 @@ import { resolveGradientCss } from "./utils/resolveGradient";
 import Section from "./components/shared/Section";
 import ComponentSelect from "./components/shared/ComponentSelect";
 import PrimitiveScale from "./components/editors/PrimitiveScale";
+import AddAlphaForm from "./components/editors/AddAlphaForm";
 import TokenChainCard from "./components/editors/TokenChainCard";
 import DimensionTokenRow from "./components/editors/DimensionTokenRow";
 import AddPrimitiveForm from "./components/editors/AddPrimitiveForm";
@@ -213,6 +214,13 @@ import FigmaSyncButton from "./components/FigmaSyncButton";
 import { buildMarkdownExport } from "./utils/buildMarkdownExport";
 import { buildComponentDocsExport } from "./utils/buildComponentDocsExport";
 import { GLOBAL_PRIMITIVES } from "./data/brands";
+import {
+  getAlphaPrimitives,
+  getAlphaSources,
+  resolveBaseHex,
+  alphaFamilyName,
+  ALPHA_STEPS,
+} from "./utils/alphaPrimitives";
 
 const VARIANTS_BY_COMPONENT = {
   button: ["filled", "outlined", "ghost", "light", "subtle", "default"],
@@ -910,6 +918,23 @@ export default function App() {
   const darkSemanticMerged = brand ? mergeDarkSemanticsForBrand(brand) : {};
   const colorNames = Object.keys(brand.primitives);
   const globalColorNames = Object.keys(GLOBAL_PRIMITIVES);
+  // Alpha primitive families are derived from base swatches, driven by the
+  // per-brand `alphaPrimitives` list (with sensible defaults). They're selectable
+  // in the color pickers (their own "Alpha" group) and shown in the "Alpha" panel
+  // section, but kept out of `colorNames` so they never appear as editable rows
+  // in the Primitives panel.
+  const alphaSources = brand ? getAlphaSources(brand) : [];
+  const alphaPrimitives = brand ? getAlphaPrimitives(brand) : {};
+  const alphaColorNames = Object.keys(alphaPrimitives);
+  const alphaStepLabels = ALPHA_STEPS.map((pct) => `${pct}%`);
+  // Base swatches selectable when adding an alpha ramp (real color families only:
+  // no "transparent", no existing alpha families).
+  const alphaBaseColorNames = [...new Set([...colorNames, ...globalColorNames])].filter(
+    (c) => c !== "transparent"
+  );
+  const alphaExistingKeys = new Set(
+    alphaSources.map((s) => `${s.color}/${s.index}`)
+  );
   const gradientPaletteColorNames = [...new Set([...globalColorNames, ...colorNames])].sort((a, b) =>
     a.localeCompare(b)
   );
@@ -1030,7 +1055,7 @@ export default function App() {
   const [activeTextText, setActiveTextText] = useState(
     DEFAULT_TITLE_TEXT
   );
-  const [activeKeyValuePairSize, setActiveKeyValuePairSize] = useState("md");
+  const [activeKeyValuePairSize, setActiveKeyValuePairSize] = useState("default");
   const [activeKeyValuePairShowIcon, setActiveKeyValuePairShowIcon] = useState(false);
   const [activeKeyValuePairKey, setActiveKeyValuePairKey] = useState("IMO");
   const [activeKeyValuePairValue, setActiveKeyValuePairValue] = useState("9456123");
@@ -1425,7 +1450,7 @@ export default function App() {
       setActiveTextTruncate("off");
       setActiveTextText(DEFAULT_TITLE_TEXT);
     } else if (newComp === "keyvaluepair") {
-      setActiveKeyValuePairSize("md");
+      setActiveKeyValuePairSize("default");
       setActiveKeyValuePairShowIcon(false);
       setActiveKeyValuePairKey("IMO");
       setActiveKeyValuePairValue("9456123");
@@ -1779,6 +1804,56 @@ export default function App() {
         const next = JSON.parse(JSON.stringify(prev));
         next[activeBrand].primitives[colorName] = scale;
         return next;
+      });
+    },
+    [activeBrand]
+  );
+
+  // Alpha primitives are stored per-brand as a list of { color, index } sources.
+  // When the field is absent we materialize the current (default) sources first,
+  // so the first add/remove persists the defaults alongside the change.
+  const addAlphaPrimitive = useCallback(
+    (color, index) => {
+      const idx = Number(index);
+      setBrands((prev) => {
+        const brand = prev[activeBrand];
+        if (!brand) return prev;
+        const current = Array.isArray(brand.alphaPrimitives)
+          ? brand.alphaPrimitives
+          : getAlphaSources(brand);
+        if (current.some((s) => s.color === color && Number(s.index) === idx)) {
+          return prev;
+        }
+        return {
+          ...prev,
+          [activeBrand]: {
+            ...brand,
+            alphaPrimitives: [...current, { color, index: idx }],
+          },
+        };
+      });
+    },
+    [activeBrand]
+  );
+
+  const removeAlphaPrimitive = useCallback(
+    (color, index) => {
+      const idx = Number(index);
+      setBrands((prev) => {
+        const brand = prev[activeBrand];
+        if (!brand) return prev;
+        const current = Array.isArray(brand.alphaPrimitives)
+          ? brand.alphaPrimitives
+          : getAlphaSources(brand);
+        return {
+          ...prev,
+          [activeBrand]: {
+            ...brand,
+            alphaPrimitives: current.filter(
+              (s) => !(s.color === color && Number(s.index) === idx)
+            ),
+          },
+        };
       });
     },
     [activeBrand]
@@ -4042,6 +4117,35 @@ export default function App() {
                 <PrimitiveScale key={c} name={c} scale={GLOBAL_PRIMITIVES[c]} readOnly />
               ))}
             </Section>
+            <Section title={`Alpha — ${brand.name}`}>
+              <div style={{ fontSize: 11, color: "#5C5F66", fontFamily: "monospace", marginBottom: 10, lineHeight: 1.45 }}>
+                Alpha ramps reference a base swatch at fixed opacity steps
+                (label = opacity %). Values are read-only — edit the base swatch to
+                change them. Use “Add alpha color” to create more.
+              </div>
+              {alphaSources.map(({ color, index }) => {
+                const familyName = alphaFamilyName(color, index);
+                const familyScale = alphaPrimitives[familyName];
+                if (!familyScale) return null;
+                return (
+                  <PrimitiveScale
+                    key={familyName}
+                    name={familyName}
+                    scale={familyScale}
+                    labels={alphaStepLabels}
+                    checkerboard
+                    readOnly
+                    onDelete={() => removeAlphaPrimitive(color, index)}
+                  />
+                );
+              })}
+              <AddAlphaForm
+                colorNames={alphaBaseColorNames}
+                getBaseHex={(c, i) => resolveBaseHex(brand, c, Number(i))}
+                existingKeys={alphaExistingKeys}
+                onAdd={addAlphaPrimitive}
+              />
+            </Section>
             {activeComponent === "foundations" && (
               <Section title={`Semantic Colors — ${brand.name}`}>
                 <SemanticColorEditor
@@ -4049,6 +4153,7 @@ export default function App() {
                   mergedMap={previewTheme === "dark" ? darkSemanticMerged : lightSemanticMerged}
                   brandColors={colorNames}
                   globalColors={globalColorNames}
+                  alphaColors={alphaColorNames}
                   resolveHex={(role) => resolveColor(brands, activeBrand, role, previewTheme)}
                   rampLengthOf={(c) =>
                     (brand.primitives && brand.primitives[c] && brand.primitives[c].length) ||
@@ -4110,6 +4215,7 @@ export default function App() {
                     onUpdate={updateComponentOverride}
                     brandColors={colorNames}
                     globalColors={globalColorNames}
+                    alphaColors={alphaColorNames}
                     gradientIds={Object.keys(brand.gradients || {}).sort()}
                   />
                 );

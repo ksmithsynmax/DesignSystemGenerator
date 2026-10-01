@@ -75,6 +75,11 @@ export default function ActionIconPreview({
 
   const resolvedActionIconSize = resolveSizeKey("actionicon-padding", size, "sm");
   const resolvedRadiusSize = resolveSizeKey("actionicon-radius", radius || size, resolvedActionIconSize);
+  // Focus-ring width/spacing track the radius selection but have no "none"
+  // bucket (a square icon still gets a normal-width focus ring), so fall back
+  // to the icon size for those when radius is "none". The ring's *radius* does
+  // go square via actionicon-focus-ring-radius's own "none" (0) entry.
+  const focusRingKey = radius && radius !== "none" ? radius : size;
 
   const actionIconPadding = resolveDimension(brands, brandId, "actionicon-padding", resolvedActionIconSize);
   const actionIconRadius = resolveDimension(brands, brandId, "actionicon-radius", resolvedRadiusSize);
@@ -97,13 +102,13 @@ export default function ActionIconPreview({
     brands,
     brandId,
     "actionicon-focus-ring-width",
-    resolveSizeKey("actionicon-focus-ring-width", radius || size, resolvedRadiusSize)
+    resolveSizeKey("actionicon-focus-ring-width", focusRingKey, resolvedActionIconSize)
   );
   const focusRingSpacing = resolveDimension(
     brands,
     brandId,
     "actionicon-focus-ring-spacing",
-    resolveSizeKey("actionicon-focus-ring-spacing", radius || size, resolvedRadiusSize)
+    resolveSizeKey("actionicon-focus-ring-spacing", focusRingKey, resolvedActionIconSize)
   );
   const focusRingRadius = resolveDimension(brands, brandId, "actionicon-focus-ring-radius", resolvedRadiusSize);
 

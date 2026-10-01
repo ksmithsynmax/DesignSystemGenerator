@@ -5,8 +5,8 @@ import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
 export const ACTIONICON_VARIANTS = ["default", "filled", "light", "outlined", "transparent"];
-export const ACTIONICON_RADIUS_KEYS = ["xs", "sm", "md", "lg", "xl"];
-export const ACTIONICON_STATES = ["default", "hover", "focus", "pressed", "disabled"];
+export const ACTIONICON_RADIUS_KEYS = ["none", "xs", "sm", "md", "lg", "xl"];
+export const ACTIONICON_STATES = ["default", "hover", "focus", "pressed", "active", "disabled"];
 const ACTIONICON_ICONS = ["check", "minus"];
 const FOCUS_RING_STYLE_OPTIONS = ["offset", "attached"];
 

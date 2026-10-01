@@ -1,6 +1,7 @@
 import { COMPONENT_TOKENS, TOKEN_TYPES } from "../data/componentTokens";
 import { GLOBAL_PRIMITIVES, BRAND_STARTER_SEMANTIC_MAP } from "../data/brands";
 import { gradientFirstStopHex } from "./resolveGradient";
+import { isAlphaFamily, getAlphaFamilyRamp } from "./alphaPrimitives";
 
 function isValidSemanticMapping(m) {
   return (
@@ -280,6 +281,13 @@ function mappingToHex(brand, mapping) {
     return g || "#FF00FF";
   }
   if (mapping.color === "transparent") return "transparent";
+  // Alpha primitive family: the ramp value already carries its alpha channel, so
+  // return it directly (going through applyOpacity would strip the alpha byte).
+  if (isAlphaFamily(mapping.color)) {
+    const ramp = getAlphaFamilyRamp(brand, mapping.color);
+    const idx = Number.isFinite(Number(mapping.index)) ? Number(mapping.index) : 0;
+    return ramp?.[idx] || "#FF00FF";
+  }
   const base = brand.primitives[mapping.color]?.[mapping.index]
     ?? GLOBAL_PRIMITIVES[mapping.color]?.[mapping.index]
     ?? "#FF00FF";

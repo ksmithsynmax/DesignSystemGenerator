@@ -5,7 +5,12 @@ figma.ui.onmessage = async function (msg) {
     try {
       await syncTokens(msg.payload);
     } catch (err) {
-      figma.ui.postMessage({ type: "sync-complete", success: false, error: String(err) });
+      // Surface the failure in the log (ui.html renders `message`) AND carry the
+      // structured error, so a crash shows WHERE/why it stopped instead of looking
+      // like a silent freeze.
+      var errText = (err && err.stack) ? String(err.stack) : String(err);
+      figma.ui.postMessage({ type: "sync-progress", message: "❌ SYNC FAILED: " + errText });
+      figma.ui.postMessage({ type: "sync-complete", success: false, error: String(err), message: "sync failed: " + String(err) });
     }
   }
 };
@@ -148,6 +153,7 @@ async function syncTokens(payload) {
   // Extract globalPrimitives and brand IDs from payload
   var globalPrimitives = payload.globalPrimitives || {};
   var globalSpacing = payload.globalSpacing || [];
+  var globalSizes = payload.globalSizes || [];
   var globalRadii = payload.globalRadii || [];
   var allKeys = Object.keys(payload);
   var brandIds = [];
@@ -155,6 +161,8 @@ async function syncTokens(payload) {
     if (
       allKeys[ki] !== "globalPrimitives" && 
       allKeys[ki] !== "globalSpacing" && 
+      allKeys[ki] !== "globalSizes" && 
+      allKeys[ki] !== "globalEnums" && 
       allKeys[ki] !== "globalRadii" && 
       allKeys[ki] !== "globalFonts" && 
       allKeys[ki] !== "globalWeights" && 
@@ -340,6 +348,24 @@ async function syncTokens(payload) {
     spacingVar.setValueForMode(globalModeId, spacingValue);
   }
 
+  // Global size scale (FLOAT) — layout widths/heights/lengths
+  for (var gzi = 0; gzi < globalSizes.length; gzi++) {
+    var sizeValue = Number(globalSizes[gzi]);
+    if (!isFinite(sizeValue)) continue;
+    var sizeVarName = "size/" + sizeValue;
+    var sizeVar = globalPrimVarMap[sizeVarName];
+    if (!sizeVar) {
+      try {
+        sizeVar = figma.variables.createVariable(sizeVarName, globalPrimCol, "FLOAT");
+      } catch (e) {
+        throw new Error("Failed to create size var: '" + sizeVarName + "' - " + String(e));
+      }
+      globalPrimVarMap[sizeVarName] = sizeVar;
+      totalCreated++;
+    }
+    sizeVar.setValueForMode(globalModeId, sizeValue);
+  }
+
   // Global radius scale (FLOAT)
   for (var gri = 0; gri < globalRadii.length; gri++) {
     var radiusEntry = globalRadii[gri];
@@ -399,6 +425,29 @@ async function syncTokens(payload) {
       totalCreated++;
     }
     weightVar.setValueForMode(globalModeId, weightVal);
+  }
+
+  // Global enums (STRING) — keyword primitives (border/line styles, curves)
+  var globalEnums = payload.globalEnums || {};
+  var enumGroups = Object.keys(globalEnums);
+  for (var egi = 0; egi < enumGroups.length; egi++) {
+    var enumGroup = enumGroups[egi];
+    var enumVals = globalEnums[enumGroup] || [];
+    for (var evi = 0; evi < enumVals.length; evi++) {
+      var enumVal = String(enumVals[evi]);
+      var enumVarName = "enum/" + enumGroup + "/" + enumVal;
+      var enumVar = globalPrimVarMap[enumVarName];
+      if (!enumVar) {
+        try {
+          enumVar = figma.variables.createVariable(enumVarName, globalPrimCol, "STRING");
+        } catch (e) {
+          throw new Error("Failed to create enum var: '" + enumVarName + "' - " + String(e));
+        }
+        globalPrimVarMap[enumVarName] = enumVar;
+        totalCreated++;
+      }
+      enumVar.setValueForMode(globalModeId, enumVal);
+    }
   }
 
   // Global border widths (FLOAT)
@@ -472,6 +521,10 @@ async function syncTokens(payload) {
       var expectedSpacing = Number(globalSpacing[gex]);
       if (isFinite(expectedSpacing)) globalExpected["spacing/" + expectedSpacing] = true;
     }
+    for (var gsz = 0; gsz < globalSizes.length; gsz++) {
+      var expectedSize = Number(globalSizes[gsz]);
+      if (isFinite(expectedSize)) globalExpected["size/" + expectedSize] = true;
+    }
     for (var gre = 0; gre < globalRadii.length; gre++) {
       var expectedRadiusEntry = globalRadii[gre];
       if (!expectedRadiusEntry || typeof expectedRadiusEntry !== "object") continue;
@@ -480,6 +533,11 @@ async function syncTokens(payload) {
     }
     for (var fi = 0; fi < fontKeys.length; fi++) globalExpected["typography/font-family/" + fontKeys[fi]] = true;
     for (var wi = 0; wi < weightKeys.length; wi++) globalExpected["typography/font-weight/" + weightKeys[wi]] = true;
+    var expEnumGroups = Object.keys(payload.globalEnums || {});
+    for (var eeg = 0; eeg < expEnumGroups.length; eeg++) {
+      var expEnumVals = payload.globalEnums[expEnumGroups[eeg]] || [];
+      for (var eev = 0; eev < expEnumVals.length; eev++) globalExpected["enum/" + expEnumGroups[eeg] + "/" + String(expEnumVals[eev])] = true;
+    }
     for (var bi = 0; bi < globalBorderWidths.length; bi++) globalExpected["border-width/" + String(globalBorderWidths[bi]).replace('.', '_')] = true;
     for (var fsi = 0; fsi < globalFontSizes.length; fsi++) globalExpected["font-size-" + String(globalFontSizes[fsi]).replace('.', '_')] = true;
     for (var lhi = 0; lhi < globalLineHeights.length; lhi++) globalExpected["typography/line-height/" + String(globalLineHeights[lhi]).replace('.', '_')] = true;
@@ -495,6 +553,7 @@ async function syncTokens(payload) {
     if (globalStale > 0) progress("  Removed " + globalStale + " stale Primitive/Global variables");
   }
   progress("Primitive/Global: " + Object.keys(globalPrimVarMap).length + " variables");
+  await yieldToUI();
 
   // ══════════════════════════════════════════════════════════════
   // PHASE 1b: Primitive/[Brand] — single mode per brand, raw COLOR values
@@ -546,6 +605,7 @@ async function syncTokens(payload) {
       if (bpStale > 0) progress("  Removed " + bpStale + " stale Primitive/" + bpName + " variables");
     }
     progress("Primitive/" + bpName + ": " + Object.keys(brandPrimVarMaps[bpId]).length + " variables");
+    await yieldToUI();
   }
 
   // ══════════════════════════════════════════════════════════════
@@ -695,6 +755,7 @@ async function syncTokens(payload) {
     if (semanticStale > 0) progress("  Removed " + semanticStale + " stale Semantic variables");
   }
   progress("Semantic: " + Object.keys(semanticVarMap).length + " variables, " + totalAliases + " aliases");
+  await yieldToUI();
 
   // ══════════════════════════════════════════════════════════════
   // PHASE 3: Components — alias to Semantic (COLOR) or raw (FLOAT/STRING)
@@ -706,6 +767,12 @@ async function syncTokens(payload) {
 
   // Pass 1: Non-alias variables
   for (var ki2 = 0; ki2 < componentKeys.length; ki2++) {
+    // Heartbeat + yield so this (large) variable pass streams progress instead of
+    // buffering silently until it finishes.
+    if (ki2 > 0 && ki2 % 100 === 0) {
+      progress("  Component variables: " + ki2 + "/" + componentKeys.length);
+      await yieldToUI();
+    }
     var figmaPath = componentKeys[ki2];
     var tokenDef = firstBrand.components[figmaPath];
     if (tokenDef.aliasOf) continue;
@@ -864,6 +931,7 @@ async function syncTokens(payload) {
   totalCreated += compCreated;
   totalAliases += compAliases;
   progress("Components: " + compCreated + " created, " + compAliases + " aliases");
+  await yieldToUI();
 
   // ── Outlined overflow fade visibility (per-brand-mode BOOLEAN) ──
   // The outlined tabs' edge fade is a baked dark Linear gradient that only
@@ -1389,6 +1457,11 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     }
     progressBuilt++;
     progressStep("Creating " + name + " component set...", progressBuilt, progressTotal);
+    // Throttled flush so the log shows which set is in progress WITHOUT forcing a
+    // full-canvas repaint on every single set (that repaint compounds as the page
+    // grows and was the main cause of the sync slowing to a crawl). Progress still
+    // updates a few times a second; if it stalls, the last "Creating X..." names it.
+    await maybeYieldToUI(1500);
     var preExistingChildren = page.children.slice();
     try {
       return await builder();
@@ -6983,50 +7056,35 @@ async function buildFoundationsDocsPage(payload, titleFont) {
   }
   function labelOf(key) { var parts = String(key).split("/"); return parts[parts.length - 1]; }
 
-  // ── Per-mode px labels ──
-  // The radius/spacing visuals are bound to Semantic FLOAT vars (they switch per
-  // brand/theme), but the "Npx" text is static. Bind the text to a Semantic STRING
-  // var so the label switches with the same mode as the bar/box it describes.
-  var semColForLabels = null;
-  for (var slc = 0; slc < collections.length; slc++) {
-    if (collections[slc].name === "Semantic") { semColForLabels = collections[slc]; break; }
-  }
-  var semLabelModeId = {};
-  if (semColForLabels) {
-    for (var slb = 0; slb < brandIds.length; slb++) {
-      for (var slt = 0; slt < THEMES.length; slt++) {
-        var wantName = cap(brandIds[slb]) + cap(THEMES[slt]);
-        for (var slm = 0; slm < semColForLabels.modes.length; slm++) {
-          if (semColForLabels.modes[slm].name === wantName) {
-            semLabelModeId[brandIds[slb] + "-" + THEMES[slt]] = semColForLabels.modes[slm].modeId;
-            break;
-          }
-        }
+  // ── Px caption labels ──
+  // The "16px" / "25px" captions under the radius boxes and spacing bars are
+  // documentation CAPTIONS, not design tokens. The docs page is pinned to a single
+  // brand/theme mode at generation time (setExplicitVariableModeForCollection) and
+  // is rebuilt on every full sync, so a caption never needs to switch modes. We
+  // therefore render them as plain STATIC TEXT (appendText already bakes the value
+  // into the text node below) and create NO caption variables at all. This keeps
+  // documentation out of the token architecture entirely — nothing leaks into the
+  // Semantic collection or the generated token output.
+  //
+  // Cleanup so a re-sync removes both earlier (wrong) approaches:
+  //   1) legacy "Doc Labels/*" STRING vars that once lived in the Semantic collection
+  //   2) the dedicated "Doc Labels" collection a previous build created
+  try {
+    var staleLabelKeys = Object.keys(semScalarByName);
+    for (var stl = 0; stl < staleLabelKeys.length; stl++) {
+      if (staleLabelKeys[stl].indexOf("Doc Labels/") === 0) {
+        try { semScalarByName[staleLabelKeys[stl]].remove(); } catch (_stlErr) {}
+        delete semScalarByName[staleLabelKeys[stl]];
       }
     }
-  }
-  function pxLabelVar(payloadField, groupName, key) {
-    if (!semColForLabels) return null;
-    var nm = "Doc Labels/" + groupName + "/" + labelOf(key);
-    var v = semScalarByName[nm];
-    if (!v) {
-      try { v = figma.variables.createVariable(nm, semColForLabels, "STRING"); semScalarByName[nm] = v; }
-      catch (_lvErr) { return null; }
-    }
-    for (var lb = 0; lb < brandIds.length; lb++) {
-      var bId = brandIds[lb];
-      var node = payload[bId] ? payload[bId][payloadField] : null;
-      for (var lt = 0; lt < THEMES.length; lt++) {
-        var mId = semLabelModeId[bId + "-" + THEMES[lt]];
-        if (!mId) continue;
-        var map = node ? (node[THEMES[lt]] || node.light) : null;
-        var def = map ? map[key] : null;
-        var val = def ? (typeof def === "object" ? def.value : def) : null;
-        try { v.setValueForMode(mId, (val != null ? Number(val) + "px" : "")); } catch (_lvmErr) {}
+  } catch (_staleLabelErr) {}
+  try {
+    for (var dlc = 0; dlc < collections.length; dlc++) {
+      if (collections[dlc] && collections[dlc].name === "Doc Labels") {
+        try { collections[dlc].remove(); } catch (_dlcRmErr) {}
       }
     }
-    return v;
-  }
+  } catch (_dlcErr) {}
 
   // ── RADIUS ──
   var radiusEntries = scalarEntries("semanticRadius", "light");
@@ -7056,8 +7114,8 @@ async function buildFoundationsDocsPage(payload, titleFont) {
         bindVar(rBox, "bottomLeftRadius", rVar); bindVar(rBox, "bottomRightRadius", rVar);
       }
       appendText(rCell, mediumFont, labelOf(rKey), 11, DOC.title, "Radius Label");
-      var rValText = appendText(rCell, bodyFont, rVal + "px", 10, DOC.body, "Radius Value");
-      bindVar(rValText, "characters", pxLabelVar("semanticRadius", "radius", rKey));
+      // Static caption — pinned to the active brand/theme this page is built for.
+      appendText(rCell, bodyFont, rVal + "px", 10, DOC.body, "Radius Value");
       radiusRow.appendChild(rCell);
     }
     radiusPanel.appendChild(radiusRow);
@@ -7086,8 +7144,8 @@ async function buildFoundationsDocsPage(payload, titleFont) {
       spRow.appendChild(spBar);
       var spVar = semScalarByName[spKey];
       if (spVar) bindVar(spBar, "width", spVar);
-      var spValText = appendText(spRow, bodyFont, spVal + "px", 10, DOC.body, "Spacing Value");
-      bindVar(spValText, "characters", pxLabelVar("semanticSpacing", "spacing", spKey));
+      // Static caption — pinned to the active brand/theme this page is built for.
+      appendText(spRow, bodyFont, spVal + "px", 10, DOC.body, "Spacing Value");
       spacingCol.appendChild(spRow);
     }
     spacingPanel.appendChild(spacingCol);
@@ -30616,6 +30674,28 @@ function validateTabsVariables(varMap) {
 
 function progress(msg) {
   figma.ui.postMessage({ type: "sync-progress", message: msg });
+}
+
+// Yields control back to the event loop so queued figma.ui.postMessage() calls
+// actually flush to the plugin UI (and the UI can repaint). Without this, a long
+// synchronous stretch buffers every progress() line until it finishes, which makes
+// the sync look frozen. Call this between chunks of heavy work.
+function yieldToUI() {
+  return new Promise(function (resolve) { setTimeout(resolve, 0); });
+}
+
+// Throttled yield. Yielding forces Figma to run an intermediate layout + repaint
+// of the whole (growing) canvas; doing that on EVERY component set makes the
+// build get progressively slower as the page fills up. So during the long
+// component-set phase we only actually yield when at least `minGapMs` has elapsed
+// since the last yield — progress still streams a few times a second and the sync
+// can't look frozen, but we no longer pay for ~45 full-canvas repaints.
+var _lastYieldMs = 0;
+function maybeYieldToUI(minGapMs) {
+  var now = Date.now();
+  if (now - _lastYieldMs < (minGapMs || 1500)) return Promise.resolve();
+  _lastYieldMs = now;
+  return new Promise(function (resolve) { setTimeout(resolve, 0); });
 }
 
 // Same as progress(), but carries a determinate step count so the React panel
