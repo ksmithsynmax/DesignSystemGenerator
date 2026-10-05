@@ -186,6 +186,10 @@ import {
   KeyValuePairPropertiesPanel,
 } from "./components/panels/KeyValuePairPreviewPanel";
 import {
+  FlagPreviewContent,
+  FlagPropertiesPanel,
+} from "./components/panels/FlagPreviewPanel";
+import {
   ModalPreviewContent,
   ModalPropertiesPanel,
 } from "./components/panels/ModalPreviewPanel";
@@ -673,6 +677,7 @@ export default function App() {
     foundations: "Foundations",
     docs: "Docs Theme",
     actionicon: "ActionIcon",
+    flag: "Flag",
     textinput: "TextInput",
     dateinput: "DateInput",
     timeinput: "TimeInput",
@@ -1059,6 +1064,8 @@ export default function App() {
   const [activeKeyValuePairShowIcon, setActiveKeyValuePairShowIcon] = useState(false);
   const [activeKeyValuePairKey, setActiveKeyValuePairKey] = useState("IMO");
   const [activeKeyValuePairValue, setActiveKeyValuePairValue] = useState("9456123");
+  const [activeFlagSize, setActiveFlagSize] = useState("default");
+  const [activeFlagCountry, setActiveFlagCountry] = useState("Singapore");
   const [activeCheckboxSize, setActiveCheckboxSize] = useState(checkboxDefault);
   const [activeCheckboxRadius, setActiveCheckboxRadius] = useState(checkboxDefault);
   const [activeCheckboxSelection, setActiveCheckboxSelection] = useState("unchecked");
@@ -1099,7 +1106,7 @@ export default function App() {
   const [activeMenuWithIcons, setActiveMenuWithIcons] = useState(true);
   const [activeDividerSize, setActiveDividerSize] = useState("default");
   const [activeDividerOrientation, setActiveDividerOrientation] = useState("horizontal");
-  const [activeDividerState, setActiveDividerState] = useState("default");
+  const [activeDividerColor, setActiveDividerColor] = useState("primary");
   const [activeDividerInset, setActiveDividerInset] = useState(true);
   const [activeListSize, setActiveListSize] = useState("default");
   const [activeListType, setActiveListType] = useState("unordered");
@@ -1449,6 +1456,9 @@ export default function App() {
       setActiveTextLineClamp(0);
       setActiveTextTruncate("off");
       setActiveTextText(DEFAULT_TITLE_TEXT);
+    } else if (newComp === "flag") {
+      setActiveFlagSize("default");
+      setActiveFlagCountry("Singapore");
     } else if (newComp === "keyvaluepair") {
       setActiveKeyValuePairSize("default");
       setActiveKeyValuePairShowIcon(false);
@@ -1701,7 +1711,7 @@ export default function App() {
     } else if (newComp === "divider") {
       setActiveDividerSize("default");
       setActiveDividerOrientation("horizontal");
-      setActiveDividerState("default");
+      setActiveDividerColor("primary");
       setActiveDividerInset(true);
     } else if (newComp === "list") {
       setActiveListSize("default");
@@ -3446,6 +3456,7 @@ export default function App() {
     title: activeTitleSize,
     text: activeTextSizeToken,
     keyvaluepair: activeKeyValuePairSize,
+    flag: activeFlagSize,
     anchor: activeAnchorSize,
     checkbox: activeCheckboxSize,
     radio: activeRadioSize,
@@ -4465,6 +4476,16 @@ export default function App() {
                   valueText={activeKeyValuePairValue}
                 />
               )}
+              {activeComponent === "flag" && (
+                <FlagPreviewContent
+                  brands={brands}
+                  activeBrand={activeBrand}
+                  activeColorToken={activeColorToken}
+                  previewTheme={previewTheme}
+                  size={activeFlagSize}
+                  country={activeFlagCountry}
+                />
+              )}
               {activeComponent === "anchor" && (
                 <AnchorPreviewContent
                   brands={brands}
@@ -4611,7 +4632,7 @@ export default function App() {
                   activeBrand={activeBrand}
                   size={activeDividerSize}
                   orientation={activeDividerOrientation}
-                  state={activeDividerState}
+                  color={activeDividerColor}
                   inset={activeDividerInset}
                 />
               )}
@@ -5391,6 +5412,14 @@ export default function App() {
                   setValueText={setActiveKeyValuePairValue}
                 />
               )}
+              {activeComponent === "flag" && (
+                <FlagPropertiesPanel
+                  size={activeFlagSize}
+                  setSize={setActiveFlagSize}
+                  country={activeFlagCountry}
+                  setCountry={setActiveFlagCountry}
+                />
+              )}
               {activeComponent === "anchor" && (
                 <AnchorPropertiesPanel
                   size={activeAnchorSize}
@@ -5571,8 +5600,8 @@ export default function App() {
                   setSize={setActiveDividerSize}
                   orientation={activeDividerOrientation}
                   setOrientation={setActiveDividerOrientation}
-                  state={activeDividerState}
-                  setState={setActiveDividerState}
+                  color={activeDividerColor}
+                  setColor={setActiveDividerColor}
                   inset={activeDividerInset}
                   setInset={setActiveDividerInset}
                 />
@@ -6211,7 +6240,7 @@ export default function App() {
                   setShowHeader={setActiveCalendarShowHeader}
                 />
               )}
-              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "keyvaluepair", "anchor", "modal", "checkbox", "radio", "chip", "selectablefilterchip", "appliedfilterchip", "tooltip", "notification", "alert", "textinput", "dateinput", "timeinput", "select", "multiselect", "combobox", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
+              {!["button", "actionicon", "tabs", "accordion", "switch", "burger", "segmentedcontrol", "slider", "rangeslider", "title", "text", "keyvaluepair", "flag", "anchor", "modal", "checkbox", "radio", "chip", "selectablefilterchip", "appliedfilterchip", "tooltip", "notification", "alert", "textinput", "dateinput", "timeinput", "select", "multiselect", "combobox", "card", "loader", "progress", "chart", "chart-line", "chart-time-series", "chart-time-series-dual-axis", "chart-area", "chart-stacked-area", "chart-stacked-bar", "chart-combo", "chart-donut", "chart-radar", "chart-scatter", "chart-candlestick", "chart-sparkline", "chart-bar-horizontal", "chart-pie", "chart-funnel", "chart-radial", "pill", "badge", "image", "avatar", "skeleton", "table", "densetable", "calendar"].includes(activeComponent) && (
                 <div style={{ fontSize: 12, color: "#868E96", lineHeight: 1.5 }}>
                   Properties for this component are currently shown in the preview column.
                 </div>

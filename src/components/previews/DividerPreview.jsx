@@ -1,18 +1,23 @@
 import { resolveColor, resolveDimension } from "../../utils/resolveToken";
 import { COMPONENT_TOKENS } from "../../data/componentTokens";
 
+const DIVIDER_COLOR_TOKENS = {
+  primary: "divider-color",
+  secondary: "divider-secondary-color",
+  subtle: "divider-subtle-color",
+};
+
 export default function DividerPreview({
   brands,
   brandId,
   size = "default",
   orientation = "horizontal",
-  state = "default",
+  color = "primary",
   inset = true,
 }) {
   const tokens = COMPONENT_TOKENS.divider;
-  const isDisabled = state === "disabled";
-  const colorKey = isDisabled ? "divider-color-disabled" : "divider-color";
-  const color = resolveColor(
+  const colorKey = DIVIDER_COLOR_TOKENS[color] || "divider-color";
+  const fillColor = resolveColor(
     brands,
     brandId,
     tokens[colorKey]?.semantic ?? tokens["divider-color"]?.semantic,
@@ -40,9 +45,8 @@ export default function DividerPreview({
           style={{
             width: "100%",
             height: "100%",
-            background: color,
+            background: fillColor,
             borderRadius: `${radius}px`,
-            opacity: isDisabled ? 0.7 : 1,
           }}
         />
       </div>
@@ -64,9 +68,8 @@ export default function DividerPreview({
         style={{
           width: "100%",
           height: "100%",
-          background: color,
+          background: fillColor,
           borderRadius: `${radius}px`,
-          opacity: isDisabled ? 0.7 : 1,
         }}
       />
     </div>

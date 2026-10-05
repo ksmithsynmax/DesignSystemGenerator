@@ -3,9 +3,9 @@ import SectionLabel from "../shared/SectionLabel";
 import PreviewStage from "../shared/PreviewStage";
 import PreviewMatrix from "../shared/PreviewMatrix";
 
-const DIVIDER_STATES = ["default", "disabled"];
 const DIVIDER_ORIENTATIONS = ["horizontal", "vertical"];
 const DIVIDER_SIZE_OPTIONS = ["default", "xs", "sm", "md", "lg", "xl"];
+const DIVIDER_COLORS = ["primary", "secondary", "subtle"];
 
 function PropertyRow({ label, value, onChange, options }) {
   return (
@@ -48,10 +48,11 @@ export function DividerPreviewContent({
   activeBrand,
   size,
   orientation,
-  state,
+  color,
   inset,
 }) {
-  const rows = DIVIDER_STATES.map((dividerState) => ({ label: dividerState, dividerState }));
+  const colorRows = DIVIDER_COLORS.map((dividerColor) => ({ label: dividerColor, dividerColor }));
+  const sizeRows = DIVIDER_SIZE_OPTIONS.map((dividerSize) => ({ label: dividerSize, dividerSize }));
 
   return (
     <div>
@@ -61,24 +62,43 @@ export function DividerPreviewContent({
           brandId={activeBrand}
           size={size}
           orientation={orientation}
-          state={state}
+          color={color}
           inset={inset}
         />
       </PreviewStage>
 
       <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
-      <SectionLabel mt={20}>State x Inset</SectionLabel>
+      <SectionLabel mt={20}>Color</SectionLabel>
       <PreviewMatrix
-        sizeKeys={["inset on", "inset off"]}
-        rows={rows}
-        renderCell={(row, insetMode) => (
+        sizeKeys={["preview"]}
+        rows={colorRows}
+        renderCell={(row) => (
           <div style={{ padding: "22px 10px" }}>
             <DividerPreview
               brands={brands}
               brandId={activeBrand}
               size={size}
               orientation={orientation}
-              state={row.dividerState}
+              color={row.dividerColor}
+              inset={inset}
+            />
+          </div>
+        )}
+      />
+
+      <div style={{ borderTop: "1px solid #2C2E33", marginTop: 40 }} />
+      <SectionLabel mt={20}>Size x Inset</SectionLabel>
+      <PreviewMatrix
+        sizeKeys={["inset on", "inset off"]}
+        rows={sizeRows}
+        renderCell={(row, insetMode) => (
+          <div style={{ padding: "22px 10px" }}>
+            <DividerPreview
+              brands={brands}
+              brandId={activeBrand}
+              size={row.dividerSize}
+              orientation={orientation}
+              color={color}
               inset={insetMode === "inset on"}
             />
           </div>
@@ -93,16 +113,16 @@ export function DividerPropertiesPanel({
   setSize,
   orientation,
   setOrientation,
-  state,
-  setState,
+  color,
+  setColor,
   inset,
   setInset,
 }) {
   return (
     <div style={{ display: "grid", gap: 10 }}>
+      <PropertyRow label="Color" value={color} onChange={setColor} options={DIVIDER_COLORS} />
       <PropertyRow label="Size" value={size} onChange={setSize} options={DIVIDER_SIZE_OPTIONS} />
       <PropertyRow label="Orientation" value={orientation} onChange={setOrientation} options={DIVIDER_ORIENTATIONS} />
-      <PropertyRow label="State" value={state} onChange={setState} options={DIVIDER_STATES} />
       <PropertyRow
         label="Inset"
         value={inset ? "on" : "off"}

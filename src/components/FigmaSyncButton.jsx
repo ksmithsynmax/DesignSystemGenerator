@@ -151,6 +151,7 @@ const BUILDABLE_COMPONENTS = [
   "title",
   "text",
   "keyvaluepair",
+  "flag",
   "image",
   "avatar",
   "skeleton",
@@ -174,6 +175,7 @@ const BUILDABLE_SECTIONS = [
 const COMPONENT_LABELS = {
   actionicon: "ActionIcon",
   keyvaluepair: "KeyValuePair",
+  flag: "Flag",
   selectablefilterchip: "Selectable Filter Chip",
   appliedfilterchip: "Applied Filter Chip",
   chart: "Bar Chart",

@@ -1339,10 +1339,18 @@ async function buildComponents(varMap, componentsToBuild, buildOptions, collecti
     if (!buildAllSentinel && hasSelection) {
       requestedSet = normalizedRequested;
     } else if (!buildAllSentinel && unknownSelections.length > 0 && !hasSelection) {
+      // The user explicitly picked components but NONE are recognized/managed by
+      // this plugin's structural builder (e.g. "flag", which only has sizing
+      // variables and no component builder). Build NOTHING rather than silently
+      // rebuilding every component — the variables were already written in the
+      // variable phase. An empty requestedSet makes every buildSet() skip and
+      // keeps cleanup from touching anything. This avoids a surprise multi-minute
+      // full rebuild from an unrecognized selection.
+      requestedSet = {};
       progress(
-        "No recognized components in selection (" +
+        "No buildable components in selection (" +
           unknownSelections.join(", ") +
-          "). Falling back to building all components."
+          "). These have variables only — nothing structural to build. Skipping component build."
       );
     }
   }
@@ -3146,13 +3154,13 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         templatedDoc.appendChild(templateListIconsBlock);
       }
 
-      var templateVariantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Subtle", "Transparent", "Pills", "Oval", "Bars", "Dots", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
-      // Buttons: show the whole variant ladder (see note on variantLimit below).
-      var templateVariantLimit = (lowerSetName === "tablebody" || lowerSetName === "button")
+      var templateVariantOrder = ["Primary", "Secondary", "Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Subtle", "Transparent", "Pills", "Oval", "Bars", "Dots", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
+      // Buttons & ActionIcons: show the whole variant ladder (see note on variantLimit below).
+      var templateVariantLimit = (lowerSetName === "tablebody" || lowerSetName === "button" || lowerSetName === "actionicon")
         ? Math.max(6, variants.length)
         : (lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3));
       var templateOrderedVariants = pickOrdered(variants, templateVariantOrder).slice(0, templateVariantLimit);
-      var templateOrderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
+      var templateOrderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 6);
       var templateOrderedSizesAll = pickOrdered(sizes, ["Default", "Label", "Caption", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 8);
       var templateOrderedTextWeights = pickOrdered(textWeights, ["Regular", "Medium", "Semibold", "Bold"]).slice(0, 6);
       var templateOrderedTextColors = pickOrdered(textColors, [
@@ -3164,7 +3172,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         "Error",
       ]).slice(0, 8);
       var templateRadii = getPropValues(variantProps, "Radius");
-      var templateOrderedRadiiAll = pickOrdered(templateRadii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+      var templateOrderedRadiiAll = pickOrdered(templateRadii, ["None", "Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
       var templateOrderedSizes = templateOrderedSizesAll.slice();
       if (templateOrderedSizes.length > 1) {
         templateOrderedSizes = templateOrderedSizes.filter(function (s) { return String(s).toLowerCase() !== "default"; });
@@ -3701,7 +3709,9 @@ async function buildUsageDocsPage(componentSets, titleFont) {
           } else {
             addInstancesRow(templateSizeSlot, "Sizes", templateOrderedSizes, function (sizeName) {
               return makeTemplateInstance({ Size: sizeName });
-            }, false, lowerSetName === "divider" ? { itemsPerRow: 3, rowItemSpacing: 56, instancePaddingX: 22, instancePaddingY: 10 } : null);
+            }, false, lowerSetName === "keyvaluepair"
+              ? { itemsPerRow: templateOrderedSizes.length, rowItemSpacing: 48, instancePaddingX: 16, instancePaddingY: 10 }
+              : (lowerSetName === "divider" ? { itemsPerRow: 3, rowItemSpacing: 56, instancePaddingX: 22, instancePaddingY: 10 } : null));
           }
         } else if (!hasSizes) {
           removeSectionOrSlot(templatedDoc, slug, "size");
@@ -3860,6 +3870,24 @@ async function buildUsageDocsPage(componentSets, titleFont) {
             },
             false,
             { itemsPerRow: 3 }
+          );
+        }
+
+        // ActionIcon documents its corner Radius scale (none → xl) explicitly.
+        if (lowerSetName === "actionicon" && templateRadiusKey && templateOrderedRadiiAll.length > 1) {
+          templatedDoc.appendChild(createSectionHeader("Radius", "Corner radius scale, from none to full.", DOC_COLORS.subtitle));
+          var actionIconTplRadiusPanel = createPanel("actionicon-template-radius", 10);
+          actionIconTplRadiusPanel.resize(1192, actionIconTplRadiusPanel.height);
+          templatedDoc.appendChild(actionIconTplRadiusPanel);
+          addInstancesRow(
+            actionIconTplRadiusPanel,
+            "Radius",
+            templateOrderedRadiiAll,
+            function (rName) {
+              return makeTemplateInstance({ Radius: rName });
+            },
+            false,
+            { itemsPerRow: 6 }
           );
         }
 
@@ -4801,15 +4829,15 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         ? pickOrdered(getPropValues(variantProps, selectiveKey), ["Active", "Selected", "Inactive", "Selective Inactive"])
         : [];
 
-      var variantOrder = ["Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Subtle", "Transparent", "Pills", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
-      // Buttons carry the full emphasis ladder (filled/outlined/light/subtle/
-      // transparent/default) — show them all instead of the generic cap of 3,
-      // otherwise Transparent/Light/Subtle silently drop out of the docs.
-      var variantLimit = (lowerSetName === "tablebody" || lowerSetName === "button")
+      var variantOrder = ["Primary", "Secondary", "Filled", "Outlined", "Outline", "Ghost", "Default", "Light", "Subtle", "Transparent", "Pills", "Single", "Palette", "Shades", "Badge", "Progress", "Text", "Flag", "Avatar", "Icon", "Button", "Detections"];
+      // Buttons and ActionIcons carry the full emphasis ladder (filled/outlined/
+      // light/subtle/transparent/default) — show them all instead of the generic
+      // cap of 3, otherwise Transparent/Light/Subtle silently drop out of the docs.
+      var variantLimit = (lowerSetName === "tablebody" || lowerSetName === "button" || lowerSetName === "actionicon")
         ? Math.max(6, variants.length)
         : (lowerSetName === "badge" ? 4 : (lowerSetName === "card" ? 5 : 3));
       var orderedVariants = pickOrdered(variants, variantOrder).slice(0, variantLimit);
-      var orderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 5);
+      var orderedStates = pickOrdered(states, ["Default", "Hover", "Focus", "Pressed", "Active", "Disabled"]).slice(0, 6);
       var orderedSizesAll = pickOrdered(sizes, ["Default", "Label", "Caption", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 8);
       var orderedTextWeights = pickOrdered(textWeights, ["Regular", "Medium", "Semibold", "Bold"]).slice(0, 6);
       var orderedTextColors = pickOrdered(textColors, [
@@ -4821,7 +4849,7 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         "Error",
       ]).slice(0, 8);
       var radii = getPropValues(variantProps, "Radius");
-      var orderedRadiiAll = pickOrdered(radii, ["Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
+      var orderedRadiiAll = pickOrdered(radii, ["None", "Default", "XXS", "XS", "SM", "MD", "LG", "XL"]).slice(0, 6);
       var orderedSizes = orderedSizesAll.slice();
       if (orderedSizes.length > 1) {
         orderedSizes = orderedSizes.filter(function (s) { return String(s).toLowerCase() !== "default"; });
@@ -5412,8 +5440,8 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         } else {
           addInstancesRow(sizeSlot, "Sizes", orderedSizes, function (sizeName) {
             return makeInstance({ Size: sizeName });
-          }, false, lowerSetName === "divider"
-            ? { itemsPerRow: 3, rowItemSpacing: 56, instancePaddingX: 22, instancePaddingY: 10 }
+          }, false, lowerSetName === "keyvaluepair"
+            ? { itemsPerRow: orderedSizes.length, rowItemSpacing: 48, instancePaddingX: 16, instancePaddingY: 10 }
             : null);
         }
       }
@@ -6267,6 +6295,24 @@ async function buildUsageDocsPage(componentSets, titleFont) {
         );
       }
 
+      // ActionIcon documents its corner Radius scale (none → xl) explicitly.
+      if (lowerSetName === "actionicon" && radiusKey && orderedRadiiAll.length > 1) {
+        doc.appendChild(createSectionHeader("Radius", "Corner radius scale, from none to full.", DOC_COLORS.subtitle));
+        var actionIconRadPanel = createPanel("actionicon-programmatic-radii", 10);
+        actionIconRadPanel.resize(1192, actionIconRadPanel.height);
+        doc.appendChild(actionIconRadPanel);
+        addInstancesRow(
+          actionIconRadPanel,
+          "Radius",
+          orderedRadiiAll,
+          function (rName) {
+            return makeInstance({ Radius: rName });
+          },
+          false,
+          { itemsPerRow: 6 }
+        );
+      }
+
       if ((lowerSetName === "tooltip" || lowerSetName === "popover") && baseComponent) {
         var ttProgDirKey = getPropKey(variantProps, "Direction");
         var ttProgArrowKey = getPropKey(variantProps, "Arrow");
@@ -6393,6 +6439,198 @@ async function buildUsageDocsPage(componentSets, titleFont) {
       }
     }
   }
+  // ── Flag doc ──
+  // Flag is NOT a managed/generated component set (we never build or delete a
+  // "Flags" set), so it won't appear in `componentSets`. Build its doc here from
+  // the user's existing "Flags" component set, instancing it read-only. If that
+  // set can't be found, fall back to neutral placeholder boxes so the doc still
+  // documents the sizing + tooltip behaviour. Fully isolated in try/catch so a
+  // failure can never take down the other component docs.
+  try {
+    // Idempotent: drop any previous Flag doc before rebuilding.
+    for (var fdc = docsPage.children.length - 1; fdc >= 0; fdc--) {
+      var fdcName = String(docsPage.children[fdc].name || "");
+      if (fdcName === "__AUTO_DOCS__ - Flag" || fdcName.indexOf("__AUTO_DOCS__ - Flag ") === 0) {
+        docsPage.children[fdc].remove();
+      }
+    }
+
+    // Locate the "Flags" (or "Flag") COMPONENT_SET anywhere in the document.
+    var flagSourceSet = null;
+    for (var fpg = 0; fpg < figma.root.children.length; fpg++) {
+      var flagPage = figma.root.children[fpg];
+      if (!flagPage || flagPage.type !== "PAGE") continue;
+      try { await flagPage.loadAsync(); } catch (_flagPageErr) {}
+      if (typeof flagPage.findOne !== "function") continue;
+      flagSourceSet = flagPage.findOne(function (n) {
+        return n.type === "COMPONENT_SET" && /^flags?$/i.test(String(n.name || ""));
+      });
+      if (flagSourceSet) break;
+    }
+
+    // Resolve the per-size flag/height FLOAT variables so each flag's HEIGHT is a
+    // live token reference (the whole point) rather than a hardcoded pixel value.
+    var flagHeightVars = {};
+    try {
+      var allFlagFloatVars = await figma.variables.getLocalVariablesAsync("FLOAT");
+      for (var ffv = 0; ffv < allFlagFloatVars.length; ffv++) {
+        var fvCand = allFlagFloatVars[ffv];
+        var fvMatch = /^flag\/height-(default|xs|sm|md|lg|xl)$/i.exec(String((fvCand && fvCand.name) || ""));
+        if (fvMatch) flagHeightVars[fvMatch[1].toLowerCase()] = fvCand;
+      }
+    } catch (_flagHeightVarErr) {}
+    function bindFlagHeight(node, sizeKey) {
+      var hv = flagHeightVars[sizeKey];
+      if (!hv || !node) return;
+      try { node.setBoundVariable("height", hv); return; } catch (_bindHErr) {}
+      try { node.setBoundVariable("height", hv.id); } catch (_bindHErr2) {}
+    }
+
+    var flagRatio = 4 / 3; // native flags are ~20x15; refined from the real variant below.
+    function makeFlagNode(h, sizeKey) {
+      if (flagSourceSet) {
+        try {
+          var flagVariant = null;
+          var fsChildren = flagSourceSet.children || [];
+          for (var fvc = 0; fvc < fsChildren.length; fvc++) {
+            if (/singapore/i.test(String(fsChildren[fvc].name || ""))) { flagVariant = fsChildren[fvc]; break; }
+          }
+          if (!flagVariant) flagVariant = flagSourceSet.defaultVariant || fsChildren[0];
+          if (flagVariant) {
+            if (flagVariant.width && flagVariant.height) flagRatio = flagVariant.width / flagVariant.height;
+            var flagInst = flagVariant.createInstance();
+            flagInst.resize(Math.round(h * flagRatio), h);
+            // HEIGHT is bound to the flag/height-<size> token; width follows the ratio.
+            bindFlagHeight(flagInst, sizeKey);
+            return flagInst;
+          }
+        } catch (_flagInstErr) {}
+      }
+      var ph = figma.createFrame();
+      ph.name = "flag-placeholder";
+      ph.resize(Math.round(h * flagRatio), h);
+      ph.cornerRadius = 1;
+      ph.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.42, b: 0.47 } }];
+      bindFlagHeight(ph, sizeKey);
+      return ph;
+    }
+
+    function makeFlagCell(key, h) {
+      var cell = createStack("size-" + key, 8);
+      cell.counterAxisAlignItems = "CENTER";
+      var cellBox = createStack("flagbox", 0);
+      cellBox.layoutMode = "HORIZONTAL";
+      cellBox.counterAxisAlignItems = "CENTER";
+      cellBox.primaryAxisAlignItems = "CENTER";
+      cellBox.counterAxisSizingMode = "FIXED";
+      cellBox.primaryAxisSizingMode = "FIXED";
+      cellBox.resize(44, 22);
+      cellBox.appendChild(makeFlagNode(h, key));
+      cell.appendChild(cellBox);
+      appendText(cell, titleFont, key, 12, DOC_COLORS.title, "Size Label", "title");
+      appendText(cell, bodyFont, h + "px", 11, DOC_COLORS.subtitle, "Size Value", "textSubtle");
+      return cell;
+    }
+
+    var flagDoc = figma.createFrame();
+    flagDoc.name = "__AUTO_DOCS__ - Flag";
+    flagDoc.layoutMode = "VERTICAL";
+    flagDoc.primaryAxisSizingMode = "AUTO";
+    flagDoc.counterAxisSizingMode = "AUTO";
+    flagDoc.counterAxisAlignItems = "MIN";
+    flagDoc.itemSpacing = 16;
+    flagDoc.paddingLeft = 64;
+    flagDoc.paddingRight = 64;
+    flagDoc.paddingTop = 64;
+    flagDoc.paddingBottom = 64;
+    flagDoc.fills = [{ type: "SOLID", color: DOC_COLORS.pageBg }];
+    if (docsResolvedColorVars.pageBg) bindPaintVar(flagDoc, "fills", 0, docsResolvedColorVars.pageBg);
+    flagDoc.cornerRadius = 0;
+    flagDoc.clipsContent = false;
+    flagDoc.resize(1320, flagDoc.height);
+
+    var flagIntro = createStack("Intro Block", 12);
+    appendText(flagIntro, titleFont, "Flag", 28, DOC_COLORS.title, "Component Title", "title");
+    var flagIntroSub = appendText(
+      flagIntro,
+      bodyFont,
+      "Country flag. Sizing token: flag/height. Width follows the flag's natural ratio (no stretch).",
+      16,
+      DOC_COLORS.subtitle,
+      "Component Subtitle",
+      "textSubtle"
+    );
+    try { flagIntroSub.textAutoResize = "HEIGHT"; flagIntroSub.layoutSizingHorizontal = "FIXED"; flagIntroSub.resize(680, flagIntroSub.height); } catch (_flagSubErr) {}
+    flagDoc.appendChild(flagIntro);
+
+    // Size section
+    flagDoc.appendChild(createSectionHeader("Size", "Height is driven by flag/height. Sizes: default, xs, sm, md, lg, xl.", DOC_COLORS.subtitle));
+    var flagSizePanel = createPanel("slot:flag:size", 10);
+    flagSizePanel.resize(1192, flagSizePanel.height);
+    var flagSizeRow = createStack("row", 28);
+    flagSizeRow.layoutMode = "HORIZONTAL";
+    flagSizeRow.counterAxisAlignItems = "MAX";
+    var FLAG_DOC_SIZES = [["default", 14], ["xs", 10], ["sm", 12], ["md", 14], ["lg", 16], ["xl", 18]];
+    for (var fsz = 0; fsz < FLAG_DOC_SIZES.length; fsz++) {
+      flagSizeRow.appendChild(makeFlagCell(FLAG_DOC_SIZES[fsz][0], FLAG_DOC_SIZES[fsz][1]));
+    }
+    flagSizePanel.appendChild(flagSizeRow);
+    flagDoc.appendChild(flagSizePanel);
+
+    // Tooltip section
+    flagDoc.appendChild(createSectionHeader("Tooltip (on hover)", "On hover, show the country name in a tooltip styled from the tooltip/* tokens.", DOC_COLORS.subtitle));
+    var flagTipPanel = createPanel("slot:flag:tooltip", 10);
+    flagTipPanel.layoutMode = "HORIZONTAL";
+    flagTipPanel.counterAxisAlignItems = "CENTER";
+    flagTipPanel.itemSpacing = 28;
+    flagTipPanel.resize(1192, flagTipPanel.height);
+    var flagTipWrap = createStack("tooltip-demo", 6);
+    flagTipWrap.counterAxisAlignItems = "CENTER";
+    var flagBubble = createStack("bubble", 0);
+    flagBubble.layoutMode = "HORIZONTAL";
+    flagBubble.counterAxisAlignItems = "CENTER";
+    flagBubble.paddingLeft = 8;
+    flagBubble.paddingRight = 8;
+    flagBubble.paddingTop = 4;
+    flagBubble.paddingBottom = 4;
+    flagBubble.cornerRadius = 4;
+    flagBubble.fills = [{ type: "SOLID", color: { r: 0.102, g: 0.106, b: 0.118 } }];
+    appendText(flagBubble, bodyFont, "Singapore", 12, { r: 1, g: 1, b: 1 }, "Tooltip Label");
+    flagTipWrap.appendChild(flagBubble);
+    var flagTipBox = createStack("flagbox", 0);
+    flagTipBox.layoutMode = "HORIZONTAL";
+    flagTipBox.counterAxisAlignItems = "CENTER";
+    flagTipBox.primaryAxisAlignItems = "CENTER";
+    flagTipBox.counterAxisSizingMode = "FIXED";
+    flagTipBox.primaryAxisSizingMode = "FIXED";
+    flagTipBox.resize(44, 22);
+    flagTipBox.appendChild(makeFlagNode(14, "default"));
+    flagTipWrap.appendChild(flagTipBox);
+    flagTipPanel.appendChild(flagTipWrap);
+    var flagTipNote = appendText(
+      flagTipPanel,
+      bodyFont,
+      "On hover: Tooltip with the country name. Styled via tooltip/* tokens (background, color, radius, padding, font). Shows only on hover.",
+      14,
+      DOC_COLORS.subtitle,
+      "Tooltip Note",
+      "textSubtle"
+    );
+    try { flagTipNote.textAutoResize = "HEIGHT"; flagTipNote.layoutSizingHorizontal = "FIXED"; flagTipNote.resize(600, flagTipNote.height); } catch (_flagNoteErr) {}
+    flagDoc.appendChild(flagTipPanel);
+
+    clearExplicitModesInSubtree(flagDoc);
+    applyDocVariableBindings(flagDoc);
+    docsPage.appendChild(flagDoc);
+    flagDoc.x = docsX;
+    flagDoc.y = docsY;
+    docsY += nodeRenderedHeight(flagDoc) + docsGap;
+    docsCreated++;
+    progress("Flag doc built from " + (flagSourceSet ? "the Flags component set" : "placeholder boxes (no Flags set found)") + ".");
+  } catch (flagDocErr) {
+    progress("Flag doc skipped: " + String(flagDocErr));
+  }
+
   progress("Usage docs generated on page: Component Documentation (created: " + docsCreated + ", skipped: " + docsSkipped + ")");
   return { created: docsCreated, skipped: docsSkipped };
 }
@@ -18419,17 +18657,23 @@ function buildDividerComponentSet(varMap, page) {
   var orientations = ["horizontal", "vertical"];
   var insetModes = ["off", "on"];
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
-  var states = ["default", "disabled"];
+  // Color variant: Primary / Secondary / Subtle, each aliasing a border-* semantic.
+  // A divider is purely presentational, so it has no interactive State axis.
+  var variants = ["primary", "secondary", "subtle"];
   var components = [];
   var gap = 20;
   var colWidth = 280;
   var rowHeight = 120;
 
-  function dividerColorVarForState(state) {
-    if (state === "disabled") return varMap["divider/color-disabled"] || varMap["divider/color"];
+  function dividerColorVar(variant) {
+    if (variant === "secondary") return varMap["divider/secondary-color"] || varMap["divider/color"];
+    if (variant === "subtle") return varMap["divider/subtle-color"] || varMap["divider/color"];
     return varMap["divider/color"];
   }
 
+  for (var vi = 0; vi < variants.length; vi++) {
+    var variant = variants[vi];
+    var capVariant = variant.charAt(0).toUpperCase() + variant.slice(1);
   for (var oi = 0; oi < orientations.length; oi++) {
     var orientation = orientations[oi];
     var capOrientation = orientation.charAt(0).toUpperCase() + orientation.slice(1);
@@ -18440,16 +18684,13 @@ function buildDividerComponentSet(varMap, page) {
       for (var si = 0; si < sizes.length; si++) {
         var size = sizes[si];
         var capSize = size === "default" ? "Default" : size.toUpperCase();
-        for (var sti = 0; sti < states.length; sti++) {
-          var state = states[sti];
-          var capState = state.charAt(0).toUpperCase() + state.slice(1);
 
           var component = figma.createComponent();
           component.name =
-            "Orientation=" + capOrientation +
+            "Variant=" + capVariant +
+            ", Orientation=" + capOrientation +
             ", Inset=" + capInset +
-            ", Size=" + capSize +
-            ", State=" + capState;
+            ", Size=" + capSize;
           component.layoutMode = "HORIZONTAL";
           component.primaryAxisSizingMode = "AUTO";
           component.counterAxisSizingMode = "AUTO";
@@ -18516,7 +18757,7 @@ function buildDividerComponentSet(varMap, page) {
           } else {
             line.resize(3, 240);
           }
-          bindPaintVar(line, "fills", 0, dividerColorVarForState(state));
+          bindPaintVar(line, "fills", 0, dividerColorVar(variant));
           bindVar(line, "topLeftRadius", varMap["divider/radius"]);
           bindVar(line, "topRightRadius", varMap["divider/radius"]);
           bindVar(line, "bottomLeftRadius", varMap["divider/radius"]);
@@ -18529,22 +18770,18 @@ function buildDividerComponentSet(varMap, page) {
             bindVar(line, "width", varMap["divider/thickness-" + size]);
           }
 
-          if (state === "disabled") {
-            line.opacity = 0.7;
-          }
-
           container.appendChild(line);
           component.appendChild(container);
 
           var colIndex = ((oi * insetModes.length + ii) * sizes.length) + si;
-          var rowIndex = sti;
+          var rowIndex = vi;
           component.x = colIndex * (colWidth + gap);
           component.y = rowIndex * (rowHeight + gap);
           page.appendChild(component);
           components.push(component);
-        }
       }
     }
+  }
   }
 
   var componentSet = figma.combineAsVariants(components, page);
@@ -28195,8 +28432,8 @@ async function buildActionIconComponentSet(varMap, page, focusRingStyle, selecte
     ? selectedVariants.slice()
     : ["default", "filled", "light", "outlined", "transparent"];
   var sizes = ["default", "xs", "sm", "md", "lg", "xl"];
-  var radii = ["xs", "sm", "md", "lg", "xl"];
-  var states = ["default", "hover", "focus", "pressed", "disabled"];
+  var radii = ["none", "xs", "sm", "md", "lg", "xl"];
+  var states = ["default", "hover", "focus", "pressed", "active", "disabled"];
   var icons = ["check"];
   var components = [];
 

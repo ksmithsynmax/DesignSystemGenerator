@@ -1653,8 +1653,13 @@ export const COMPONENT_TOKENS = {
 
   divider: {
     // ── COLOR TOKENS ──
+    // Color variant (primary / secondary / subtle). "divider-color" is the primary
+    // variant and the backwards-compatible default. All alias border-* semantics so
+    // they theme across brands + light/dark. A divider is purely presentational, so
+    // it has no interactive state (no hover/focus/disabled) — only a color variant.
     "divider-color": { type: "COLOR", semantic: "border-primary", figmaPath: "divider/color" },
-    "divider-color-disabled": { type: "COLOR", semantic: "border-disabled", figmaPath: "divider/color-disabled" },
+    "divider-secondary-color": { type: "COLOR", semantic: "border-secondary", figmaPath: "divider/secondary-color" },
+    "divider-subtle-color": { type: "COLOR", semantic: "border-subtle", figmaPath: "divider/subtle-color" },
 
     // ── FLOAT TOKENS ──
     "divider-length": { type: "FLOAT", unit: "px", value: 240, figmaPath: "divider/length" },
@@ -3241,6 +3246,17 @@ export const COMPONENT_TOKENS = {
     "table-header-line-height": { type: "FLOAT", unit: "px", value: 16, figmaPath: "table/header-line-height" },
   },
 
+  // Flag — a small country flag chip. The generator renders a neutral stand-in
+  // (same look as the DenseTable flag cell); the real artwork comes from the
+  // Figma "Flags" component set (INSTANCE_SWAP on sync) and from the runtime API
+  // in production. Flags each have their own natural aspect ratio, so ONLY the
+  // height is tokenized — width follows each flag's intrinsic ratio (never
+  // stretched). Heights step 10 → 18 by 2px (default = 14); all values land on
+  // the spacing primitive scale so they alias (never emit literals).
+  flag: {
+    "flag-height": { type: "FLOAT", unit: "px", sizes: { default: 14, xs: 10, sm: 12, md: 14, lg: 16, xl: 18 }, figmaPath: "flag/height" },
+  },
+
   // Dense data table — a compact, high-density table distinct from `table`.
   // Header cells carry their own filled surface + sort icon; body rows are
   // divider-separated. The last column can host an action button that toggles
@@ -3445,6 +3461,7 @@ export const COMPONENT_DISPLAY_NAMES = {
   combobox: "Combobox",
   segmentedcontrol: "SegmentedControl",
   keyvaluepair: "KeyValuePair",
+  flag: "Flag",
   densetable: "DenseTable",
   accordionitem: "Accordion Item",
   chart: "Bar Chart",
@@ -3534,6 +3551,7 @@ export const COMPONENT_SIZE_KEYS = {
   title: ["h1", "h2", "h3", "h4", "h5", "h6"],
   text: ["default", "label", "caption", "xs", "sm", "md", "lg", "xl"],
   keyvaluepair: ["default", "sm", "md", "lg"],
+  flag: ["default", "xs", "sm", "md", "lg", "xl"],
 };
 
 // Chart subtypes (chart-line, future chart-area) inherit the shared `chart`
