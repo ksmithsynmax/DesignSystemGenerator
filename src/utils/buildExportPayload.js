@@ -107,11 +107,40 @@ function resolveMappingToColor(brand, mapping) {
   return { value, primitiveAlias, gradientSpec: null };
 }
 
+// Tokens that have been retired and must never be exported/synced again, even
+// if a stale browser localStorage snapshot or an older recovery file still
+// carries them. Deleting them in Figma can't stick on its own because sync is
+// one-way (app -> Figma) and rebuilds the payload from app state, so we scrub
+// them here at the single chokepoint every sync/lock/export flows through.
+const DEPRECATED_SEMANTIC_TOKENS = new Set(["primary-border"]);
+
+function stripDeprecatedTokens(brands) {
+  if (!brands || typeof brands !== "object") return brands;
+  const clone = JSON.parse(JSON.stringify(brands));
+  const walk = (node) => {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) {
+      node.forEach(walk);
+      return;
+    }
+    for (const key of Object.keys(node)) {
+      if (DEPRECATED_SEMANTIC_TOKENS.has(key)) {
+        delete node[key];
+        continue;
+      }
+      walk(node[key]);
+    }
+  };
+  walk(clone);
+  return clone;
+}
+
 /**
  * Builds the fully-resolved token payload for all brands.
  * Returns a plain object (not serialized).
  */
 export function buildExportPayload(brands, options) {
+  brands = stripDeprecatedTokens(brands);
   const GLOBAL_RADII = [
     { name: "none", value: 0 },
     { name: "1", value: 1 },

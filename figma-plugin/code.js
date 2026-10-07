@@ -29549,7 +29549,7 @@ async function buildTabsComponentSet(varMap, page, font, selectedVariants) {
                   if (variant === "outlined" && orientation === "horizontal" && visualState === "active") {
                     tab.strokeBottomWeight = 0;
                   }
-                  if (variant === "outlined" && orientation === "horizontal" && ti > 0) {
+                  if (variant === "outlined" && orientation === "horizontal" && ti > 0 && !tabDef.active) {
                     tab.strokeLeftWeight = 0;
                   } else if (variant === "outlined" && orientation === "vertical" && ti > 0) {
                     tab.strokeTopWeight = 0;
