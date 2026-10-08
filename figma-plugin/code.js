@@ -16486,76 +16486,49 @@ async function buildNotificationComponentSet(varMap, page, font, loaderSet, reso
       bindVar(comp, "bottomRightRadius", varMap["notification/radius-" + radius]);
     }
 
-    function appendNotificationCloseControl() {
-      if (!withClose) return;
-      var notifW = 360;
-      var closeIconW = 16;
-      var closePadRight = resolveCompFloat("notification/padding-x", 12);
-      var closeTop = resolveCompFloat("notification/padding-y", 10);
-      var closeX = notifW - closeIconW - closePadRight;
-      var closeComp = notificationIcons.close;
-      if (closeComp && closeComp.type === "COMPONENT") {
-        var closeInst = closeComp.createInstance();
-        closeInst.name = "close";
-        try {
-          closeInst.resize(closeIconW, closeIconW);
-        } catch (_eCloseResize) {}
-        bindNotificationCloseIconGraphicNodes(closeInst, varMap, colorTone);
-        closeInst.x = closeX;
-        closeInst.y = closeTop;
-        comp.appendChild(closeInst);
-      } else {
-        var closeNode = figma.createText();
-        closeNode.name = "close";
-        closeNode.fontName = font;
-        closeNode.characters = "×";
-        closeNode.fontSize = 14;
-        closeNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
-        var nCloseFallback = notificationResolvedVar(varMap, "close", colorTone);
-        if (nCloseFallback) bindPaintVar(closeNode, "fills", 0, nCloseFallback);
-        closeNode.x = closeX;
-        closeNode.y = closeTop;
-        comp.appendChild(closeNode);
-      }
+    // --- Auto layout root -------------------------------------------------
+    // Horizontal row, top-aligned. Width stays fixed; height HUGS content so
+    // the card grows/shrinks with the copy (and with the title shown/hidden).
+    comp.layoutMode = "HORIZONTAL";
+    comp.primaryAxisSizingMode = "FIXED";   // width stays fixed (360)
+    comp.counterAxisSizingMode = "AUTO";    // height hugs content
+    comp.primaryAxisAlignItems = "MIN";
+    comp.counterAxisAlignItems = "MIN";     // top-align children
+    comp.itemSpacing = 12;
+    comp.paddingLeft = 16;
+    comp.paddingRight = 16;
+    comp.paddingTop = 14;
+    comp.paddingBottom = 14;
+    if (varMap["notification/padding-x"]) {
+      bindVar(comp, "paddingLeft", varMap["notification/padding-x"]);
+      bindVar(comp, "paddingRight", varMap["notification/padding-x"]);
+    }
+    if (varMap["notification/padding-y"]) {
+      bindVar(comp, "paddingTop", varMap["notification/padding-y"]);
+      bindVar(comp, "paddingBottom", varMap["notification/padding-y"]);
     }
 
+    // Left accent stripe: flow child stretched to the row height. When hidden
+    // (no accent / loading) Figma excludes it from the layout automatically.
+    var accent = figma.createRectangle();
+    accent.name = "accent";
+    accent.resize(6, 94);
+    accent.cornerRadius = 3;
+    accent.visible = hasAccent;
+    accent.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
+    if (indicatorVar) bindPaintVar(accent, "fills", 0, indicatorVar);
+    else if (notificationResolvedVar(varMap, "accent", colorTone))
+      bindPaintVar(accent, "fills", 0, notificationResolvedVar(varMap, "accent", colorTone));
+    else if (notificationResolvedVar(varMap, "icon", colorTone))
+      bindPaintVar(accent, "fills", 0, notificationResolvedVar(varMap, "icon", colorTone));
+    comp.appendChild(accent);
+    try {
+      accent.layoutSizingHorizontal = "FIXED";
+      accent.layoutSizingVertical = "FILL";
+    } catch (_eAccentLayout) {}
+
+    // Leading element: loader while loading, otherwise the (optional) icon.
     if (isLoading) {
-      // Same layer stack as non-loading: accent exists but stays hidden while loading (no left bar).
-      var accentLoad = figma.createRectangle();
-      accentLoad.name = "accent";
-      accentLoad.resize(6, 94);
-      accentLoad.x = 8;
-      accentLoad.y = 8;
-      accentLoad.cornerRadius = 3;
-      accentLoad.visible = false;
-      accentLoad.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
-      if (indicatorVar) bindPaintVar(accentLoad, "fills", 0, indicatorVar);
-      else if (notificationResolvedVar(varMap, "accent", colorTone))
-        bindPaintVar(accentLoad, "fills", 0, notificationResolvedVar(varMap, "accent", colorTone));
-      else if (notificationResolvedVar(varMap, "icon", colorTone))
-        bindPaintVar(accentLoad, "fills", 0, notificationResolvedVar(varMap, "icon", colorTone));
-      comp.appendChild(accentLoad);
-
-      // Row: loader left (vertically centered vs copy), title + description right, left-aligned.
-      var loadingBody = figma.createFrame();
-      loadingBody.name = "body";
-      loadingBody.resize(360, 110);
-      loadingBody.x = 0;
-      loadingBody.y = 0;
-      loadingBody.clipsContent = false;
-      loadingBody.layoutMode = "HORIZONTAL";
-      loadingBody.primaryAxisSizingMode = "FIXED";
-      loadingBody.counterAxisSizingMode = "FIXED";
-      loadingBody.primaryAxisAlignItems = "MIN";
-      loadingBody.counterAxisAlignItems = "CENTER";
-      loadingBody.itemSpacing = 12;
-      loadingBody.paddingLeft = 20;
-      loadingBody.paddingRight = withClose ? 46 : 20;
-      loadingBody.paddingTop = 12;
-      loadingBody.paddingBottom = 12;
-      loadingBody.fills = [];
-
-      var loaderW = 18;
       if (loaderSource) {
         var loaderInst = loaderSource.createInstance();
         loaderInst.name = "loader";
@@ -16569,19 +16542,17 @@ async function buildNotificationComponentSet(varMap, page, font, loaderSet, reso
             Math.max(1, Math.round((lh || 56) * scale))
           );
         } catch (eLoaderResize) {}
-        loaderW = loaderInst.width;
         try {
           loaderInst.layoutGrow = 0;
           loaderInst.layoutSizingHorizontal = "FIXED";
           loaderInst.layoutSizingVertical = "FIXED";
         } catch (eLoaderLayout) {}
         bindLoaderGraphicNodesToLoaderColor(loaderInst, varMap);
-        loadingBody.appendChild(loaderInst);
+        comp.appendChild(loaderInst);
       } else {
         var loaderNode = figma.createEllipse();
         loaderNode.name = "loader";
         loaderNode.resize(18, 18);
-        loaderW = 18;
         loaderNode.strokeAlign = "CENTER";
         loaderNode.arcData = { startingAngle: 0, endingAngle: Math.PI * 1.55, innerRadius: 0.72 };
         loaderNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.55, b: 0.9 } }];
@@ -16597,161 +16568,115 @@ async function buildNotificationComponentSet(varMap, page, font, loaderSet, reso
           bindPaintVar(loaderNode, "fills", 0, nIconL);
           bindPaintVar(loaderNode, "strokes", 0, nIconL);
         }
-        loadingBody.appendChild(loaderNode);
+        comp.appendChild(loaderNode);
       }
-
-      var padL = 20;
-      var padR = withClose ? 46 : 20;
-      var rowGap = 12;
-      var loadColW = Math.max(
-        160,
-        Math.floor(360 - padL - padR - rowGap - loaderW)
-      );
-
-      var textColumn = figma.createFrame();
-      textColumn.name = "content";
-      textColumn.layoutMode = "VERTICAL";
-      textColumn.primaryAxisSizingMode = "AUTO";
-      textColumn.counterAxisSizingMode = "FIXED";
-      textColumn.primaryAxisAlignItems = "MIN";
-      textColumn.counterAxisAlignItems = "MIN";
-      textColumn.itemSpacing = 4;
-      textColumn.fills = [];
-      textColumn.resize(loadColW, 40);
-
-      var titleNode = figma.createText();
-      titleNode.name = "title";
-      titleNode.fontName = font;
-      titleNode.characters = "We notify you that";
-      titleNode.fontSize = 14;
-      titleNode.textAutoResize = "HEIGHT";
-      titleNode.textAlignHorizontal = "LEFT";
-      titleNode.resize(loadColW, titleNode.height);
-      titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-      var nTitleL = notificationResolvedVar(varMap, "title", colorTone);
-      if (nTitleL) bindPaintVar(titleNode, "fills", 0, nTitleL);
-      if (varMap["notification/title-font-size"]) bindVar(titleNode, "fontSize", varMap["notification/title-font-size"]);
-      bindVar(titleNode, "fontFamily", varMap["notification/title-font-family"]);
-      bindVar(titleNode, "fontStyle", varMap["notification/title-font-weight"]);
-      bindVar(titleNode, "lineHeight", varMap["notification/title-line-height"]);
-      try {
-        titleNode.layoutSizingHorizontal = "FIXED";
-        titleNode.layoutSizingVertical = "HUG";
-        titleNode.layoutGrow = 0;
-      } catch (eTitleLayout) {}
-      textColumn.appendChild(titleNode);
-
-      var descNode = figma.createText();
-      descNode.name = "description";
-      descNode.fontName = font;
-      descNode.characters = "You are now obligated to give a star to Mantine project on GitHub";
-      descNode.fontSize = 13;
-      descNode.textAutoResize = "HEIGHT";
-      descNode.textAlignHorizontal = "LEFT";
-      descNode.resize(loadColW, descNode.height);
-      descNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
-      var nDescL = notificationResolvedVar(varMap, "description", colorTone);
-      if (nDescL) bindPaintVar(descNode, "fills", 0, nDescL);
-      if (varMap["notification/description-font-size"]) bindVar(descNode, "fontSize", varMap["notification/description-font-size"]);
-      bindVar(descNode, "fontFamily", varMap["notification/description-font-family"]);
-      bindVar(descNode, "fontStyle", varMap["notification/description-font-weight"]);
-      bindVar(descNode, "lineHeight", varMap["notification/description-line-height"]);
-      try {
-        descNode.layoutSizingHorizontal = "FIXED";
-        descNode.layoutSizingVertical = "HUG";
-        descNode.layoutGrow = 0;
-      } catch (eDescLayout) {}
-      textColumn.appendChild(descNode);
-
-      try {
-        textColumn.layoutSizingHorizontal = "FIXED";
-        textColumn.layoutSizingVertical = "HUG";
-      } catch (eColLayout) {}
-      loadingBody.appendChild(textColumn);
-
-      comp.appendChild(loadingBody);
-
-      appendNotificationCloseControl();
-    } else {
-      var accent = figma.createRectangle();
-      accent.name = "accent";
-      accent.resize(6, 94);
-      accent.x = 8;
-      accent.y = 8;
-      accent.cornerRadius = 3;
-      accent.visible = hasAccent;
-      accent.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
-      if (indicatorVar) bindPaintVar(accent, "fills", 0, indicatorVar);
-      else if (notificationResolvedVar(varMap, "accent", colorTone))
-        bindPaintVar(accent, "fills", 0, notificationResolvedVar(varMap, "accent", colorTone));
-      else if (notificationResolvedVar(varMap, "icon", colorTone))
-        bindPaintVar(accent, "fills", 0, notificationResolvedVar(varMap, "icon", colorTone));
-      comp.appendChild(accent);
-
-      if (withIcon) {
-        var iconSource = notificationIcons.leading || notificationIcons.fallback;
-        var iconX = hasAccent ? 24 : 16;
-        if (iconSource) {
-          var iconInst = iconSource.createInstance();
-          iconInst.name = "icon";
-          try { iconInst.resize(16, 16); } catch (eIconResize) {}
-          iconInst.x = iconX;
-          iconInst.y = 14;
-          bindNotificationIconTokenVectors(iconInst, varMap);
-          comp.appendChild(iconInst);
-        } else {
-          var iconFallback = figma.createEllipse();
-          iconFallback.name = "icon";
-          iconFallback.resize(14, 14);
-          iconFallback.x = iconX;
-          iconFallback.y = 16;
-          iconFallback.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
-          var nIconF = notificationResolvedVar(varMap, "icon", colorTone);
-          if (nIconF) bindPaintVar(iconFallback, "fills", 0, nIconF);
-          comp.appendChild(iconFallback);
-        }
+    } else if (withIcon) {
+      var iconSource = notificationIcons.leading || notificationIcons.fallback;
+      if (iconSource) {
+        var iconInst = iconSource.createInstance();
+        iconInst.name = "icon";
+        try { iconInst.resize(16, 16); } catch (eIconResize) {}
+        bindNotificationIconTokenVectors(iconInst, varMap);
+        comp.appendChild(iconInst);
+        try {
+          iconInst.layoutGrow = 0;
+          iconInst.layoutSizingHorizontal = "FIXED";
+          iconInst.layoutSizingVertical = "FIXED";
+        } catch (_eIconLayout) {}
+      } else {
+        var iconFallback = figma.createEllipse();
+        iconFallback.name = "icon";
+        iconFallback.resize(14, 14);
+        iconFallback.fills = [{ type: "SOLID", color: { r: 0.2, g: 0.53, b: 0.87 } }];
+        var nIconF = notificationResolvedVar(varMap, "icon", colorTone);
+        if (nIconF) bindPaintVar(iconFallback, "fills", 0, nIconF);
+        comp.appendChild(iconFallback);
       }
+    }
 
-      var textLeft = hasAccent ? (withIcon ? 48 : 24) : (withIcon ? 40 : 16);
-      var textWidth = withClose ? 280 : 305;
+    // Text column (title + description): fills remaining width, hugs height.
+    // Title off = hide/delete the "title" layer; the column reflows on its own.
+    var textColumn = figma.createFrame();
+    textColumn.name = "content";
+    textColumn.layoutMode = "VERTICAL";
+    textColumn.primaryAxisSizingMode = "AUTO";
+    textColumn.counterAxisSizingMode = "FIXED";
+    textColumn.primaryAxisAlignItems = "MIN";
+    textColumn.counterAxisAlignItems = "MIN";
+    textColumn.itemSpacing = 4;
+    textColumn.fills = [];
+    comp.appendChild(textColumn);
+    try {
+      textColumn.layoutGrow = 1;
+      textColumn.layoutSizingHorizontal = "FILL";
+      textColumn.layoutSizingVertical = "HUG";
+    } catch (_eColLayout) {}
 
-      var titleNode = figma.createText();
-      titleNode.name = "title";
-      titleNode.fontName = font;
-      titleNode.characters = "We notify you that";
-      titleNode.fontSize = 14;
-      titleNode.x = textLeft;
-      titleNode.y = 12;
-      titleNode.textAutoResize = "HEIGHT";
-      titleNode.resize(textWidth, titleNode.height);
-      titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
-      var nTitle = notificationResolvedVar(varMap, "title", colorTone);
-      if (nTitle) bindPaintVar(titleNode, "fills", 0, nTitle);
-      if (varMap["notification/title-font-size"]) bindVar(titleNode, "fontSize", varMap["notification/title-font-size"]);
-      bindVar(titleNode, "fontFamily", varMap["notification/title-font-family"]);
-      bindVar(titleNode, "fontStyle", varMap["notification/title-font-weight"]);
-      bindVar(titleNode, "lineHeight", varMap["notification/title-line-height"]);
-      comp.appendChild(titleNode);
+    var titleNode = figma.createText();
+    titleNode.name = "title";
+    titleNode.fontName = font;
+    titleNode.characters = "We notify you that";
+    titleNode.fontSize = 14;
+    titleNode.textAutoResize = "HEIGHT";
+    titleNode.textAlignHorizontal = "LEFT";
+    titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
+    var nTitle = notificationResolvedVar(varMap, "title", colorTone);
+    if (nTitle) bindPaintVar(titleNode, "fills", 0, nTitle);
+    if (varMap["notification/title-font-size"]) bindVar(titleNode, "fontSize", varMap["notification/title-font-size"]);
+    bindVar(titleNode, "fontFamily", varMap["notification/title-font-family"]);
+    bindVar(titleNode, "fontStyle", varMap["notification/title-font-weight"]);
+    bindVar(titleNode, "lineHeight", varMap["notification/title-line-height"]);
+    textColumn.appendChild(titleNode);
+    try {
+      titleNode.layoutSizingHorizontal = "FILL";
+      titleNode.layoutSizingVertical = "HUG";
+    } catch (_eTitleLayout) {}
 
-      var descNode = figma.createText();
-      descNode.name = "description";
-      descNode.fontName = font;
-      descNode.characters = "You are now obligated to give a star to Mantine project on GitHub";
-      descNode.fontSize = 13;
-      descNode.x = textLeft;
-      descNode.y = 44;
-      descNode.textAutoResize = "HEIGHT";
-      descNode.resize(textWidth, descNode.height);
-      descNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
-      var nDesc = notificationResolvedVar(varMap, "description", colorTone);
-      if (nDesc) bindPaintVar(descNode, "fills", 0, nDesc);
-      if (varMap["notification/description-font-size"]) bindVar(descNode, "fontSize", varMap["notification/description-font-size"]);
-      bindVar(descNode, "fontFamily", varMap["notification/description-font-family"]);
-      bindVar(descNode, "fontStyle", varMap["notification/description-font-weight"]);
-      bindVar(descNode, "lineHeight", varMap["notification/description-line-height"]);
-      comp.appendChild(descNode);
+    var descNode = figma.createText();
+    descNode.name = "description";
+    descNode.fontName = font;
+    descNode.characters = "You are now obligated to give a star to Mantine project on GitHub";
+    descNode.fontSize = 13;
+    descNode.textAutoResize = "HEIGHT";
+    descNode.textAlignHorizontal = "LEFT";
+    descNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+    var nDesc = notificationResolvedVar(varMap, "description", colorTone);
+    if (nDesc) bindPaintVar(descNode, "fills", 0, nDesc);
+    if (varMap["notification/description-font-size"]) bindVar(descNode, "fontSize", varMap["notification/description-font-size"]);
+    bindVar(descNode, "fontFamily", varMap["notification/description-font-family"]);
+    bindVar(descNode, "fontStyle", varMap["notification/description-font-weight"]);
+    bindVar(descNode, "lineHeight", varMap["notification/description-line-height"]);
+    textColumn.appendChild(descNode);
+    try {
+      descNode.layoutSizingHorizontal = "FILL";
+      descNode.layoutSizingVertical = "HUG";
+    } catch (_eDescLayout) {}
 
-      appendNotificationCloseControl();
+    // Close affordance, top-aligned; the FILL text column pushes it right.
+    if (withClose) {
+      var closeComp = notificationIcons.close;
+      if (closeComp && closeComp.type === "COMPONENT") {
+        var closeInst = closeComp.createInstance();
+        closeInst.name = "close";
+        try { closeInst.resize(16, 16); } catch (_eCloseResize) {}
+        bindNotificationCloseIconGraphicNodes(closeInst, varMap, colorTone);
+        comp.appendChild(closeInst);
+        try {
+          closeInst.layoutGrow = 0;
+          closeInst.layoutSizingHorizontal = "FIXED";
+          closeInst.layoutSizingVertical = "FIXED";
+        } catch (_eCloseLayout) {}
+      } else {
+        var closeNode = figma.createText();
+        closeNode.name = "close";
+        closeNode.fontName = font;
+        closeNode.characters = "×";
+        closeNode.fontSize = 14;
+        closeNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
+        var nCloseFallback = notificationResolvedVar(varMap, "close", colorTone);
+        if (nCloseFallback) bindPaintVar(closeNode, "fills", 0, nCloseFallback);
+        comp.appendChild(closeNode);
+      }
     }
 
     comp.x = layout.colIndex * (colWidth + gap);

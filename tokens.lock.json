@@ -1082,7 +1082,7 @@
           "_value": 16
         },
         "modal-default-title-font-weight": {
-          "_value": "Regular"
+          "_value": "Semi Bold"
         },
         "modal-default-body-padding-top": {
           "_value": 24
@@ -51984,8 +51984,8 @@
         },
         "modal/default-title-font-weight": {
           "type": "STRING",
-          "value": "Regular",
-          "alias": "typography/font-weight/regular"
+          "value": "Semi Bold",
+          "alias": "typography/font-weight/semibold"
         },
         "modal/default-title-line-height": {
           "type": "FLOAT",
