@@ -146,9 +146,62 @@ function syncGradientPaintStyles(payload, syncBrands) {
   }
 }
 
+// ── Incremental variable writes ───────────────────────────────────────────
+// Re-writing a variable value that already matches what's in Figma is a no-op
+// that still costs an API call — the reason a "nothing changed" export still
+// grinds through thousands of writes. These helpers compare each desired value
+// against the variable's CURRENT value in Figma and skip the write when they're
+// already equal. Comparing live state (not a saved lock) means it's also
+// self-correcting: a hand-edited variable differs from the desired value, so it
+// still gets rewritten. End state is identical to a full push — just faster.
+var __varWriteStats = { written: 0, skipped: 0 };
+
+function figmaValuesEqual(current, desired) {
+  if (current === desired) return true;
+  if (desired && typeof desired === "object") {
+    if (desired.type === "VARIABLE_ALIAS") {
+      return !!current && typeof current === "object" &&
+        current.type === "VARIABLE_ALIAS" && current.id === desired.id;
+    }
+    if (typeof desired.r === "number") {
+      // COLOR {r,g,b,(a)}
+      if (!current || typeof current !== "object" || typeof current.r !== "number") return false;
+      var eps = 0.0001;
+      var da = (typeof desired.a === "number") ? desired.a : 1;
+      var ca = (typeof current.a === "number") ? current.a : 1;
+      return Math.abs(current.r - desired.r) < eps &&
+        Math.abs(current.g - desired.g) < eps &&
+        Math.abs(current.b - desired.b) < eps &&
+        Math.abs(ca - da) < eps;
+    }
+    return false;
+  }
+  if (typeof desired === "number" && typeof current === "number") {
+    return Math.abs(current - desired) < 1e-9;
+  }
+  return false;
+}
+
+// Drop-in replacement for variable.setValueForMode(modeId, desired) that skips
+// the write when the current value already matches. Returns true if it wrote.
+function setVarValueIfChanged(variable, modeId, desired) {
+  try {
+    var cur = variable.valuesByMode ? variable.valuesByMode[modeId] : undefined;
+    if (cur !== undefined && figmaValuesEqual(cur, desired)) {
+      __varWriteStats.skipped++;
+      return false;
+    }
+  } catch (_cmpErr) {}
+  variable.setValueForMode(modeId, desired);
+  __varWriteStats.written++;
+  return true;
+}
+
 async function syncTokens(payload) {
   var buildOptions = payload.__buildOptions || {};
   var preserveExistingVariables = Boolean(buildOptions && buildOptions.preserveExistingVariables);
+  // Reset incremental-write accounting for this sync.
+  __varWriteStats = { written: 0, skipped: 0 };
 
   // Extract globalPrimitives and brand IDs from payload
   var globalPrimitives = payload.globalPrimitives || {};
@@ -326,7 +379,7 @@ async function syncTokens(payload) {
         globalPrimVarMap[gVarName] = gVar;
         totalCreated++;
       }
-      gVar.setValueForMode(globalModeId, hexToFigmaRgb(gPaletteArr[gIdx]));
+      setVarValueIfChanged(gVar, globalModeId, hexToFigmaRgb(gPaletteArr[gIdx]));
     }
   }
 
@@ -345,7 +398,7 @@ async function syncTokens(payload) {
       globalPrimVarMap[spacingVarName] = spacingVar;
       totalCreated++;
     }
-    spacingVar.setValueForMode(globalModeId, spacingValue);
+    setVarValueIfChanged(spacingVar, globalModeId, spacingValue);
   }
 
   // Global size scale (FLOAT) — layout widths/heights/lengths
@@ -363,7 +416,7 @@ async function syncTokens(payload) {
       globalPrimVarMap[sizeVarName] = sizeVar;
       totalCreated++;
     }
-    sizeVar.setValueForMode(globalModeId, sizeValue);
+    setVarValueIfChanged(sizeVar, globalModeId, sizeValue);
   }
 
   // Global radius scale (FLOAT)
@@ -384,7 +437,7 @@ async function syncTokens(payload) {
       globalPrimVarMap[radiusVarName] = radiusVar;
       totalCreated++;
     }
-    radiusVar.setValueForMode(globalModeId, radiusValue);
+    setVarValueIfChanged(radiusVar, globalModeId, radiusValue);
   }
 
   // Global fonts (STRING)
@@ -404,7 +457,7 @@ async function syncTokens(payload) {
       globalPrimVarMap[fontVarName] = fontVar;
       totalCreated++;
     }
-    fontVar.setValueForMode(globalModeId, fontVal);
+    setVarValueIfChanged(fontVar, globalModeId, fontVal);
   }
 
   // Global weights (STRING)
@@ -424,7 +477,7 @@ async function syncTokens(payload) {
       globalPrimVarMap[weightVarName] = weightVar;
       totalCreated++;
     }
-    weightVar.setValueForMode(globalModeId, weightVal);
+    setVarValueIfChanged(weightVar, globalModeId, weightVal);
   }
 
   // Global enums (STRING) — keyword primitives (border/line styles, curves)
@@ -446,7 +499,7 @@ async function syncTokens(payload) {
         globalPrimVarMap[enumVarName] = enumVar;
         totalCreated++;
       }
-      enumVar.setValueForMode(globalModeId, enumVal);
+      setVarValueIfChanged(enumVar, globalModeId, enumVal);
     }
   }
 
@@ -466,7 +519,7 @@ async function syncTokens(payload) {
       globalPrimVarMap[bwVarName] = bwVar;
       totalCreated++;
     }
-    bwVar.setValueForMode(globalModeId, bwVal);
+    setVarValueIfChanged(bwVar, globalModeId, bwVal);
   }
 
   // Global typography font sizes (FLOAT)
@@ -485,7 +538,7 @@ async function syncTokens(payload) {
       globalPrimVarMap[fsVarName] = fsVar;
       totalCreated++;
     }
-    fsVar.setValueForMode(globalModeId, fsVal);
+    setVarValueIfChanged(fsVar, globalModeId, fsVal);
   }
 
   // Global typography line heights (FLOAT)
@@ -504,7 +557,7 @@ async function syncTokens(payload) {
       globalPrimVarMap[lhVarName] = lhVar;
       totalCreated++;
     }
-    lhVar.setValueForMode(globalModeId, lhVal);
+    setVarValueIfChanged(lhVar, globalModeId, lhVal);
   }
 
   if (!preserveExistingVariables) {
@@ -581,7 +634,7 @@ async function syncTokens(payload) {
           brandPrimVarMaps[bpId][bpVarName] = bpVar;
           totalCreated++;
         }
-        bpVar.setValueForMode(bpModeId, hexToFigmaRgb(bpArr[bpIdx]));
+        setVarValueIfChanged(bpVar, bpModeId, hexToFigmaRgb(bpArr[bpIdx]));
       }
     }
     if (!preserveExistingVariables) {
@@ -652,12 +705,12 @@ async function syncTokens(payload) {
       var primTarget = brandPrimVarMaps[mode.brandId][semToken.alias] || globalPrimVarMap[semToken.alias];
       if (primTarget) {
         var semAlias = figma.variables.createVariableAlias(primTarget);
-        semVar.setValueForMode(semModes.modeMap[mode.key], semAlias);
+        setVarValueIfChanged(semVar, semModes.modeMap[mode.key], semAlias);
         totalAliases++;
       } else {
         // Fallback: set raw value if primitive not found
         progress("  Warning: primitive " + semToken.alias + " not found for " + mode.key + ", using raw value");
-        semVar.setValueForMode(semModes.modeMap[mode.key], hexToFigmaRgb(semToken.value));
+        setVarValueIfChanged(semVar, semModes.modeMap[mode.key], hexToFigmaRgb(semToken.value));
       }
     }
   }
@@ -716,12 +769,12 @@ async function syncTokens(payload) {
         }
 
         if (aliasTarget) {
-          semScalarVar.setValueForMode(modeId, figma.variables.createVariableAlias(aliasTarget));
+          setVarValueIfChanged(semScalarVar, modeId, figma.variables.createVariableAlias(aliasTarget));
           totalAliases++;
         } else if (type === "FLOAT") {
-          semScalarVar.setValueForMode(modeId, (modeToken.value != null) ? Number(modeToken.value) : 0);
+          setVarValueIfChanged(semScalarVar, modeId, (modeToken.value != null) ? Number(modeToken.value) : 0);
         } else if (type === "STRING") {
-          semScalarVar.setValueForMode(modeId, (modeToken.value != null) ? String(modeToken.value) : "");
+          setVarValueIfChanged(semScalarVar, modeId, (modeToken.value != null) ? String(modeToken.value) : "");
         }
       }
     }
@@ -815,7 +868,7 @@ async function syncTokens(payload) {
           semanticAliasTarget = semanticVarMap[themedColorToken.alias];
         }
         if (semanticAliasTarget) {
-          compVar.setValueForMode(cModeId, figma.variables.createVariableAlias(semanticAliasTarget));
+          setVarValueIfChanged(compVar, cModeId, figma.variables.createVariableAlias(semanticAliasTarget));
           compAliases++;
         } else {
           var primitiveAliasTarget = null;
@@ -827,10 +880,10 @@ async function syncTokens(payload) {
             }
           }
           if (primitiveAliasTarget) {
-            compVar.setValueForMode(cModeId, figma.variables.createVariableAlias(primitiveAliasTarget));
+            setVarValueIfChanged(compVar, cModeId, figma.variables.createVariableAlias(primitiveAliasTarget));
             compAliases++;
           } else {
-            compVar.setValueForMode(cModeId, hexToFigmaRgb(themedColorToken.value));
+            setVarValueIfChanged(compVar, cModeId, hexToFigmaRgb(themedColorToken.value));
           }
         }
         } else if (brandToken.type === "FLOAT") {
@@ -843,11 +896,11 @@ async function syncTokens(payload) {
             }
           }
           if (floatAliasTarget) {
-            compVar.setValueForMode(cModeId, figma.variables.createVariableAlias(floatAliasTarget));
+            setVarValueIfChanged(compVar, cModeId, figma.variables.createVariableAlias(floatAliasTarget));
             compAliases++;
           } else {
             if (brandToken.value != null) {
-              compVar.setValueForMode(cModeId, brandToken.value);
+              setVarValueIfChanged(compVar, cModeId, brandToken.value);
             }
           }
         } else if (brandToken.type === "STRING") {
@@ -860,10 +913,10 @@ async function syncTokens(payload) {
             }
           }
           if (stringAliasTarget) {
-            compVar.setValueForMode(cModeId, figma.variables.createVariableAlias(stringAliasTarget));
+            setVarValueIfChanged(compVar, cModeId, figma.variables.createVariableAlias(stringAliasTarget));
             compAliases++;
           } else {
-            compVar.setValueForMode(cModeId, (brandToken.value != null) ? brandToken.value : "");
+            setVarValueIfChanged(compVar, cModeId, (brandToken.value != null) ? brandToken.value : "");
           }
         }
     }
@@ -902,7 +955,7 @@ async function syncTokens(payload) {
       if (targetVar) {
         var abModeId = compModes.modeMap[aMode.key];
         var defaultAlias = figma.variables.createVariableAlias(targetVar);
-        aliasVar.setValueForMode(abModeId, defaultAlias);
+        setVarValueIfChanged(aliasVar, abModeId, defaultAlias);
         compAliases++;
       }
     }
@@ -931,6 +984,10 @@ async function syncTokens(payload) {
   totalCreated += compCreated;
   totalAliases += compAliases;
   progress("Components: " + compCreated + " created, " + compAliases + " aliases");
+  progress(
+    "Variable writes: " + __varWriteStats.written + " written, " +
+    __varWriteStats.skipped + " unchanged (skipped)"
+  );
   await yieldToUI();
 
   // ── Outlined overflow fade visibility (per-brand-mode BOOLEAN) ──
@@ -955,7 +1012,7 @@ async function syncTokens(payload) {
       if (!fvModeId) continue;
       // Only Theia keeps the fade overlay; all other brands hide it.
       var fadeVisible = syncModes[fvi].brandId === "theia";
-      try { fadeVisVar.setValueForMode(fvModeId, fadeVisible); } catch (_fadeSetErr) {}
+      try { setVarValueIfChanged(fadeVisVar, fvModeId, fadeVisible); } catch (_fadeSetErr) {}
     }
   } catch (_fadeVisErr) {
     progress("Fade visibility variable skipped: " + String(_fadeVisErr));
@@ -977,8 +1034,8 @@ async function syncTokens(payload) {
   // tokens, builder edits) still need a full "Sync to Figma".
   if (buildOptions.variablesOnly) {
     var varsOnlyMsg =
-      "Variables updated (" + totalCreated + " synced, " + totalAliases +
-      " aliases). Components & docs repaint live. No rebuild.";
+      "Variables updated (" + __varWriteStats.written + " written, " +
+      __varWriteStats.skipped + " unchanged). Components & docs repaint live. No rebuild.";
     progress(varsOnlyMsg);
     figma.ui.postMessage({ type: "sync-complete", success: true, message: varsOnlyMsg });
     return;
@@ -7837,6 +7894,11 @@ function buildSwitchComponentSet(varMap, page, font) {
 
   // Known switch heights per size for dynamic grid spacing
   var sizeHeights = { default: 22, xs: 16, sm: 18, md: 22, lg: 28, xl: 34 };
+  // Thumb diameters + track border width (mirror of switch/thumb-size-* and
+  // switch/track-border-width tokens). Used to compute the thumb inset so the
+  // gap is EVEN on all four sides — see the track padding below.
+  var sizeThumbs = { default: 18, xs: 12, sm: 14, md: 18, lg: 24, xl: 30 };
+  var trackBorderW = 1.5;
   var gap = 16;
   var colGap = 16;
 
@@ -7895,10 +7957,17 @@ function buildSwitchComponentSet(varMap, page, font) {
           track.counterAxisSizingMode = "FIXED";
           track.counterAxisAlignItems = "CENTER";
           track.resize(42, 22);
-          track.paddingLeft = 2;
-          track.paddingRight = 2;
-          track.paddingTop = 2;
-          track.paddingBottom = 2;
+          // Thumb inset. Vertically the thumb is CENTERED, which ignores the
+          // inside border, giving a gap of (height - thumb)/2. Horizontally the
+          // thumb is placed by padding in the auto-layout flow, and Figma ADDS
+          // the inside border to that — so to get the SAME visual gap on all
+          // four sides we subtract the border width from the horizontal padding.
+          var vGap = (sizeHeights[size] - sizeThumbs[size]) / 2;
+          var hPad = Math.max(0, vGap - trackBorderW);
+          track.paddingLeft = hPad;
+          track.paddingRight = hPad;
+          track.paddingTop = vGap;
+          track.paddingBottom = vGap;
           track.cornerRadius = 11;
 
           // Bind track dimensions to size-specific variables
@@ -16837,12 +16906,26 @@ async function buildAlertComponentSet(varMap, page, font) {
               ", Radius=" + capRadius +
               ", Close=" + capClose +
               ", Icon=" + capIcon;
-            comp.resize(380, 110);
+            // Auto layout shell: HORIZONTAL [ body | close ]. Width is FIXED so
+            // the user can DRAG the alert wider (the body FILLs the extra width);
+            // height HUGs the content. Padding is bound to alert/padding-x / -y
+            // instead of the old hardcoded body.x=14 / y=10 offsets.
+            comp.layoutMode = "HORIZONTAL";
+            comp.primaryAxisSizingMode = "FIXED";
+            comp.counterAxisSizingMode = "AUTO";
+            comp.primaryAxisAlignItems = "MIN";
+            comp.counterAxisAlignItems = "MIN";
+            comp.itemSpacing = 12;
             comp.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
             comp.strokes = [{ type: "SOLID", color: { r: 0.84, g: 0.84, b: 0.84 } }];
             comp.strokeWeight = 1;
             comp.strokeAlign = "INSIDE";
             comp.cornerRadius = 8;
+            comp.paddingLeft = 12;
+            comp.paddingRight = 12;
+            comp.paddingTop = 10;
+            comp.paddingBottom = 10;
+            try { comp.resizeWithoutConstraints(380, 110); } catch (_alertSeedSizeErr) {}
 
             bindPaintVar(comp, "fills", 0, avar(variant, status, "background"));
             bindPaintVar(comp, "strokes", 0, avar(variant, status, "border"));
@@ -16851,9 +16934,12 @@ async function buildAlertComponentSet(varMap, page, font) {
             bindVar(comp, "topRightRadius", varMap["alert/radius-" + radius]);
             bindVar(comp, "bottomLeftRadius", varMap["alert/radius-" + radius]);
             bindVar(comp, "bottomRightRadius", varMap["alert/radius-" + radius]);
+            bindVar(comp, "paddingLeft", varMap["alert/padding-x"]);
+            bindVar(comp, "paddingRight", varMap["alert/padding-x"]);
+            bindVar(comp, "paddingTop", varMap["alert/padding-y"]);
+            bindVar(comp, "paddingBottom", varMap["alert/padding-y"]);
 
             var textVar = avar(variant, status, "text");
-            var textWidth = withClose ? 316 : 340;
             var body = figma.createFrame();
             body.name = "body";
             body.layoutMode = "VERTICAL";
@@ -16863,9 +16949,11 @@ async function buildAlertComponentSet(varMap, page, font) {
             body.counterAxisAlignItems = "MIN";
             body.itemSpacing = 0;
             body.fills = [];
-            body.x = 14;
-            body.y = 10;
             comp.appendChild(body);
+            // Body takes the remaining width so close sits at the far right, and
+            // grows when the alert is dragged wider.
+            try { body.layoutSizingHorizontal = "FILL"; } catch (_alertBodyFillErr) {}
+            try { body.layoutSizingVertical = "HUG"; } catch (_alertBodyHugErr) {}
 
             var titleRow = figma.createFrame();
             titleRow.name = "title-row";
@@ -16878,6 +16966,7 @@ async function buildAlertComponentSet(varMap, page, font) {
             titleRow.fills = [];
             bindVar(titleRow, "itemSpacing", varMap["alert/icon-title-gap"]);
             body.appendChild(titleRow);
+            try { titleRow.layoutSizingHorizontal = "FILL"; } catch (_alertTitleRowFillErr) {}
 
             if (withIcon) {
               var iconSource = statusIconSource[status] || alertIcons.fallback;
@@ -16900,7 +16989,6 @@ async function buildAlertComponentSet(varMap, page, font) {
             titleNode.characters = "Alert title";
             titleNode.fontSize = 14;
             titleNode.textAutoResize = "HEIGHT";
-            titleNode.resize(textWidth, titleNode.height);
             titleNode.fills = [{ type: "SOLID", color: { r: 0.13, g: 0.13, b: 0.13 } }];
             bindPaintVar(titleNode, "fills", 0, textVar);
             bindVar(titleNode, "fontSize", varMap["alert/title-font-size"]);
@@ -16908,6 +16996,9 @@ async function buildAlertComponentSet(varMap, page, font) {
             bindVar(titleNode, "fontStyle", varMap["alert/title-font-weight"]);
             bindVar(titleNode, "lineHeight", varMap["alert/title-line-height"]);
             titleRow.appendChild(titleNode);
+            // Title FILLs the row width so it wraps as the alert gets wider.
+            try { titleNode.layoutSizingHorizontal = "FILL"; } catch (_alertTitleFillErr) {}
+            try { titleNode.layoutSizingVertical = "HUG"; } catch (_alertTitleHugErr) {}
 
             var messageWrap = figma.createFrame();
             messageWrap.name = "message-wrap";
@@ -16920,6 +17011,7 @@ async function buildAlertComponentSet(varMap, page, font) {
             messageWrap.fills = [];
             bindVar(messageWrap, "paddingTop", varMap["alert/title-message-gap"]);
             body.appendChild(messageWrap);
+            try { messageWrap.layoutSizingHorizontal = "FILL"; } catch (_alertMsgWrapFillErr) {}
 
             var messageNode = figma.createText();
             messageNode.name = "message";
@@ -16927,7 +17019,6 @@ async function buildAlertComponentSet(varMap, page, font) {
             messageNode.characters = "Lorem ipsum dolor sit amet consectetur adipiscing elit.";
             messageNode.fontSize = 13;
             messageNode.textAutoResize = "HEIGHT";
-            messageNode.resize(textWidth, messageNode.height);
             messageNode.fills = [{ type: "SOLID", color: { r: 0.35, g: 0.37, b: 0.4 } }];
             bindPaintVar(messageNode, "fills", 0, textVar);
             bindVar(messageNode, "fontSize", varMap["alert/message-font-size"]);
@@ -16935,6 +17026,9 @@ async function buildAlertComponentSet(varMap, page, font) {
             bindVar(messageNode, "fontStyle", varMap["alert/message-font-weight"]);
             bindVar(messageNode, "lineHeight", varMap["alert/message-line-height"]);
             messageWrap.appendChild(messageNode);
+            // Message FILLs the width so it wraps as the alert gets wider.
+            try { messageNode.layoutSizingHorizontal = "FILL"; } catch (_alertMsgFillErr) {}
+            try { messageNode.layoutSizingVertical = "HUG"; } catch (_alertMsgHugErr) {}
 
             if (withClose) {
               var closeSource = alertIcons.close || alertIcons.fallback;
@@ -16947,9 +17041,11 @@ async function buildAlertComponentSet(varMap, page, font) {
                   bindVar(closeVectors[cvi], "strokeWeight", varMap["alert/icon-stroke-width"]);
                 }
                 bindIconColor(closeInst, avar(variant, status, "close"));
-                closeInst.x = 356;
-                closeInst.y = 10;
                 comp.appendChild(closeInst);
+                // Close is a fixed 16×16, top-aligned at the trailing edge; the
+                // body FILLs the gap so no absolute x/y is needed.
+                try { closeInst.layoutSizingHorizontal = "FIXED"; } catch (_alertCloseWErr) {}
+                try { closeInst.layoutSizingVertical = "FIXED"; } catch (_alertCloseHErr) {}
               }
             }
 
@@ -17476,51 +17572,93 @@ async function buildModalComponentSet(varMap, page, font, sourceSets) {
               bindPaintVar(bodyWrap, "fills", 0, modalBgVar);
               comp.appendChild(bodyWrap);
 
-              var bodyNode = null;
-              if (bodyTextVariant && useLinkedTextComponents) {
-                bodyNode = bodyTextVariant.createInstance();
-                bodyNode.name = "body";
-                try {
-                  if (bodyNode.componentProperties && typeof bodyNode.setProperties === "function") {
-                    var bodyTextPropPatch = {};
-                    var bodyPropKeys = Object.keys(bodyNode.componentProperties);
-                    for (var bpi = 0; bpi < bodyPropKeys.length; bpi++) {
-                      var bodyPropKey = bodyPropKeys[bpi];
-                      var bodyPropMeta = bodyNode.componentProperties[bodyPropKey];
-                      if (bodyPropMeta && bodyPropMeta.type === "TEXT") {
-                        bodyTextPropPatch[bodyPropKey] = modalBodyCopy;
-                      }
-                    }
-                    if (Object.keys(bodyTextPropPatch).length > 0) {
-                      bodyNode.setProperties(bodyTextPropPatch);
-                    }
-                  }
-                } catch (_modalBodyTextOverrideErr) {}
-                try { await setNamedText(bodyNode, "text", modalBodyCopy); } catch (_modalBodyNamedTextErr) {}
-                try { await setNamedText(bodyNode, "Content", modalBodyCopy); } catch (_modalBodyNamedContentErr) {}
-                try { await setNamedText(bodyNode, "Contents", modalBodyCopy); } catch (_modalBodyNamedContentsErr) {}
-                try {
-                  bodyNode.resize(panelW - 32, 58);
-                } catch (e) {}
-              } else {
-                bodyNode = figma.createText();
-                bodyNode.name = "body";
-                bodyNode.fontName = font;
-                bodyNode.characters = modalBodyCopy;
-                bodyNode.fontSize = 12;
-                bodyNode.textAutoResize = "HEIGHT";
-                bodyNode.resize(panelW - 32, bodyNode.height);
-                bodyNode.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
-                bindPaintVar(bodyNode, "fills", 0, modalBodyVar);
-                bindVar(bodyNode, "fontSize", bodyFontSizeVar);
-                bindVar(bodyNode, "fontFamily", bodyFontFamilyVar);
-                bindVar(bodyNode, "fontStyle", bodyFontWeightVar);
-                bindVar(bodyNode, "lineHeight", bodyLineHeightVar);
+              // Content SLOT: the modal body is a NATIVE Figma slot (createSlot)
+              // instead of fixed text, so consumers can drop ANY component into the
+              // body directly in Figma (the pink "+" slot) — same pattern as the
+              // Combobox/Accordion slots. Falls back to a dashed placeholder + hint
+              // label on older editors that lack the slot API.
+              var bodySlot = null;
+              try {
+                if (comp && typeof comp.createSlot === "function") {
+                  bodySlot = comp.createSlot();
+                } else if (typeof figma.createSlot === "function") {
+                  bodySlot = figma.createSlot();
+                }
+              } catch (_modalSlotCreateErr) {
+                bodySlot = null;
               }
-              bodyWrap.appendChild(bodyNode);
-              if (bodyNode.type === "TEXT") bodyNode.textAutoResize = "HEIGHT";
-              try { bodyNode.layoutSizingHorizontal = "FILL"; } catch (_modalBodyFillErr) {}
-              try { bodyNode.layoutSizingVertical = "HUG"; } catch (_modalBodyHugErr2) {}
+              var bodySlotIsNative = !!bodySlot && bodySlot.type === "SLOT";
+              if (!bodySlot) bodySlot = figma.createFrame();
+              bodySlot.name = "Content";
+              // VERTICAL flow + stretchChildOnInsert makes dropped content fill the
+              // body WIDTH; height HUGs so the modal grows to the component.
+              try { bodySlot.layoutMode = "VERTICAL"; } catch (_modalSlotLayoutErr) {}
+              try { bodySlot.primaryAxisSizingMode = "AUTO"; } catch (_modalSlotPrimErr) {}
+              try { bodySlot.counterAxisSizingMode = "AUTO"; } catch (_modalSlotCountErr) {}
+              try { bodySlot.primaryAxisAlignItems = "MIN"; } catch (_modalSlotPrimAlignErr) {}
+              try { bodySlot.counterAxisAlignItems = "MIN"; } catch (_modalSlotCountAlignErr) {}
+              try { bodySlot.paddingLeft = 0; } catch (_modalSlotPadLErr) {}
+              try { bodySlot.paddingRight = 0; } catch (_modalSlotPadRErr) {}
+              try { bodySlot.paddingTop = 0; } catch (_modalSlotPadTErr) {}
+              try { bodySlot.paddingBottom = 0; } catch (_modalSlotPadBErr) {}
+              try { bodySlot.fills = []; } catch (_modalSlotFillsErr) {}
+              // NO minHeight floor: the slot HUGS its content exactly, so a
+              // dropped component sets the body height with zero extra space
+              // (a minHeight taller than the content is what left dead space
+              // under short content). Empty slots fall back to Figma's own slot
+              // indicator. Seed a tiny height just so an empty slot renders.
+              try { bodySlot.minHeight = null; } catch (_modalSlotMinHErr) {}
+              try {
+                bodySlot.resizeWithoutConstraints(Math.max(1, panelW - 32), 1);
+              } catch (_modalSlotResizeErr) {
+                try { bodySlot.resize(Math.max(1, panelW - 32), 1); } catch (_modalSlotResize2Err) {}
+              }
+
+              // Configure the slot so dropped content auto-fills the body width and
+              // empty slots keep their indicator visible.
+              if (bodySlotIsNative && typeof comp.editComponentProperty === "function") {
+                try {
+                  var modalSlotPropId =
+                    bodySlot.componentPropertyReferences &&
+                    bodySlot.componentPropertyReferences.slotContentId;
+                  if (modalSlotPropId) {
+                    comp.editComponentProperty(modalSlotPropId, {
+                      slotSettings: {
+                        stretchChildOnInsert: true,
+                        displayEmptyByDefault: true,
+                      },
+                    });
+                  }
+                } catch (_modalSlotSettingsErr) {}
+              }
+
+              // Dashed placeholder + hint ONLY for the fallback frame on editors
+              // without the slot API; native slots stay empty (pink indicator).
+              if (!bodySlotIsNative) {
+                try { bodySlot.cornerRadius = 4; } catch (_modalSlotRadErr) {}
+                bodySlot.strokes = [{ type: "SOLID", color: { r: 0.7, g: 0.7, b: 0.7 } }];
+                bodySlot.strokeWeight = 1;
+                bodySlot.strokeAlign = "INSIDE";
+                bodySlot.dashPattern = [4, 3];
+                if (modalHeaderBorderVar) bindPaintVar(bodySlot, "strokes", 0, modalHeaderBorderVar);
+                var modalSlotHint = figma.createText();
+                modalSlotHint.name = "SlotHint";
+                modalSlotHint.fontName = font;
+                modalSlotHint.characters = "Slot component here";
+                try { modalSlotHint.textAlignHorizontal = "CENTER"; } catch (_modalSlotTextAlignErr) {}
+                modalSlotHint.fontSize = 12;
+                modalSlotHint.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } }];
+                if (modalBodyVar) bindPaintVar(modalSlotHint, "fills", 0, modalBodyVar);
+                if (bodyFontSizeVar) bindVar(modalSlotHint, "fontSize", bodyFontSizeVar);
+                if (bodyFontFamilyVar) bindVar(modalSlotHint, "fontFamily", bodyFontFamilyVar);
+                bodySlot.appendChild(modalSlotHint);
+              }
+
+              bodyWrap.appendChild(bodySlot);
+              // Slot FILLS the modal width and HUGS height so the modal grows to
+              // fit whatever the consumer drops in.
+              try { bodySlot.layoutSizingHorizontal = "FILL"; } catch (_modalSlotFillErr) {}
+              try { bodySlot.layoutSizingVertical = "HUG"; } catch (_modalSlotVHugErr) {}
 
               if (layout === "action-right" || layout === "action-full" || layout === "centered-arch" || layout === "centered-action") {
               if (showDividers) {
@@ -28118,7 +28256,9 @@ function buildCardComponentSet(varMap, page, font, options) {
   var states = ["default", "hover", "focus", "pressed", "disabled"];
   var borderModes = ["on", "off"];
   var shadowModes = ["off", "on"];
-  var sectionModes = ["on", "off"];
+  // "off" first so the default variant (first component built → what you pull
+  // from Assets) has Section=Off.
+  var sectionModes = ["off", "on"];
   var components = [];
 
   var rowGap = 24;
@@ -28263,44 +28403,94 @@ function buildCardComponentSet(varMap, page, font, options) {
             if (varMap["card/gap-" + size]) bindVar(body, "itemSpacing", varMap["card/gap-" + size]);
             comp.appendChild(body);
 
-            var topRow = figma.createFrame();
-            topRow.name = "TopRow";
-            topRow.layoutMode = "HORIZONTAL";
-            topRow.primaryAxisSizingMode = "AUTO";
-            topRow.counterAxisSizingMode = "AUTO";
-            topRow.primaryAxisAlignItems = "SPACE_BETWEEN";
-            topRow.counterAxisAlignItems = "CENTER";
-            topRow.layoutAlign = "STRETCH";
-            topRow.fills = [];
-            body.appendChild(topRow);
+            // Content SLOT: the card body is a NATIVE Figma slot (createSlot)
+            // instead of fixed Title + Description text, so consumers can drop
+            // ANY component into the card body directly in Figma (the pink "+"
+            // slot) — same pattern as the Modal body slot. Falls back to a dashed
+            // placeholder + hint label on older editors that lack the slot API.
+            var cardSlot = null;
+            try {
+              if (comp && typeof comp.createSlot === "function") {
+                cardSlot = comp.createSlot();
+              } else if (typeof figma.createSlot === "function") {
+                cardSlot = figma.createSlot();
+              }
+            } catch (_cardSlotCreateErr) {
+              cardSlot = null;
+            }
+            var cardSlotIsNative = !!cardSlot && cardSlot.type === "SLOT";
+            if (!cardSlot) cardSlot = figma.createFrame();
+            cardSlot.name = "Content";
+            // VERTICAL flow + stretchChildOnInsert makes dropped content fill the
+            // card body WIDTH; height HUGs so the card grows to the component.
+            try { cardSlot.layoutMode = "VERTICAL"; } catch (_cardSlotLayoutErr) {}
+            try { cardSlot.primaryAxisSizingMode = "AUTO"; } catch (_cardSlotPrimErr) {}
+            try { cardSlot.counterAxisSizingMode = "AUTO"; } catch (_cardSlotCountErr) {}
+            try { cardSlot.primaryAxisAlignItems = "MIN"; } catch (_cardSlotPrimAlignErr) {}
+            try { cardSlot.counterAxisAlignItems = "MIN"; } catch (_cardSlotCountAlignErr) {}
+            try { cardSlot.paddingLeft = 0; } catch (_cardSlotPadLErr) {}
+            try { cardSlot.paddingRight = 0; } catch (_cardSlotPadRErr) {}
+            try { cardSlot.paddingTop = 0; } catch (_cardSlotPadTErr) {}
+            try { cardSlot.paddingBottom = 0; } catch (_cardSlotPadBErr) {}
+            try { cardSlot.itemSpacing = 0; } catch (_cardSlotGapErr) {}
+            try { cardSlot.fills = []; } catch (_cardSlotFillsErr) {}
+            // NO minHeight floor: the slot HUGS its content exactly, so a dropped
+            // component sets the body height with zero extra space (a minHeight
+            // taller than the content is what leaves dead space under short
+            // content). Empty slots fall back to Figma's own slot indicator.
+            // Seed a tiny height just so an empty slot renders.
+            try { cardSlot.minHeight = null; } catch (_cardSlotMinHErr) {}
+            try {
+              cardSlot.resizeWithoutConstraints(288, 1);
+            } catch (_cardSlotResizeErr) {
+              try { cardSlot.resize(288, 1); } catch (_cardSlotResize2Err) {}
+            }
 
-            var titleNode = figma.createText();
-            titleNode.name = "Title";
-            titleNode.fontName = font;
-            titleNode.characters = "PlanetScope vessel";
-            titleNode.fontSize = 14;
-            titleNode.fills = [{ type: "SOLID", color: { r: 0.1, g: 0.1, b: 0.1 } }];
-            if (titleVar) bindPaintVar(titleNode, "fills", 0, titleVar);
-            if (varMap["card/title-font-size-" + size]) bindVar(titleNode, "fontSize", varMap["card/title-font-size-" + size]);
-            bindVar(titleNode, "fontFamily", varMap["card/title-font-family"]);
-            bindVar(titleNode, "fontStyle", varMap["card/title-font-weight"]);
-            if (varMap["card/title-line-height-" + size]) bindVar(titleNode, "lineHeight", varMap["card/title-line-height-" + size]);
-            topRow.appendChild(titleNode);
+            // Configure the slot so dropped content auto-fills the body width and
+            // empty slots keep their indicator visible.
+            if (cardSlotIsNative && typeof comp.editComponentProperty === "function") {
+              try {
+                var cardSlotPropId =
+                  cardSlot.componentPropertyReferences &&
+                  cardSlot.componentPropertyReferences.slotContentId;
+                if (cardSlotPropId) {
+                  comp.editComponentProperty(cardSlotPropId, {
+                    slotSettings: {
+                      stretchChildOnInsert: true,
+                      displayEmptyByDefault: true,
+                    },
+                  });
+                }
+              } catch (_cardSlotSettingsErr) {}
+            }
 
-            var descriptionNode = figma.createText();
-            descriptionNode.name = "Description";
-            descriptionNode.fontName = font;
-            descriptionNode.characters = "Detected vessel metadata and imagery details from latest satellite capture.";
-            descriptionNode.fontSize = 12;
-            descriptionNode.fills = [{ type: "SOLID", color: { r: 0.4, g: 0.4, b: 0.4 } }];
-            descriptionNode.textAutoResize = "HEIGHT";
-            descriptionNode.resize(288, descriptionNode.height);
-            if (descriptionVar) bindPaintVar(descriptionNode, "fills", 0, descriptionVar);
-            if (varMap["card/description-font-size-" + size]) bindVar(descriptionNode, "fontSize", varMap["card/description-font-size-" + size]);
-            bindVar(descriptionNode, "fontFamily", varMap["card/description-font-family"]);
-            bindVar(descriptionNode, "fontStyle", varMap["card/description-font-weight"]);
-            if (varMap["card/description-line-height-" + size]) bindVar(descriptionNode, "lineHeight", varMap["card/description-line-height-" + size]);
-            body.appendChild(descriptionNode);
+            // Dashed placeholder + hint ONLY for the fallback frame on editors
+            // without the slot API; native slots stay empty (pink indicator).
+            if (!cardSlotIsNative) {
+              try { cardSlot.cornerRadius = 4; } catch (_cardSlotRadErr) {}
+              cardSlot.strokes = [{ type: "SOLID", color: { r: 0.7, g: 0.7, b: 0.7 } }];
+              cardSlot.strokeWeight = 1;
+              cardSlot.strokeAlign = "INSIDE";
+              cardSlot.dashPattern = [4, 3];
+              if (borderVar) bindPaintVar(cardSlot, "strokes", 0, borderVar);
+              var cardSlotHint = figma.createText();
+              cardSlotHint.name = "SlotHint";
+              cardSlotHint.fontName = font;
+              cardSlotHint.characters = "Slot component here";
+              try { cardSlotHint.textAlignHorizontal = "CENTER"; } catch (_cardSlotTextAlignErr) {}
+              cardSlotHint.fontSize = 12;
+              cardSlotHint.fills = [{ type: "SOLID", color: { r: 0.5, g: 0.5, b: 0.5 } }];
+              if (descriptionVar) bindPaintVar(cardSlotHint, "fills", 0, descriptionVar);
+              if (varMap["card/description-font-size-" + size]) bindVar(cardSlotHint, "fontSize", varMap["card/description-font-size-" + size]);
+              bindVar(cardSlotHint, "fontFamily", varMap["card/description-font-family"]);
+              cardSlot.appendChild(cardSlotHint);
+            }
+
+            body.appendChild(cardSlot);
+            // Slot FILLS the card body width and HUGS height so the card grows to
+            // fit whatever the consumer drops in.
+            try { cardSlot.layoutSizingHorizontal = "FILL"; } catch (_cardSlotFillErr) {}
+            try { cardSlot.layoutSizingVertical = "HUG"; } catch (_cardSlotVHugErr) {}
 
             // Ensure card height hugs content (section on/off variants)
             // while width remains fixed to 320.
